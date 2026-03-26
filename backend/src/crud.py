@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 from . import models
 
 
@@ -30,10 +30,11 @@ def get_contributors(db: Session):
 
 def search_all(db: Session, query: str, skip: int = 0, limit: int = 100):
     # Enable trigram extension for fuzzy search
-    db.execute(func.text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
 
     # Set similarity threshold
-    db.execute(func.text("SELECT set_limit(0.3);"))
+    db.execute(text("SELECT set_limit(0.3);"))
+    db.commit()
 
     search_term = f"%{query}%"
 
