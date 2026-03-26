@@ -51,10 +51,8 @@ document.getElementById('btn-general-search').addEventListener('click', async ()
 
     document.getElementById('count-general-births').textContent = results.births.length;
     document.getElementById('count-general-families').textContent = results.families.length;
-    document.getElementById('table-general-births')._sortState = null;
-    document.getElementById('table-general-families')._sortState = null;
-    renderTable(results.births, 'table-general-births', birthColumns);
-    renderTable(results.families, 'table-general-families', familyColumns);
+    renderTable(results.births, 'table-general-births', birthColumns, 'surname', true);
+    renderTable(results.families, 'table-general-families', familyColumns, 'husband_surname', true);
   } catch (error) {
     console.error("Search failed:", error);
     document.getElementById('general-results').innerHTML = '<p>Search failed. Check API connection.</p>';
@@ -113,8 +111,7 @@ async function performAdvancedSearch() {
     const results = await response.json();
 
     document.getElementById('count-adv-results').textContent = results.length;
-    document.getElementById('table-adv-results')._sortState = null;
-    renderTable(results, 'table-adv-results', cols);
+    renderTable(results, 'table-adv-results', cols, isBirth ? 'surname' : 'husband_surname', true);
   } catch (error) {
     console.error("Advanced search failed:", error);
     document.getElementById('table-adv-results').innerHTML = '<p>Search failed. Check API connection.</p>';
@@ -154,16 +151,16 @@ function parseDateForSort(dateStr) {
 }
 
 // --- Table Generation Helpers ---
-function renderTable(data, containerId, columns) {
+function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true) {
   const container = document.getElementById(containerId);
   if (data.length === 0) {
     container.innerHTML = '<p>No results found.</p>';
     return;
   }
 
-  // Initialize or retrieve sort state
-  if (!container._sortState) {
-    container._sortState = { column: null, ascending: true };
+  // Initialize or retrieve sort state, applying default if not already set
+  if (!container._sortState || (container._sortState.column === null && defaultSortColumn)) {
+    container._sortState = { column: defaultSortColumn, ascending: defaultSortAscending };
   }
 
   let html = '<table><thead><tr>';
@@ -176,6 +173,29 @@ function renderTable(data, containerId, columns) {
     html += `<th data-col="${col}" class="sortable">${header}${sortIndicator}</th>`;
   });
   html += '</tr></thead><tbody>';
+
+  // Apply initial sort if a column is set in _sortState
+  if (container._sortState.column) {
+    const col = container._sortState.column;
+    const asc = container._sortState.ascending ? 1 : -1;
+    const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
+
+    data.sort((a, b) => {
+      if (isGedcomDate) {
+        const valA = parseDateForSort(a[col]);
+        const valB = parseDateForSort(b[col]);
+        if (valA < valB) return -1 * asc;
+        if (valA > valB) return 1 * asc;
+        return 0;
+      } else {
+        const valA = String(a[col] || '').toLowerCase();
+        const valB = String(b[col] || '').toLowerCase();
+        if (valA < valB) return -1 * asc;
+        if (valA > valB) return 1 * asc;
+        return 0;
+      }
+    });
+  }
 
   data.forEach(row => {
     html += '<tr>';
@@ -234,8 +254,7 @@ async function renderContributors() {
       total_families: m.families_count,
       last_modified: new Date(m.last_modified).toLocaleString()
     }));
-    document.getElementById('table-contributors')._sortState = null;
-    renderTable(dataForTable, 'table-contributors', ['contributor_ID', 'total_births', 'total_families', 'last_modified']);
+    renderTable(dataForTable, 'table-contributors', ['contributor_ID', 'total_births', 'total_families', 'last_modified'], 'contributor_ID', true);
   } catch (error) {
     container.innerHTML = '<p>Could not load contributor data.</p>';
   }
