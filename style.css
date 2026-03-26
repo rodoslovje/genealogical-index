@@ -22,27 +22,59 @@ body {
 }
 
 header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   border-bottom: 2px solid var(--border);
   padding-bottom: 1rem;
 }
 
 h1 { color: var(--primary); margin-top: 0; }
 
-nav button {
-  background: none;
-  border: 1px solid var(--border);
-  padding: 10px 20px;
-  cursor: pointer;
-  font-size: 1rem;
-  margin-right: 5px;
-  border-radius: 4px 4px 0 0;
+.content-wrapper {
+  display: flex;
+  gap: 2rem;
 }
 
-nav button.active {
+nav#tabs {
+  flex: 0 0 220px;
+  border-right: 1px solid var(--border);
+  padding-right: 1rem;
+}
+
+nav#tabs h2 {
+  font-size: 1.2rem;
+  color: var(--primary);
+  margin-top: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+nav#tabs button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  padding: 12px 15px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  text-align: left;
+  border-radius: 4px;
+  color: var(--primary);
+}
+
+nav#tabs button.active {
   background: var(--secondary);
   color: white;
-  border-color: var(--secondary);
+  border-left-color: var(--primary);
+}
+
+nav#tabs button:hover {
+  background: #e9ecef;
+}
+
+main {
+  flex-grow: 1;
 }
 
 .tab-content { display: none; }
