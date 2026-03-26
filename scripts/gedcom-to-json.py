@@ -1,0 +1,170 @@
+# scripts/extract_data.py
+
+import os
+import json
+from gedcom.parser import Parser
+
+# --- Configuration ---
+# Define paths relative to the project root.
+# This script should be run from the root of the project directory.
+INPUT_DIR = "input"
+OUTPUT_DIR = "data"
+
+
+def get_name_surname(individual):
+    """
+    Safely extracts the first name and surname from an individual element.
+    GEDCOM names can be complex, so this handles basic cases gracefully.
+    """
+    for child in individual.get_child_elements():
+        if child.get_tag() == "NAME":
+            name_val = child.get_value()
+            if "/" in name_val:
+                parts = name_val.split("/")
+                first = parts[0].strip()
+                last = parts[1].strip()
+                return first or "", last or ""
+            return name_val.strip() or "", ""
+    return "", ""
+
+
+def get_event_data(element, event_tag):
+    """Helper to extract date and place for a specific event like BIRT or MARR."""
+    for child in element.get_child_elements():
+        if child.get_tag() == event_tag:
+            date, place = "", ""
+            for subchild in child.get_child_elements():
+                if subchild.get_tag() == "DATE":
+                    date = subchild.get_value()
+                elif subchild.get_tag() == "PLAC":
+                    place = subchild.get_value()
+            return date, place
+    return "", ""
+
+
+def main():
+    """
+    Main function to process all GEDCOM files in the input directory,
+    extracting birth and marriage data into separate JSON files.
+    """
+    print("Starting GEDCOM data extraction process...")
+
+    # --- Setup ---
+    # Ensure the output directory exists, creating it if necessary.
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+        print(f"Created output directory: {OUTPUT_DIR}")
+
+    # Check if the input directory exists.
+    if not os.path.isdir(INPUT_DIR):
+        print(f"Error: Input directory '{INPUT_DIR}' not found.")
+        print("Please create it and place your GEDCOM (.ged) files inside.")
+        return
+
+    # --- File Processing Loop ---
+    # Find all files ending with .ged in the input directory.
+    gedcom_files = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith(".ged")]
+
+    if not gedcom_files:
+        print(f"No GEDCOM files found in '{INPUT_DIR}'.")
+        return
+
+    # Process each file found.
+    for filename in gedcom_files:
+        contributor_id = os.path.splitext(filename)[0]
+        input_path = os.path.join(INPUT_DIR, filename)
+        print(f"\nProcessing file: {filename} (Contributor: {contributor_id})")
+
+        # Initialize lists to hold extracted records for this file.
+        births_data = []
+        families_data = []
+
+        # --- Parsing ---
+        try:
+            # Instantiate the parser and parse the file.
+            gedcom_parser = Parser()
+            gedcom_parser.parse_file(input_path)
+        except Exception as e:
+            print(f"  ERROR: Could not parse {filename}. Skipping file. Reason: {e}")
+            continue  # Move to the next file
+
+        # --- 1. Extract Birth Information ---
+        # Dictionary to cache individual names by their GEDCOM pointer (ID)
+        individuals_dict = {}
+        family_elements = []
+
+        # First pass: Get all elements directly from the parser
+        for element in gedcom_parser.get_root_child_elements():
+            tag = element.get_tag()
+
+            # --- 1. Extract Birth Information ---
+            if tag == "INDI":
+                pointer = element.get_pointer()
+                name, surname = get_name_surname(element)
+                birth_date, birth_place = get_event_data(element, "BIRT")
+
+                # Store for marriage cross-referencing
+                individuals_dict[pointer] = {"name": name, "surname": surname}
+
+                if birth_date or birth_place:
+                    births_data.append(
+                        {
+                            "name": name,
+                            "surname": surname,
+                            "date_of_birth": birth_date or "",
+                            "place_of_birth": birth_place or "",
+                        }
+                    )
+
+            elif tag == "FAM":
+                family_elements.append(element)
+
+        # --- 2. Extract Family (Marriage) Information ---
+        for family in family_elements:
+            marr_date, marr_place = get_event_data(family, "MARR")
+
+            husb_pointer, wife_pointer = "", ""
+            for child in family.get_child_elements():
+                if child.get_tag() == "HUSB":
+                    husb_pointer = child.get_value()
+                elif child.get_tag() == "WIFE":
+                    wife_pointer = child.get_value()
+
+            husb = individuals_dict.get(husb_pointer, {})
+            wife = individuals_dict.get(wife_pointer, {})
+
+            families_data.append(
+                {
+                    "husband_name": husb.get("name", ""),
+                    "husband_surname": husb.get("surname", ""),
+                    "wife_name": wife.get("name", ""),
+                    "wife_surname": wife.get("surname", ""),
+                    "date_of_marriage": marr_date or "",
+                    "place_of_marriage": marr_place or "",
+                }
+            )
+
+        # --- 3. Write Output JSON Files ---
+        # Write the extracted births data to its JSON file.
+        births_output_path = os.path.join(OUTPUT_DIR, f"{contributor_id}-births.json")
+        with open(births_output_path, "w", encoding="utf-8") as f:
+            json.dump(births_data, f, ensure_ascii=False, indent=4)
+        print(
+            f"  -> Successfully created '{births_output_path}' with {len(births_data)} birth records."
+        )
+
+        # Write the extracted families data to its JSON file.
+        families_output_path = os.path.join(
+            OUTPUT_DIR, f"{contributor_id}-families.json"
+        )
+        with open(families_output_path, "w", encoding="utf-8") as f:
+            json.dump(families_data, f, ensure_ascii=False, indent=4)
+        print(
+            f"  -> Successfully created '{families_output_path}' with {len(families_data)} family records."
+        )
+
+    print("\nExtraction process finished successfully.")
+
+
+if __name__ == "__main__":
+    main()

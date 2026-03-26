@@ -1,0 +1,33 @@
+# Ignore the input directory that has raw GEDCOM files from contributors
+input/
+
+# Ignore the data directory for now - not clear if it should be in git
+data/
+
+# Python virtual environment
+############################################
+.venv/
+venv/
+
+# Python build artifacts and caches
+############################################
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+
+# IDE and editor files
+############################################
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Web development (Node.js / Vite)
+############################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
