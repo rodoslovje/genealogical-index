@@ -4,6 +4,9 @@ input/
 # Ignore the data directory for now - not clear if it should be in git
 data/
 
+# Ignore environment variables file that contains sensitive information
+.env
+
 # Python virtual environment
 ############################################
 .venv/
