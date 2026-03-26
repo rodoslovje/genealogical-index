@@ -1,1 +1,2 @@
 python-gedcom
+python-dotenv
