@@ -110,3 +110,51 @@ tr:hover { background: #f5f5f5; }
 h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
 
 .loading { text-align: center; font-size: 1.2rem; color: var(--secondary); padding: 2rem; }
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 768px) {
+  .content-wrapper {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  nav#tabs {
+    flex: none;
+    border-right: none;
+    padding-right: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+  }
+
+  nav#tabs h2 {
+    display: none; /* Hide redundant "Menu" heading on mobile */
+  }
+
+  nav#tabs button {
+    width: auto;
+    flex: 1 1 calc(33% - 1rem); /* Distribute buttons evenly */
+    text-align: center;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: 0;
+    padding: 10px;
+  }
+
+  nav#tabs button.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--primary);
+  }
+
+  .search-box {
+    flex-direction: column;
+  }
+
+  .search-box input,
+  .search-box select,
+  .search-box button {
+    width: 100%;
+  }
+}

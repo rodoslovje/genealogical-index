@@ -86,10 +86,36 @@ function setupAdvancedSearchForm() {
 }
 
 async function performAdvancedSearch() {
-  // This function would be built out similar to the general search,
-  // but it would construct a query string with multiple parameters
-  // (e.g., /api/search/advanced/births?name=John&surname=Doe)
-  alert("Advanced search endpoint not yet implemented in this example.");
+  const isBirth = document.getElementById('adv-search-type').value === 'births';
+  const cols = isBirth ? birthColumns : familyColumns;
+
+  document.getElementById('advanced-results').style.display = 'block';
+  document.getElementById('table-adv-results').innerHTML = '<p>Searching...</p>';
+
+  // Gather query criteria dynamically
+  const params = new URLSearchParams();
+  cols.filter(c => c !== 'contributor').forEach(c => {
+    const val = document.getElementById(`adv-${c}`).value.trim();
+    if (val) params.append(c, val);
+  });
+
+  if (params.toString() === '') {
+    document.getElementById('table-adv-results').innerHTML = '<p>Please enter at least one search criterion.</p>';
+    document.getElementById('count-adv-results').textContent = '0';
+    return;
+  }
+
+  const endpoint = isBirth ? 'births' : 'families';
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/search/advanced/${endpoint}?${params.toString()}`);
+    const results = await response.json();
+
+    document.getElementById('count-adv-results').textContent = results.length;
+    renderTable(results, 'table-adv-results', cols);
+  } catch (error) {
+    console.error("Advanced search failed:", error);
+    document.getElementById('table-adv-results').innerHTML = '<p>Search failed. Check API connection.</p>';
+  }
 }
 
 // --- Table Generation Helpers ---

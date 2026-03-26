@@ -45,3 +45,35 @@ def search_general(q: Optional[str] = None, db: Session = Depends(get_db)):
 
     results = crud.search_all(db, query=q)
     return results
+
+
+@app.get("/api/search/advanced/births", response_model=List[schemas.Birth])
+def search_advanced_births(
+    name: Optional[str] = None,
+    surname: Optional[str] = None,
+    date_of_birth: Optional[str] = None,
+    place_of_birth: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    return crud.search_advanced_births(db, name, surname, date_of_birth, place_of_birth)
+
+
+@app.get("/api/search/advanced/families", response_model=List[schemas.Family])
+def search_advanced_families(
+    husband_name: Optional[str] = None,
+    husband_surname: Optional[str] = None,
+    wife_name: Optional[str] = None,
+    wife_surname: Optional[str] = None,
+    date_of_marriage: Optional[str] = None,
+    place_of_marriage: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    return crud.search_advanced_families(
+        db,
+        husband_name,
+        husband_surname,
+        wife_name,
+        wife_surname,
+        date_of_marriage,
+        place_of_marriage,
+    )
