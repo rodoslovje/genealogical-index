@@ -11,11 +11,11 @@ services:
     restart: unless-stopped
 
   api:
-    build: ./backend
+    build: ../backend
     container_name: sgi_api
     volumes:
-      - ./data:/app/data
-      - ./scripts:/app/scripts
+      - ../data:/app/data
+      - ../scripts:/app/scripts
     restart: unless-stopped
     env_file:
       - .env
