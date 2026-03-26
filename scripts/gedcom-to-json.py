@@ -2,6 +2,7 @@
 
 import os
 import json
+from datetime import datetime
 from gedcom.parser import Parser
 
 # --- Configuration ---
@@ -68,6 +69,9 @@ def main():
     if not gedcom_files:
         print(f"No GEDCOM files found in '{INPUT_DIR}'.")
         return
+
+    # Store metadata about processed files for the frontend
+    metadata = []
 
     # Process each file found.
     for filename in gedcom_files:
@@ -162,6 +166,22 @@ def main():
         print(
             f"  -> Successfully created '{families_output_path}' with {len(families_data)} family records."
         )
+
+        # Add to metadata
+        metadata.append(
+            {
+                "contributor": contributor_id,
+                "births_count": len(births_data),
+                "families_count": len(families_data),
+                "last_modified": datetime.now().isoformat(),
+            }
+        )
+
+    # Write global metadata.json for the frontend
+    metadata_output_path = os.path.join(OUTPUT_DIR, "metadata.json")
+    with open(metadata_output_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=4)
+    print(f"\n  -> Successfully created metadata file: {metadata_output_path}")
 
     print("\nExtraction process finished successfully.")
 
