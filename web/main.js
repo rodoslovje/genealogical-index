@@ -18,9 +18,7 @@ async function init() {
     setupAdvancedSearchForm();
     // Ensure sidebar is visible on desktop, or hidden on mobile
     const sidebar = document.getElementById('sidebar');
-    if (window.innerWidth > 768) {
-      sidebar.classList.add('open'); // Always open on desktop
-    }
+    sidebar.classList.add('open');
 
     // Activate the general search tab by default on load
     document.querySelector('.tab-btn[data-target="tab-general"]').click();
