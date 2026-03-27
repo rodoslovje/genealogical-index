@@ -1,6 +1,7 @@
 import { t, initI18n, onLanguageChange } from './i18n.js';
 import { renderContributors, refreshContributorsIfVisible } from './contributors.js';
-import { setupGeneralSearch, setupAdvancedSearchForm } from './search.js';
+import { setupGeneralSearch, setupAdvancedSearchForm, restoreFromURL } from './search.js';
+import { updateURL } from './url.js';
 
 // --- Clearable inputs ---
 
@@ -50,6 +51,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
     if (targetTab === 'tab-contributors') {
       document.body.classList.add('contributors-view');
+      updateURL({ t: 'contributors' });
       renderContributors();
     } else {
       document.body.classList.remove('contributors-view');
@@ -95,7 +97,17 @@ async function init() {
     setupAdvancedSearchForm();
 
     sidebar.classList.add('open');
-    document.querySelector('.tab-btn[data-target="tab-general"]').click();
+
+    // Infer active tab from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlT = urlParams.get('t');
+    let urlTab = 'general';
+    if (urlT === 'contributors') urlTab = 'contributors';
+    else if (urlT === 'birth' || urlT === 'family') urlTab = 'advanced';
+    document.querySelector(`.tab-btn[data-target="tab-${urlTab}"]`)?.click();
+
+    // Restore search fields and trigger search if URL contains query params
+    restoreFromURL();
 
     // Refresh contributors table column headers on language change
     onLanguageChange(() => refreshContributorsIfVisible());

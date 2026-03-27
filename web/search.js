@@ -1,6 +1,7 @@
 import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
 import { API_BASE_URL, birthColumns, familyColumns } from './config.js';
+import { updateURL, PARAM_MAP, PARAM_MAP_REVERSE } from './url.js';
 
 // Last search results kept so they can be re-rendered on language change
 let lastGeneralResults = null;
@@ -15,6 +16,8 @@ export function setupGeneralSearch() {
 async function performGeneralSearch() {
   const query = document.getElementById('general-query').value.trim();
   if (!query) return;
+
+  updateURL({ q: query });
 
   document.getElementById('general-results').style.display = 'block';
   document.getElementById('table-general-births').innerHTML = `<p>${t('searching')}</p>`;
@@ -36,30 +39,37 @@ async function performGeneralSearch() {
 }
 
 async function performAdvancedSearch() {
-  const isBirth = document.getElementById('adv-search-type').value === 'births';
+  const type = document.getElementById('adv-search-type').value;
+  const isBirth = type === 'births';
   const cols = isBirth ? birthColumns : familyColumns;
 
   document.getElementById('advanced-results').style.display = 'block';
   document.getElementById('table-adv-results').innerHTML = `<p>${t('searching')}</p>`;
 
-  const params = new URLSearchParams();
+  const fieldParams = {};
   cols.filter(c => c !== 'contributor').forEach(c => {
     const val = document.getElementById(`adv-${c}`)?.value.trim();
-    if (val) params.append(c, val);
+    if (val) fieldParams[c] = val;
   });
 
-  if (!params.toString()) {
+  if (!Object.keys(fieldParams).length) {
     document.getElementById('table-adv-results').innerHTML = `<p>${t('enter_criterion')}</p>`;
     document.getElementById('count-adv-results').textContent = '0';
     return;
   }
 
-  params.append('limit', '500');
+  // Build compact URL: t=birth/family + short field names
+  const shortParams = { t: isBirth ? 'birth' : 'family' };
+  for (const [field, val] of Object.entries(fieldParams)) {
+    shortParams[PARAM_MAP[field] || field] = val;
+  }
+  updateURL(shortParams);
+
+  const apiParams = new URLSearchParams({ ...fieldParams, limit: '500' });
   const defaultSort = isBirth ? 'surname' : 'husband_surname';
 
   try {
-    const endpoint = isBirth ? 'births' : 'families';
-    const response = await fetch(`${API_BASE_URL}/api/search/advanced/${endpoint}?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}/api/search/advanced/${type}?${apiParams.toString()}`);
     const results = await response.json();
 
     lastAdvResults = results;
@@ -155,4 +165,42 @@ export function setupAdvancedSearchForm() {
       renderTable(lastAdvResults, 'table-adv-results', lastAdvCols, lastAdvDefaultSort, true);
     }
   });
+}
+
+/**
+ * Reads URL params and restores the search form + triggers the search.
+ * Call after setupGeneralSearch and setupAdvancedSearchForm.
+ */
+export function restoreFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get('q');
+  const t = params.get('t');
+
+  if (q) {
+    document.getElementById('general-query').value = q;
+    document.getElementById('btn-general-search').click();
+  } else if (t === 'birth' || t === 'family') {
+    const apiType = t === 'birth' ? 'births' : 'families';
+    const typeSelect = document.getElementById('adv-search-type');
+    if (typeSelect && typeSelect.value !== apiType) {
+      typeSelect.value = apiType;
+      renderAdvFields();
+    }
+    // Map short URL params back to API field names and fill inputs
+    const cols = apiType === 'families' ? familyColumns : birthColumns;
+    let hasCriteria = false;
+    cols.filter(c => c !== 'contributor').forEach(col => {
+      const val = params.get(PARAM_MAP[col] || col);
+      if (val) {
+        const input = document.getElementById(`adv-${col}`);
+        if (input) {
+          input.value = val;
+          const clearBtn = input.nextElementSibling;
+          if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = 'block';
+          hasCriteria = true;
+        }
+      }
+    });
+    if (hasCriteria) document.getElementById('btn-adv-search')?.click();
+  }
 }

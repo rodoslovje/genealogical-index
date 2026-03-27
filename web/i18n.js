@@ -48,7 +48,7 @@ const translations = {
     // Navigation tabs
     tab_search: 'Iskanje',
     tab_advanced: 'Napredno iskanje',
-    tab_contributors: 'Dajalec',
+    tab_contributors: 'Dajalci',
 
     // Search controls
     search_placeholder: 'Išči po vseh poljih (npr. ime, kraj, datum)...',
