@@ -16,18 +16,13 @@ async function init() {
   try {
     // Render initial search form into sidebar
     setupAdvancedSearchForm();
-    // Ensure sidebar is visible on desktop, or hidden on mobile
-    const sidebar = document.getElementById('sidebar');
-    if (window.innerWidth > 768) {
-      sidebar.classList.add('open'); // Always open on desktop
-    }
   } catch (err) {
     loading.textContent = 'Error initializing the application.';
     console.error(err);
   }
 }
 
-// --- Top Navigation & Tab Management ---
+// --- Top Navigation & Mobile Menu ---
 const hamburgerBtn = document.querySelector('.hamburger-btn');
 const sidebar = document.getElementById('sidebar');
 
@@ -35,19 +30,12 @@ hamburgerBtn.addEventListener('click', () => {
   sidebar.classList.toggle('open');
 });
 
+// --- Tab Management ---
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     // If contributors tab is clicked, fetch and render the data
     if (btn.dataset.target === 'tab-contributors') {
       renderContributors();
-      sidebar.style.display = 'none'; // Hide sidebar for contributors
-    } else {
-      sidebar.style.display = 'block'; // Show sidebar for search tabs
-    }
-
-    // Close mobile nav if open
-    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
-      sidebar.classList.remove('open');
     }
 
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -60,6 +48,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     } else if (btn.dataset.target === 'tab-advanced') {
       document.getElementById('advanced-search-sidebar').classList.add('active');
     }
+
     btn.classList.add('active');
     document.getElementById(btn.dataset.target).classList.add('active');
   });
@@ -100,7 +89,7 @@ document.getElementById('btn-general-search').addEventListener('click', async ()
 document.getElementById('general-query').addEventListener('keydown', handleSearchOnEnter);
 
 // --- Advanced Search ---
-function setupAdvancedSearchForm() { // This now renders into #advanced-search-sidebar
+function setupAdvancedSearchForm() {
   const container = document.getElementById('adv-search-controls');
 
   const renderFields = () => {

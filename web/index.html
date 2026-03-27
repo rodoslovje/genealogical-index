@@ -14,11 +14,6 @@
           <div class="nav-title">
             <a href="/">Slovenian Genealogical Index</a>
           </div>
-          <div class="nav-center-buttons">
-            <button class="tab-btn active" data-target="tab-general">Search</button>
-            <button class="tab-btn" data-target="tab-advanced">Advanced Search</button>
-            <button class="tab-btn" data-target="tab-contributors">Contributors</button>
-          </div>
           <button class="hamburger-btn">
             <span></span>
             <span></span>
@@ -28,20 +23,6 @@
       </header>
 
       <div class="content-area">
-        <aside id="sidebar">
-          <div id="general-search-sidebar" class="sidebar-section active">
-            <div class="search-box">
-              <input type="text" id="general-query" placeholder="Search all fields (e.g., name, place, date)..." />
-              <button id="btn-general-search">Search</button>
-            </div>
-          </div>
-          <div id="advanced-search-sidebar" class="sidebar-section">
-            <div class="search-box" id="adv-search-controls">
-              <!-- Controls injected by JS -->
-            </div>
-          </div>
-        </aside>
-
         <main id="main-content">
           <div id="loading" class="loading">Loading genealogical data...</div>
 
@@ -65,6 +46,27 @@
             <div class="table-responsive" id="table-contributors"></div>
           </section>
         </main>
+
+        <aside id="sidebar" class="open">
+          <div class="sidebar-nav">
+            <button class="tab-btn active" data-target="tab-general">Search</button>
+            <button class="tab-btn" data-target="tab-advanced">Advanced Search</button>
+            <button class="tab-btn" data-target="tab-contributors">Contributors</button>
+          </div>
+
+          <div id="general-search-sidebar" class="sidebar-section active">
+            <div class="search-box">
+              <input type="text" id="general-query" placeholder="Search all fields (e.g., name, place, date)..." />
+              <button id="btn-general-search">Search</button>
+            </div>
+          </div>
+
+          <div id="advanced-search-sidebar" class="sidebar-section">
+            <div class="search-box" id="adv-search-controls">
+              <!-- Controls injected by JS -->
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
     <script type="module" src="/main.js"></script>

@@ -48,39 +48,6 @@ nav#top-nav .nav-title a {
   font-weight: bold;
 }
 
-nav#top-nav .nav-center-buttons {
-  display: flex;
-  gap: 10px;
-  /* Center the buttons */
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  /* Ensure it's above the hamburger on desktop */
-  z-index: 1;
-}
-
-nav#top-nav .tab-btn {
-  background: none;
-  border: 1px solid transparent;
-  padding: 8px 15px;
-  font-size: 1rem;
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-nav#top-nav .tab-btn.active {
-  background: var(--secondary);
-  color: white;
-  border-color: var(--secondary);
-}
-
-nav#top-nav .tab-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
 /* Existing styles for tab-content, search-box, etc. remain */
 
 button {
@@ -107,55 +74,26 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 
 .loading { text-align: center; font-size: 1.2rem; color: var(--secondary); padding: 2rem; }
 
-/* --- New Layout: Sidebar and Main Content --- */
-.content-area {
-  display: flex;
-  padding: 0 20px; /* Apply horizontal padding here */
-}
-
-#sidebar {
-  flex: 0 0 300px; /* Fixed width for sidebar */
-  background: var(--bg);
-  padding: 20px;
-  border-right: 1px solid var(--border);
-  margin-right: 20px;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.05);
-  display: block;
-}
-
-#main-content {
-  flex-grow: 1;
-  min-width: 0; /* Prevents tables from overflowing flex container */
-}
-
-.sidebar-section {
-  display: none; /* Hidden by default, JS will show active one */
-}
-
-.sidebar-section.active {
-  display: block;
-}
-
 .search-box {
   margin-bottom: 20px;
   display: flex;
   gap: 10px;
-  flex-direction: column; /* Stack inputs vertically */
+  flex-wrap: wrap;
 }
 
 .search-box input,
 .search-box select,
 .search-box button {
-  width: 100%; /* Full width within sidebar */
   padding: 10px;
   font-size: 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
+  flex-grow: 1;
 }
 
 /* --- Hamburger Menu --- */
 .hamburger-btn {
-  display: none; /* Hidden on desktop */
+  display: flex;
   flex-direction: column;
   justify-content: space-around;
   width: 2rem;
@@ -174,18 +112,81 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   border-radius: 10px;
 }
 
+/* --- New Layout: Content Area & Sidebar --- */
+.content-area {
+  display: flex;
+  flex-direction: row; /* Main left, sidebar right */
+}
+
+#main-content {
+  flex-grow: 1;
+  padding: 0 20px;
+  min-width: 0; /* Prevent table overflow */
+}
+
+#sidebar {
+  flex: 0 0 300px;
+  background: var(--bg);
+  padding: 20px;
+  border-left: 1px solid var(--border);
+  display: none; /* Hidden when closed */
+}
+
+#sidebar.open {
+  display: block;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 15px;
+}
+
+.sidebar-nav .tab-btn {
+  background: white;
+  border: 1px solid var(--border);
+  padding: 10px;
+  text-align: left;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--primary);
+}
+
+.sidebar-nav .tab-btn.active {
+  background: var(--secondary);
+  color: white;
+  border-color: var(--secondary);
+}
+
+.sidebar-section {
+  display: none;
+}
+
+.sidebar-section.active {
+  display: block;
+}
+
 /* --- Mobile Responsiveness --- */
 @media (max-width: 768px) {
-  nav#top-nav .nav-center-buttons { display: none; }
-  nav#top-nav .hamburger-btn { display: flex; }
-  .content-area { flex-direction: column; }
-  #sidebar {
-    display: none; /* Hidden by default on mobile */
-    flex: none;
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    margin: 0 0 15px 0;
+  .content-area {
+    flex-direction: column;
   }
-  #sidebar.open { display: block; }
+
+  #sidebar {
+    width: 100%;
+    border-left: none;
+    border-bottom: 1px solid var(--border);
+    order: -1; /* Display above main content on mobile */
+  }
+
+  .search-box {
+    flex-direction: column;
+  }
+  .search-box input, .search-box select, .search-box button {
+    width: 100%;
+  }
 }
