@@ -12,6 +12,30 @@ INPUT_DIR = "input"
 OUTPUT_DIR = "data"
 
 
+def safe_read_gedcom(filepath):
+    """
+    Attempts to read a file using a sequence of common GEDCOM encodings.
+    Returns the file content as a string.
+    """
+    # Common encodings:
+    # utf-8-sig handles UTF-8 files with a Byte Order Mark (BOM)
+    # cp1252 and iso-8859-1 handle most legacy Windows/European files
+    # mac_roman handles older Apple exports
+    encodings_to_try = ["utf-8-sig", "utf-8", "cp1252", "iso-8859-1", "mac_roman"]
+
+    for enc in encodings_to_try:
+        try:
+            with open(filepath, "r", encoding=enc) as f:
+                content = f.read()
+                print(f"  Successfully read {filepath} using {enc} encoding.")
+                return content
+        except UnicodeDecodeError:
+            continue  # Try the next encoding in the list
+
+    # If all fail, raise an exception or handle it gracefully
+    raise ValueError(f"Could not decode {filepath}. Unknown encoding.")
+
+
 def get_name_surname(individual):
     """
     Safely extracts the first name and surname from an individual element.
@@ -84,12 +108,26 @@ def main():
         families_data = []
 
         # --- Parsing ---
+        temp_path = f"{input_path}.utf8.tmp"
         try:
+            # Decode the file using our fallback encodings
+            gedcom_content = safe_read_gedcom(input_path)
+
+            # Write the decoded content to a temporary UTF-8 file
+            # so the parser can reliably process it without encoding errors.
+            with open(temp_path, "w", encoding="utf-8") as tmp_file:
+                tmp_file.write(gedcom_content)
+
             # Instantiate the parser and parse the file.
             gedcom_parser = Parser()
-            gedcom_parser.parse_file(input_path)
+            gedcom_parser.parse_file(temp_path)
+
+            # Clean up the temporary file on success
+            os.remove(temp_path)
         except Exception as e:
             print(f"  ERROR: Could not parse {filename}. Skipping file. Reason: {e}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
             continue  # Move to the next file
 
         # --- 1. Extract Birth Information ---
