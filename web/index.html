@@ -15,11 +15,22 @@
             <a href="/">Slovenian Genealogical Index</a>
           </div>
           <div class="header-nav">
-            <button class="tab-btn active" data-target="tab-general">Search</button>
-            <button class="tab-btn" data-target="tab-advanced">Advanced Search</button>
-            <button class="tab-btn" data-target="tab-contributors">Contributors</button>
+            <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
+            <button class="tab-btn" data-target="tab-advanced" data-i18n="tab_advanced">Advanced Search</button>
+            <button class="tab-btn" data-target="tab-contributors" data-i18n="tab_contributors">Contributors</button>
           </div>
-          <button class="hamburger-btn">
+          <div class="lang-switcher" id="lang-switcher">
+            <button class="lang-toggle" id="lang-toggle" aria-label="Select language">
+              <span class="lang-flag">🇬🇧</span>
+              <span class="lang-code">EN</span>
+              <span class="lang-arrow">▾</span>
+            </button>
+            <div class="lang-dropdown" id="lang-dropdown">
+              <button class="lang-option" data-lang="en">🇬🇧 EN</button>
+              <button class="lang-option" data-lang="sl">🇸🇮 SL</button>
+            </div>
+          </div>
+          <button class="hamburger-btn" aria-label="Toggle sidebar">
             <span></span>
             <span></span>
             <span></span>
@@ -29,20 +40,20 @@
 
       <div class="content-area">
         <main id="main-content">
-          <div id="loading" class="loading">Loading genealogical data...</div>
+          <div id="loading" class="loading" data-i18n="loading">Loading genealogical data...</div>
 
           <section id="tab-general" class="tab-content active">
             <div id="general-results" class="results-container" style="display: none;">
-              <h2>Births (<span id="count-general-births">0</span>)</h2>
+              <h2><span data-i18n="results_births">Births</span> (<span id="count-general-births">0</span>)</h2>
               <div class="table-responsive" id="table-general-births"></div>
-              <h2>Families (<span id="count-general-families">0</span>)</h2>
+              <h2><span data-i18n="results_families">Families</span> (<span id="count-general-families">0</span>)</h2>
               <div class="table-responsive" id="table-general-families"></div>
             </div>
           </section>
 
           <section id="tab-advanced" class="tab-content">
             <div id="advanced-results" class="results-container" style="display: none;">
-              <h2 id="adv-results-title">Results (<span id="count-adv-results">0</span>)</h2>
+              <h2><span data-i18n="results_title">Results</span> (<span id="count-adv-results">0</span>)</h2>
               <div class="table-responsive" id="table-adv-results"></div>
             </div>
           </section>
@@ -54,15 +65,16 @@
 
         <aside id="sidebar" class="open">
           <div class="sidebar-nav">
-            <button class="tab-btn active" data-target="tab-general">Search</button>
-            <button class="tab-btn" data-target="tab-advanced">Advanced Search</button>
-            <button class="tab-btn" data-target="tab-contributors">Contributors</button>
+            <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
+            <button class="tab-btn" data-target="tab-advanced" data-i18n="tab_advanced">Advanced Search</button>
+            <button class="tab-btn" data-target="tab-contributors" data-i18n="tab_contributors">Contributors</button>
           </div>
 
           <div id="general-search-sidebar" class="sidebar-section active">
             <div class="search-box">
-              <input type="text" id="general-query" placeholder="Search all fields (e.g., name, place, date)..." />
-              <button id="btn-general-search">Search</button>
+              <input type="text" id="general-query" data-i18n-placeholder="search_placeholder"
+                placeholder="Search all fields (e.g., name, place, date)..." />
+              <button id="btn-general-search" data-i18n="search_btn">Search</button>
             </div>
           </div>
 
