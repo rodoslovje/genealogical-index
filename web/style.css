@@ -48,6 +48,28 @@ nav#top-nav .nav-title a {
   font-weight: bold;
 }
 
+.header-nav {
+  display: flex;
+  gap: 20px;
+  margin-left: auto;
+  margin-right: 20px;
+}
+
+.header-nav .tab-btn {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 5px 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+.header-nav .tab-btn:hover,
+.header-nav .tab-btn.active {
+  color: white;
+  border-bottom-color: var(--secondary);
+  opacity: 1;
+}
+
 /* Existing styles for tab-content, search-box, etc. remain */
 
 button {
@@ -137,29 +159,26 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 }
 
 .sidebar-nav {
-  display: flex;
+  display: none; /* Hidden on desktop */
   flex-direction: column;
-  gap: 10px;
+  gap: 5px;
   margin-bottom: 20px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 15px;
 }
 
 .sidebar-nav .tab-btn {
-  background: white;
-  border: 1px solid var(--border);
-  padding: 10px;
+  background: transparent;
+  border-left: 3px solid transparent;
   text-align: left;
-  font-size: 1rem;
-  border-radius: 4px;
-  cursor: pointer;
   color: var(--primary);
 }
 
-.sidebar-nav .tab-btn.active {
-  background: var(--secondary);
-  color: white;
-  border-color: var(--secondary);
+.sidebar-nav .tab-btn.active, .sidebar-nav .tab-btn:hover {
+  background: rgba(0,0,0,0.03);
+  border-left-color: var(--secondary);
+  font-weight: bold;
+  opacity: 1;
 }
 
 .sidebar-section {
@@ -172,6 +191,14 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 
 /* --- Mobile Responsiveness --- */
 @media (max-width: 768px) {
+  .header-nav {
+    display: none;
+  }
+
+  .sidebar-nav {
+    display: flex;
+  }
+
   .content-area {
     flex-direction: column;
   }

@@ -61,7 +61,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     } else if (btn.dataset.target === 'tab-advanced') {
       document.getElementById('advanced-search-sidebar').classList.add('active');
     }
-    btn.classList.add('active');
+
+    // Add active class to all buttons representing this tab (both header and sidebar)
+    document.querySelectorAll(`.tab-btn[data-target="${btn.dataset.target}"]`).forEach(b => b.classList.add('active'));
     document.getElementById(btn.dataset.target).classList.add('active');
   });
 });
