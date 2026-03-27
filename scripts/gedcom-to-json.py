@@ -2,6 +2,7 @@
 
 import os
 import json
+import re
 from datetime import datetime
 from gedcom.parser import Parser
 
@@ -15,13 +16,51 @@ OUTPUT_DIR = "data"
 def safe_read_gedcom(filepath):
     """
     Attempts to read a file using a sequence of common GEDCOM encodings.
+    It first tries to detect the encoding from the '1 CHAR' tag in the header.
     Returns the file content as a string.
     """
-    # Common encodings:
-    # utf-8-sig handles UTF-8 files with a Byte Order Mark (BOM)
-    # cp1252 and iso-8859-1 handle most legacy Windows/European files
-    # mac_roman handles older Apple exports
-    encodings_to_try = ["utf-8-sig", "utf-8", "cp1252", "iso-8859-1", "mac_roman"]
+    detected_enc = None
+    encoding_map = {
+        b"UTF-8": "utf-8-sig",
+        b"ANSI": "cp1250",
+        b"MACINTOSH": "mac_roman",
+        b"IBM WINDOWS": "cp1250",
+        b"WINDOWS": "cp1250",
+        b"ISO8859-1": "iso-8859-1",
+        b"ASCII": "ascii",
+        b"UNICODE": "utf-16",
+        b"UTF-16": "utf-16",
+    }
+
+    # Fast check of the first 4KB to find the '1 CHAR' definition
+    try:
+        with open(filepath, "rb") as f:
+            head = f.read(4096)
+            idx = head.find(b"1 CHAR ")
+            if idx != -1:
+                idx += 7
+                end_idx_n = head.find(b"\n", idx)
+                end_idx_r = head.find(b"\r", idx)
+
+                if end_idx_n != -1 and end_idx_r != -1:
+                    end_idx = min(end_idx_n, end_idx_r)
+                else:
+                    end_idx = max(end_idx_n, end_idx_r)
+
+                if end_idx != -1:
+                    char_val = head[idx:end_idx].strip()
+                    detected_enc = encoding_map.get(char_val.upper())
+    except Exception:
+        pass
+
+    encodings_to_try = []
+    if detected_enc:
+        encodings_to_try.append(detected_enc)
+
+    # Fallbacks: UTF-8 with BOM, Standard UTF-8, Windows-1250 (Central European), Windows-1252, ISO-8859-1, Mac Roman
+    for enc in ["utf-8-sig", "utf-8", "cp1250", "cp1252", "iso-8859-1", "mac_roman"]:
+        if enc not in encodings_to_try:
+            encodings_to_try.append(enc)
 
     for enc in encodings_to_try:
         try:
@@ -112,6 +151,12 @@ def main():
         try:
             # Decode the file using our fallback encodings
             gedcom_content = safe_read_gedcom(input_path)
+
+            # Update the CHAR tag to UTF-8 so the parser doesn't get confused
+            # by a legacy encoding declaration in a file we just converted.
+            gedcom_content = re.sub(
+                r"^1 CHAR .*$", "1 CHAR UTF-8", gedcom_content, flags=re.MULTILINE
+            )
 
             # Write the decoded content to a temporary UTF-8 file
             # so the parser can reliably process it without encoding errors.
