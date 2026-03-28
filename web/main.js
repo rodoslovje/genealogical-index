@@ -1,7 +1,9 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import { renderContributors, refreshContributorsIfVisible } from './contributors.js';
-import { setupGeneralSearch, setupAdvancedSearchForm, restoreFromURL } from './search.js';
+import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, restoreFromURL } from './search.js';
 import { updateURL } from './url.js';
+
+const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family'];
 
 // --- Clearable inputs ---
 
@@ -48,8 +50,10 @@ export function renderIntros() {
     <img src="/srd-logo.png" alt="Slovensko rodoslovno društvo" class="intro-logo" />
   </a>`;
   const html = paragraphs + logo;
-  document.getElementById('intro-general').innerHTML = html;
-  document.getElementById('intro-advanced').innerHTML = html;
+  ['intro-general', 'intro-birth', 'intro-family'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
 }
 
 export function hideIntro(id) {
@@ -58,7 +62,7 @@ export function hideIntro(id) {
 }
 
 export function showIntros() {
-  ['intro-general', 'intro-advanced'].forEach(id => {
+  ['intro-general', 'intro-birth', 'intro-family'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = '';
   });
@@ -95,13 +99,14 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     }
 
     document.getElementById('general-results').style.display = 'none';
-    document.getElementById('advanced-results').style.display = 'none';
+    document.getElementById('birth-results').style.display = 'none';
+    document.getElementById('family-results').style.display = 'none';
     showIntros();
 
-    // On desktop: open sidebar for search tabs, close it for contributors
-    // On mobile: never auto-change sidebar state — hamburger controls it
+    // On desktop: open sidebar for search tabs, close for contributors
+    // On mobile: hamburger controls the sidebar — never auto-change
     if (window.innerWidth > 768) {
-      if (targetTab === 'tab-general' || targetTab === 'tab-advanced') {
+      if (SEARCH_TABS.includes(targetTab)) {
         sidebar.classList.add('open');
       } else {
         sidebar.classList.remove('open');
@@ -112,11 +117,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
 
-    if (targetTab === 'tab-general') {
-      document.getElementById('general-search-sidebar').classList.add('active');
-    } else if (targetTab === 'tab-advanced') {
-      document.getElementById('advanced-search-sidebar').classList.add('active');
-    }
+    const sidebarSectionMap = {
+      'tab-general': 'general-search-sidebar',
+      'tab-birth':   'birth-search-sidebar',
+      'tab-family':  'family-search-sidebar',
+    };
+    const sidebarSection = sidebarSectionMap[targetTab];
+    if (sidebarSection) document.getElementById(sidebarSection).classList.add('active');
 
     document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));
     document.getElementById(targetTab).classList.add('active');
@@ -137,7 +144,8 @@ async function init() {
     });
 
     setupGeneralSearch();
-    setupAdvancedSearchForm();
+    setupBirthSearchForm();
+    setupFamilySearchForm();
     renderIntros();
 
     if (window.innerWidth > 768) sidebar.classList.add('open');
@@ -147,13 +155,12 @@ async function init() {
     const urlT = urlParams.get('t');
     let urlTab = 'general';
     if (urlT === 'contributors') urlTab = 'contributors';
-    else if (urlT === 'birth' || urlT === 'family') urlTab = 'advanced';
+    else if (urlT === 'birth') urlTab = 'birth';
+    else if (urlT === 'family') urlTab = 'family';
     document.querySelector(`.tab-btn[data-target="tab-${urlTab}"]`)?.click();
 
-    // Restore search fields and trigger search if URL contains query params
     restoreFromURL();
 
-    // Re-render intro and contributors table on language change
     onLanguageChange(() => {
       renderIntros();
       refreshContributorsIfVisible();

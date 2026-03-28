@@ -19,7 +19,8 @@
           </div>
           <div class="header-nav">
             <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
-            <button class="tab-btn" data-target="tab-advanced" data-i18n="tab_advanced">Advanced Search</button>
+            <button class="tab-btn" data-target="tab-birth" data-i18n="tab_birth">Birth</button>
+            <button class="tab-btn" data-target="tab-family" data-i18n="tab_family">Family</button>
             <button class="tab-btn" data-target="tab-contributors" data-i18n="tab_contributors">Contributors</button>
           </div>
           <div class="lang-switcher" id="lang-switcher">
@@ -48,18 +49,26 @@
           <section id="tab-general" class="tab-content active">
             <div id="intro-general" class="intro-text"></div>
             <div id="general-results" class="results-container" style="display: none;">
-              <h2><span data-i18n="results_births">Births</span> (<span id="count-general-births">0</span>)</h2>
+              <h2><span data-i18n="results_births">Birth</span> (<span id="count-general-births">0</span>)</h2>
               <div class="table-responsive" id="table-general-births"></div>
-              <h2><span data-i18n="results_families">Families</span> (<span id="count-general-families">0</span>)</h2>
+              <h2><span data-i18n="results_families">Family</span> (<span id="count-general-families">0</span>)</h2>
               <div class="table-responsive" id="table-general-families"></div>
             </div>
           </section>
 
-          <section id="tab-advanced" class="tab-content">
-            <div id="intro-advanced" class="intro-text"></div>
-            <div id="advanced-results" class="results-container" style="display: none;">
-              <h2><span data-i18n="results_title">Results</span> (<span id="count-adv-results">0</span>)</h2>
-              <div class="table-responsive" id="table-adv-results"></div>
+          <section id="tab-birth" class="tab-content">
+            <div id="intro-birth" class="intro-text"></div>
+            <div id="birth-results" class="results-container" style="display: none;">
+              <h2><span data-i18n="results_births">Birth</span> (<span id="count-birth-results">0</span>)</h2>
+              <div class="table-responsive" id="table-birth-results"></div>
+            </div>
+          </section>
+
+          <section id="tab-family" class="tab-content">
+            <div id="intro-family" class="intro-text"></div>
+            <div id="family-results" class="results-container" style="display: none;">
+              <h2><span data-i18n="results_families">Family</span> (<span id="count-family-results">0</span>)</h2>
+              <div class="table-responsive" id="table-family-results"></div>
             </div>
           </section>
 
@@ -71,7 +80,8 @@
         <aside id="sidebar">
           <div class="sidebar-nav">
             <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
-            <button class="tab-btn" data-target="tab-advanced" data-i18n="tab_advanced">Advanced Search</button>
+            <button class="tab-btn" data-target="tab-birth" data-i18n="tab_birth">Birth</button>
+            <button class="tab-btn" data-target="tab-family" data-i18n="tab_family">Family</button>
             <button class="tab-btn" data-target="tab-contributors" data-i18n="tab_contributors">Contributors</button>
           </div>
 
@@ -83,8 +93,14 @@
             </div>
           </div>
 
-          <div id="advanced-search-sidebar" class="sidebar-section">
-            <div class="search-box" id="adv-search-controls">
+          <div id="birth-search-sidebar" class="sidebar-section">
+            <div class="search-box" id="birth-search-controls">
+              <!-- Controls injected by JS -->
+            </div>
+          </div>
+
+          <div id="family-search-sidebar" class="sidebar-section">
+            <div class="search-box" id="family-search-controls">
               <!-- Controls injected by JS -->
             </div>
           </div>

@@ -5,19 +5,17 @@ const translations = {
 
     // Navigation tabs
     tab_search: 'Search',
-    tab_advanced: 'Advanced Search',
+    tab_birth: 'Birth',
+    tab_family: 'Family',
     tab_contributors: 'Contributors',
 
     // Search controls
     search_placeholder: 'Search all fields (e.g., name, place, date)...',
     search_btn: 'Search',
-    adv_type_births: 'Birth',
-    adv_type_families: 'Family',
 
     // Result section headings
     results_births: 'Birth',
     results_families: 'Family',
-    results_title: 'Results',
 
     // Status messages
     loading: 'Loading genealogical data...',
@@ -53,19 +51,17 @@ const translations = {
 
     // Navigation tabs
     tab_search: 'Iskanje',
-    tab_advanced: 'Napredno iskanje',
+    tab_birth: 'Rojstvo',
+    tab_family: 'Družina',
     tab_contributors: 'Dajalci',
 
     // Search controls
     search_placeholder: 'Išči po vseh poljih (npr. ime, kraj, datum)...',
     search_btn: 'Išči',
-    adv_type_births: 'Rojstvo',
-    adv_type_families: 'Družina',
 
     // Result section headings
     results_births: 'Rojstvo',
     results_families: 'Družina',
-    results_title: 'Rezultati',
 
     // Status messages
     loading: 'Nalaganje genealoških podatkov...',
