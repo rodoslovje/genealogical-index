@@ -14,7 +14,7 @@ async function ensureData() {
       total_births: m.births_count,
       total_families: m.families_count,
       total: m.births_count + m.families_count,
-      last_modified: new Date(m.last_modified).toLocaleDateString(),
+      last_modified: m.last_modified ? m.last_modified.slice(0, 10) : '',
     }));
   }
   return cachedData;
