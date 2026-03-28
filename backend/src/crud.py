@@ -4,28 +4,25 @@ from . import models
 
 
 def get_contributors(db: Session):
-    results = []
-    contributors = db.query(models.Contributor).all()
-    for contributor in contributors:
-        births_count = (
-            db.query(models.Birth)
-            .filter(models.Birth.contributor == contributor.name)
-            .count()
-        )
-        families_count = (
-            db.query(models.Family)
-            .filter(models.Family.contributor == contributor.name)
-            .count()
-        )
-        results.append(
-            {
-                "name": contributor.name,
-                "last_modified": contributor.last_modified,
-                "births_count": births_count,
-                "families_count": families_count,
-            }
-        )
-    return results
+    births_counts = dict(
+        db.query(models.Birth.contributor, func.count(models.Birth.id))
+        .group_by(models.Birth.contributor)
+        .all()
+    )
+    families_counts = dict(
+        db.query(models.Family.contributor, func.count(models.Family.id))
+        .group_by(models.Family.contributor)
+        .all()
+    )
+    return [
+        {
+            "name": c.name,
+            "last_modified": c.last_modified,
+            "births_count": births_counts.get(c.name, 0),
+            "families_count": families_counts.get(c.name, 0),
+        }
+        for c in db.query(models.Contributor).all()
+    ]
 
 
 def search_all(db: Session, query: str, skip: int = 0, limit: int = 100):
