@@ -106,6 +106,20 @@ def get_event_data(element, event_tag):
     return "", ""
 
 
+def extract_year(date_str):
+    """Returns the 4-digit year from a GEDCOM date string, or None if not found."""
+    if not date_str:
+        return None
+    match = re.search(r'\b(\d{4})\b', date_str)
+    return int(match.group(1)) if match else None
+
+
+def is_recent(date_str, cutoff_year):
+    """Returns True if the year in date_str is within the last 100 years."""
+    year = extract_year(date_str)
+    return year is not None and year > cutoff_year
+
+
 def main():
     """
     Main function to process all GEDCOM files in the input directory,
@@ -231,7 +245,18 @@ def main():
                 }
             )
 
-        # --- 3. Write Output JSON Files ---
+        # --- 3. Filter recent records (privacy: exclude last 100 years) ---
+        cutoff_year = datetime.now().year - 100
+        births_before = len(births_data)
+        families_before = len(families_data)
+        births_data = [r for r in births_data if not is_recent(r["date_of_birth"], cutoff_year)]
+        families_data = [r for r in families_data if not is_recent(r["date_of_marriage"], cutoff_year)]
+        filtered_births = births_before - len(births_data)
+        filtered_families = families_before - len(families_data)
+        if filtered_births or filtered_families:
+            print(f"  Filtered {filtered_births} recent birth(s) and {filtered_families} recent family/families (after {cutoff_year}).")
+
+        # --- 4. Write Output JSON Files ---
         # Write the extracted births data to its JSON file.
         births_output_path = os.path.join(OUTPUT_DIR, f"{contributor_id}-births.json")
         with open(births_output_path, "w", encoding="utf-8") as f:
