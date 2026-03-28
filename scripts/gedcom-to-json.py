@@ -4,6 +4,7 @@ import argparse
 import os
 import json
 import re
+import unicodedata
 from datetime import datetime
 from gedcom.parser import Parser
 
@@ -178,10 +179,10 @@ def main():
 
     # Process each file found.
     for filename in gedcom_files:
-        contributor_id = "-".join(
+        contributor_id = unicodedata.normalize("NFC", "-".join(
             part.lower().capitalize()
             for part in os.path.splitext(filename)[0].split("-")
-        )
+        ))
         input_path = os.path.join(INPUT_DIR, filename)
         births_output_path = os.path.join(OUTPUT_DIR, f"{contributor_id}-births.json")
         families_output_path = os.path.join(
