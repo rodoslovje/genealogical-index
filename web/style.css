@@ -396,6 +396,21 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   }
 }
 
+/* --- Totals bar --- */
+.totals-bar {
+  display: flex;
+  gap: 24px;
+  padding: 8px 20px;
+  background: #eef3f8;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.totals-bar strong {
+  color: var(--primary);
+}
+
 /* --- Footer --- */
 .app-footer {
   display: flex;
