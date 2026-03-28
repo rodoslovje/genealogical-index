@@ -160,7 +160,7 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   flex-wrap: wrap;
 }
 
-.search-box input,
+.search-box input:not([type="checkbox"]),
 .search-box select,
 .search-box button:not(.clear-btn) {
   padding: 10px;
@@ -168,6 +168,11 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   border: 1px solid var(--border);
   border-radius: 4px;
   flex-grow: 1;
+}
+
+.search-box button:not(.clear-btn),
+.search-box .exact-toggle {
+  flex-basis: 100%;
 }
 
 /* Wrapper for inputs to contain a clear button */
@@ -211,6 +216,25 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   background: #c8c8c8;
   color: #222;
   opacity: 1;
+}
+
+/* --- Exact search toggle --- */
+.exact-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.exact-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary);
 }
 
 /* --- Shared nav button style (lang toggle + hamburger) --- */
@@ -443,7 +467,7 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   .search-box {
     flex-direction: column;
   }
-  .search-box input, .search-box select, .search-box button:not(.clear-btn) {
+  .search-box input:not([type="checkbox"]), .search-box select, .search-box button:not(.clear-btn) {
     width: 100%;
   }
 }

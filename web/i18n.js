@@ -12,6 +12,7 @@ const translations = {
     // Search controls
     search_placeholder: 'Search all fields (e.g., name, place, date)...',
     search_btn: 'Search',
+    exact_search: 'Exact',
 
     // Result section headings
     results_births: 'Birth',
@@ -65,6 +66,7 @@ const translations = {
     // Search controls
     search_placeholder: 'Išči po vseh poljih (npr. ime, kraj, datum)...',
     search_btn: 'Išči',
+    exact_search: 'Točno',
 
     // Result section headings
     results_births: 'Rojstvo',

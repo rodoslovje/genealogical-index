@@ -24,14 +24,16 @@ async function performGeneralSearch() {
   const query = document.getElementById('general-query').value.trim();
   if (!query) return;
 
-  updateURL({ q: query });
+  const exact = document.getElementById('general-exact')?.checked || false;
+  updateURL({ q: query, ...(exact ? { ex: '1' } : {}) });
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
   document.getElementById('table-general-births').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-families').innerHTML = `<p>${t('searching')}</p>`;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/search/general?q=${encodeURIComponent(query)}&limit=500`);
+    const params = new URLSearchParams({ q: query, limit: '500', ...(exact ? { exact: 'true' } : {}) });
+    const response = await fetch(`${API_BASE_URL}/api/search/general?${params}`);
     const results = await response.json();
     lastGeneralResults = results;
 
@@ -51,7 +53,10 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   const container = document.getElementById(controlsId);
   const prefix = `adv-${urlType}-`;
 
+  const exactId = `${prefix}exact`;
+
   function renderFields() {
+    const exactChecked = document.getElementById(exactId)?.checked || false;
     let html = '';
     columns.filter(c => c !== 'contributor').forEach(col => {
       const inputId = `${prefix}${col}`;
@@ -62,6 +67,10 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
                  <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
                </div>`;
     });
+    html += `<label class="exact-toggle">
+               <input type="checkbox" id="${exactId}"${exactChecked ? ' checked' : ''} />
+               <span>${t('exact_search')}</span>
+             </label>`;
     html += `<button id="btn-adv-search-${urlType}">${t('search_btn')}</button>`;
     container.innerHTML = html;
   }
@@ -82,14 +91,15 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       return;
     }
 
-    const shortParams = { t: urlType };
+    const exact = document.getElementById(exactId)?.checked || false;
+    const shortParams = { t: urlType, ...(exact ? { ex: '1' } : {}) };
     for (const [field, val] of Object.entries(fieldParams)) {
       shortParams[PARAM_MAP[field] || field] = val;
     }
     updateURL(shortParams);
 
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
-    const apiParams = new URLSearchParams({ ...fieldParams, limit: '500' });
+    const apiParams = new URLSearchParams({ ...fieldParams, limit: '500', ...(exact ? { exact: 'true' } : {}) });
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/search/advanced/${endpoint}?${apiParams}`);
@@ -168,6 +178,10 @@ export function restoreFromURL() {
 
   if (q) {
     document.getElementById('general-query').value = q;
+    if (params.get('ex') === '1') {
+      const cb = document.getElementById('general-exact');
+      if (cb) cb.checked = true;
+    }
     document.getElementById('btn-general-search').click();
   } else if (tParam === 'birth' || tParam === 'family') {
     const columns = tParam === 'birth' ? birthColumns : familyColumns;
@@ -185,6 +199,10 @@ export function restoreFromURL() {
         }
       }
     });
+    if (params.get('ex') === '1') {
+      const cb = document.getElementById(`${prefix}exact`);
+      if (cb) cb.checked = true;
+    }
     if (hasCriteria) document.getElementById(`btn-adv-search-${tParam}`)?.click();
   }
 }
