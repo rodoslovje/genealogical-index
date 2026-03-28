@@ -14,8 +14,8 @@ export function setupGeneralSearch() {
 
   onLanguageChange(() => {
     if (lastGeneralResults) {
-      renderTable(lastGeneralResults.births, 'table-general-births', birthColumns, 'surname', true);
-      renderTable(lastGeneralResults.families, 'table-general-families', familyColumns, 'husband_surname', true);
+      renderTable(lastGeneralResults.births, 'table-general-births', birthColumns, 'surname', true, 'name');
+      renderTable(lastGeneralResults.families, 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
     }
   });
 }
@@ -37,8 +37,8 @@ async function performGeneralSearch() {
 
     document.getElementById('count-general-births').textContent = results.births.length;
     document.getElementById('count-general-families').textContent = results.families.length;
-    renderTable(results.births, 'table-general-births', birthColumns, 'surname', true);
-    renderTable(results.families, 'table-general-families', familyColumns, 'husband_surname', true);
+    renderTable(results.births, 'table-general-births', birthColumns, 'surname', true, 'name');
+    renderTable(results.families, 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
   } catch (error) {
     console.error('Search failed:', error);
     document.getElementById('general-results').innerHTML = `<p>${t('search_failed')}</p>`;
@@ -47,7 +47,7 @@ async function performGeneralSearch() {
 
 // --- Birth / Family advanced search (shared setup) ---
 
-function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, tableId, introId, defaultSort, urlType }) {
+function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, tableId, introId, defaultSort, defaultSecondarySort = null, urlType }) {
   const container = document.getElementById(controlsId);
   const prefix = `adv-${urlType}-`;
 
@@ -94,9 +94,9 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     try {
       const response = await fetch(`${API_BASE_URL}/api/search/advanced/${endpoint}?${apiParams}`);
       const results = await response.json();
-      lastAdvResults[urlType] = { data: results, cols: columns, defaultSort };
+      lastAdvResults[urlType] = { data: results, cols: columns, defaultSort, defaultSecondarySort };
       document.getElementById(countId).textContent = results.length;
-      renderTable(results, tableId, columns, defaultSort, true);
+      renderTable(results, tableId, columns, defaultSort, true, defaultSecondarySort);
     } catch (error) {
       console.error('Search failed:', error);
       document.getElementById(tableId).innerHTML = `<p>${t('search_failed')}</p>`;
@@ -127,7 +127,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   onLanguageChange(() => {
     renderFields();
     const last = lastAdvResults[urlType];
-    if (last) renderTable(last.data, tableId, last.cols, last.defaultSort, true);
+    if (last) renderTable(last.data, tableId, last.cols, last.defaultSort, true, last.defaultSecondarySort);
   });
 }
 
@@ -141,6 +141,7 @@ export function setupBirthSearchForm() {
     tableId: 'table-birth-results',
     introId: 'intro-birth',
     defaultSort: 'surname',
+    defaultSecondarySort: 'name',
     urlType: 'birth',
   });
 }
@@ -155,6 +156,7 @@ export function setupFamilySearchForm() {
     tableId: 'table-family-results',
     introId: 'intro-family',
     defaultSort: 'husband_surname',
+    defaultSecondarySort: 'husband_name',
     urlType: 'family',
   });
 }

@@ -27,49 +27,55 @@ export function parseDateForSort(dateStr) {
   return year * 10000 + month * 100 + day;
 }
 
-function compareValues(a, b, col, ascending) {
-  const dir = ascending ? 1 : -1;
+function getValue(row, col) {
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
   const isNumeric = ['total_births', 'total_families', 'total'].includes(col);
-
-  let va, vb;
-  if (isGedcomDate) {
-    va = parseDateForSort(a[col]);
-    vb = parseDateForSort(b[col]);
-  } else if (isNumeric) {
-    va = Number(a[col] || 0);
-    vb = Number(b[col] || 0);
-  } else {
-    va = String(a[col] || '').toLowerCase();
-    vb = String(b[col] || '').toLowerCase();
-  }
-
-  if (va < vb) return -1 * dir;
-  if (va > vb) return 1 * dir;
-  return 0;
+  if (isGedcomDate) return parseDateForSort(row[col]);
+  if (isNumeric) return Number(row[col] || 0);
+  return String(row[col] || '').toLowerCase();
 }
 
-export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true) {
+function sortData(data, primary, secondary) {
+  data.sort((a, b) => {
+    const va = getValue(a, primary.column);
+    const vb = getValue(b, primary.column);
+    const dir = primary.ascending ? 1 : -1;
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    if (secondary) {
+      const sa = getValue(a, secondary.column);
+      const sb = getValue(b, secondary.column);
+      const sdir = secondary.ascending ? 1 : -1;
+      if (sa < sb) return -1 * sdir;
+      if (sa > sb) return 1 * sdir;
+    }
+    return 0;
+  });
+}
+
+export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
   const container = document.getElementById(containerId);
   if (data.length === 0) {
     container.innerHTML = `<p>${t('no_results')}</p>`;
     return;
   }
 
-  if (!container._sortState || (container._sortState.column === null && defaultSortColumn)) {
-    container._sortState = { column: defaultSortColumn, ascending: defaultSortAscending };
+  if (!container._sortState) {
+    container._sortState = {
+      primary: defaultSortColumn ? { column: defaultSortColumn, ascending: defaultSortAscending } : null,
+      secondary: defaultSecondarySortColumn ? { column: defaultSecondarySortColumn, ascending: true } : null,
+    };
   }
 
-  if (container._sortState.column) {
-    data.sort((a, b) => compareValues(a, b, container._sortState.column, container._sortState.ascending));
-  }
+  const { primary, secondary } = container._sortState;
+  if (primary) sortData(data, primary, secondary);
 
   let html = '<table><thead><tr>';
   columns.forEach(col => {
     const header = t(`col_${col}`);
-    const indicator = container._sortState.column === col
-      ? (container._sortState.ascending ? ' ▲' : ' ▼')
-      : '';
+    let indicator = '';
+    if (primary?.column === col) indicator = primary.ascending ? ' ▲' : ' ▼';
+    else if (secondary?.column === col) indicator = secondary.ascending ? ' △' : ' ▽';
     html += `<th data-col="${col}" class="sortable">${header}${indicator}</th>`;
   });
   html += '</tr></thead><tbody>';
@@ -85,13 +91,15 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   container.querySelectorAll('th.sortable').forEach(th => {
     th.addEventListener('click', () => {
       const col = th.dataset.col;
-      if (container._sortState.column === col) {
-        container._sortState.ascending = !container._sortState.ascending;
+      const state = container._sortState;
+      if (state.primary?.column === col) {
+        // Toggle direction on already-primary column
+        state.primary.ascending = !state.primary.ascending;
       } else {
-        container._sortState.column = col;
-        container._sortState.ascending = true;
+        // Clicked column becomes primary; old primary becomes secondary
+        state.secondary = state.primary;
+        state.primary = { column: col, ascending: true };
       }
-      data.sort((a, b) => compareValues(a, b, container._sortState.column, container._sortState.ascending));
       renderTable(data, containerId, columns);
     });
   });
