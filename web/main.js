@@ -96,6 +96,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       document.body.classList.add('contributors-view');
       updateURL({ t: 'contributors' });
       renderContributors();
+      renderTotalsBar();
     } else {
       document.body.classList.remove('contributors-view');
     }
@@ -149,7 +150,6 @@ async function init() {
     setupBirthSearchForm();
     setupFamilySearchForm();
     renderIntros();
-    renderTotalsBar();
 
     const buildEl = document.getElementById('build-time');
     const dataEl = document.getElementById('data-updated');
