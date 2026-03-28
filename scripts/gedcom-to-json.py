@@ -239,7 +239,7 @@ def main():
 
             # Instantiate the parser and parse the file.
             gedcom_parser = Parser()
-            gedcom_parser.parse_file(temp_path)
+            gedcom_parser.parse_file(temp_path, strict=False)
 
             # Clean up the temporary file on success
             os.remove(temp_path)
