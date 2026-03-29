@@ -79,6 +79,7 @@ def search_advanced_births(
     surname: str = None,
     date_of_birth: str = None,
     place_of_birth: str = None,
+    contributor: str = None,
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
@@ -97,6 +98,8 @@ def search_advanced_births(
         query = query.filter(_text_filter(models.Birth.place_of_birth, place_of_birth, exact))
     if date_of_birth:
         query = query.filter(models.Birth.date_of_birth.ilike(f"%{date_of_birth}%"))
+    if contributor:
+        query = query.filter(_text_filter(models.Birth.contributor, contributor, exact))
 
     return query.offset(skip).limit(limit).all()
 
@@ -109,6 +112,7 @@ def search_advanced_families(
     wife_surname: str = None,
     date_of_marriage: str = None,
     place_of_marriage: str = None,
+    contributor: str = None,
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
@@ -131,5 +135,7 @@ def search_advanced_families(
         query = query.filter(_text_filter(models.Family.place_of_marriage, place_of_marriage, exact))
     if date_of_marriage:
         query = query.filter(models.Family.date_of_marriage.ilike(f"%{date_of_marriage}%"))
+    if contributor:
+        query = query.filter(_text_filter(models.Family.contributor, contributor, exact))
 
     return query.offset(skip).limit(limit).all()

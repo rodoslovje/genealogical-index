@@ -13,6 +13,7 @@ export const PARAM_MAP = {
   wife_surname:     'wsn',
   date_of_marriage: 'dom',
   place_of_marriage:'pom',
+  contributor:      'c',
 };
 
 export const PARAM_MAP_REVERSE = Object.fromEntries(

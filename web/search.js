@@ -58,7 +58,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   function renderFields() {
     const exactChecked = document.getElementById(exactId)?.checked || false;
     let html = '';
-    columns.filter(c => c !== 'contributor').forEach(col => {
+    columns.forEach(col => {
       const inputId = `${prefix}${col}`;
       const label = t(`col_${col}`);
       const val = document.getElementById(inputId)?.value || '';
@@ -77,7 +77,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
   async function performSearch() {
     const fieldParams = {};
-    columns.filter(c => c !== 'contributor').forEach(c => {
+    columns.forEach(c => {
       const val = document.getElementById(`${prefix}${c}`)?.value.trim();
       if (val) fieldParams[c] = val;
     });
@@ -187,7 +187,7 @@ export function restoreFromURL() {
     const columns = tParam === 'birth' ? birthColumns : familyColumns;
     const prefix = `adv-${tParam}-`;
     let hasCriteria = false;
-    columns.filter(c => c !== 'contributor').forEach(col => {
+    columns.forEach(col => {
       const val = params.get(PARAM_MAP[col] || col);
       if (val) {
         const input = document.getElementById(`${prefix}${col}`);

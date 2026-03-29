@@ -39,10 +39,12 @@ export async function renderTotalsBar() {
     const data = await ensureData();
     const births = data.reduce((s, r) => s + r.total_births, 0);
     const families = data.reduce((s, r) => s + r.total_families, 0);
+    const lastUpdate = data.reduce((max, r) => r.last_modified > max ? r.last_modified : max, '');
     setEl('total-contributors', data.length.toLocaleString());
     setEl('total-births', births.toLocaleString());
     setEl('total-families', families.toLocaleString());
     setEl('total-all', (births + families).toLocaleString());
+    setEl('total-last-update', lastUpdate);
     document.getElementById('totals-bar').style.display = '';
   } catch { /* silently skip if API unavailable */ }
 }
