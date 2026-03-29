@@ -307,8 +307,8 @@ def main():
                 name, surname = get_name_surname(element)
                 birth_date, birth_place = get_event_data(element, "BIRT")
 
-                # Store for marriage cross-referencing
-                individuals_dict[pointer] = {"name": name, "surname": surname}
+                # Store for marriage cross-referencing (include birth_date for privacy filter)
+                individuals_dict[pointer] = {"name": name, "surname": surname, "birth_date": birth_date}
 
                 if birth_date or birth_place:
                     births_data.append(
@@ -345,6 +345,8 @@ def main():
                     "wife_surname": wife.get("surname", ""),
                     "date_of_marriage": marr_date or "",
                     "place_of_marriage": marr_place or "",
+                    "_husb_birth": husb.get("birth_date", ""),
+                    "_wife_birth": wife.get("birth_date", ""),
                 }
             )
 
@@ -359,7 +361,13 @@ def main():
             r
             for r in families_data
             if not is_recent(r["date_of_marriage"], cutoff_year)
+            and not is_recent(r.get("_husb_birth", ""), cutoff_year)
+            and not is_recent(r.get("_wife_birth", ""), cutoff_year)
         ]
+        # Strip internal fields before writing
+        for r in families_data:
+            r.pop("_husb_birth", None)
+            r.pop("_wife_birth", None)
         filtered_births = births_before - len(births_data)
         filtered_families = families_before - len(families_data)
         if filtered_births or filtered_families:
