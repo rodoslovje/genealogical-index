@@ -2,7 +2,7 @@ import { t } from './i18n.js';
 import { renderTable } from './table.js';
 import { API_BASE_URL } from './config.js';
 
-const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total', 'total_links', 'last_modified'];
+const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified'];
 let cachedData = null;
 let fetchPromise = null;
 
@@ -16,7 +16,8 @@ function ensureData() {
           contributor_ID: m.name,
           total_births: m.births_count,
           total_families: m.families_count,
-          total: m.births_count + m.families_count,
+          total_deaths: m.deaths_count || 0,
+          total: m.births_count + m.families_count + (m.deaths_count || 0),
           total_links: m.links_count || 0,
           last_modified: m.last_modified ? m.last_modified.slice(0, 10) : '',
         }));
@@ -40,12 +41,14 @@ export async function renderTotalsBar() {
     const data = await ensureData();
     const births = data.reduce((s, r) => s + r.total_births, 0);
     const families = data.reduce((s, r) => s + r.total_families, 0);
+    const deaths = data.reduce((s, r) => s + r.total_deaths, 0);
     const links = data.reduce((s, r) => s + r.total_links, 0);
     const lastUpdate = data.reduce((max, r) => r.last_modified > max ? r.last_modified : max, '');
     setEl('total-contributors', data.length.toLocaleString());
     setEl('total-births', births.toLocaleString());
     setEl('total-families', families.toLocaleString());
-    setEl('total-all', (births + families).toLocaleString());
+    setEl('total-deaths', deaths.toLocaleString());
+    setEl('total-all', (births + families + deaths).toLocaleString());
     setEl('total-links', links.toLocaleString());
     setEl('total-last-update', lastUpdate);
     document.getElementById('totals-bar').style.display = '';
