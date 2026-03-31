@@ -27,6 +27,16 @@ export function parseDateForSort(dateStr) {
   return year * 10000 + month * 100 + day;
 }
 
+const CENTERED_COLUMNS = new Set([
+  'contributor', 'contributor_ID',
+  'total_births', 'total_families', 'total', 'total_links',
+  'last_modified',
+]);
+
+const RIGHT_COLUMNS = new Set([
+  'date_of_birth', 'date_of_marriage',
+]);
+
 function getValue(row, col) {
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
   const isNumeric = ['total_births', 'total_families', 'total', 'total_links'].includes(col);
@@ -79,7 +89,8 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       let indicator = '';
       if (primary?.column === col) indicator = primary.ascending ? ' ▲' : ' ▼';
       else if (secondary?.column === col) indicator = secondary.ascending ? ' △' : ' ▽';
-      html += `<th data-col="${col}" class="sortable">${header}${indicator}</th>`;
+      const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
+      html += `<th data-col="${col}"${cls}>${header}${indicator}</th>`;
     }
   });
   html += '</tr></thead><tbody>';
@@ -91,6 +102,12 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         html += row.link
           ? `<td class="link-cell"><a href="${row.link}" target="_blank" rel="noopener" title="${row.link}">🔗</a></td>`
           : '<td></td>';
+      } else if (CENTERED_COLUMNS.has(col)) {
+        const isNumeric = ['total_births', 'total_families', 'total', 'total_links'].includes(col);
+        const val = isNumeric && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
+        html += `<td class="col-center">${val}</td>`;
+      } else if (RIGHT_COLUMNS.has(col)) {
+        html += `<td class="col-right">${row[col] || ''}</td>`;
       } else {
         html += `<td>${row[col] || ''}</td>`;
       }

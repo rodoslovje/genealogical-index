@@ -450,6 +450,14 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   color: var(--primary);
 }
 
+.col-center {
+  text-align: center;
+}
+
+.col-right {
+  text-align: right;
+}
+
 .link-cell {
   text-align: center;
   font-size: 1rem;
