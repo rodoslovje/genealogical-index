@@ -29,7 +29,7 @@ export function parseDateForSort(dateStr) {
 
 const CENTERED_COLUMNS = new Set([
   'contributor', 'contributor_ID',
-  'total_births', 'total_families', 'total', 'total_links',
+  'total_births', 'total_families', 'total_deaths', 'total', 'total_links',
   'last_modified',
 ]);
 
@@ -39,7 +39,7 @@ const RIGHT_COLUMNS = new Set([
 
 function getValue(row, col) {
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
-  const isNumeric = ['total_births', 'total_families', 'total', 'total_links'].includes(col);
+  const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
   if (isGedcomDate) return parseDateForSort(row[col]);
   if (isNumeric) return Number(row[col] || 0);
   return String(row[col] || '').toLowerCase();
@@ -103,7 +103,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           ? `<td class="link-cell"><a href="${row.link}" target="_blank" rel="noopener" title="${row.link}">🔗</a></td>`
           : '<td></td>';
       } else if (CENTERED_COLUMNS.has(col)) {
-        const isNumeric = ['total_births', 'total_families', 'total', 'total_links'].includes(col);
+        const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
         const val = isNumeric && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
