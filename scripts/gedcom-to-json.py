@@ -178,6 +178,10 @@ def _link_from_subelement(element, sources_dict):
         return _find_matricula_url(full)
 
     if tag == "SOUR":
+        # P8: URL stored directly as SOUR value (ODAR.GED pattern: "2 SOUR https://...")
+        url = _find_matricula_url(val)
+        if url:
+            return url
         # P5/P7: reference pointer @Sxxx@
         if val.startswith("@") and val.endswith("@"):
             template = sources_dict.get(val, "")
