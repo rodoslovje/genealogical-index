@@ -29,7 +29,7 @@ export function parseDateForSort(dateStr) {
 
 function getValue(row, col) {
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage';
-  const isNumeric = ['total_births', 'total_families', 'total'].includes(col);
+  const isNumeric = ['total_births', 'total_families', 'total', 'total_links'].includes(col);
   if (isGedcomDate) return parseDateForSort(row[col]);
   if (isNumeric) return Number(row[col] || 0);
   return String(row[col] || '').toLowerCase();

@@ -198,6 +198,18 @@ def main():
     with open(metadata_file, "r", encoding="utf-8") as f:
         metadata = json.load(f)
 
+    # --- Remove contributors no longer in metadata (e.g. deleted GED files) ---
+    if not full_mode:
+        known = {m["contributor"] for m in metadata}
+        stale = db.execute(text("SELECT name FROM contributors")).fetchall()
+        for (name,) in stale:
+            if name not in known:
+                print(f"\nRemoving stale contributor: {name}")
+                db.execute(text("DELETE FROM births WHERE contributor = :name"), {"name": name})
+                db.execute(text("DELETE FROM families WHERE contributor = :name"), {"name": name})
+                db.execute(text("DELETE FROM contributors WHERE name = :name"), {"name": name})
+        db.commit()
+
     for meta in metadata:
         contributor_id = meta["contributor"]
         last_modified = meta.get("last_modified", "")
