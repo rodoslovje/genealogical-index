@@ -92,14 +92,22 @@ def setup_update(db):
 
 
 def get_db_state(db, contributor_name):
-    """Returns (last_modified, links_count, deaths_count) stored in contributors table, or (None, 0, 0)."""
+    """Returns (last_modified, births_count, families_count, deaths_count, links_count) stored in DB, or (None, 0, 0, 0, 0)."""
     row = db.execute(
         text("SELECT last_modified FROM contributors WHERE name = :name"),
         {"name": contributor_name},
     ).fetchone()
     if not row:
-        return None, 0, 0
+        return None, 0, 0, 0, 0
     lm = row[0]
+    births_count = db.execute(
+        text("SELECT COUNT(*) FROM births WHERE contributor = :name"),
+        {"name": contributor_name},
+    ).scalar()
+    families_count = db.execute(
+        text("SELECT COUNT(*) FROM families WHERE contributor = :name"),
+        {"name": contributor_name},
+    ).scalar()
     birth_links = db.execute(
         text(
             "SELECT COUNT(*) FROM births WHERE contributor = :name AND link IS NOT NULL AND link != ''"
@@ -124,8 +132,10 @@ def get_db_state(db, contributor_name):
     ).scalar()
     return (
         lm,
-        (birth_links or 0) + (family_links or 0) + (death_links or 0),
+        (births_count or 0),
+        (families_count or 0),
         (deaths_count or 0),
+        (birth_links or 0) + (family_links or 0) + (death_links or 0),
     )
 
 
@@ -304,15 +314,23 @@ def main():
         last_modified = meta.get("last_modified", "")
 
         if not full_mode:
-            db_last_modified, db_links_count, db_deaths_count = get_db_state(
-                db, contributor_id
-            )
-            meta_links_count = meta.get("links_count", 0)
+            (
+                db_last_modified,
+                db_births_count,
+                db_families_count,
+                db_deaths_count,
+                db_links_count,
+            ) = get_db_state(db, contributor_id)
+            meta_births_count = meta.get("births_count", 0)
+            meta_families_count = meta.get("families_count", 0)
             meta_deaths_count = meta.get("deaths_count", 0)
+            meta_links_count = meta.get("links_count", 0)
             if (
                 db_last_modified == last_modified
-                and db_links_count == meta_links_count
+                and db_births_count == meta_births_count
+                and db_families_count == meta_families_count
                 and db_deaths_count == meta_deaths_count
+                and db_links_count == meta_links_count
             ):
                 print(
                     f"\nSkipping contributor {index}/{total_contributors}: {contributor_id} (up to date)"
