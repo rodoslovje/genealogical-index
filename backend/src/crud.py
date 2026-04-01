@@ -129,6 +129,7 @@ def search_advanced_births(
     date_of_birth_to: str = None,
     place_of_birth: str = None,
     contributor: str = None,
+    has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
@@ -150,6 +151,8 @@ def search_advanced_births(
         query = query.filter(date_cond)
     if contributor:
         query = query.filter(_text_filter(models.Birth.contributor, contributor, exact))
+    if has_link:
+        query = query.filter(models.Birth.link.isnot(None), models.Birth.link != "")
 
     return query.offset(skip).limit(limit).all()
 
@@ -164,6 +167,7 @@ def search_advanced_families(
     date_of_marriage_to: str = None,
     place_of_marriage: str = None,
     contributor: str = None,
+    has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
@@ -189,6 +193,8 @@ def search_advanced_families(
         query = query.filter(date_cond)
     if contributor:
         query = query.filter(_text_filter(models.Family.contributor, contributor, exact))
+    if has_link:
+        query = query.filter(models.Family.link.isnot(None), models.Family.link != "")
 
     return query.offset(skip).limit(limit).all()
 
@@ -201,6 +207,7 @@ def search_advanced_deaths(
     date_of_death_to: str = None,
     place_of_death: str = None,
     contributor: str = None,
+    has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
@@ -222,5 +229,7 @@ def search_advanced_deaths(
         query = query.filter(date_cond)
     if contributor:
         query = query.filter(_text_filter(models.Death.contributor, contributor, exact))
+    if has_link:
+        query = query.filter(models.Death.link.isnot(None), models.Death.link != "")
 
     return query.offset(skip).limit(limit).all()

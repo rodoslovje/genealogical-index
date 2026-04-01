@@ -56,9 +56,11 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   const prefix = `adv-${urlType}-`;
 
   const exactId = `${prefix}exact`;
+  const hasLinkId = `${prefix}has_link`;
 
   function renderFields() {
     const exactChecked = document.getElementById(exactId)?.checked || false;
+    const hasLinkChecked = document.getElementById(hasLinkId)?.checked || false;
     let html = '';
     columns.filter(col => !DISPLAY_ONLY_COLUMNS.has(col)).forEach(col => {
       const inputId = `${prefix}${col}`;
@@ -84,6 +86,10 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
                  </div>`;
       }
     });
+    html += `<label class="exact-toggle">
+               <input type="checkbox" id="${hasLinkId}"${hasLinkChecked ? ' checked' : ''} />
+               <span>${t('has_link')}</span>
+             </label>`;
     html += `<label class="exact-toggle">
                <input type="checkbox" id="${exactId}"${exactChecked ? ' checked' : ''} />
                <span>${t('exact_search')}</span>
@@ -113,7 +119,8 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     }
 
     const exact = document.getElementById(exactId)?.checked || false;
-    const shortParams = { t: urlType, ...(exact ? { ex: '1' } : {}) };
+    const hasLink = document.getElementById(hasLinkId)?.checked || false;
+    const shortParams = { t: urlType, ...(exact ? { ex: '1' } : {}), ...(hasLink ? { hl: '1' } : {}) };
     for (const [field, val] of Object.entries(fieldParams)) {
       shortParams[PARAM_MAP[field] || field] = val;
     }
@@ -121,7 +128,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
     document.getElementById(countId).textContent = '0';
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
-    const apiParams = new URLSearchParams({ ...fieldParams, limit: '500', ...(exact ? { exact: 'true' } : {}) });
+    const apiParams = new URLSearchParams({ ...fieldParams, limit: '500', ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}) });
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/search/advanced/${endpoint}?${apiParams}`);
@@ -252,6 +259,10 @@ export function restoreFromURL() {
     if (params.get('ex') === '1') {
       const cb = document.getElementById(`${prefix}exact`);
       if (cb) cb.checked = true;
+    }
+    if (params.get('hl') === '1') {
+      const cb = document.getElementById(`${prefix}has_link`);
+      if (cb) { cb.checked = true; hasCriteria = true; }
     }
     if (hasCriteria) document.getElementById(`btn-adv-search-${tParam}`)?.click();
   }

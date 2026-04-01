@@ -14,6 +14,7 @@ const translations = {
     search_placeholder: 'Search all fields (e.g., name, place, date)...',
     search_btn: 'Search',
     exact_search: 'Exact',
+    has_link: 'With link',
     date_to: 'to',
 
     // Result section headings
@@ -77,6 +78,7 @@ const translations = {
     search_placeholder: 'Išči po vseh poljih (npr. ime, kraj, datum)...',
     search_btn: 'Išči',
     exact_search: 'Točno',
+    has_link: 'S povezavo',
     date_to: 'do',
 
     // Result section headings

@@ -55,13 +55,15 @@ def search_advanced_births(
     date_of_birth_to: Optional[str] = None,
     place_of_birth: Optional[str] = None,
     contributor: Optional[str] = None,
+    has_link: bool = False,
     limit: int = 500,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
     return crud.search_advanced_births(
         db, name, surname, date_of_birth, date_of_birth_to=date_of_birth_to,
-        place_of_birth=place_of_birth, contributor=contributor, limit=limit, exact=exact
+        place_of_birth=place_of_birth, contributor=contributor, has_link=has_link,
+        limit=limit, exact=exact
     )
 
 
@@ -75,6 +77,7 @@ def search_advanced_families(
     date_of_marriage_to: Optional[str] = None,
     place_of_marriage: Optional[str] = None,
     contributor: Optional[str] = None,
+    has_link: bool = False,
     limit: int = 500,
     exact: bool = False,
     db: Session = Depends(get_db),
@@ -89,6 +92,7 @@ def search_advanced_families(
         date_of_marriage_to=date_of_marriage_to,
         place_of_marriage=place_of_marriage,
         contributor=contributor,
+        has_link=has_link,
         limit=limit,
         exact=exact,
     )
@@ -102,11 +106,13 @@ def search_advanced_deaths(
     date_of_death_to: Optional[str] = None,
     place_of_death: Optional[str] = None,
     contributor: Optional[str] = None,
+    has_link: bool = False,
     limit: int = 500,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
     return crud.search_advanced_deaths(
         db, name, surname, date_of_death, date_of_death_to=date_of_death_to,
-        place_of_death=place_of_death, contributor=contributor, limit=limit, exact=exact
+        place_of_death=place_of_death, contributor=contributor, has_link=has_link,
+        limit=limit, exact=exact
     )

@@ -14,6 +14,7 @@ export const PARAM_MAP = {
   date_of_marriage: 'dom',
   place_of_marriage:'pom',
   contributor:          'c',
+  has_link:             'hl',
   date_of_birth_to:     'dobt',
   date_of_marriage_to:  'domt',
   date_of_death:        'dod',
