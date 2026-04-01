@@ -15,7 +15,7 @@ const translations = {
     search_btn: 'Search',
     exact_search: 'Exact',
     has_link: 'With link',
-    date_to: 'to',
+    date_to: 'to Year',
 
     // Result section headings
     results_births: 'Birth',
@@ -79,7 +79,7 @@ const translations = {
     search_btn: 'Išči',
     exact_search: 'Točno',
     has_link: 'S povezavo',
-    date_to: 'do',
+    date_to: 'do leta',
 
     // Result section headings
     results_births: 'Rojstvo',
