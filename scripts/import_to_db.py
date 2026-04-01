@@ -208,7 +208,12 @@ def import_contributor(db, contributor_id, last_modified):
                 birth,
             )
     else:
-        print(f"  -> WARNING: Could not find births file at {births_file}")
+        visible = [
+            f for f in os.listdir(DATA_DIR) if contributor_id.casefold() in f.casefold()
+        ]
+        print(
+            f"  -> WARNING: Could not find births file at {births_file}\n     (Docker sync issue? Container only sees: {visible})"
+        )
 
     # Load Families
     if os.path.exists(families_file):
@@ -229,7 +234,12 @@ def import_contributor(db, contributor_id, last_modified):
                 family,
             )
     else:
-        print(f"  -> WARNING: Could not find families file at {families_file}")
+        visible = [
+            f for f in os.listdir(DATA_DIR) if contributor_id.casefold() in f.casefold()
+        ]
+        print(
+            f"  -> WARNING: Could not find families file at {families_file}\n     (Docker sync issue? Container only sees: {visible})"
+        )
 
     # Load Deaths
     deaths_file = find_data_file(DATA_DIR, f"{contributor_id}-deaths.json")
@@ -248,7 +258,12 @@ def import_contributor(db, contributor_id, last_modified):
                 death,
             )
     else:
-        print(f"  -> WARNING: Could not find deaths file at {deaths_file}")
+        visible = [
+            f for f in os.listdir(DATA_DIR) if contributor_id.casefold() in f.casefold()
+        ]
+        print(
+            f"  -> WARNING: Could not find deaths file at {deaths_file}\n     (Docker sync issue? Container only sees: {visible})"
+        )
 
     db.commit()
 
