@@ -313,7 +313,13 @@ def main():
         contributor_id = meta["contributor"]
         last_modified = meta.get("last_modified", "")
 
-        if not full_mode:
+        do_import = False
+        if full_mode:
+            do_import = True
+            print(
+                f"\nProcessing contributor {index}/{total_contributors}: {contributor_id}"
+            )
+        else:  # update mode
             (
                 db_last_modified,
                 db_births_count,
@@ -321,10 +327,12 @@ def main():
                 db_deaths_count,
                 db_links_count,
             ) = get_db_state(db, contributor_id)
+
             meta_births_count = meta.get("births_count", 0)
             meta_families_count = meta.get("families_count", 0)
             meta_deaths_count = meta.get("deaths_count", 0)
             meta_links_count = meta.get("links_count", 0)
+
             is_up_to_date = (
                 db_last_modified == last_modified
                 and db_births_count == meta_births_count
@@ -337,8 +345,8 @@ def main():
                 print(
                     f"\nSkipping contributor {index}/{total_contributors}: {contributor_id} (up to date)"
                 )
-                continue
             else:
+                do_import = True
                 print(
                     f"\nProcessing contributor {index}/{total_contributors}: {contributor_id} (mismatch detected)"
                 )
@@ -362,13 +370,9 @@ def main():
                     print(
                         f"  -> Mismatch in links_count: DB={db_links_count} vs Meta={meta_links_count}"
                     )
-                import_contributor(db, contributor_id, last_modified)
-                continue
 
-        print(
-            f"\nProcessing contributor {index}/{total_contributors}: {contributor_id}"
-        )
-        import_contributor(db, contributor_id, last_modified)
+        if do_import:
+            import_contributor(db, contributor_id, last_modified)
 
     print("\nData import finished successfully.")
     db.close()
