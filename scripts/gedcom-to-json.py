@@ -599,12 +599,13 @@ def main():
                         children_info.append("private")
                     else:
                         child_name = child_data.get("name", "")
-                        if child_name:  # Only add child if name is present
-                            birth_year = extract_year(child_birth_date)
-                            if birth_year:
-                                children_info.append(f"{child_name} *{birth_year}")
-                            else:
-                                children_info.append(child_name)
+                        if not child_name:
+                            child_name = "unknown"
+                        birth_year = extract_year(child_birth_date)
+                        if birth_year:
+                            children_info.append(f"{child_name} *{birth_year}")
+                        else:
+                            children_info.append(child_name)
             children_string = ", ".join(children_info)
 
             record = {
