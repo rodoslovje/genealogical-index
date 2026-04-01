@@ -69,13 +69,13 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
             conditions.append(year_expr <= to_year)
         return and_(*conditions)
     if from_val:
-        return column.ilike(from_val if exact else f"%{from_val}%")
+        return column.ilike(f"%{from_val}%")
     return None
 
 
 def _text_filter(column, value, exact: bool):
     if exact:
-        return column.ilike(value)  # case-insensitive exact match, no wildcards
+        return column.ilike(f"%{value}%")  # case-insensitive exact substring match
     return or_(column.op("%")(cast(value, Text)), column.ilike(f"%{value}%"))
 
 
