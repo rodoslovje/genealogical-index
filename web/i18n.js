@@ -16,7 +16,6 @@ const translations = {
     exact_search: 'Exact',
     has_link: 'With link',
     date_to: 'to Year',
-    phonetic_search: 'Phonetic',
     download_csv: 'Download CSV',
     general_search_label: 'General',
 
@@ -87,7 +86,6 @@ const translations = {
     exact_search: 'Točno',
     has_link: 'S povezavo',
     date_to: 'do leta',
-    phonetic_search: 'Fonetično',
     download_csv: 'Prenesi CSV',
     general_search_label: 'Splošno',
 

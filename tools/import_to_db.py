@@ -24,7 +24,6 @@ def setup_full(db):
     """Drop and recreate all tables (full mode)."""
     print("Setting up database tables and extensions (full rebuild)...")
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;"))
     db.execute(
         text(
             """
@@ -52,15 +51,6 @@ def setup_full(db):
         CREATE INDEX idx_family_children_trgm ON families USING gist (children gist_trgm_ops);
         CREATE INDEX idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
         CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
-
-        CREATE INDEX idx_birth_name_phonetic ON births (dmetaphone(name));
-        CREATE INDEX idx_birth_surname_phonetic ON births (dmetaphone(surname));
-        CREATE INDEX idx_family_h_name_phonetic ON families (dmetaphone(husband_name));
-        CREATE INDEX idx_family_h_surname_phonetic ON families (dmetaphone(husband_surname));
-        CREATE INDEX idx_family_w_name_phonetic ON families (dmetaphone(wife_name));
-        CREATE INDEX idx_family_w_surname_phonetic ON families (dmetaphone(wife_surname));
-        CREATE INDEX idx_death_name_phonetic ON deaths (dmetaphone(name));
-        CREATE INDEX idx_death_surname_phonetic ON deaths (dmetaphone(surname));
     """
         )
     )
@@ -71,7 +61,6 @@ def setup_update(db):
     """Create tables if they don't exist yet (update mode)."""
     print("Setting up database tables and extensions (update mode)...")
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;"))
     db.execute(
         text(
             """
@@ -100,15 +89,6 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_family_children_trgm ON families USING gist (children gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
-
-        CREATE INDEX IF NOT EXISTS idx_birth_name_phonetic ON births (dmetaphone(name));
-        CREATE INDEX IF NOT EXISTS idx_birth_surname_phonetic ON births (dmetaphone(surname));
-        CREATE INDEX IF NOT EXISTS idx_family_h_name_phonetic ON families (dmetaphone(husband_name));
-        CREATE INDEX IF NOT EXISTS idx_family_h_surname_phonetic ON families (dmetaphone(husband_surname));
-        CREATE INDEX IF NOT EXISTS idx_family_w_name_phonetic ON families (dmetaphone(wife_name));
-        CREATE INDEX IF NOT EXISTS idx_family_w_surname_phonetic ON families (dmetaphone(wife_surname));
-        CREATE INDEX IF NOT EXISTS idx_death_name_phonetic ON deaths (dmetaphone(name));
-        CREATE INDEX IF NOT EXISTS idx_death_surname_phonetic ON deaths (dmetaphone(surname));
     """
         )
     )

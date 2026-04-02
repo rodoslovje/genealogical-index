@@ -24,7 +24,6 @@ export function setupGeneralSearch() {
     const contributorVal = document.getElementById('general-contributor')?.value || '';
     const exactChecked = document.getElementById('general-exact')?.checked || false;
     const hasLinkChecked = document.getElementById('general-has_link')?.checked || false;
-    const phoneticChecked = document.getElementById('general-phonetic')?.checked || false;
 
     let html = `
       <div class="input-wrapper">
@@ -60,10 +59,6 @@ export function setupGeneralSearch() {
       <label class="exact-toggle">
         <input type="checkbox" id="general-has_link"${hasLinkChecked ? ' checked' : ''} />
         <span>${t('has_link')}</span>
-      </label>
-      <label class="exact-toggle">
-        <input type="checkbox" id="general-phonetic"${phoneticChecked ? ' checked' : ''} />
-        <span>${t('phonetic_search')}</span>
       </label>
       <label class="exact-toggle">
         <input type="checkbox" id="general-exact"${exactChecked ? ' checked' : ''} />
@@ -123,9 +118,6 @@ async function performGeneralSearch() {
   const hasLink = document.getElementById('general-has_link')?.checked || false;
   if (hasLink) params.has_link = 'true';
 
-  const phonetic = document.getElementById('general-phonetic')?.checked || false;
-  if (phonetic) params.phonetic = 'true';
-
   const shortParams = {};
   for (const [key, value] of Object.entries(params)) {
     if (key === 'exact' || key === 'has_link') continue;
@@ -134,7 +126,6 @@ async function performGeneralSearch() {
   }
   if (exact) shortParams.ex = '1';
   if (hasLink) shortParams.hl = '1';
-  if (phonetic) shortParams.ph = '1';
 
   updateURL(shortParams);
   hideIntro('intro-general');
@@ -180,12 +171,10 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
   const exactId = `${prefix}exact`;
   const hasLinkId = `${prefix}has_link`;
-  const phoneticId = `${prefix}phonetic`;
 
   function renderFields() {
     const exactChecked = document.getElementById(exactId)?.checked || false;
     const hasLinkChecked = document.getElementById(hasLinkId)?.checked || false;
-    const phoneticChecked = document.getElementById(phoneticId)?.checked || false;
     let html = '';
     columns.filter(col => !DISPLAY_ONLY_COLUMNS.has(col)).forEach(col => {
       const inputId = `${prefix}${col}`;
@@ -214,10 +203,6 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     html += `<label class="exact-toggle">
                <input type="checkbox" id="${hasLinkId}"${hasLinkChecked ? ' checked' : ''} />
                <span>${t('has_link')}</span>
-             </label>`;
-    html += `<label class="exact-toggle">
-               <input type="checkbox" id="${phoneticId}"${phoneticChecked ? ' checked' : ''} />
-               <span>${t('phonetic_search')}</span>
              </label>`;
     html += `<label class="exact-toggle">
                <input type="checkbox" id="${exactId}"${exactChecked ? ' checked' : ''} />
@@ -249,8 +234,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
     const exact = document.getElementById(exactId)?.checked || false;
     const hasLink = document.getElementById(hasLinkId)?.checked || false;
-    const phonetic = document.getElementById(phoneticId)?.checked || false;
-    const shortParams = { t: urlType, ...(exact ? { ex: '1' } : {}), ...(hasLink ? { hl: '1' } : {}), ...(phonetic ? { ph: '1' } : {}) };
+    const shortParams = { t: urlType, ...(exact ? { ex: '1' } : {}), ...(hasLink ? { hl: '1' } : {}) };
     for (const [field, val] of Object.entries(fieldParams)) {
       shortParams[PARAM_MAP[field] || field] = val;
     }
@@ -258,7 +242,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
     document.getElementById(countId).textContent = '0';
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
-    const apiParams = new URLSearchParams({ ...fieldParams, limit: '500', ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}), ...(phonetic ? { phonetic: 'true' } : {}) });
+    const apiParams = new URLSearchParams({ ...fieldParams, limit: '500', ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}) });
 
     const overlay = document.getElementById('search-overlay');
     if (overlay) overlay.style.display = 'flex';
@@ -379,10 +363,6 @@ export function restoreFromURL() {
       const cb = document.getElementById('general-has_link');
       if (cb) cb.checked = true;
     }
-    if (params.get('ph') === '1') {
-      const cb = document.getElementById('general-phonetic');
-      if (cb) cb.checked = true;
-    }
     document.getElementById('btn-general-search')?.click();
   } else if (tParam === 'birth' || tParam === 'family' || tParam === 'death') {
     const columns = tParam === 'birth' ? birthColumns : tParam === 'family' ? familyColumns : deathColumns;
@@ -420,10 +400,6 @@ export function restoreFromURL() {
     if (params.get('hl') === '1') {
       const cb = document.getElementById(`${prefix}has_link`);
       if (cb) { cb.checked = true; hasCriteria = true; }
-    }
-    if (params.get('ph') === '1') {
-      const cb = document.getElementById(`${prefix}phonetic`);
-      if (cb) { cb.checked = true; }
     }
     if (hasCriteria) document.getElementById(`btn-adv-search-${tParam}`)?.click();
   }

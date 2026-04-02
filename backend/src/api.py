@@ -49,7 +49,6 @@ def search_general(
     contributor: Optional[str] = None,
     has_link: bool = False,
     limit: int = 500,
-    phonetic: bool = False,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
@@ -67,7 +66,6 @@ def search_general(
         has_link=has_link,
         limit=limit,
         exact=exact,
-        phonetic=phonetic,
     )
 
 
@@ -81,7 +79,6 @@ def search_advanced_births(
     contributor: Optional[str] = None,
     has_link: bool = False,
     limit: int = 500,
-    phonetic: bool = False,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
@@ -96,7 +93,6 @@ def search_advanced_births(
         has_link=has_link,
         limit=limit,
         exact=exact,
-        phonetic=phonetic,
     )
 
 
@@ -113,7 +109,6 @@ def search_advanced_families(
     contributor: Optional[str] = None,
     has_link: bool = False,
     limit: int = 500,
-    phonetic: bool = False,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
@@ -131,7 +126,6 @@ def search_advanced_families(
         has_link=has_link,
         limit=limit,
         exact=exact,
-        phonetic=phonetic,
     )
 
 
@@ -145,7 +139,6 @@ def search_advanced_deaths(
     contributor: Optional[str] = None,
     has_link: bool = False,
     limit: int = 500,
-    phonetic: bool = False,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
@@ -160,5 +153,4 @@ def search_advanced_deaths(
         has_link=has_link,
         limit=limit,
         exact=exact,
-        phonetic=phonetic,
     )
