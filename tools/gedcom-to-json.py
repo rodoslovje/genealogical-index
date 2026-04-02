@@ -12,8 +12,8 @@ from gedcom.parser import Parser
 # --- Configuration ---
 # Define paths relative to the project root.
 # This script should be run from the root of the project directory.
-INPUT_DIR = "input"
-OUTPUT_DIR = "data"
+INPUT_DIR = "data/filtered"
+OUTPUT_DIR = "data/output"
 CACHE_FILE = ".gedcom-to-json.cache"
 
 

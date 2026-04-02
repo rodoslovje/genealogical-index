@@ -13,7 +13,7 @@ services:
     container_name: sgi_api
     volumes:
       - ./data:/app/data
-      - ./scripts:/app/scripts
+      - ./tools:/app/tools
       - ./backend/src:/app/src
     restart: unless-stopped
     env_file:

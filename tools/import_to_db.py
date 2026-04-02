@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
-DATA_DIR = "data"
+DATA_DIR = "data/output"
 
 # --- Database Setup ---
 DATABASE_URL = os.getenv("DATABASE_URL")

@@ -18,7 +18,7 @@ This project provides a scalable, searchable web application for genealogical da
 
 Before importing data into the database, extract the JSON records from your raw GEDCOM (`.ged`) files.
 
-1. Place your raw `.ged` files into the `input/` directory. (Create it if it doesn't exist).
+1. Place your raw `.ged` files into the `data/filtered/` directory. (Create it if it doesn't exist).
 2. Setup a Python virtual environment and install the required dependencies:
    ```bash
    python -m venv .venv
@@ -27,9 +27,9 @@ Before importing data into the database, extract the JSON records from your raw 
    ```
 3. Run the extraction script:
    ```bash
-   python tools/gedcom-to-json.py
+   python tools/gedcom-to-json.py --mode update
    ```
-   _This will parse the GEDCOM files and output JSON datasets alongside a `metadata.json` file in the `data/` directory._
+   _This will parse the GEDCOM files and output JSON datasets alongside a `metadata.json` file in the `data/output/` directory._
 
 ## 2. Deploying the Backend & Database
 
