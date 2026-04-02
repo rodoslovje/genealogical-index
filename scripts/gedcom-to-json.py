@@ -14,6 +14,7 @@ from gedcom.parser import Parser
 # This script should be run from the root of the project directory.
 INPUT_DIR = "input"
 OUTPUT_DIR = "data"
+CACHE_FILE = ".gedcom-to-json.cache"
 
 
 def _build_cp1252_to_cp1250_map():
@@ -232,6 +233,25 @@ def _indi_level_link(element, sources_dict):
 _URL_CACHE = {}
 
 
+def load_url_cache():
+    global _URL_CACHE
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                _URL_CACHE = json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load URL cache: {e}")
+            _URL_CACHE = {}
+
+
+def save_url_cache():
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(_URL_CACHE, f, indent=4)
+    except Exception as e:
+        print(f"Warning: Could not save URL cache: {e}")
+
+
 def _determine_link_type(url):
     if not url:
         return "unknown"
@@ -422,6 +442,8 @@ def main():
     full_mode = args.mode == "full"
 
     print(f"Starting GEDCOM data extraction process (mode: {args.mode})...")
+
+    load_url_cache()
 
     # --- Setup ---
     # Ensure the output directory exists, creating it if necessary.
@@ -809,6 +831,8 @@ def main():
     with open(metadata_output_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=4)
     print(f"\n  -> Successfully created metadata file: {metadata_output_path}")
+
+    save_url_cache()
 
     print("\nExtraction process finished successfully.")
 
