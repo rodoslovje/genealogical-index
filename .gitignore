@@ -1,5 +1,5 @@
-# Ignore the input directory that has raw GEDCOM files from contributors
-input/
+# Ignore the data directory that has raw GEDCOM files from contributors and output
+data
 
 # Ignore environment variables file that contains sensitive information
 .env
