@@ -19,7 +19,7 @@ const translations = {
     download_csv: 'Download CSV',
     general_search_label: 'General',
     chart_others: 'Others',
-    chart_birth_years: 'Birth Years Distribution',
+    chart_timeline: 'Records Timeline',
 
     // Result section headings
     results_births: 'Birth',
@@ -91,7 +91,7 @@ const translations = {
     download_csv: 'Prenesi CSV',
     general_search_label: 'Splošno',
     chart_others: 'Ostali',
-    chart_birth_years: 'Porazdelitev letnic rojstev',
+    chart_timeline: 'Časovnica zapisov',
 
     // Result section headings
     results_births: 'Rojstvo',

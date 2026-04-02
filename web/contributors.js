@@ -35,7 +35,7 @@ function ensureData() {
 function ensureTimelineData() {
   if (timelineData) return Promise.resolve(timelineData);
   if (!timelinePromise) {
-    timelinePromise = fetch(`${API_BASE_URL}/api/stats/birth-years`)
+    timelinePromise = fetch(`${API_BASE_URL}/api/stats/timeline`)
       .then(r => r.json())
       .then(data => { timelineData = data; return data; });
   }
@@ -163,7 +163,10 @@ function renderTimelineChart(data) {
   const decades = {};
   data.forEach(d => {
     const decade = Math.floor(d.year / 10) * 10;
-    decades[decade] = (decades[decade] || 0) + d.count;
+    if (!decades[decade]) decades[decade] = { births: 0, marriages: 0, deaths: 0 };
+    decades[decade].births += d.births;
+    decades[decade].marriages += d.marriages;
+    decades[decade].deaths += d.deaths;
   });
 
   // Fill any gaps so the timeline represents a continuous X-axis
@@ -171,42 +174,49 @@ function renderTimelineChart(data) {
     const minDecade = Math.min(...Object.keys(decades).map(Number));
     const maxDecade = Math.max(...Object.keys(decades).map(Number));
     for (let i = minDecade; i <= maxDecade; i += 10) {
-      if (decades[i] === undefined) decades[i] = 0;
+      if (!decades[i]) decades[i] = { births: 0, marriages: 0, deaths: 0 };
     }
   }
 
-  const labels = Object.keys(decades).sort((a, b) => a - b).map(d => `${d}s`);
-  const values = Object.keys(decades).sort((a, b) => a - b).map(d => decades[d]);
+  const sortedKeys = Object.keys(decades).sort((a, b) => a - b);
+  const labels = sortedKeys.map(d => `${d}s`);
+  const births = sortedKeys.map(d => decades[d].births);
+  const marriages = sortedKeys.map(d => decades[d].marriages);
+  const deaths = sortedKeys.map(d => decades[d].deaths);
 
   if (timelineChartInstance) timelineChartInstance.destroy();
 
+  // Using Chart.js stacked feature for the timeline
   timelineChartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,
-      datasets: [{
-        label: t('chart_birth_years'),
-        data: values,
-        backgroundColor: '#3498db',
-        borderRadius: 4
-      }]
+      datasets: [
+        { label: t('results_births'), data: births, backgroundColor: '#3498db', borderRadius: 2 },
+        { label: t('results_families'), data: marriages, backgroundColor: '#2ecc71', borderRadius: 2 },
+        { label: t('results_deaths'), data: deaths, backgroundColor: '#e74c3c', borderRadius: 2 }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: { display: true, position: 'bottom', labels: { boxWidth: 12 } },
         title: {
           display: true,
-          text: t('chart_birth_years'),
+          text: t('chart_timeline'),
           font: { family: 'system-ui, -apple-system, sans-serif', size: 14, weight: '600' },
           color: '#444'
         },
         tooltip: {
-          callbacks: { label: (ctx) => ` ${ctx.parsed.y.toLocaleString()} ${t('results_births').toLowerCase()}` }
+          mode: 'index',
+          intersect: false
         }
       },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } }
+      scales: {
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+        x: { stacked: true, grid: { display: false } }
+      }
     }
   });
 }

@@ -59,9 +59,11 @@ class GeneralSearchResponse(BaseModel):
     deaths: List[Death]
 
 
-class YearStat(BaseModel):
+class TimelineStat(BaseModel):
     year: int
-    count: int
+    births: int = 0
+    marriages: int = 0
+    deaths: int = 0
 
 
 class Contributor(BaseModel):

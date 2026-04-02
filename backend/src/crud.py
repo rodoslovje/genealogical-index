@@ -53,19 +53,50 @@ def get_contributors(db: Session):
     ]
 
 
-def get_birth_years_distribution(db: Session):
-    """Extracts 4-digit years from births and returns their historical distribution."""
-    year_expr = cast(func.substring(models.Birth.date_of_birth, r"\d{4}"), Integer)
-    results = (
-        db.query(year_expr.label("year"), func.count(models.Birth.id))
+def get_timeline_distribution(db: Session):
+    """Extracts 4-digit years from births, marriages, and deaths for the timeline."""
+    birth_year = cast(func.substring(models.Birth.date_of_birth, r"\d{4}"), Integer)
+    births = (
+        db.query(birth_year.label("year"), func.count(models.Birth.id))
         .filter(models.Birth.date_of_birth.op("~")(r"\d{4}"))
         .group_by("year")
         .all()
     )
-    # Return the aggregated years within a historically valid genealogical range
-    return [
-        {"year": r[0], "count": r[1]} for r in results if r[0] and 1500 <= r[0] <= 2025
-    ]
+
+    marr_year = cast(func.substring(models.Family.date_of_marriage, r"\d{4}"), Integer)
+    marriages = (
+        db.query(marr_year.label("year"), func.count(models.Family.id))
+        .filter(models.Family.date_of_marriage.op("~")(r"\d{4}"))
+        .group_by("year")
+        .all()
+    )
+
+    death_year = cast(func.substring(models.Death.date_of_death, r"\d{4}"), Integer)
+    deaths = (
+        db.query(death_year.label("year"), func.count(models.Death.id))
+        .filter(models.Death.date_of_death.op("~")(r"\d{4}"))
+        .group_by("year")
+        .all()
+    )
+
+    timeline = {}
+    for y, c in births:
+        if y and 1500 <= y <= 2025:
+            timeline.setdefault(
+                y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
+            )["births"] = c
+    for y, c in marriages:
+        if y and 1500 <= y <= 2025:
+            timeline.setdefault(
+                y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
+            )["marriages"] = c
+    for y, c in deaths:
+        if y and 1500 <= y <= 2025:
+            timeline.setdefault(
+                y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
+            )["deaths"] = c
+
+    return list(timeline.values())
 
 
 def _extract_year(val: str):
