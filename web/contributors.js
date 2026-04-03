@@ -179,7 +179,7 @@ function renderTimelineChart(data) {
   }
 
   const sortedKeys = Object.keys(decades).sort((a, b) => a - b);
-  const labels = sortedKeys.map(d => `${d}s`);
+  const labels = sortedKeys.map(d => `${d}`);
   const births = sortedKeys.map(d => decades[d].births);
   const marriages = sortedKeys.map(d => decades[d].marriages);
   const deaths = sortedKeys.map(d => decades[d].deaths);
