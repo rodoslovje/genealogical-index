@@ -459,7 +459,9 @@ def main():
 
     # --- File Processing Loop ---
     # Find all files ending with .ged in the input directory.
-    gedcom_files = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith(".ged")]
+    gedcom_files = sorted(
+        [f for f in os.listdir(INPUT_DIR) if f.lower().endswith(".ged")]
+    )
 
     if not gedcom_files:
         print(f"No GEDCOM files found in '{INPUT_DIR}'.")
