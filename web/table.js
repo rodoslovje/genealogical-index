@@ -197,6 +197,27 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
         html += `<td class="col-right">${row[col] || ''}</td>`;
+      } else if ((col === 'husband_name' || col === 'husband_surname') && row[col]) {
+        const params = new URLSearchParams();
+        params.set('t', 'birth');
+        if (row.husband_name) params.set('n', row.husband_name);
+        if (row.husband_surname) params.set('sn', row.husband_surname);
+        params.set('ex', '1');
+        html += `<td><a href="?${params.toString()}" target="_blank" rel="noopener" class="name-link">${row[col]}</a></td>`;
+      } else if ((col === 'wife_name' || col === 'wife_surname') && row[col]) {
+        const params = new URLSearchParams();
+        params.set('t', 'birth');
+        if (row.wife_name) params.set('n', row.wife_name);
+        if (row.wife_surname) params.set('sn', row.wife_surname);
+        params.set('ex', '1');
+        html += `<td><a href="?${params.toString()}" target="_blank" rel="noopener" class="name-link">${row[col]}</a></td>`;
+      } else if ((col === 'name' || col === 'surname') && row[col] && row.date_of_death !== undefined) {
+        const params = new URLSearchParams();
+        params.set('t', 'birth');
+        if (row.name) params.set('n', row.name);
+        if (row.surname) params.set('sn', row.surname);
+        params.set('ex', '1');
+        html += `<td><a href="?${params.toString()}" target="_blank" rel="noopener" class="name-link">${row[col]}</a></td>`;
       } else if (col === 'children' && row[col]) {
         const childrenList = row[col].split(', ');
         const formattedChildren = childrenList.map(c => {
