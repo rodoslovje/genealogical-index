@@ -199,10 +199,31 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         html += `<td class="col-right">${row[col] || ''}</td>`;
       } else if (col === 'children' && row[col]) {
         const childrenList = row[col].split(', ');
+        const formattedChildren = childrenList.map(c => {
+          if (c === 'private' || c === 'unknown') return c;
+
+          let namePart = c;
+          let yearPart = '';
+          const starIdx = c.lastIndexOf('*');
+          if (starIdx !== -1) {
+            namePart = c.substring(0, starIdx).trim();
+            yearPart = c.substring(starIdx + 1).trim();
+          }
+
+          const params = new URLSearchParams();
+          params.set('t', 'birth');
+          if (namePart) params.set('n', namePart);
+          const surname = row.husband_surname || row.wife_surname || '';
+          if (surname) params.set('sn', surname);
+          if (yearPart) params.set('dob', yearPart);
+          params.set('ex', '1');
+
+          return `<a href="?${params.toString()}" target="_blank" rel="noopener">${c}</a>`;
+        });
         html += `<td>
           <details class="expandable-cell">
             <summary>${childrenList.length}</summary>
-            <div class="expanded-content">${childrenList.join('<br>')}</div>
+            <div class="expanded-content">${formattedChildren.join('<br>')}</div>
           </details>
         </td>`;
       } else {

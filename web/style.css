@@ -624,3 +624,10 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
     width: 100%;
   }
 }
+.expandable-cell .expanded-content a {
+  color: var(--secondary);
+  text-decoration: none;
+}
+.expandable-cell .expanded-content a:hover {
+  text-decoration: underline;
+}
