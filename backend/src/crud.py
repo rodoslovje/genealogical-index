@@ -123,9 +123,9 @@ def search_all(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.4 if not exact else 1.0};"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
     db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.4 if not exact else 1.0};")
+        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
     )
     db.commit()
 
@@ -260,9 +260,9 @@ def search_advanced_births(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.4 if not exact else 1.0};"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
     db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.4 if not exact else 1.0};")
+        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
     )
     db.commit()
 
@@ -306,9 +306,9 @@ def search_advanced_families(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.4 if not exact else 1.0};"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
     db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.4 if not exact else 1.0};")
+        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
     )
     db.commit()
 
@@ -363,9 +363,9 @@ def search_advanced_deaths(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.4 if not exact else 1.0};"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
     db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.4 if not exact else 1.0};")
+        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
     )
     db.commit()
 
