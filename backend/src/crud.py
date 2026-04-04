@@ -138,7 +138,6 @@ def search_all(
                     _text_filter(models.Birth.surname, word, exact),
                     _text_filter(models.Birth.place_of_birth, word, exact),
                     _text_filter(models.Birth.date_of_birth, word, exact),
-                    _text_filter(models.Birth.contributor, word, exact),
                 )
             )
     if name:
@@ -175,7 +174,6 @@ def search_all(
                     _text_filter(models.Family.children, word, exact),
                     _text_filter(models.Family.place_of_marriage, word, exact),
                     _text_filter(models.Family.date_of_marriage, word, exact),
-                    _text_filter(models.Family.contributor, word, exact),
                 )
             )
     if name:
@@ -221,7 +219,6 @@ def search_all(
                     _text_filter(models.Death.surname, word, exact),
                     _text_filter(models.Death.place_of_death, word, exact),
                     _text_filter(models.Death.date_of_death, word, exact),
-                    _text_filter(models.Death.contributor, word, exact),
                 )
             )
     if name:
