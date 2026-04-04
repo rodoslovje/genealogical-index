@@ -141,7 +141,7 @@ async function performGeneralSearch() {
   if (overlay) overlay.style.display = 'flex';
 
   try {
-    const apiParams = new URLSearchParams({ ...params, limit: '500' });
+    const apiParams = new URLSearchParams(params);
     const response = await fetch(`${API_BASE_URL}/api/search/general?${apiParams}`);
     const results = await response.json();
     lastGeneralResults = results;
@@ -242,7 +242,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
     document.getElementById(countId).textContent = '0';
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
-    const apiParams = new URLSearchParams({ ...fieldParams, limit: '500', ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}) });
+    const apiParams = new URLSearchParams({ ...fieldParams, ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}) });
 
     const overlay = document.getElementById('search-overlay');
     if (overlay) overlay.style.display = 'flex';
