@@ -131,15 +131,16 @@ def search_all(
 
     births_q = db.query(models.Birth)
     if query:
-        births_q = births_q.filter(
-            or_(
-                _text_filter(models.Birth.name, query, exact),
-                _text_filter(models.Birth.surname, query, exact),
-                _text_filter(models.Birth.place_of_birth, query, exact),
-                _text_filter(models.Birth.date_of_birth, query, exact),
-                _text_filter(models.Birth.contributor, query, exact),
+        for word in query.split():
+            births_q = births_q.filter(
+                or_(
+                    _text_filter(models.Birth.name, word, exact),
+                    _text_filter(models.Birth.surname, word, exact),
+                    _text_filter(models.Birth.place_of_birth, word, exact),
+                    _text_filter(models.Birth.date_of_birth, word, exact),
+                    _text_filter(models.Birth.contributor, word, exact),
+                )
             )
-        )
     if name:
         births_q = births_q.filter(_text_filter(models.Birth.name, name, exact))
     if surname:
@@ -164,18 +165,19 @@ def search_all(
 
     families_q = db.query(models.Family)
     if query:
-        families_q = families_q.filter(
-            or_(
-                _text_filter(models.Family.husband_name, query, exact),
-                _text_filter(models.Family.husband_surname, query, exact),
-                _text_filter(models.Family.wife_name, query, exact),
-                _text_filter(models.Family.wife_surname, query, exact),
-                _text_filter(models.Family.children, query, exact),
-                _text_filter(models.Family.place_of_marriage, query, exact),
-                _text_filter(models.Family.date_of_marriage, query, exact),
-                _text_filter(models.Family.contributor, query, exact),
+        for word in query.split():
+            families_q = families_q.filter(
+                or_(
+                    _text_filter(models.Family.husband_name, word, exact),
+                    _text_filter(models.Family.husband_surname, word, exact),
+                    _text_filter(models.Family.wife_name, word, exact),
+                    _text_filter(models.Family.wife_surname, word, exact),
+                    _text_filter(models.Family.children, word, exact),
+                    _text_filter(models.Family.place_of_marriage, word, exact),
+                    _text_filter(models.Family.date_of_marriage, word, exact),
+                    _text_filter(models.Family.contributor, word, exact),
+                )
             )
-        )
     if name:
         families_q = families_q.filter(
             or_(
@@ -212,15 +214,16 @@ def search_all(
 
     deaths_q = db.query(models.Death)
     if query:
-        deaths_q = deaths_q.filter(
-            or_(
-                _text_filter(models.Death.name, query, exact),
-                _text_filter(models.Death.surname, query, exact),
-                _text_filter(models.Death.place_of_death, query, exact),
-                _text_filter(models.Death.date_of_death, query, exact),
-                _text_filter(models.Death.contributor, query, exact),
+        for word in query.split():
+            deaths_q = deaths_q.filter(
+                or_(
+                    _text_filter(models.Death.name, word, exact),
+                    _text_filter(models.Death.surname, word, exact),
+                    _text_filter(models.Death.place_of_death, word, exact),
+                    _text_filter(models.Death.date_of_death, word, exact),
+                    _text_filter(models.Death.contributor, word, exact),
+                )
             )
-        )
     if name:
         deaths_q = deaths_q.filter(_text_filter(models.Death.name, name, exact))
     if surname:
