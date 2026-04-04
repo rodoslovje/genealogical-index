@@ -105,7 +105,7 @@ def _text_filter(column, value, exact: bool):
         return column.op("~*")(
             rf"\y{safe_value}\y"
         )  # case-insensitive word boundary match
-    return or_(column.op("%")(cast(value, Text)), column.ilike(f"%{value}%"))
+    return or_(column.op("%>")(cast(value, Text)), column.ilike(f"%{value}%"))
 
 
 def search_all(
@@ -123,10 +123,10 @@ def search_all(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SELECT set_limit({0.5 if not exact else 1.0});"))
-    db.execute(text(f"SELECT set_limit({0.5 if not exact else 1.0});"))
-    db.execute(text(f"SELECT set_limit({0.5 if not exact else 1.0});"))
-    db.execute(text(f"SELECT set_limit({0.5 if not exact else 1.0});"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.4 if not exact else 1.0};"))
+    db.execute(
+        text(f"SET pg_trgm.word_similarity_threshold = {0.4 if not exact else 1.0};")
+    )
     db.commit()
 
     births_q = db.query(models.Birth)
@@ -260,7 +260,10 @@ def search_advanced_births(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.4 if not exact else 1.0};"))
+    db.execute(
+        text(f"SET pg_trgm.word_similarity_threshold = {0.4 if not exact else 1.0};")
+    )
     db.commit()
 
     query = db.query(models.Birth)
@@ -303,7 +306,10 @@ def search_advanced_families(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.4 if not exact else 1.0};"))
+    db.execute(
+        text(f"SET pg_trgm.word_similarity_threshold = {0.4 if not exact else 1.0};")
+    )
     db.commit()
 
     query = db.query(models.Family)
@@ -357,7 +363,10 @@ def search_advanced_deaths(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.4 if not exact else 1.0};"))
+    db.execute(
+        text(f"SET pg_trgm.word_similarity_threshold = {0.4 if not exact else 1.0};")
+    )
     db.commit()
 
     query = db.query(models.Death)
