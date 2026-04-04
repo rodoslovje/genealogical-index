@@ -123,7 +123,10 @@ def search_all(
     exact: bool = False,
 ):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SELECT set_limit({0.3 if not exact else 1.0});"))
+    db.execute(text(f"SELECT set_limit({0.5 if not exact else 1.0});"))
+    db.execute(text(f"SELECT set_limit({0.5 if not exact else 1.0});"))
+    db.execute(text(f"SELECT set_limit({0.5 if not exact else 1.0});"))
+    db.execute(text(f"SELECT set_limit({0.5 if not exact else 1.0});"))
     db.commit()
 
     births_q = db.query(models.Birth)
