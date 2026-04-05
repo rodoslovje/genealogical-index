@@ -127,7 +127,6 @@ def search_all(
     db.execute(
         text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
     )
-    db.commit()
 
     births_q = db.query(models.Birth)
     if query:
@@ -264,7 +263,6 @@ def search_advanced_births(
     db.execute(
         text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
     )
-    db.commit()
 
     query = db.query(models.Birth)
 
@@ -310,7 +308,6 @@ def search_advanced_families(
     db.execute(
         text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
     )
-    db.commit()
 
     query = db.query(models.Family)
 
@@ -367,7 +364,6 @@ def search_advanced_deaths(
     db.execute(
         text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
     )
-    db.commit()
 
     query = db.query(models.Death)
 
