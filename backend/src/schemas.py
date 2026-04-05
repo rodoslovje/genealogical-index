@@ -8,7 +8,7 @@ class BirthBase(BaseModel):
     date_of_birth: str
     place_of_birth: str
     contributor: str
-    link: Optional[str] = None
+    links: Optional[str] = None
 
 
 class Birth(BirthBase):
@@ -30,7 +30,7 @@ class FamilyBase(BaseModel):
     date_of_marriage: str
     place_of_marriage: str
     contributor: str
-    link: Optional[str] = None
+    links: Optional[str] = None
 
 
 class Family(FamilyBase):
@@ -46,7 +46,7 @@ class DeathBase(BaseModel):
     date_of_death: str
     place_of_death: str
     contributor: str
-    link: Optional[str] = None
+    links: Optional[str] = None
 
 
 class Death(DeathBase):

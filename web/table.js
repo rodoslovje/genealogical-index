@@ -201,7 +201,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
 
   let html = '<table><thead><tr>';
   columns.forEach(col => {
-    if (col === 'link') {
+    if (col === 'links') {
       html += `<th>${t('col_link')}</th>`;
     } else {
       const header = t(`col_${col}`);
@@ -217,10 +217,20 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   data.forEach(row => {
     html += '<tr>';
     columns.forEach(col => {
-      if (col === 'link') {
-        html += row.link
-          ? `<td class="link-cell"><a href="${row.link}" target="_blank" rel="noopener" title="${row.link}">🔗</a></td>`
-          : '<td></td>';
+      if (col === 'links') {
+        let linksList = [];
+        if (row.links) {
+          try { linksList = JSON.parse(row.links); } catch(e) { linksList = [row.links]; }
+        }
+        if (linksList.length) {
+          const icons = linksList.map(url => {
+            const icon = url.includes('geneanet.org/cemetery') ? '⚰' : '🔗';
+            return `<a href="${url}" target="_blank" rel="noopener" title="${url}">${icon}</a>`;
+          }).join(' ');
+          html += `<td class="link-cell">${icons}</td>`;
+        } else {
+          html += '<td></td>';
+        }
       } else if (CENTERED_COLUMNS.has(col)) {
         const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
         const val = isNumeric && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');

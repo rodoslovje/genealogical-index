@@ -156,7 +156,7 @@ def search_all(
         )
     if has_link:
         births_q = births_q.filter(
-            models.Birth.link.isnot(None), models.Birth.link != ""
+            models.Birth.links.isnot(None), models.Birth.links != ""
         )
 
     births = births_q.offset(skip).limit(limit).all()
@@ -204,7 +204,7 @@ def search_all(
         )
     if has_link:
         families_q = families_q.filter(
-            models.Family.link.isnot(None), models.Family.link != ""
+            models.Family.links.isnot(None), models.Family.links != ""
         )
 
     families = families_q.offset(skip).limit(limit).all()
@@ -237,7 +237,7 @@ def search_all(
         )
     if has_link:
         deaths_q = deaths_q.filter(
-            models.Death.link.isnot(None), models.Death.link != ""
+            models.Death.links.isnot(None), models.Death.links != ""
         )
 
     deaths = deaths_q.offset(skip).limit(limit).all()
@@ -282,7 +282,7 @@ def search_advanced_births(
     if contributor:
         query = query.filter(_text_filter(models.Birth.contributor, contributor, exact))
     if has_link:
-        query = query.filter(models.Birth.link.isnot(None), models.Birth.link != "")
+        query = query.filter(models.Birth.links.isnot(None), models.Birth.links != "")
 
     return query.offset(skip).limit(limit).all()
 
@@ -341,7 +341,7 @@ def search_advanced_families(
             _text_filter(models.Family.contributor, contributor, exact)
         )
     if has_link:
-        query = query.filter(models.Family.link.isnot(None), models.Family.link != "")
+        query = query.filter(models.Family.links.isnot(None), models.Family.links != "")
 
     return query.offset(skip).limit(limit).all()
 
@@ -383,6 +383,6 @@ def search_advanced_deaths(
     if contributor:
         query = query.filter(_text_filter(models.Death.contributor, contributor, exact))
     if has_link:
-        query = query.filter(models.Death.link.isnot(None), models.Death.link != "")
+        query = query.filter(models.Death.links.isnot(None), models.Death.links != "")
 
     return query.offset(skip).limit(limit).all()

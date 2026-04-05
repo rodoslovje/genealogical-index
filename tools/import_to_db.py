@@ -44,13 +44,13 @@ def setup_full(db):
             links_count INTEGER DEFAULT 0
         );
         CREATE TABLE births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, links TEXT
         );
 
         CREATE INDEX idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
@@ -79,16 +79,34 @@ def setup_update(db):
             last_modified VARCHAR(255)
         );
         CREATE TABLE IF NOT EXISTS births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, link TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, links TEXT
         );
-        ALTER TABLE births ADD COLUMN IF NOT EXISTS link TEXT;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS link TEXT;
+        ALTER TABLE births ADD COLUMN IF NOT EXISTS links TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS links TEXT;
+        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS links TEXT;
+
+        -- Migrate old single-URL 'link' column to JSON array 'links', then drop it
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='births' AND column_name='link') THEN
+                UPDATE births SET links = '["' || link || '"]' WHERE link IS NOT NULL AND link != '' AND links IS NULL;
+                ALTER TABLE births DROP COLUMN link;
+            END IF;
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='families' AND column_name='link') THEN
+                UPDATE families SET links = '["' || link || '"]' WHERE link IS NOT NULL AND link != '' AND links IS NULL;
+                ALTER TABLE families DROP COLUMN link;
+            END IF;
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deaths' AND column_name='link') THEN
+                UPDATE deaths SET links = '["' || link || '"]' WHERE link IS NOT NULL AND link != '' AND links IS NULL;
+                ALTER TABLE deaths DROP COLUMN link;
+            END IF;
+        END $$;
+
         ALTER TABLE families ADD COLUMN IF NOT EXISTS children TEXT;
         ALTER TABLE families DROP COLUMN IF EXISTS children_json;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS children_list TEXT;
@@ -199,11 +217,13 @@ def import_contributor(
             print(f"  -> Inserting {len(births_data)} birth records...")
             for birth in births_data:
                 birth["contributor"] = contributor_id
-                birth.setdefault("link", None)
+                if isinstance(birth.get("links"), list):
+                    birth["links"] = json.dumps(birth["links"], ensure_ascii=False)
+                birth.setdefault("links", None)
                 db.execute(
                     text(
-                        "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor, link) "
-                        "VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor, :link)"
+                        "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor, links) "
+                        "VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor, :links)"
                     ),
                     birth,
                 )
@@ -230,7 +250,9 @@ def import_contributor(
             print(f"  -> Inserting {len(families_data)} family records...")
             for family in families_data:
                 family["contributor"] = contributor_id
-                family.setdefault("link", None)
+                if isinstance(family.get("links"), list):
+                    family["links"] = json.dumps(family["links"], ensure_ascii=False)
+                family.setdefault("links", None)
                 family.setdefault("children", None)
                 family.setdefault("children_list", None)
                 family.setdefault("husband_parents", None)
@@ -250,9 +272,9 @@ def import_contributor(
                 db.execute(
                     text(
                         "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
-                        "children, children_list, husband_parents, wife_parents, date_of_marriage, place_of_marriage, contributor, link) "
+                        "children, children_list, husband_parents, wife_parents, date_of_marriage, place_of_marriage, contributor, links) "
                         "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
-                        ":children, :children_list, :husband_parents, :wife_parents, :date_of_marriage, :place_of_marriage, :contributor, :link)"
+                        ":children, :children_list, :husband_parents, :wife_parents, :date_of_marriage, :place_of_marriage, :contributor, :links)"
                     ),
                     family,
                 )
@@ -279,11 +301,13 @@ def import_contributor(
             print(f"  -> Inserting {len(deaths_data)} death records...")
             for death in deaths_data:
                 death["contributor"] = contributor_id
-                death.setdefault("link", None)
+                if isinstance(death.get("links"), list):
+                    death["links"] = json.dumps(death["links"], ensure_ascii=False)
+                death.setdefault("links", None)
                 db.execute(
                     text(
-                        "INSERT INTO deaths (name, surname, date_of_death, place_of_death, contributor, link) "
-                        "VALUES (:name, :surname, :date_of_death, :place_of_death, :contributor, :link)"
+                        "INSERT INTO deaths (name, surname, date_of_death, place_of_death, contributor, links) "
+                        "VALUES (:name, :surname, :date_of_death, :place_of_death, :contributor, :links)"
                     ),
                     death,
                 )

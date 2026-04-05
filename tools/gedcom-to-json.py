@@ -133,6 +133,7 @@ def get_name_surname(individual):
 
 
 MATRICULA_RE = re.compile(r"https?://data\.matricula-online\.eu/[^\"\s<]+")
+GENEANET_CEMETERY_RE = re.compile(r"https?://[a-z]{2}\.geneanet\.org/cemetery/[^\"\s<]+")
 
 
 def _find_matricula_url(text):
@@ -141,6 +142,28 @@ def _find_matricula_url(text):
         return ""
     m = MATRICULA_RE.search(text)
     return m.group().rstrip(".,;)") if m else ""
+
+
+def _find_cemetery_url(text):
+    """Return the first geneanet.org/cemetery URL found in text, or empty string."""
+    if not text:
+        return ""
+    m = GENEANET_CEMETERY_RE.search(text)
+    return m.group().rstrip(".,;)") if m else ""
+
+
+def _find_all_links(text):
+    """Return list of all known link URLs found in text (matricula + cemetery)."""
+    if not text:
+        return []
+    links = []
+    url = _find_matricula_url(text)
+    if url:
+        links.append(url)
+    url = _find_cemetery_url(text)
+    if url and url not in links:
+        links.append(url)
+    return links
 
 
 _PAGE_RE = re.compile(r"\?pg=\d+")
@@ -155,7 +178,10 @@ def _apply_page(url_template, page):
 
 def _link_from_subelement(element, sources_dict):
     """
-    Extract a matricula URL from a GEDCOM sub-element using all known patterns:
+    Extract all known URLs (matricula, cemetery) from a GEDCOM sub-element.
+    Returns a deduplicated list of URLs.
+
+    Patterns covered:
       P1  NOTE value (plain) or NOTE+CONT children (HTML-wrapped)
       P2  NOTE with plain URL — same tag path as P1
       P3  SOUR > PAGE
@@ -167,67 +193,77 @@ def _link_from_subelement(element, sources_dict):
     val = element.get_value() or ""
 
     if tag == "NOTE":
-        # P2: plain URL directly as NOTE value
-        url = _find_matricula_url(val)
-        if url:
-            return url
-        # P1: URL buried in CONT/CONC continuation lines (may be HTML-wrapped)
+        # P2: plain URLs directly as NOTE value
+        urls = _find_all_links(val)
+        # P1: URLs buried in CONT/CONC continuation lines (may be HTML-wrapped)
         # CONC = concatenate directly (no separator), CONT = new line (space separator)
         full = val
         for cont in element.get_child_elements():
             sep = "" if cont.get_tag() == "CONC" else " "
             full += sep + (cont.get_value() or "")
-        return _find_matricula_url(full)
+        if full != val:
+            for url in _find_all_links(full):
+                if url not in urls:
+                    urls.append(url)
+        return urls
 
     if tag == "SOUR":
         # P8: URL stored directly as SOUR value (ODAR.GED pattern: "2 SOUR https://...")
-        url = _find_matricula_url(val)
-        if url:
-            return url
+        urls = _find_all_links(val)
+        if urls:
+            return urls
         # P5/P7: reference pointer @Sxxx@
         if val.startswith("@") and val.endswith("@"):
             template = sources_dict.get(val, "")
             if not template:
-                return ""
+                return []
             # P7: if a PAGE child exists, substitute the page number into the template URL
             for sour_child in element.get_child_elements():
                 if sour_child.get_tag() == "PAGE":
                     page_val = (sour_child.get_value() or "").strip()
-                    # page_val may be a plain number or contain text like "254" or "pg. 254"
                     m = re.search(r"\d+", page_val)
                     if m and _PAGE_RE.search(template):
-                        return _apply_page(template, m.group())
+                        return [_apply_page(template, m.group())]
             # P5: plain URL stored directly in sources_dict (no page substitution needed)
-            return template
-        # P3: inline SOUR > PAGE
+            return _find_all_links(template) or [template]
+        # P3: inline SOUR > PAGE / P4: inline SOUR > DATA > TEXT
+        urls = []
         for sour_child in element.get_child_elements():
             if sour_child.get_tag() == "PAGE":
-                url = _find_matricula_url(sour_child.get_value() or "")
-                if url:
-                    return url
-            # P4: inline SOUR > DATA > TEXT
+                for url in _find_all_links(sour_child.get_value() or ""):
+                    if url not in urls:
+                        urls.append(url)
             elif sour_child.get_tag() == "DATA":
                 for data_child in sour_child.get_child_elements():
                     if data_child.get_tag() == "TEXT":
-                        url = _find_matricula_url(data_child.get_value() or "")
-                        if url:
-                            return url
+                        for url in _find_all_links(data_child.get_value() or ""):
+                            if url not in urls:
+                                urls.append(url)
+        return urls
 
-    return ""
+    return []
 
 
-def _indi_level_link(element, sources_dict):
+def _indi_level_link(element, sources_dict, obje_dict=None):
     """
-    Extract a matricula URL from any NOTE or SOUR at the INDI (or FAM) level.
-    Used when the researcher stored the link on the individual/family record
-    rather than inside the specific BIRT/MARR event (e.g. KOŠIR.GED pattern).
+    Extract all known URLs from NOTE, SOUR, or OBJE at the INDI (or FAM) level.
+    Returns a deduplicated list.
     """
+    if obje_dict is None:
+        obje_dict = {}
+    urls = []
     for child in element.get_child_elements():
         if child.get_tag() in ("NOTE", "SOUR"):
-            url = _link_from_subelement(child, sources_dict)
-            if url:
-                return url
-    return ""
+            for url in _link_from_subelement(child, sources_dict):
+                if url not in urls:
+                    urls.append(url)
+        elif child.get_tag() == "OBJE":
+            val = child.get_value() or ""
+            if val.startswith("@") and val.endswith("@"):
+                url = obje_dict.get(val, "")
+                if url and url not in urls:
+                    urls.append(url)
+    return urls
 
 
 _URL_CACHE = {}
@@ -283,37 +319,53 @@ def _determine_link_type(url):
     return _URL_CACHE[base_url]
 
 
-def _extract_indi_links(element, sources_dict):
+def _extract_indi_links(element, sources_dict, obje_dict=None):
     """
-    Extract matricula URLs from NOTE or SOUR at the INDI level.
-    Checks the HTML content of the URL to determine if it belongs
-    to a birth, death, or marriage record.
+    Extract URLs from NOTE, SOUR, or OBJE at the INDI level.
+    Cemetery URLs always go to death. Matricula URLs are routed by fetching
+    the page HTML to determine record type (birth/death/marriage).
+    Returns (b_links, d_links, m_links) as deduplicated lists.
     """
-    b_link, d_link, m_link = "", "", ""
+    if obje_dict is None:
+        obje_dict = {}
+    b_links, d_links, m_links = [], [], []
+
+    def _route(url):
+        if _find_cemetery_url(url):
+            if url not in d_links:
+                d_links.append(url)
+        else:
+            link_type = _determine_link_type(url)
+            if link_type == "birth":
+                if url not in b_links:
+                    b_links.append(url)
+            elif link_type == "death":
+                if url not in d_links:
+                    d_links.append(url)
+            elif link_type == "marriage":
+                if url not in m_links:
+                    m_links.append(url)
+            else:
+                if url not in b_links:
+                    b_links.append(url)
+
     for child in element.get_child_elements():
         if child.get_tag() in ("NOTE", "SOUR"):
-            url = _link_from_subelement(child, sources_dict)
-            if url:
-                link_type = _determine_link_type(url)
-                if link_type == "birth":
-                    if not b_link:
-                        b_link = url
-                elif link_type == "death":
-                    if not d_link:
-                        d_link = url
-                elif link_type == "marriage":
-                    if not m_link:
-                        m_link = url
-                else:
-                    if not b_link:
-                        b_link = url
-    return b_link, d_link, m_link
+            for url in _link_from_subelement(child, sources_dict):
+                _route(url)
+        elif child.get_tag() == "OBJE":
+            val = child.get_value() or ""
+            if val.startswith("@") and val.endswith("@"):
+                url = obje_dict.get(val, "")
+                if url:
+                    _route(url)
+    return b_links, d_links, m_links
 
 
 def build_obje_dict(root_elements):
     """
-    Pre-build a mapping of OBJE pointer → matricula URL from all root OBJE records.
-    Used to resolve FILN-based sources in RENKO.GED (and similar files).
+    Pre-build a mapping of OBJE pointer → URL from all root OBJE records.
+    Covers matricula and cemetery links. Used to resolve OBJE @ref@ pointers on INDI/FAM records.
     """
     obje = {}
     for element in root_elements:
@@ -324,9 +376,10 @@ def build_obje_dict(root_elements):
             continue
         for child in element.get_child_elements():
             if child.get_tag() == "FILE":
-                url = _find_matricula_url(child.get_value() or "")
-                if url:
-                    obje[pointer] = url
+                raw = child.get_value() or ""
+                urls = _find_all_links(raw)
+                if urls:
+                    obje[pointer] = urls[0]
                     break
     return obje
 
@@ -375,26 +428,29 @@ def build_sources_dict(root_elements, obje_dict=None):
 
 def get_event_data(element, event_tag, sources_dict=None):
     """
-    Extract date, place, and an optional matricula-online link for an event (BIRT/MARR).
+    Extract date, place, and all links for an event (BIRT/MARR/DEAT/BURI).
     sources_dict must be pre-built with build_sources_dict() for SOUR @ref@ resolution.
+    Returns (date, place, links_list).
     """
     if sources_dict is None:
         sources_dict = {}
     for child in element.get_child_elements():
         if child.get_tag() != event_tag:
             continue
-        date, place, link = "", "", ""
+        date, place = "", ""
         # P6: URL stored directly as the event tag value (RENKO.GED pattern)
-        link = _find_matricula_url(child.get_value() or "")
+        links = _find_all_links(child.get_value() or "")
         for subchild in child.get_child_elements():
             if subchild.get_tag() == "DATE":
                 date = subchild.get_value()
             elif subchild.get_tag() == "PLAC":
                 place = subchild.get_value()
-            elif not link:
-                link = _link_from_subelement(subchild, sources_dict)
-        return date, place, link
-    return "", "", ""
+            else:
+                for url in _link_from_subelement(subchild, sources_dict):
+                    if url not in links:
+                        links.append(url)
+        return date, place, links
+    return "", "", []
 
 
 def extract_year(date_str):
@@ -517,9 +573,9 @@ def main():
                         "births_count": len(births_data_skip),
                         "families_count": len(families_data_skip),
                         "deaths_count": len(deaths_data_skip),
-                        "links_count": sum(1 for r in births_data_skip if r.get("link"))
-                        + sum(1 for r in families_data_skip if r.get("link"))
-                        + sum(1 for r in deaths_data_skip if r.get("link")),
+                        "links_count": sum(1 for r in births_data_skip if r.get("links"))
+                        + sum(1 for r in families_data_skip if r.get("links"))
+                        + sum(1 for r in deaths_data_skip if r.get("links")),
                         "last_modified": ged_mtime,
                     }
                 )
@@ -590,20 +646,27 @@ def main():
             if tag == "INDI":
                 pointer = element.get_pointer()
                 name, surname = get_name_surname(element)
-                birth_date, birth_place, birth_link = get_event_data(
+                birth_date, birth_place, birth_links = get_event_data(
                     element, "BIRT", sources_dict
                 )
-                death_date, death_place, death_link = get_event_data(
+                death_date, death_place, death_links = get_event_data(
                     element, "DEAT", sources_dict
                 )
-                # Fallback: link at INDI level, fetching HTML to determine type
-                indi_b_link, indi_d_link, indi_m_link = _extract_indi_links(
-                    element, sources_dict
+                # Cemetery links from BURI event → attach to death
+                _, _, buri_links = get_event_data(element, "BURI", sources_dict)
+                for url in buri_links:
+                    if url not in death_links:
+                        death_links.append(url)
+                # Fallback: links at INDI level, routing by type (cemetery→death, matricula→fetched)
+                indi_b_links, indi_d_links, indi_m_links = _extract_indi_links(
+                    element, sources_dict, obje_dict
                 )
-                if not birth_link:
-                    birth_link = indi_b_link
-                if not death_link:
-                    death_link = indi_d_link
+                for url in indi_b_links:
+                    if url not in birth_links:
+                        birth_links.append(url)
+                for url in indi_d_links:
+                    if url not in death_links:
+                        death_links.append(url)
 
                 is_deceased_flag = any(
                     child.get_tag() in ("DEAT", "BURI")
@@ -622,7 +685,7 @@ def main():
                     "surname": surname,
                     "birth_date": birth_date,
                     "is_deceased": is_deceased_flag,
-                    "marr_link": indi_m_link,
+                    "marr_links": indi_m_links,
                     "famc": famc_pointers,
                 }
 
@@ -634,8 +697,8 @@ def main():
                         "place_of_birth": birth_place or "",
                         "_is_deceased": is_deceased_flag,
                     }
-                    if birth_link:
-                        record["link"] = birth_link
+                    if birth_links:
+                        record["links"] = birth_links
                     births_data.append(record)
 
                 if death_date or death_place:
@@ -645,8 +708,8 @@ def main():
                         "date_of_death": death_date or "",
                         "place_of_death": death_place or "",
                     }
-                    if death_link:
-                        record["link"] = death_link
+                    if death_links:
+                        record["links"] = death_links
                     deaths_data.append(record)
 
             elif tag == "FAM":
@@ -677,12 +740,13 @@ def main():
             family_dict[family.get_pointer()] = {"husb": h_ptr, "wife": w_ptr}
 
         for family in family_elements:
-            marr_date, marr_place, marr_link = get_event_data(
+            marr_date, marr_place, marr_links = get_event_data(
                 family, "MARR", sources_dict
             )
-            # Fallback: link at FAM level (e.g. KOŠIR.GED stores NOTE on FAM, not inside MARR)
-            if not marr_link:
-                marr_link = _indi_level_link(family, sources_dict)
+            # Fallback: links at FAM level (e.g. KOŠIR.GED stores NOTE on FAM, not inside MARR)
+            for url in _indi_level_link(family, sources_dict, obje_dict):
+                if url not in marr_links:
+                    marr_links.append(url)
 
             husb_pointer, wife_pointer = "", ""
             child_pointers = []
@@ -698,8 +762,8 @@ def main():
             wife = individuals_dict.get(wife_pointer, {})
 
             # Use INDI-level marriage links if FAM-level is missing
-            if not marr_link:
-                marr_link = husb.get("marr_link", "") or wife.get("marr_link", "")
+            if not marr_links:
+                marr_links = list(husb.get("marr_links", []) or wife.get("marr_links", []))
 
             def get_parents_list(person_data):
                 parents_list = []
@@ -807,8 +871,8 @@ def main():
             ):
                 continue
 
-            if marr_link:
-                record["link"] = marr_link
+            if marr_links:
+                record["links"] = marr_links
             if children_string:
                 record["children"] = children_string
             if children_list:
@@ -916,9 +980,9 @@ def main():
 
         # Add to metadata
         links_count = (
-            sum(1 for r in births_data if r.get("link"))
-            + sum(1 for r in families_data if r.get("link"))
-            + sum(1 for r in deaths_data if r.get("link"))
+            sum(1 for r in births_data if r.get("links"))
+            + sum(1 for r in families_data if r.get("links"))
+            + sum(1 for r in deaths_data if r.get("links"))
         )
         metadata.append(
             {
