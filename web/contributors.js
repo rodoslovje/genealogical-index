@@ -258,7 +258,8 @@ async function loadSurnameCloud(contributor) {
   cloudAbortController = new AbortController();
 
   try {
-    const url = `${API_BASE_URL}/api/stats/top_surnames?contributor=${encodeURIComponent(contributor)}&limit=80`;
+    const qs = contributor ? `contributor=${encodeURIComponent(contributor)}&` : '';
+    const url = `${API_BASE_URL}/api/stats/top_surnames?${qs}limit=80`;
     const res = await fetch(url, { signal: cloudAbortController.signal });
     const data = await res.json();
 
