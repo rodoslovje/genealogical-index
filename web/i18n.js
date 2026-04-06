@@ -21,6 +21,7 @@ const translations = {
     chart_others: 'Others',
     chart_timeline: 'Records Timeline',
     chart_surnames_title: 'Top Surnames by Contributor',
+    chart_surnames_all: 'All contributors',
     chart_surnames_select: 'Select contributor…',
     chart_surnames_loading: 'Loading…',
 
@@ -105,6 +106,7 @@ const translations = {
     chart_others: 'Ostali',
     chart_timeline: 'Časovnica zapisov',
     chart_surnames_title: 'Najpogostejši priimki po dajalcu',
+    chart_surnames_all: 'Vsi dajalci',
     chart_surnames_select: 'Izberite dajalca…',
     chart_surnames_loading: 'Nalaganje…',
 

@@ -86,8 +86,7 @@ export async function renderContributors() {
     renderTimelineChart(timeline);
     renderTable(data, 'table-contributors', contributorColumns, 'total', false);
     populateSurnameSelect(data);
-    const cloud = document.getElementById('surname-cloud');
-    if (cloud) cloud.innerHTML = `<span class="cloud-placeholder">${t('chart_surnames_select')}</span>`;
+    loadSurnameCloud('');
   } catch {
     container.innerHTML = `<p>${t('contributors_failed')}</p>`;
   }
@@ -232,19 +231,26 @@ let cloudAbortController = null;
 function populateSurnameSelect(contributorData) {
   const select = document.getElementById('surname-cloud-select');
   if (!select) return;
-  const sorted = [...contributorData].sort((a, b) => a.contributor_ID.localeCompare(b.contributor_ID));
-  select.innerHTML = `<option value="">${t('chart_surnames_select')}</option>` +
-    sorted.map(d => `<option value="${d.contributor_ID}">${d.contributor_ID}</option>`).join('');
+  // Avoid re-binding the event listener on re-renders
+  if (select.dataset.bound) {
+    select.innerHTML = buildSelectOptions(contributorData);
+    return;
+  }
+  select.innerHTML = buildSelectOptions(contributorData);
   select.addEventListener('change', () => loadSurnameCloud(select.value));
+  select.dataset.bound = '1';
+}
+
+function buildSelectOptions(contributorData) {
+  const sorted = [...contributorData].sort((a, b) => a.contributor_ID.localeCompare(b.contributor_ID));
+  return `<option value="">${t('chart_surnames_all')}</option>` +
+    `<option disabled>──────────────</option>` +
+    sorted.map(d => `<option value="${d.contributor_ID}">${d.contributor_ID}</option>`).join('');
 }
 
 async function loadSurnameCloud(contributor) {
   const cloud = document.getElementById('surname-cloud');
   if (!cloud) return;
-  if (!contributor) {
-    cloud.innerHTML = `<span class="cloud-placeholder">${t('chart_surnames_select')}</span>`;
-    return;
-  }
 
   cloud.innerHTML = `<span class="cloud-placeholder">${t('chart_surnames_loading')}</span>`;
 
@@ -276,8 +282,9 @@ async function loadSurnameCloud(contributor) {
       el.addEventListener('click', () => {
         const sn = el.dataset.surname;
         const contrib = el.dataset.contributor;
-        const params = new URLSearchParams({ t: 'general', sn, c: contrib });
-        window.location.search = params.toString();
+        const urlParams = { t: 'general', sn };
+        if (contrib) urlParams.c = contrib;
+        window.location.search = new URLSearchParams(urlParams).toString();
       });
     });
   } catch (err) {

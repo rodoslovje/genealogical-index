@@ -77,37 +77,14 @@ def get_top_surnames(db: Session, contributor: str = None, limit: int = 100):
     if cached and (now - cached["time"] < CACHE_TTL):
         return cached["data"][:limit]
 
+    q = db.query(models.Birth.surname, func.count(models.Birth.id)).group_by(models.Birth.surname)
+    if contributor:
+        q = q.filter(models.Birth.contributor == contributor)
+
     counts = {}
-
-    def _add(rows):
-        for surname, c in rows:
-            if surname:
-                counts[surname] = counts.get(surname, 0) + c
-
-    def _filter(q, model):
-        if contributor:
-            q = q.filter(model.contributor == contributor)
-        return q
-
-    _add(_filter(
-        db.query(models.Birth.surname, func.count(models.Birth.id)).group_by(models.Birth.surname),
-        models.Birth,
-    ).all())
-
-    _add(_filter(
-        db.query(models.Family.husband_surname, func.count(models.Family.id)).group_by(models.Family.husband_surname),
-        models.Family,
-    ).all())
-
-    _add(_filter(
-        db.query(models.Family.wife_surname, func.count(models.Family.id)).group_by(models.Family.wife_surname),
-        models.Family,
-    ).all())
-
-    _add(_filter(
-        db.query(models.Death.surname, func.count(models.Death.id)).group_by(models.Death.surname),
-        models.Death,
-    ).all())
+    for surname, c in q.all():
+        if surname and surname.strip():
+            counts[surname] = c
 
     result = sorted(
         [{"surname": s, "count": c} for s, c in counts.items() if s.strip()],
