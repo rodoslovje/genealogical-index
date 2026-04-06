@@ -142,6 +142,11 @@ GENEANET_CEMETERY_RE = re.compile(
 FINDAGRAVE_RE = re.compile(
     r"https?://(?:www\.)?findagrave\.com/(?:memorial/[^\"\s<]+|cgi-bin/fg\.cgi\?[^\"\s<]*page=gr[^\"\s<]*)"
 )
+BILLIONGRAVES_RE = re.compile(r"https?://(?:www\.)?billiongraves\.com/grave/[^\"\s<]+")
+SISTORY_RE = re.compile(r"https?://(?:www\.)?sistory\.si/ww[12][^\"\s<]*")
+SISTORY_CENSUS_RE = re.compile(
+    r"https?://(?:www\.)?sistory\.si/[^\"\s<]*popisi[^\"\s<]*"
+)
 
 
 def _normalize_matricula_url(url):
@@ -159,25 +164,39 @@ def _find_matricula_url(text):
 
 
 def _find_cemetery_url(text):
-    """Return the first cemetery URL (Geneanet or FindAGrave) found in text, or empty string."""
+    """Return the first cemetery or Sistory URL found in text, or empty string."""
     if not text:
         return ""
-    for pattern in (GENEANET_CEMETERY_RE, FINDAGRAVE_RE):
+    for pattern in (GENEANET_CEMETERY_RE, FINDAGRAVE_RE, BILLIONGRAVES_RE, SISTORY_RE):
         m = pattern.search(text)
         if m:
             return m.group().rstrip(".,;)")
     return ""
 
 
+def _find_census_url(text):
+    """Return the first Sistory census URL found in text, or empty string."""
+    if not text:
+        return ""
+    m = SISTORY_CENSUS_RE.search(text)
+    return m.group().rstrip(".,;)") if m else ""
+
+
 def _find_all_links(text):
-    """Return list of all known link URLs found in text (matricula + cemetery)."""
+    """Return list of all known link URLs found in text (matricula + cemetery + sistory)."""
     if not text:
         return []
     links = []
     url = _find_matricula_url(text)
     if url:
         links.append(url)
-    for pattern in (GENEANET_CEMETERY_RE, FINDAGRAVE_RE):
+    for pattern in (
+        GENEANET_CEMETERY_RE,
+        FINDAGRAVE_RE,
+        BILLIONGRAVES_RE,
+        SISTORY_RE,
+        SISTORY_CENSUS_RE,
+    ):
         m = pattern.search(text)
         if m:
             url = m.group().rstrip(".,;)")
@@ -439,6 +458,15 @@ def sanitize_links(links, expected_type):
                 misplaced.append((url, ["death"]))
             continue
 
+        if _find_census_url(url):
+            # Census links explicitly cited on an event should stay there,
+            # but we also copy them to 'birth'.
+            if url not in sanitized:
+                sanitized.append(url)
+            if expected_type != "birth":
+                misplaced.append((url, ["birth"]))
+            continue
+
         types = _determine_link_type(url)
         if not types or expected_type in types:
             if url not in sanitized:
@@ -463,6 +491,9 @@ def _extract_indi_links(element, sources_dict, obje_dict=None):
         if _find_cemetery_url(url):
             if url not in d_links:
                 d_links.append(url)
+        elif _find_census_url(url):
+            if url not in b_links:
+                b_links.append(url)
         else:
             types = _determine_link_type(url)
             if not types:

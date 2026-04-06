@@ -67,6 +67,12 @@ const translations = {
     col_total_links: 'Links',
     col_url: 'URL',
 
+    // Tooltips
+    icon_grave: 'Grave',
+    icon_census: 'Census',
+    icon_military: 'Casualty of the war',
+    icon_matricula: 'Matricula Online',
+
     // Society name (used in intro logo)
     society_name: 'Slovenian Genealogy Society',
 
@@ -141,6 +147,12 @@ const translations = {
     col_link: 'Povezava',
     col_total_links: 'Povezave',
     col_url: 'URL',
+
+    // Tooltips
+    icon_grave: 'Grob',
+    icon_census: 'Popis prebivalstva',
+    icon_military: 'Žrtev vojne',
+    icon_matricula: 'Matricula Online',
 
     // Society name (used in intro logo)
     society_name: 'Slovensko rodoslovno društvo',

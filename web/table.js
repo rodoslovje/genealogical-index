@@ -224,11 +224,24 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         }
         if (linksList.length) {
           const icons = linksList.map(url => {
-            const icon = (url.includes('geneanet.org') || url.includes('findagrave.com')) ? '🪦' : '🔗';
+            let icon = '🔗';
+            let titleText = t('icon_matricula');
+
+            if (url.includes('geneanet.org') || url.includes('findagrave.com') || url.includes('billiongraves.com')) {
+              icon = '🪦';
+              titleText = t('icon_grave');
+            } else if (url.includes('sistory.si/ww')) {
+              icon = '🎖️';
+              titleText = t('icon_military');
+            } else if (url.includes('sistory.si') && url.includes('popisi')) {
+              icon = '📋';
+              titleText = t('icon_census');
+            }
+
             const href = url.includes('matricula-online.eu')
               ? url.replace(/\/(en|sl)\//, `/${getCurrentLang()}/`)
               : url;
-            return `<a href="${href}" target="_blank" rel="noopener" title="${href}">${icon}</a>`;
+            return `<a href="${href}" target="_blank" rel="noopener" title="${titleText}">${icon}</a>`;
           }).join(' ');
           html += `<td class="link-cell">${icons}</td>`;
         } else {
