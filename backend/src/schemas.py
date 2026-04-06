@@ -79,3 +79,8 @@ class Contributor(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SurnameStat(BaseModel):
+    surname: str
+    count: int

@@ -6,6 +6,7 @@ from . import models
 
 CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
 _timeline_cache = {"data": None, "time": 0}
+_surnames_cache = {}  # keyed by contributor name (or "" for all)
 
 
 def get_contributors(db: Session):
@@ -66,6 +67,55 @@ def get_timeline_distribution(db: Session):
     _timeline_cache["data"] = result
     _timeline_cache["time"] = now
     return result
+
+
+def get_top_surnames(db: Session, contributor: str = None, limit: int = 100):
+    """Returns the top surnames by record count, optionally filtered by contributor."""
+    cache_key = contributor or ""
+    now = time.time()
+    cached = _surnames_cache.get(cache_key)
+    if cached and (now - cached["time"] < CACHE_TTL):
+        return cached["data"][:limit]
+
+    counts = {}
+
+    def _add(rows):
+        for surname, c in rows:
+            if surname:
+                counts[surname] = counts.get(surname, 0) + c
+
+    def _filter(q, model):
+        if contributor:
+            q = q.filter(model.contributor == contributor)
+        return q
+
+    _add(_filter(
+        db.query(models.Birth.surname, func.count(models.Birth.id)).group_by(models.Birth.surname),
+        models.Birth,
+    ).all())
+
+    _add(_filter(
+        db.query(models.Family.husband_surname, func.count(models.Family.id)).group_by(models.Family.husband_surname),
+        models.Family,
+    ).all())
+
+    _add(_filter(
+        db.query(models.Family.wife_surname, func.count(models.Family.id)).group_by(models.Family.wife_surname),
+        models.Family,
+    ).all())
+
+    _add(_filter(
+        db.query(models.Death.surname, func.count(models.Death.id)).group_by(models.Death.surname),
+        models.Death,
+    ).all())
+
+    result = sorted(
+        [{"surname": s, "count": c} for s, c in counts.items() if s.strip()],
+        key=lambda x: x["count"],
+        reverse=True,
+    )
+    _surnames_cache[cache_key] = {"data": result, "time": now}
+    return result[:limit]
 
 
 def _extract_year(val: str):

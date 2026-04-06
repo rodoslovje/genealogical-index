@@ -878,6 +878,7 @@ def main():
                         "date_of_birth": birth_date or "",
                         "place_of_birth": birth_place or "",
                         "_is_deceased": is_deceased_flag,
+                        "_ptr": pointer,
                     }
                     if birth_links:
                         record["links"] = list(dict.fromkeys(birth_links))
@@ -911,6 +912,16 @@ def main():
                 or surname.strip().lower() == "private"
             )
 
+        def is_person_recent(person_data, cutoff):
+            """Returns True if person is estimated to have been born within the last 100 years.
+            Uses actual birth date first; falls back to estimated_birth_year if no birth date."""
+            birth_date = person_data.get("birth_date") or ""
+            year = extract_year(birth_date)
+            if year is not None:
+                return year > cutoff
+            est_year = person_data.get("estimated_birth_year")
+            return est_year is not None and est_year > cutoff
+
         family_dict = {}
         for family in family_elements:
             h_ptr, w_ptr = "", ""
@@ -920,6 +931,54 @@ def main():
                 elif child.get_tag() == "WIFE":
                     w_ptr = child.get_value()
             family_dict[family.get_pointer()] = {"husb": h_ptr, "wife": w_ptr}
+
+        # Estimate birth year for people with no birth date and no death record.
+        # Uses marriage date (person was ~20), children's birth dates (person was ~20),
+        # and parents' birth dates (person was born ~40 years after parent).
+        # Takes the latest (most conservative) estimate to avoid hiding living people.
+        person_to_family_info = {}  # ptr -> list of (marr_date, [child_ptrs])
+        for fam_el in family_elements:
+            fm_date, _, _ = get_event_data(fam_el, "MARR", sources_dict)
+            fh_ptr, fw_ptr = "", ""
+            fc_ptrs = []
+            for ch in fam_el.get_child_elements():
+                ctag = ch.get_tag()
+                if ctag == "HUSB":
+                    fh_ptr = ch.get_value()
+                elif ctag == "WIFE":
+                    fw_ptr = ch.get_value()
+                elif ctag == "CHIL":
+                    fc_ptrs.append(ch.get_value())
+            for sp_ptr in (fh_ptr, fw_ptr):
+                if sp_ptr:
+                    person_to_family_info.setdefault(sp_ptr, []).append(
+                        (fm_date, fc_ptrs)
+                    )
+
+        for ptr, data in individuals_dict.items():
+            if data.get("birth_date") or data.get("is_deceased"):
+                continue
+            est_years = []
+            for fm_date, fc_ptrs in person_to_family_info.get(ptr, []):
+                fm_year = extract_year(fm_date)
+                if fm_year:
+                    est_years.append(fm_year - 20)
+                for fc_ptr in fc_ptrs:
+                    fc_data = individuals_dict.get(fc_ptr, {})
+                    fc_year = extract_year(fc_data.get("birth_date"))
+                    if fc_year:
+                        est_years.append(fc_year - 20)
+            for famc_ptr in data.get("famc", []):
+                fam_d = family_dict.get(famc_ptr, {})
+                for p_ptr in (fam_d.get("husb", ""), fam_d.get("wife", "")):
+                    if not p_ptr:
+                        continue
+                    p_d = individuals_dict.get(p_ptr, {})
+                    p_year = extract_year(p_d.get("birth_date"))
+                    if p_year:
+                        est_years.append(p_year + 40)
+            if est_years:
+                data["estimated_birth_year"] = max(est_years)
 
         for family in family_elements:
             marr_date, marr_place, raw_marr_links = get_event_data(
@@ -963,10 +1022,9 @@ def main():
                                 continue
                             p_data = individuals_dict.get(p_ptr)
                             if p_data:
-                                p_birth_date = p_data.get("birth_date", "")
                                 p_is_deceased = p_data.get("is_deceased", False)
                                 is_private = (
-                                    is_recent(p_birth_date, birth_cutoff)
+                                    is_person_recent(p_data, birth_cutoff)
                                     and not p_is_deceased
                                 )
                                 if is_private:
@@ -978,7 +1036,7 @@ def main():
                                     if not p_name:
                                         p_name = "unknown"
                                     p_surname = p_data.get("surname", "")
-                                    p_birth_year = extract_year(p_birth_date)
+                                    p_birth_year = extract_year(p_data.get("birth_date"))
                                     p_year_str = (
                                         str(p_birth_year) if p_birth_year else ""
                                     )
@@ -1002,10 +1060,10 @@ def main():
                     child_birth_date = child_data.get("birth_date", "")
                     child_is_deceased = child_data.get("is_deceased", False)
 
-                    # A child is considered private if they were born in the last 100 years
-                    # AND they are not known to be deceased.
+                    # A child is considered private if they were born (or estimated born)
+                    # in the last 100 years AND they are not known to be deceased.
                     is_private = (
-                        is_recent(child_birth_date, birth_cutoff)
+                        is_person_recent(child_data, birth_cutoff)
                         and not child_is_deceased
                     )
 
@@ -1041,8 +1099,8 @@ def main():
                 "wife_surname": wife.get("surname", ""),
                 "date_of_marriage": marr_date or "",
                 "place_of_marriage": marr_place or "",
-                "_husb_birth": husb.get("birth_date", ""),
-                "_wife_birth": wife.get("birth_date", ""),
+                "_husb_is_recent": is_person_recent(husb, birth_cutoff),
+                "_wife_is_recent": is_person_recent(wife, birth_cutoff),
                 "_husb_is_deceased": husb.get("is_deceased", False),
                 "_wife_is_deceased": wife.get("is_deceased", False),
             }
@@ -1079,20 +1137,19 @@ def main():
         births_data = [
             r
             for r in births_data
-            if not is_recent(r["date_of_birth"], birth_cutoff)
+            if (
+                not is_recent(r["date_of_birth"], birth_cutoff)
+                and not is_person_recent(
+                    individuals_dict.get(r.get("_ptr"), {}), birth_cutoff
+                )
+            )
             or r.get("_is_deceased", False)
         ]
         families_data = [
             r
             for r in families_data
-            if not (
-                is_recent(r.get("_husb_birth", ""), birth_cutoff)
-                and not r.get("_husb_is_deceased", False)
-            )
-            and not (
-                is_recent(r.get("_wife_birth", ""), birth_cutoff)
-                and not r.get("_wife_is_deceased", False)
-            )
+            if not (r.get("_husb_is_recent", False) and not r.get("_husb_is_deceased", False))
+            and not (r.get("_wife_is_recent", False) and not r.get("_wife_is_deceased", False))
             and (
                 not is_recent(r["date_of_marriage"], birth_cutoff)
                 or r.get("_husb_is_deceased", False)
@@ -1102,9 +1159,10 @@ def main():
         # Strip internal fields before writing
         for r in births_data:
             r.pop("_is_deceased", None)
+            r.pop("_ptr", None)
         for r in families_data:
-            r.pop("_husb_birth", None)
-            r.pop("_wife_birth", None)
+            r.pop("_husb_is_recent", None)
+            r.pop("_wife_is_recent", None)
             r.pop("_husb_is_deceased", None)
             r.pop("_wife_is_deceased", None)
         filtered_births = births_before - len(births_data)

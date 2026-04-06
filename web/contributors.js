@@ -85,6 +85,9 @@ export async function renderContributors() {
     renderChart(data);
     renderTimelineChart(timeline);
     renderTable(data, 'table-contributors', contributorColumns, 'total', false);
+    populateSurnameSelect(data);
+    const cloud = document.getElementById('surname-cloud');
+    if (cloud) cloud.innerHTML = `<span class="cloud-placeholder">${t('chart_surnames_select')}</span>`;
   } catch {
     container.innerHTML = `<p>${t('contributors_failed')}</p>`;
   }
@@ -222,11 +225,74 @@ function renderTimelineChart(data) {
   });
 }
 
+// --- Surname Word Cloud ---
+
+let cloudAbortController = null;
+
+function populateSurnameSelect(contributorData) {
+  const select = document.getElementById('surname-cloud-select');
+  if (!select) return;
+  const sorted = [...contributorData].sort((a, b) => a.contributor_ID.localeCompare(b.contributor_ID));
+  select.innerHTML = `<option value="">${t('chart_surnames_select')}</option>` +
+    sorted.map(d => `<option value="${d.contributor_ID}">${d.contributor_ID}</option>`).join('');
+  select.addEventListener('change', () => loadSurnameCloud(select.value));
+}
+
+async function loadSurnameCloud(contributor) {
+  const cloud = document.getElementById('surname-cloud');
+  if (!cloud) return;
+  if (!contributor) {
+    cloud.innerHTML = `<span class="cloud-placeholder">${t('chart_surnames_select')}</span>`;
+    return;
+  }
+
+  cloud.innerHTML = `<span class="cloud-placeholder">${t('chart_surnames_loading')}</span>`;
+
+  if (cloudAbortController) cloudAbortController.abort();
+  cloudAbortController = new AbortController();
+
+  try {
+    const url = `${API_BASE_URL}/api/stats/top_surnames?contributor=${encodeURIComponent(contributor)}&limit=80`;
+    const res = await fetch(url, { signal: cloudAbortController.signal });
+    const data = await res.json();
+
+    if (!data.length) {
+      cloud.innerHTML = `<span class="cloud-placeholder">${t('no_results')}</span>`;
+      return;
+    }
+
+    const maxCount = data[0].count;
+    const minCount = data[data.length - 1].count;
+    const range = maxCount - minCount || 1;
+
+    cloud.innerHTML = data.map(({ surname, count }) => {
+      const ratio = (count - minCount) / range;
+      const size = (0.75 + ratio * 1.75).toFixed(2);
+      const opacity = (0.55 + ratio * 0.45).toFixed(2);
+      return `<span class="cloud-word" style="font-size:${size}rem;opacity:${opacity}" title="${count}" data-surname="${surname}" data-contributor="${contributor}">${surname}</span>`;
+    }).join('');
+
+    cloud.querySelectorAll('.cloud-word').forEach(el => {
+      el.addEventListener('click', () => {
+        const sn = el.dataset.surname;
+        const contrib = el.dataset.contributor;
+        const params = new URLSearchParams({ t: 'general', sn, c: contrib });
+        window.location.search = params.toString();
+      });
+    });
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      cloud.innerHTML = `<span class="cloud-placeholder">${t('search_failed')}</span>`;
+    }
+  }
+}
+
 /** Re-renders the contributors table if it is currently visible (re-translates column headers). */
 export function refreshContributorsIfVisible() {
   if (cachedData && document.getElementById('tab-contributors').classList.contains('active')) {
     renderChart(cachedData);
     if (timelineData) renderTimelineChart(timelineData);
     renderTable(cachedData, 'table-contributors', contributorColumns, 'total', false);
+    populateSurnameSelect(cachedData);
   }
 }

@@ -43,6 +43,15 @@ def read_timeline(db: Session = Depends(get_db)):
     return crud.get_timeline_distribution(db)
 
 
+@app.get("/api/stats/top_surnames", response_model=List[schemas.SurnameStat])
+def read_top_surnames(
+    contributor: Optional[str] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    return crud.get_top_surnames(db, contributor=contributor, limit=limit)
+
+
 @app.get("/api/search/general", response_model=schemas.GeneralSearchResponse)
 def search_general(
     q: Optional[str] = None,
