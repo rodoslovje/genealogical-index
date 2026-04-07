@@ -3,6 +3,7 @@ import { renderTable } from './table.js';
 import { API_BASE_URL, birthColumns, familyColumns, deathColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
 import { updateURL, PARAM_MAP } from './url.js';
 import { hideIntro } from './main.js';
+import { getContributorUrlMap } from './contributors.js';
 
 let lastGeneralResults = null;
 const lastAdvResults = { birth: null, family: null, death: null };
@@ -94,9 +95,9 @@ export function setupGeneralSearch() {
   onLanguageChange(() => {
     if (container) renderFields();
     if (lastGeneralResults) {
-      renderTable(lastGeneralResults.births || [], 'table-general-births', birthColumns, 'surname', true, 'name');
-      renderTable(lastGeneralResults.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
-      renderTable(lastGeneralResults.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name');
+      renderTable(lastGeneralResults.births || [], 'table-general-births', birthColumns, 'surname', true, 'name', getContributorUrlMap());
+      renderTable(lastGeneralResults.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name', getContributorUrlMap());
+      renderTable(lastGeneralResults.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name', getContributorUrlMap());
     }
   });
 }
@@ -150,9 +151,9 @@ async function performGeneralSearch() {
     document.getElementById('count-general-families').textContent = results.families?.length || 0;
     document.getElementById('count-general-deaths').textContent = results.deaths?.length || 0;
 
-    renderTable(results.births || [], 'table-general-births', birthColumns, 'surname', true, 'name');
-    renderTable(results.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
-    renderTable(results.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name');
+    renderTable(results.births || [], 'table-general-births', birthColumns, 'surname', true, 'name', getContributorUrlMap());
+    renderTable(results.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name', getContributorUrlMap());
+    renderTable(results.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name', getContributorUrlMap());
   } catch (error) {
     console.error('Search failed:', error);
     document.getElementById('table-general-births').innerHTML = `<p>${t('search_failed')}</p>`;
@@ -252,7 +253,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       const results = await response.json();
       lastAdvResults[urlType] = { data: results, cols: columns, defaultSort, defaultSecondarySort };
       document.getElementById(countId).textContent = results.length;
-      renderTable(results, tableId, columns, defaultSort, true, defaultSecondarySort);
+      renderTable(results, tableId, columns, defaultSort, true, defaultSecondarySort, getContributorUrlMap());
     } catch (error) {
       console.error('Search failed:', error);
       document.getElementById(tableId).innerHTML = `<p>${t('search_failed')}</p>`;
@@ -285,7 +286,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   onLanguageChange(() => {
     renderFields();
     const last = lastAdvResults[urlType];
-    if (last) renderTable(last.data, tableId, last.cols, last.defaultSort, true, last.defaultSecondarySort);
+    if (last) renderTable(last.data, tableId, last.cols, last.defaultSort, true, last.defaultSecondarySort, getContributorUrlMap());
   });
 }
 

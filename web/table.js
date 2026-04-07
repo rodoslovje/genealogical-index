@@ -177,7 +177,7 @@ function sortData(data, primary, secondary) {
   });
 }
 
-export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
+export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null, contributorUrlMap = {}) {
   const container = document.getElementById(containerId);
   const headerEl = container.previousElementSibling;
   const isHeaderValid = headerEl && (headerEl.tagName === 'H2' || headerEl.classList.contains('totals-bar'));
@@ -253,11 +253,17 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         const name = row[col] || '';
         const url = row._url || '';
         if (url) {
-          const isEmail = url.startsWith('mailto:');
-          const icon = isEmail ? '✉' : '🔗';
-          html += `<td class="col-center">${name} <a href="${url}" target="_blank" rel="noopener" title="${url}" class="contributor-link">${icon}</a></td>`;
+          html += `<td class="col-center"><a href="${url}" target="_blank" rel="noopener">${name}</a></td>`;
         } else {
           html += `<td class="col-center">${name}</td>`;
+        }
+      } else if (col === 'contributor') {
+        const name = row[col] || '';
+        const url = contributorUrlMap[name] || '';
+        if (url) {
+          html += `<td><a href="${url}" target="_blank" rel="noopener">${name}</a></td>`;
+        } else {
+          html += `<td>${name}</td>`;
         }
       } else if (CENTERED_COLUMNS.has(col)) {
         const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
@@ -449,7 +455,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         state.secondary = state.primary;
         state.primary = { column: col, ascending: true };
       }
-      renderTable(data, containerId, columns);
+      renderTable(data, containerId, columns, null, true, null, contributorUrlMap);
     });
   });
 }

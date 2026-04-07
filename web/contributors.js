@@ -48,6 +48,13 @@ export function prefetchContributors() {
   ensureTimelineData().catch(() => {});
 }
 
+export function getContributorUrlMap() {
+  if (!cachedData) return {};
+  return Object.fromEntries(
+    cachedData.filter(d => d._url).map(d => [d.contributor_ID, d._url])
+  );
+}
+
 function setEl(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
