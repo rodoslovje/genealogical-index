@@ -17,6 +17,17 @@ from gedcom.parser import Parser
 INPUT_DIR = "data/filtered"
 OUTPUT_DIR = "data/output"
 CACHE_FILE = ".gedcom-to-json.cache"
+CONTRIBUTORS_FILE = "data/contributors.json"
+
+
+def _load_contributor_urls():
+    """Load public URLs from contributors.json. Returns dict of contributor_id -> url."""
+    try:
+        with open(CONTRIBUTORS_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        return {name: info.get("url") for name, info in data.items() if info.get("url")}
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
 def _build_cp1252_to_cp1250_map():
@@ -691,6 +702,7 @@ def main():
 
     # Store metadata about processed files for the frontend
     metadata = []
+    contributor_urls = _load_contributor_urls()
 
     # Process each file found.
     total_files = len(gedcom_files)
@@ -745,6 +757,7 @@ def main():
                         + sum(1 for r in families_data_skip if r.get("links"))
                         + sum(1 for r in deaths_data_skip if r.get("links")),
                         "last_modified": ged_mtime,
+                        "url": contributor_urls.get(contributor_id),
                     }
                 )
             except Exception:
@@ -1236,6 +1249,7 @@ def main():
                 "deaths_count": len(deaths_data),
                 "links_count": links_count,
                 "last_modified": datetime.fromtimestamp(ged_mtime).isoformat(),
+                "url": contributor_urls.get(contributor_id),
             }
         )
 

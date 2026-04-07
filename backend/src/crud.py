@@ -6,16 +6,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from . import models
 
-CONTRIBUTORS_PATH = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'data', 'contributors.json'
+METADATA_PATH = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'data', 'output', 'metadata.json'
 )
 
 def _load_contributor_links():
-    """Returns a dict of contributor name -> public URL (only the url field is exposed)."""
+    """Returns a dict of contributor name -> public URL extracted from metadata.json."""
     try:
-        with open(CONTRIBUTORS_PATH, encoding='utf-8') as f:
+        with open(METADATA_PATH, encoding='utf-8') as f:
             data = json.load(f)
-        return {name: info.get('url') for name, info in data.items() if info.get('url')}
+        return {entry['contributor']: entry['url'] for entry in data if entry.get('url')}
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
