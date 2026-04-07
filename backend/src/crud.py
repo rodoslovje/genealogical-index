@@ -1,8 +1,23 @@
+import json
+import os
 import re
 import time
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from . import models
+
+CONTRIBUTORS_PATH = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'data', 'contributors.json'
+)
+
+def _load_contributor_links():
+    """Returns a dict of contributor name -> public URL (only the url field is exposed)."""
+    try:
+        with open(CONTRIBUTORS_PATH, encoding='utf-8') as f:
+            data = json.load(f)
+        return {name: info.get('url') for name, info in data.items() if info.get('url')}
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
 _timeline_cache = {"data": None, "time": 0}
@@ -10,8 +25,12 @@ _surnames_cache = {}  # keyed by contributor name (or "" for all)
 
 
 def get_contributors(db: Session):
-    """Fetch pre-calculated stats directly from the contributors table."""
-    return db.query(models.Contributor).all()
+    """Fetch pre-calculated stats, enriched with optional contributor links."""
+    rows = db.query(models.Contributor).all()
+    links = _load_contributor_links()
+    for row in rows:
+        row.url = links.get(row.name)
+    return rows
 
 
 def get_timeline_distribution(db: Session):

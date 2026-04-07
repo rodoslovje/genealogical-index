@@ -25,6 +25,7 @@ function ensureData() {
           total: m.births_count + m.families_count + (m.deaths_count || 0),
           total_links: m.links_count || 0,
           last_modified: m.last_modified ? m.last_modified.slice(0, 10) : '',
+          _url: m.url || '',
         }));
         return cachedData;
       });

@@ -249,6 +249,16 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         } else {
           html += '<td></td>';
         }
+      } else if (col === 'contributor_ID') {
+        const name = row[col] || '';
+        const url = row._url || '';
+        if (url) {
+          const isEmail = url.startsWith('mailto:');
+          const icon = isEmail ? '✉' : '🔗';
+          html += `<td class="col-center">${name} <a href="${url}" target="_blank" rel="noopener" title="${url}" class="contributor-link">${icon}</a></td>`;
+        } else {
+          html += `<td class="col-center">${name}</td>`;
+        }
       } else if (CENTERED_COLUMNS.has(col)) {
         const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
         const val = isNumeric && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
