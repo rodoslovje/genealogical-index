@@ -346,7 +346,7 @@ def save_url_cache():
         print(f"Warning: Could not save URL cache: {e}")
 
 
-def _determine_link_type(url):
+def _determine_link_type(url, context=None):
     if not url:
         return []
 
@@ -444,7 +444,9 @@ def _determine_link_type(url):
             if attempt < 2:
                 time.sleep(1 * (attempt + 1))
             else:
-                print(f"  [!] Failed to fetch {base_url} after 3 attempts: {e}")
+                ctx_str = f" (person: {context})" if context else ""
+                display_url = url if url != base_url else base_url
+                print(f"  [!] Failed to fetch {display_url}{ctx_str} after 3 attempts: {e}")
                 _ERROR_CACHE.add(base_url)
                 return []
 
@@ -452,7 +454,7 @@ def _determine_link_type(url):
     return []
 
 
-def sanitize_links(links, expected_type):
+def sanitize_links(links, expected_type, context=None):
     """
     Keeps links that match the expected type (or unknown),
     and removes those that are strictly of another type.
@@ -478,7 +480,7 @@ def sanitize_links(links, expected_type):
                 misplaced.append((url, ["birth"]))
             continue
 
-        types = _determine_link_type(url)
+        types = _determine_link_type(url, context=context)
         if not types or expected_type in types:
             if url not in sanitized:
                 sanitized.append(url)
@@ -487,7 +489,7 @@ def sanitize_links(links, expected_type):
     return sanitized, misplaced
 
 
-def _extract_indi_links(element, sources_dict, obje_dict=None):
+def _extract_indi_links(element, sources_dict, obje_dict=None, context=None):
     """
     Extract URLs from NOTE, SOUR, or OBJE at the INDI level.
     Cemetery URLs always go to death. Matricula URLs are routed by fetching
@@ -506,7 +508,7 @@ def _extract_indi_links(element, sources_dict, obje_dict=None):
             if url not in b_links:
                 b_links.append(url)
         else:
-            types = _determine_link_type(url)
+            types = _determine_link_type(url, context=context)
             if not types:
                 if url not in b_links:
                     b_links.append(url)
@@ -839,12 +841,13 @@ def main():
                     if url not in raw_death_links:
                         raw_death_links.append(url)
 
-                birth_links, b_misplaced = sanitize_links(raw_birth_links, "birth")
-                death_links, d_misplaced = sanitize_links(raw_death_links, "death")
+                person_context = f"{name} {surname}".strip()
+                birth_links, b_misplaced = sanitize_links(raw_birth_links, "birth", context=person_context)
+                death_links, d_misplaced = sanitize_links(raw_death_links, "death", context=person_context)
 
                 # Fallback: links at INDI level, routing by type (cemetery→death, matricula→fetched)
                 indi_b_links, indi_d_links, indi_m_links = _extract_indi_links(
-                    element, sources_dict, obje_dict
+                    element, sources_dict, obje_dict, context=person_context
                 )
 
                 marr_links = list(indi_m_links)
@@ -1002,8 +1005,6 @@ def main():
                 if url not in raw_marr_links:
                     raw_marr_links.append(url)
 
-            marr_links, _ = sanitize_links(raw_marr_links, "marriage")
-
             husb_pointer, wife_pointer = "", ""
             child_pointers = []
             for child in family.get_child_elements():
@@ -1016,6 +1017,12 @@ def main():
 
             husb = individuals_dict.get(husb_pointer, {})
             wife = individuals_dict.get(wife_pointer, {})
+
+            family_context = " & ".join(filter(None, [
+                f"{husb.get('name', '')} {husb.get('surname', '')}".strip(),
+                f"{wife.get('name', '')} {wife.get('surname', '')}".strip(),
+            ])) or family.get_pointer()
+            marr_links, _ = sanitize_links(raw_marr_links, "marriage", context=family_context)
 
             # Use INDI-level marriage links if FAM-level is missing
             if not marr_links:
