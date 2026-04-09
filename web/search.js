@@ -8,6 +8,12 @@ import { getContributorUrlMap } from './contributors.js';
 let lastGeneralResults = null;
 const lastAdvResults = { birth: null, family: null, death: null };
 
+function collapseSidebarOnDesktop() {
+  if (window.innerWidth > 768) {
+    document.getElementById('sidebar').classList.remove('open');
+  }
+}
+
 // --- General search ---
 
 export function setupGeneralSearch() {
@@ -154,6 +160,7 @@ async function performGeneralSearch() {
     renderTable(results.births || [], 'table-general-births', birthColumns, 'surname', true, 'name', getContributorUrlMap());
     renderTable(results.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name', getContributorUrlMap());
     renderTable(results.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name', getContributorUrlMap());
+    collapseSidebarOnDesktop();
   } catch (error) {
     console.error('Search failed:', error);
     document.getElementById('table-general-births').innerHTML = `<p>${t('search_failed')}</p>`;
@@ -254,6 +261,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       lastAdvResults[urlType] = { data: results, cols: columns, defaultSort, defaultSecondarySort };
       document.getElementById(countId).textContent = results.length;
       renderTable(results, tableId, columns, defaultSort, true, defaultSecondarySort, getContributorUrlMap());
+      collapseSidebarOnDesktop();
     } catch (error) {
       console.error('Search failed:', error);
       document.getElementById(tableId).innerHTML = `<p>${t('search_failed')}</p>`;

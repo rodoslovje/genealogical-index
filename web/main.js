@@ -83,13 +83,28 @@ document.addEventListener('click', (e) => {
 
 const hamburgerBtn = document.querySelector('.hamburger-btn');
 const sidebar = document.getElementById('sidebar');
+const appHeader = document.querySelector('header');
 
-hamburgerBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+function updateSidebarTop() {
+  const h = appHeader.offsetHeight;
+  document.documentElement.style.setProperty('--nav-height', `${h}px`);
+}
+updateSidebarTop();
+window.addEventListener('resize', updateSidebarTop);
+
+hamburgerBtn.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.toggle('open'); });
+
+document.addEventListener('click', (e) => {
+  if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+    sidebar.classList.remove('open');
+  }
+});
 
 // --- Tab Management ---
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
     const targetTab = btn.dataset.target;
 
     if (targetTab === 'tab-contributors') {
