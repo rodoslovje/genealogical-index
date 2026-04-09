@@ -605,7 +605,7 @@ def build_sources_dict(root_elements, obje_dict=None):
     return sources
 
 
-def get_event_data(element, event_tag, sources_dict=None):
+def get_event_data(element, event_tag, sources_dict=None, obje_dict=None):
     """
     Extract date, place, and all links for an event (BIRT/MARR/DEAT/BURI).
     sources_dict must be pre-built with build_sources_dict() for SOUR @ref@ resolution.
@@ -613,6 +613,8 @@ def get_event_data(element, event_tag, sources_dict=None):
     """
     if sources_dict is None:
         sources_dict = {}
+    if obje_dict is None:
+        obje_dict = {}
     for child in element.get_child_elements():
         if child.get_tag() != event_tag:
             continue
@@ -624,6 +626,12 @@ def get_event_data(element, event_tag, sources_dict=None):
                 date = subchild.get_value()
             elif subchild.get_tag() == "PLAC":
                 place = subchild.get_value()
+            elif subchild.get_tag() == "OBJE":
+                val = subchild.get_value() or ""
+                if val.startswith("@") and val.endswith("@"):
+                    url = obje_dict.get(val, "")
+                    if url and url not in links:
+                        links.append(url)
             else:
                 for url in _link_from_subelement(subchild, sources_dict):
                     if url not in links:
@@ -830,13 +838,13 @@ def main():
                 pointer = element.get_pointer()
                 name, surname = get_name_surname(element)
                 birth_date, birth_place, raw_birth_links = get_event_data(
-                    element, "BIRT", sources_dict
+                    element, "BIRT", sources_dict, obje_dict
                 )
                 death_date, death_place, raw_death_links = get_event_data(
-                    element, "DEAT", sources_dict
+                    element, "DEAT", sources_dict, obje_dict
                 )
                 # Cemetery links from BURI event → attach to death
-                _, _, raw_buri_links = get_event_data(element, "BURI", sources_dict)
+                _, _, raw_buri_links = get_event_data(element, "BURI", sources_dict, obje_dict)
                 for url in raw_buri_links:
                     if url not in raw_death_links:
                         raw_death_links.append(url)
@@ -998,7 +1006,7 @@ def main():
 
         for family in family_elements:
             marr_date, marr_place, raw_marr_links = get_event_data(
-                family, "MARR", sources_dict
+                family, "MARR", sources_dict, obje_dict
             )
             # Fallback: links at FAM level (e.g. KOŠIR.GED stores NOTE on FAM, not inside MARR)
             for url in _indi_level_link(family, sources_dict, obje_dict):
