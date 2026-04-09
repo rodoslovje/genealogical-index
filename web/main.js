@@ -92,7 +92,23 @@ function updateSidebarTop() {
 updateSidebarTop();
 window.addEventListener('resize', updateSidebarTop);
 
-hamburgerBtn.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.toggle('open'); });
+hamburgerBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+    const rect = sidebar.getBoundingClientRect();
+    const sidebarVisible = rect.bottom > 0;
+    if (!sidebarVisible) {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      return;
+    }
+  }
+  sidebar.classList.toggle('open');
+  if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }
+});
 
 document.addEventListener('click', (e) => {
   if (window.innerWidth > 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
