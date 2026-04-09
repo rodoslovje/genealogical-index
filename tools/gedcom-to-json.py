@@ -1203,14 +1203,15 @@ def main():
                 x.get("surname", "") or "",
                 x.get("name", "") or "",
                 x.get("date_of_birth", "") or "",
+                x.get("place_of_birth", "") or "",
             )
         )
         families_data.sort(
             key=lambda x: (
                 x.get("husband_surname", "") or "",
                 x.get("husband_name", "") or "",
-                x.get("wife_surname", "") or "",
-                x.get("wife_name", "") or "",
+                x.get("date_of_marriage", "") or "",
+                x.get("place_of_marriage", "") or "",
             )
         )
         deaths_data.sort(
@@ -1218,6 +1219,7 @@ def main():
                 x.get("surname", "") or "",
                 x.get("name", "") or "",
                 x.get("date_of_death", "") or "",
+                x.get("place_of_death", "") or "",
             )
         )
 
