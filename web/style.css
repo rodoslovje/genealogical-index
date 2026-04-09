@@ -629,6 +629,31 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
     border-bottom: 1px solid var(--border);
     right: auto;
     order: -1;
+    padding: 8px 20px 12px;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  #main-content {
+    padding: 0 4px;
+  }
+
+  body.contributors-view #main-content {
+    padding: 0 12px;
+  }
+
+  .intro-text {
+    padding: 12px;
+  }
+
+  th, td {
+    padding: 8px 6px;
+  }
+
+  th {
+    position: static;
   }
 
   .search-box {

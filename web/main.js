@@ -95,7 +95,7 @@ window.addEventListener('resize', updateSidebarTop);
 hamburgerBtn.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.toggle('open'); });
 
 document.addEventListener('click', (e) => {
-  if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+  if (window.innerWidth > 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
     sidebar.classList.remove('open');
   }
 });
@@ -124,7 +124,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
     if (SEARCH_TABS.includes(targetTab)) {
       sidebar.classList.add('open');
-    } else {
+    } else if (window.innerWidth > 768) {
       sidebar.classList.remove('open');
     }
 
