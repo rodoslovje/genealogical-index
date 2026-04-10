@@ -30,11 +30,7 @@ export const PARAM_MAP_REVERSE = Object.fromEntries(
   Object.entries(PARAM_MAP).map(([field, short]) => [short, field])
 );
 
-/**
- * Updates the browser URL with the given params without adding a history entry.
- * Empty/null/undefined values are omitted.
- */
-export function updateURL(params) {
+function buildURL(params) {
   const url = new URL(window.location);
   url.search = '';
   for (const [k, v] of Object.entries(params)) {
@@ -42,5 +38,21 @@ export function updateURL(params) {
       url.searchParams.set(k, v);
     }
   }
-  history.replaceState(null, '', url);
+  return url;
+}
+
+/**
+ * Updates the browser URL with the given params without adding a history entry.
+ * Empty/null/undefined values are omitted.
+ */
+export function updateURL(params) {
+  history.replaceState(null, '', buildURL(params));
+}
+
+/**
+ * Pushes a new history entry with the given params.
+ * Use this when a user-initiated search is performed.
+ */
+export function pushURL(params) {
+  history.pushState(null, '', buildURL(params));
 }

@@ -1,7 +1,7 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
-import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL, getTabURLParams } from './search.js';
+import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
 
 const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family', 'tab-death', 'tab-contributors'];
 export const tabsWithResults = new Set();
@@ -149,7 +149,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       for (const [k, v] of Object.entries(params)) {
         if (v) url.searchParams.set(k, v);
       }
-      history.replaceState(null, '', url);
+      const currentT = new URLSearchParams(window.location.search).get('t') || 'general';
+      if (currentT !== urlT) {
+        history.pushState(null, '', url);
+      } else {
+        history.replaceState(null, '', url);
+      }
     }
 
     if (targetTab === 'tab-contributors') {
@@ -268,3 +273,20 @@ async function init() {
 }
 
 init();
+
+// --- Browser back/forward navigation ---
+window.addEventListener('popstate', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlT = urlParams.get('t') || 'general';
+  const tabMap = { general: 'tab-general', birth: 'tab-birth', family: 'tab-family', death: 'tab-death', contributors: 'tab-contributors' };
+  const targetTab = tabMap[urlT] || 'tab-general';
+
+  // Switch tab silently (without updating URL again)
+  isInitializing = true;
+  document.querySelector(`.tab-btn[data-target="${targetTab}"]`)?.click();
+  isInitializing = false;
+
+  // Clear forms then restore from the popped URL
+  clearAllSearchForms();
+  restoreFromURL();
+});

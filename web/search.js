@@ -1,12 +1,23 @@
 import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
 import { API_BASE_URL, birthColumns, familyColumns, deathColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
-import { updateURL, PARAM_MAP } from './url.js';
+import { updateURL, pushURL, PARAM_MAP } from './url.js';
 import { hideIntro, tabsWithResults } from './main.js';
 import { getContributorUrlMap } from './contributors.js';
 
 let lastGeneralResults = null;
 const lastAdvResults = { birth: null, family: null, death: null };
+
+// Set to true during URL-driven restore so searches use replaceState, not pushState
+let isRestoring = false;
+
+function pushOrReplaceURL(params) {
+  // If the current URL has no search conditions (only t=xxx or empty), replace instead of push
+  const current = new URLSearchParams(window.location.search);
+  current.delete('t');
+  const hasExistingSearch = current.toString() !== '';
+  if (!isRestoring && hasExistingSearch) pushURL(params); else updateURL(params);
+}
 
 function dismissKeyboardAndScrollToResults(resultsId) {
   if (window.innerWidth <= 768) {
@@ -147,7 +158,7 @@ async function performGeneralSearch() {
   if (exact) shortParams.ex = '1';
   if (hasLink) shortParams.hl = '1';
 
-  updateURL(shortParams);
+  pushOrReplaceURL(shortParams);
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
   document.getElementById('count-general-births').textContent = '0';
@@ -261,7 +272,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     for (const [field, val] of Object.entries(fieldParams)) {
       shortParams[PARAM_MAP[field] || field] = val;
     }
-    updateURL(shortParams);
+    pushOrReplaceURL(shortParams);
 
     document.getElementById(countId).textContent = '0';
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
@@ -388,7 +399,22 @@ export function getTabURLParams(tabType) {
   return out;
 }
 
+export function clearAllSearchForms() {
+  ['general-query', 'general-name', 'general-surname', 'general-date_from', 'general-date_to', 'general-place', 'general-contributor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
+  });
+  ['general-exact', 'general-has_link'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+  ['birth', 'family', 'death'].forEach(type => {
+    document.querySelectorAll(`#adv-${type}-search-controls input`).forEach(el => {
+      if (el.type === 'checkbox') el.checked = false;
+      else { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
+    });
+  });
+}
+
 export function restoreFromURL() {
+  isRestoring = true;
   const params = new URLSearchParams(window.location.search);
   const q = params.get('q');
   const tParam = params.get('t');
@@ -457,4 +483,6 @@ export function restoreFromURL() {
     }
     if (hasCriteria) document.getElementById(`btn-adv-search-${tParam}`)?.click();
   }
+  // Reset flag after a tick so any async search triggered above can check it
+  setTimeout(() => { isRestoring = false; }, 0);
 }
