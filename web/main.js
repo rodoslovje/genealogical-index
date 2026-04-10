@@ -3,7 +3,7 @@ import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
 import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL, getTabURLParams } from './search.js';
 
-const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family', 'tab-death'];
+const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family', 'tab-death', 'tab-contributors'];
 export const tabsWithResults = new Set();
 
 // --- Clearable inputs ---
@@ -193,10 +193,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
 
     const sidebarSectionMap = {
-      'tab-general': 'general-search-sidebar',
-      'tab-birth':   'birth-search-sidebar',
-      'tab-family':  'family-search-sidebar',
-      'tab-death':   'death-search-sidebar',
+      'tab-general':      'general-search-sidebar',
+      'tab-birth':        'birth-search-sidebar',
+      'tab-family':       'family-search-sidebar',
+      'tab-death':        'death-search-sidebar',
+      'tab-contributors': 'contributors-search-sidebar',
     };
     const sidebarSection = sidebarSectionMap[targetTab];
     if (sidebarSection) {
@@ -224,6 +225,8 @@ async function init() {
     setupClearableInput(document.getElementById('general-query'), () => {
       document.getElementById('btn-general-search').click();
     });
+
+    setupClearableInput(document.getElementById('contributors-query'));
 
     setupGeneralSearch();
     setupBirthSearchForm();

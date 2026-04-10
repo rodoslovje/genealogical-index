@@ -510,21 +510,7 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 }
 
 /* --- Layout for Full-Width Contributors Page --- */
-/* Hide sidebar on desktop only — on mobile the hamburger still needs to work */
-@media (min-width: 769px) {
-  body.contributors-view #sidebar {
-    display: none;
-  }
-}
 
-/* On mobile contributors view, remove extra margin/padding below the nav items */
-@media (max-width: 768px) {
-  body.contributors-view .sidebar-nav {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
-  }
-}
 
 /* --- Totals bar (above contributors table) --- */
 .totals-bar {

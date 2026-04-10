@@ -88,17 +88,20 @@ def get_timeline_distribution(db: Session):
     return result
 
 
-def get_top_surnames(db: Session, contributor: str = None, limit: int = 100):
-    """Returns the top surnames by record count, optionally filtered by contributor."""
-    cache_key = contributor or ""
+def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
+    """Returns the top surnames by record count, optionally filtered by contributor(s)."""
+    cache_key = ",".join(sorted(contributors)) if contributors else ""
     now = time.time()
     cached = _surnames_cache.get(cache_key)
     if cached and (now - cached["time"] < CACHE_TTL):
         return cached["data"][:limit]
 
     q = db.query(models.Birth.surname, func.count(models.Birth.id)).group_by(models.Birth.surname)
-    if contributor:
-        q = q.filter(models.Birth.contributor == contributor)
+    if contributors:
+        if len(contributors) == 1:
+            q = q.filter(models.Birth.contributor == contributors[0])
+        else:
+            q = q.filter(models.Birth.contributor.in_(contributors))
 
     counts = {}
     for surname, c in q.all():

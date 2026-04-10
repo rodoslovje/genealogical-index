@@ -46,10 +46,16 @@ def read_timeline(db: Session = Depends(get_db)):
 @app.get("/api/stats/top_surnames", response_model=List[schemas.SurnameStat])
 def read_top_surnames(
     contributor: Optional[str] = None,
+    contributors: Optional[str] = None,
     limit: int = 100,
     db: Session = Depends(get_db),
 ):
-    return crud.get_top_surnames(db, contributor=contributor, limit=limit)
+    contributor_list = None
+    if contributors:
+        contributor_list = [c.strip() for c in contributors.split(',') if c.strip()]
+    elif contributor:
+        contributor_list = [contributor]
+    return crud.get_top_surnames(db, contributors=contributor_list, limit=limit)
 
 
 @app.get("/api/search/general", response_model=schemas.GeneralSearchResponse)

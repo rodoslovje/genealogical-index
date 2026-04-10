@@ -80,6 +80,16 @@ export async function renderTotalsBar() {
   } catch { /* silently skip if API unavailable */ }
 }
 
+function getContributorFilter() {
+  return (document.getElementById('contributors-query')?.value || '').trim().toLowerCase();
+}
+
+function filterContributorData(data) {
+  const q = getContributorFilter();
+  if (!q) return data;
+  return data.filter(d => d.contributor_ID.toLowerCase().includes(q));
+}
+
 export async function renderContributors() {
   const container = document.getElementById('table-contributors');
   container.innerHTML = `<p>${t('loading_contributors')}</p>`;
@@ -92,9 +102,21 @@ export async function renderContributors() {
 
     renderChart(data);
     renderTimelineChart(timeline);
-    renderTable(data, 'table-contributors', contributorColumns, 'total', false);
-    populateSurnameSelect(data);
-    loadSurnameCloud('');
+    const initialFiltered = filterContributorData(data);
+    renderTable(initialFiltered, 'table-contributors', contributorColumns, 'total', false);
+    loadSurnameCloud(initialFiltered.map(d => d.contributor_ID));
+
+    const input = document.getElementById('contributors-query');
+    if (input && !input.dataset.bound) {
+      input.dataset.bound = '1';
+      input.addEventListener('input', () => {
+        if (cachedData) {
+          const filtered = filterContributorData(cachedData);
+          renderTable(filtered, 'table-contributors', contributorColumns, 'total', false);
+          loadSurnameCloud(filtered.map(d => d.contributor_ID));
+        }
+      });
+    }
   } catch {
     container.innerHTML = `<p>${t('contributors_failed')}</p>`;
   }
@@ -256,7 +278,7 @@ function buildSelectOptions(contributorData) {
     sorted.map(d => `<option value="${d.contributor_ID}">${d.contributor_ID}</option>`).join('');
 }
 
-async function loadSurnameCloud(contributor) {
+async function loadSurnameCloud(contributors) {
   const cloud = document.getElementById('surname-cloud');
   if (!cloud) return;
 
@@ -266,7 +288,8 @@ async function loadSurnameCloud(contributor) {
   cloudAbortController = new AbortController();
 
   try {
-    const qs = contributor ? `contributor=${encodeURIComponent(contributor)}&` : '';
+    const list = Array.isArray(contributors) ? contributors : (contributors ? [contributors] : []);
+    const qs = list.length ? `contributors=${list.map(encodeURIComponent).join(',')}&` : '';
     const url = `${API_BASE_URL}/api/stats/top_surnames?${qs}limit=80`;
     const res = await fetch(url, { signal: cloudAbortController.signal });
     const data = await res.json();
@@ -285,7 +308,8 @@ async function loadSurnameCloud(contributor) {
       const ratio = (count - minCount) / range;
       const size = (0.75 + ratio * 1.75).toFixed(2);
       const opacity = (0.55 + ratio * 0.45).toFixed(2);
-      return `<span class="cloud-word" style="font-size:${size}rem;opacity:${opacity}" title="${count}" data-surname="${surname}" data-contributor="${contributor}">${surname}</span>`;
+      const singleContrib = list.length === 1 ? list[0] : '';
+      return `<span class="cloud-word" style="font-size:${size}rem;opacity:${opacity}" title="${count}" data-surname="${surname}" data-contributor="${singleContrib}">${surname}</span>`;
     }).join('');
 
     cloud.querySelectorAll('.cloud-word').forEach(el => {
