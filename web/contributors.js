@@ -87,7 +87,7 @@ function getContributorFilter() {
 function filterContributorData(data) {
   const q = getContributorFilter();
   if (!q) return data;
-  return data.filter(d => d.contributor_ID.toLowerCase().includes(q));
+  return data.filter(d => d.contributor_ID.toLowerCase().includes(q) || d.last_modified.includes(q));
 }
 
 export async function renderContributors() {

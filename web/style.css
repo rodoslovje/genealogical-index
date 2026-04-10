@@ -662,28 +662,6 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 .surname-cloud-section {
   margin: 1rem 0 2rem;
 }
-.surname-cloud-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-.surname-cloud-header h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #444;
-}
-.surname-cloud-header select {
-  font-size: 0.85rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
-}
 .surname-cloud {
   display: flex;
   flex-wrap: wrap;
