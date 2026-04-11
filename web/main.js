@@ -74,7 +74,7 @@ export function showIntros(onlyId = null) {
 // Intercept intro links to contributors tab so they switch tabs without a page reload
 document.addEventListener('click', (e) => {
   const link = e.target.closest('a[href="?t=contributors"]');
-  if (link) {
+  if (link && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.button !== 1) {
     e.preventDefault();
     document.querySelector('.tab-btn[data-target="tab-contributors"]')?.click();
   }
@@ -290,6 +290,8 @@ function navigateToURL(urlSearch) {
 document.addEventListener('click', (e) => {
   const link = e.target.closest('[data-spa-nav]');
   if (!link) return;
+  // Let browser handle Ctrl/Cmd/middle-click natively (opens new tab)
+  if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
   e.preventDefault();
   const url = new URL(link.href, window.location.href);
   history.pushState(null, '', url);
