@@ -142,18 +142,28 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
         return and_(*conditions)
     if from_val:
         if exact:
-            safe_value = re.sub(r"([.*+?^${}()|\[\]\\])", r"\\\1", from_val)
-            return column.op("~*")(rf"\y{safe_value}\y")
+            v = from_val.replace("%", r"\%").replace("_", r"\_")
+            return or_(
+                column.ilike(v),
+                column.ilike(f"{v} %"),
+                column.ilike(f"% {v}"),
+                column.ilike(f"% {v} %"),
+            )
         return column.ilike(f"%{from_val}%")
     return None
 
 
 def _text_filter(column, value, exact: bool):
     if exact:
-        safe_value = re.sub(r"([.*+?^${}()|\[\]\\])", r"\\\1", value)
-        return column.op("~*")(
-            rf"\y{safe_value}\y"
-        )  # case-insensitive word boundary match
+        # Match value as a whole word using ILIKE patterns — all are index-friendly.
+        # Covers: full field, start, end, and middle word positions.
+        v = value.replace("%", r"\%").replace("_", r"\_")
+        return or_(
+            column.ilike(v),
+            column.ilike(f"{v} %"),
+            column.ilike(f"% {v}"),
+            column.ilike(f"% {v} %"),
+        )
     return or_(column.op("%>")(cast(value, Text)), column.ilike(f"%{value}%"))
 
 
