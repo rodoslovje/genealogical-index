@@ -158,6 +158,9 @@ SISTORY_RE = re.compile(r"https?://(?:www\.)?sistory\.si/ww[12][^\"\s<]*")
 SISTORY_CENSUS_RE = re.compile(
     r"https?://(?:www\.)?sistory\.si/[^\"\s<]*popisi[^\"\s<]*"
 )
+FAMILYSEARCH_RE = re.compile(
+    r"https?://(?:www\.)?familysearch\.org/ark:/[^\"\s<]+"
+)
 
 
 def _normalize_matricula_url(url):
@@ -193,6 +196,14 @@ def _find_census_url(text):
     return m.group().rstrip(".,;)") if m else ""
 
 
+def _find_familysearch_url(text):
+    """Return the first FamilySearch ark URL found in text, or empty string."""
+    if not text:
+        return ""
+    m = FAMILYSEARCH_RE.search(text)
+    return m.group().rstrip(".,;)") if m else ""
+
+
 def _find_all_links(text):
     """Return list of all known link URLs found in text (matricula + cemetery + sistory)."""
     if not text:
@@ -207,6 +218,7 @@ def _find_all_links(text):
         BILLIONGRAVES_RE,
         SISTORY_RE,
         SISTORY_CENSUS_RE,
+        FAMILYSEARCH_RE,
     ):
         m = pattern.search(text)
         if m:
@@ -348,6 +360,11 @@ def save_url_cache():
 
 def _determine_link_type(url, context=None):
     if not url:
+        return []
+
+    # FamilySearch ark links are behind a login — do not attempt to fetch them.
+    # Return [] so they are kept on whichever event they were placed in the GEDCOM.
+    if FAMILYSEARCH_RE.search(url):
         return []
 
     # Strip query parameters (like ?pg=N) to cache and fetch at the book level

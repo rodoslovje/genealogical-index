@@ -74,6 +74,7 @@ const translations = {
     col_url: 'URL',
 
     // Tooltips
+    icon_familysearch: 'FamilySearch',
     icon_grave: 'Grave',
     icon_census: 'Census',
     icon_military: 'Casualty of the war',
@@ -161,6 +162,7 @@ const translations = {
     col_url: 'URL',
 
     // Tooltips
+    icon_familysearch: 'FamilySearch',
     icon_grave: 'Grob',
     icon_census: 'Popis prebivalstva',
     icon_military: 'Žrtev vojne',

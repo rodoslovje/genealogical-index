@@ -226,10 +226,13 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         }
         if (linksList.length) {
           const icons = linksList.map(url => {
-            let icon = '🔗';
+            let icon = '📜';
             let titleText = t('icon_matricula');
 
-            if (url.includes('geneanet.org') || url.includes('findagrave.com') || url.includes('billiongraves.com')) {
+            if (url.includes('familysearch.org')) {
+              icon = '🌳';
+              titleText = t('icon_familysearch');
+            } else if (url.includes('geneanet.org') || url.includes('findagrave.com') || url.includes('billiongraves.com')) {
               icon = '🪦';
               titleText = t('icon_grave');
             } else if (url.includes('sistory.si/ww')) {
