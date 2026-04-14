@@ -179,6 +179,96 @@ const translations = {
     footer_version: 'Različica',
     footer_data_update: 'Posodobitev podatkov',
   },
+  it: {
+    // Site title
+    site_title: 'Indice genealogico sloveno',
+
+    // Navigation tabs
+    tab_search: 'Ricerca',
+    tab_birth: 'Nascita',
+    tab_family: 'Famiglia',
+    tab_death: 'Morte',
+    tab_contributors: 'Collaboratori',
+
+    // Search controls
+    search_placeholder: 'Cerca in tutti i campi (es. nome, luogo, data)...',
+    search_btn: 'Cerca',
+    exact_search: 'Esatto',
+    approximate_search: 'Approssimato',
+    has_link: 'Con collegamento',
+    date_to: 'fino all\'anno',
+    download_csv: 'Scarica CSV',
+    general_search_label: 'Generale',
+    chart_others: 'Altri',
+    chart_timeline: 'Cronologia dei record',
+    chart_surnames_title: 'Cognomi più frequenti per collaboratore',
+    contributors_filter_placeholder: 'Filtra per nome collaboratore…',
+    chart_surnames_all: 'Tutti i collaboratori',
+    chart_surnames_select: 'Seleziona collaboratore…',
+    chart_surnames_loading: 'Caricamento…',
+
+    // Result section headings
+    results_births: 'Nascita',
+    results_families: 'Famiglia',
+    results_deaths: 'Morte',
+
+    // Status messages
+    loading: 'Caricamento dei dati genealogici...',
+    searching: 'Ricerca in corso...',
+    no_results: 'Nessun risultato trovato.',
+    enter_criterion: 'Inserisci almeno un criterio di ricerca.',
+    search_failed: 'Ricerca fallita. Controlla la connessione API.',
+    loading_contributors: 'Caricamento collaboratori...',
+    contributors_failed: 'Impossibile caricare i dati dei collaboratori.',
+    init_error: 'Errore durante l\'inizializzazione dell\'applicazione.',
+
+    // Table column headers
+    col_name: 'Nome',
+    col_surname: 'Cognome',
+    col_date: 'Data',
+    col_place: 'Luogo',
+    col_date_of_birth: 'Data di nascita',
+    col_place_of_birth: 'Luogo di nascita',
+    col_contributor: 'Collaboratore',
+    col_date_of_death: 'Data di morte',
+    col_place_of_death: 'Luogo di morte',
+    col_husband_name: 'Nome del marito',
+    col_husband_surname: 'Cognome del marito',
+    col_wife_name: 'Nome della moglie',
+    col_wife_surname: 'Cognome della moglie',
+    col_parents: 'Genitori',
+    label_husband: 'Famiglia del marito',
+    label_wife: 'Famiglia della moglie',
+    col_children: 'Figli',
+    col_date_of_marriage: 'Data di matrimonio',
+    col_place_of_marriage: 'Luogo di matrimonio',
+    col_contributor_ID: 'Collaboratore',
+    col_total_births: 'Nascita',
+    col_total_families: 'Famiglia',
+    col_total_deaths: 'Morte',
+    col_total: 'Totale',
+    col_last_modified: 'Ultima modifica',
+    col_last_update: 'Ultimo aggiornamento',
+    col_link: 'Collegamento',
+    col_links: 'Collegamento',
+    col_total_links: 'Collegamenti',
+    col_url: 'URL',
+
+    // Tooltips
+    icon_familysearch: 'FamilySearch',
+    icon_grave: 'Tomba',
+    icon_census: 'Censimento',
+    icon_military: 'Vittima di guerra',
+    icon_matricula: 'Matricula Online',
+    icon_dlib: 'Biblioteca digitale della Slovenia',
+
+    // Society name (used in intro logo)
+    society_name: 'Società genealogica slovena',
+
+    // Footer
+    footer_version: 'Versione',
+    footer_data_update: 'Aggiornamento dati',
+  },
 };
 
 // Intro paragraphs shown on empty Search and Advanced Search tabs.
@@ -204,11 +294,22 @@ const introData = {
     { text: 'Opozorilo! Slovenski rodoslovni indeks je informativnega značaja. Slovensko rodoslovno društvo se odreka vsakršne odgovornosti za pravilnost posredovanih podatkov. Društvo je prostovoljna povezava posameznikov, ki razvijajo skupen vir poznavanja podatkov iz matičnih registrov in drugih pisnih in ustnih virov. Struktura društva omogoča, da lahko vsak, ki ima svojo zbirko rodoslovnih podatkov, to prispeva v skupno kumulativno zbirko in indeks. Za pravilnost podatkov ne more jamčiti noben posameznik, ki je prispeval podatke v indeks, kot tudi ne Slovensko rodoslovno društvo.', warning: true },
     { text: 'Če imate svoj rodovnik v obliki zbirke podatkov in bi se dosedanjim sodelavcem želeli pridružiti z rezultati svojega dela, svojo GEDCOM datoteko (brez podatkov o še živečih osebah) po <a href="mailto:indeks@rodoslovje.si">e-pošti</a> pošljite administratorju.' },
   ],
+  it: [
+    { text: '<strong>L\'Indice genealogico sloveno</strong> è una raccolta archivistica di dati su nascite, matrimoni e morti in Slovenia, creata dalle collezioni di singoli genealogisti fin dall\'inizio delle attività della società. In esso possiamo cercare i nomi e i cognomi delle persone che stiamo ricercando per scoprire se qualcun altro le ha già individuate e descritte. L\'indice di base contiene, oltre ai nomi personali, le date e i luoghi di nascita, matrimonio e morte, nonché il cognome del fornitore dei dati, il che permette al ricercatore di stabilire ulteriori contatti, indica la direzione e spesso rende possibile la ricerca nella parrocchia indirettamente scoperta. I dati di contatto dei donatori non sono pubblicati, ma non sarà difficile raggiungerli tramite la <a href="https://rodoslovje.si" target="_blank" rel="noopener">Società genealogica slovena</a>.' },
+    { text: 'La scheda principale <strong>Ricerca</strong> restituisce i risultati della query da tutte le parti della collezione: nascite, matrimoni e morti di figure storiche in Slovenia. Il motore di ricerca consente ricerche esatte o approssimate in tutti i campi, nonché la ricerca solo di record con un collegamento ai documenti originali (su <a href="https://data.matricula-online.eu/en/slovenia/" target="_blank" rel="noopener">Matricula Online</a>).' },
+    { text: 'Le schede aggiuntive <strong>Nascita</strong>, <strong>Famiglia</strong> e <strong>Morte</strong> consentono la ricerca per tipo specifico di record. Anche qui sono disponibili tutti i campi: nome, cognome, data e luogo dell\'evento e il cognome del genealogista fornitore dei dati.' },
+    { text: 'L\'indice delle famiglie include anche i genitori che non si sono mai sposati o che non hanno mai vissuto insieme, il che può essere un\'informazione preziosa per i discendenti o per chi cerca informazioni. Per ogni famiglia è inoltre visibile il numero di figli. Dietro il numero è nascosto un elenco dei nomi dei figli con l\'anno di nascita (ove tale dato sia disponibile).' },
+    { text: 'I risultati della query possono essere ordinati per qualsiasi colonna. Per una visualizzazione completa, è possibile nascondere la finestra di ricerca. È possibile esportare i risultati in formato CSV. Per gli utenti stranieri dell\'indice, il sito è disponibile anche in inglese.' },
+    { text: 'L\'elenco di cognomi, nomi, date e luoghi di nascita, matrimonio e morte è ricavato da un file unificato a cui molti genealogisti, elencati nella pagina <a href="?t=contributors">Collaboratori</a>, hanno contribuito con i risultati del loro lavoro.' },
+    { text: 'Avvertenza! L\'Indice genealogico sloveno ha carattere informativo. La Società genealogica slovena declina ogni responsabilità per l\'accuratezza dei dati forniti. La società è un\'associazione volontaria di individui che sviluppano una fonte comune di conoscenza dei dati provenienti da registri e altre fonti scritte e orali. La struttura della società permette a chiunque disponga di una propria raccolta di dati genealogici di contribuirla alla raccolta cumulativa comune e all\'indice. Nessun individuo che abbia contribuito dati all\'indice, né la Società genealogica slovena, può garantire l\'accuratezza dei dati.', warning: true },
+    { text: 'Se disponi del tuo albero genealogico sotto forma di database e desideri unirti ai collaboratori esistenti con i risultati del tuo lavoro, invia il tuo file GEDCOM (esclusi i dati sulle persone viventi) per <a href="mailto:indeks@rodoslovje.si">email</a> all\'amministratore.' },
+  ],
 };
 
 const LANG_META = {
   en: { flag: '🇬🇧', code: 'EN' },
   sl: { flag: '🇸🇮', code: 'SL' },
+  it: { flag: '🇮🇹', code: 'IT' },
 };
 
 function detectLanguage() {
