@@ -141,7 +141,7 @@ export function parseDateForSort(dateStr) {
 const CENTERED_COLUMNS = new Set([
   'contributor', 'contributor_ID',
   'total_births', 'total_families', 'total_deaths', 'total', 'total_links',
-  'last_modified',
+  'last_modified', 'links',
 ]);
 
 const RIGHT_COLUMNS = new Set([
@@ -150,6 +150,9 @@ const RIGHT_COLUMNS = new Set([
 
 function getValue(row, col) {
   if (col === 'parents') return String(row.husband_parents || '') + String(row.wife_parents || '');
+  if (col === 'links') {
+    try { return row.links ? JSON.parse(row.links).length : 0; } catch { return 0; }
+  }
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death';
   const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
   if (isGedcomDate) return parseDateForSort(row[col]);
@@ -203,16 +206,12 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
 
   let html = '<table><thead><tr>';
   columns.forEach(col => {
-    if (col === 'links') {
-      html += `<th>${t('col_link')}</th>`;
-    } else {
-      const header = t(`col_${col}`);
-      let indicator = '';
-      if (primary?.column === col) indicator = primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
-      else if (secondary?.column === col) indicator = secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
-      const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
-      html += `<th data-col="${col}"${cls}>${header}${indicator}</th>`;
-    }
+    const header = t(`col_${col}`);
+    let indicator = '';
+    if (primary?.column === col) indicator = primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
+    else if (secondary?.column === col) indicator = secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
+    const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
+    html += `<th data-col="${col}"${cls}>${header}${indicator}</th>`;
   });
   html += '</tr></thead><tbody>';
 

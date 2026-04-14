@@ -70,6 +70,7 @@ const translations = {
     col_last_modified: 'Last Change',
     col_last_update: 'Last update',
     col_link: 'Link',
+    col_links: 'Link',
     col_total_links: 'Links',
     col_url: 'URL',
 
@@ -159,6 +160,7 @@ const translations = {
     col_last_modified: 'Zadnja sprememba',
     col_last_update: 'Zadnja posodobitev',
     col_link: 'Povezava',
+    col_links: 'Povezava',
     col_total_links: 'Povezave',
     col_url: 'URL',
 
