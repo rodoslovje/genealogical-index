@@ -126,20 +126,47 @@ def _extract_year(val: str):
 def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool = False):
     """
     If only from_val is given: existing fuzzy/exact string match.
-    If to_val is given: year-range comparison using the 4-digit year extracted
-    from the stored date string.
+    If to_val is given: year-range comparison, handling three date formats:
+      - Exact year (e.g. "15 MAR 1875"): included when from_year <= year <= to_year
+      - Decade approx (e.g. "ABT 193_"): included when range 1930-1939 overlaps search range
+      - Century approx (e.g. "ABT 19__"): included when range 1900-1999 overlaps search range
     """
     if to_val is not None:
-        # Year-range mode: extract year with PostgreSQL regex, cast to integer
-        year_expr = cast(func.substring(column, r"\d{4}"), Integer)
-        conditions = [column.op("~")(r"\d{4}")]  # only rows that have a year
         from_year = _extract_year(from_val) if from_val else None
         to_year = _extract_year(to_val)
+
+        # Case 1: exact 4-digit year
+        year_expr = cast(func.substring(column, r"\d{4}"), Integer)
+        exact_conds = [column.op("~")(r"\d{4}")]
         if from_year:
-            conditions.append(year_expr >= from_year)
+            exact_conds.append(year_expr >= from_year)
         if to_year:
-            conditions.append(year_expr <= to_year)
-        return and_(*conditions)
+            exact_conds.append(year_expr <= to_year)
+        exact_match = and_(*exact_conds)
+
+        # Case 2: decade approximation — 3 known digits + underscore (e.g. "193_" → 1930–1939)
+        decade_prefix = cast(func.substring(column, r"(\d{3})_"), Integer)
+        decade_min = decade_prefix * 10
+        decade_max = decade_prefix * 10 + 9
+        decade_conds = [column.op("~")(r"\d{3}_")]
+        if from_year:
+            decade_conds.append(decade_max >= from_year)
+        if to_year:
+            decade_conds.append(decade_min <= to_year)
+        decade_match = and_(*decade_conds)
+
+        # Case 3: century approximation — 2 known digits + two underscores (e.g. "19__" → 1900–1999)
+        century_prefix = cast(func.substring(column, r"(\d{2})__"), Integer)
+        century_min = century_prefix * 100
+        century_max = century_prefix * 100 + 99
+        century_conds = [column.op("~")(r"\d{2}__")]
+        if from_year:
+            century_conds.append(century_max >= from_year)
+        if to_year:
+            century_conds.append(century_min <= to_year)
+        century_match = and_(*century_conds)
+
+        return or_(exact_match, decade_match, century_match)
     if from_val:
         if exact:
             v = from_val.replace("%", r"\%").replace("_", r"\_")
