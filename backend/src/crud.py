@@ -384,7 +384,17 @@ def search_advanced_families(
             _text_filter(models.Family.wife_surname, wife_surname, exact)
         )
     if children:
-        query = query.filter(_text_filter(models.Family.children_list, children, exact))
+        # children_list is a JSON array: names appear as JSON string values surrounded by quotes.
+        # Use ILIKE '%"value"%' for exact word match, or '%value%' for approximate.
+        v = children.replace("%", r"\%").replace("_", r"\_")
+        if exact:
+            children_filter = models.Family.children_list.ilike(f'%"{v}"%')
+        else:
+            children_filter = or_(
+                models.Family.children_list.ilike(f'%{v}%'),
+                models.Family.children_list.op("%>")(cast(children, Text)),
+            )
+        query = query.filter(children_filter)
     if place_of_marriage:
         query = query.filter(
             _text_filter(models.Family.place_of_marriage, place_of_marriage, exact)
