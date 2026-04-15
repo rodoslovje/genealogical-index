@@ -10,6 +10,10 @@ class Birth(Base):
     surname = Column(Text, index=True)
     date_of_birth = Column(Text)
     place_of_birth = Column(Text)
+    father_name = Column(Text)
+    father_surname = Column(Text)
+    mother_name = Column(Text)
+    mother_surname = Column(Text)
     contributor = Column(Text, index=True)
     links = Column(Text)
 
@@ -39,6 +43,10 @@ class Death(Base):
     surname = Column(Text, index=True)
     date_of_death = Column(Text)
     place_of_death = Column(Text)
+    father_name = Column(Text)
+    father_surname = Column(Text)
+    mother_name = Column(Text)
+    mother_surname = Column(Text)
     contributor = Column(Text, index=True)
     links = Column(Text)
 

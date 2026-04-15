@@ -7,7 +7,14 @@ function exportToCSV(data, columns, filename) {
   const rows = data.map(row => {
     return columns.map(col => {
       let val = '';
-      if (col === 'parents') {
+      if (col === 'parents' && (row.father_name || row.father_surname || row.mother_name || row.mother_surname)) {
+        const parts = [];
+        const fStr = [row.father_name, row.father_surname].filter(Boolean).join(' ');
+        const mStr = [row.mother_name, row.mother_surname].filter(Boolean).join(' ');
+        if (fStr) parts.push(fStr);
+        if (mStr) parts.push(mStr);
+        val = parts.join(', ');
+      } else if (col === 'parents') {
         const parseP = (jsonStr, label) => {
           if (!jsonStr) return '';
           try {
@@ -206,12 +213,15 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
 
   let html = '<table><thead><tr>';
   columns.forEach(col => {
-    const header = t(`col_${col}`);
     let indicator = '';
     if (primary?.column === col) indicator = primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
     else if (secondary?.column === col) indicator = secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
     const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
-    html += `<th data-col="${col}"${cls}>${header}${indicator}</th>`;
+    if (col === 'parents') {
+      html += `<th data-col="${col}"${cls} title="${t('col_parents')}">👪${indicator}</th>`;
+    } else {
+      html += `<th data-col="${col}"${cls}>${t(`col_${col}`)}${indicator}</th>`;
+    }
   });
   html += '</tr></thead><tbody>';
 
@@ -335,6 +345,15 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
             <div class="expanded-content">${formattedList.join('<br>')}</div>
           </details>
         </td>`;
+      } else if (col === 'parents' && (row.father_name || row.father_surname || row.mother_name || row.mother_surname)) {
+        const famParams = new URLSearchParams();
+        famParams.set('t', 'family');
+        if (row.father_name) famParams.set('hn', row.father_name);
+        if (row.father_surname) famParams.set('hsn', row.father_surname);
+        if (row.mother_name) famParams.set('wn', row.mother_name);
+        if (row.mother_surname) famParams.set('wsn', row.mother_surname);
+        famParams.set('ex', '1');
+        html += `<td class="col-center"><a href="?${famParams.toString()}" data-spa-nav title="${t('col_parents')}">👪</a></td>`;
       } else if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
         let parentsCount = 0;
         const renderParents = (parentsJson, labelKey) => {

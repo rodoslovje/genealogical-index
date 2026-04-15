@@ -7,6 +7,10 @@ class BirthBase(BaseModel):
     surname: str
     date_of_birth: str
     place_of_birth: str
+    father_name: Optional[str] = None
+    father_surname: Optional[str] = None
+    mother_name: Optional[str] = None
+    mother_surname: Optional[str] = None
     contributor: str
     links: Optional[str] = None
 
@@ -44,6 +48,10 @@ class DeathBase(BaseModel):
     surname: str
     date_of_death: str
     place_of_death: str
+    father_name: Optional[str] = None
+    father_surname: Optional[str] = None
+    mother_name: Optional[str] = None
+    mother_surname: Optional[str] = None
     contributor: str
     links: Optional[str] = None
 

@@ -44,13 +44,13 @@ def setup_full(db):
             links_count INTEGER DEFAULT 0
         );
         CREATE TABLE births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE families (
             id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, contributor TEXT, links TEXT
         );
 
         CREATE INDEX idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
@@ -79,13 +79,13 @@ def setup_update(db):
             last_modified VARCHAR(255)
         );
         CREATE TABLE IF NOT EXISTS births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS families (
             id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, contributor TEXT, links TEXT
         );
         ALTER TABLE births ADD COLUMN IF NOT EXISTS links TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS links TEXT;
@@ -106,6 +106,15 @@ def setup_update(db):
                 ALTER TABLE deaths DROP COLUMN link;
             END IF;
         END $$;
+
+        ALTER TABLE births ADD COLUMN IF NOT EXISTS father_name TEXT;
+        ALTER TABLE births ADD COLUMN IF NOT EXISTS father_surname TEXT;
+        ALTER TABLE births ADD COLUMN IF NOT EXISTS mother_name TEXT;
+        ALTER TABLE births ADD COLUMN IF NOT EXISTS mother_surname TEXT;
+        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS father_name TEXT;
+        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS father_surname TEXT;
+        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS mother_name TEXT;
+        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS mother_surname TEXT;
 
         ALTER TABLE families DROP COLUMN IF EXISTS children_json;
         ALTER TABLE families DROP COLUMN IF EXISTS children;
@@ -220,10 +229,16 @@ def import_contributor(
                 if isinstance(birth.get("links"), list):
                     birth["links"] = json.dumps(birth["links"], ensure_ascii=False)
                 birth.setdefault("links", None)
+                birth.setdefault("father_name", None)
+                birth.setdefault("father_surname", None)
+                birth.setdefault("mother_name", None)
+                birth.setdefault("mother_surname", None)
                 db.execute(
                     text(
-                        "INSERT INTO births (name, surname, date_of_birth, place_of_birth, contributor, links) "
-                        "VALUES (:name, :surname, :date_of_birth, :place_of_birth, :contributor, :links)"
+                        "INSERT INTO births (name, surname, date_of_birth, place_of_birth, "
+                        "father_name, father_surname, mother_name, mother_surname, contributor, links) "
+                        "VALUES (:name, :surname, :date_of_birth, :place_of_birth, "
+                        ":father_name, :father_surname, :mother_name, :mother_surname, :contributor, :links)"
                     ),
                     birth,
                 )
@@ -303,10 +318,16 @@ def import_contributor(
                 if isinstance(death.get("links"), list):
                     death["links"] = json.dumps(death["links"], ensure_ascii=False)
                 death.setdefault("links", None)
+                death.setdefault("father_name", None)
+                death.setdefault("father_surname", None)
+                death.setdefault("mother_name", None)
+                death.setdefault("mother_surname", None)
                 db.execute(
                     text(
-                        "INSERT INTO deaths (name, surname, date_of_death, place_of_death, contributor, links) "
-                        "VALUES (:name, :surname, :date_of_death, :place_of_death, :contributor, :links)"
+                        "INSERT INTO deaths (name, surname, date_of_death, place_of_death, "
+                        "father_name, father_surname, mother_name, mother_surname, contributor, links) "
+                        "VALUES (:name, :surname, :date_of_death, :place_of_death, "
+                        ":father_name, :father_surname, :mother_name, :mother_surname, :contributor, :links)"
                     ),
                     death,
                 )
