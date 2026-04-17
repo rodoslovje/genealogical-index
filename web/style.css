@@ -201,6 +201,25 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   text-decoration: none;
 }
 
+.intro-logo-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.intro-logo-text {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .intro-logo-text {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 .intro-logo-link {
   display: inline-flex;
   align-items: center;

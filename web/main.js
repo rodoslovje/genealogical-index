@@ -47,10 +47,17 @@ export function renderIntros() {
       ? `<p class="intro-warning">${p.text}</p>`
       : `<p>${p.text}</p>`
   ).join('');
-  const logo = `<a href="https://rodoslovje.si" target="_blank" rel="noopener" class="intro-logo-link">
+  const logo = `<div class="intro-logo-links">
     <img src="/srd-logo.png" alt="Slovensko rodoslovno društvo" class="intro-logo" />
-    <span class="intro-logo-name">${t('society_name')}</span>
-  </a>`;
+    <div class="intro-logo-text">
+      <a href="https://rodoslovje.si" target="_blank" rel="noopener" class="intro-logo-link">
+        <span class="intro-logo-name">${t('society_name')}</span>
+      </a>
+      <a href="https://rodoslovje.si/rodoslovni-indeks/" target="_blank" rel="noopener" class="intro-logo-link">
+        <span class="intro-logo-name">${t('site_title')}</span>
+      </a>
+    </div>
+  </div>`;
   const html = paragraphs + logo;
   ['intro-general', 'intro-birth', 'intro-family', 'intro-death'].forEach(id => {
     const el = document.getElementById(id);
