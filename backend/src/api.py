@@ -60,7 +60,6 @@ def read_top_surnames(
 
 @app.get("/api/search/general", response_model=schemas.GeneralSearchResponse)
 def search_general(
-    q: Optional[str] = None,
     name: Optional[str] = None,
     surname: Optional[str] = None,
     date_from: Optional[str] = None,
@@ -70,13 +69,13 @@ def search_general(
     has_link: bool = False,
     limit: int = 500,
     exact: bool = False,
+    type: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    if not any([q, name, surname, date_from, date_to, place, contributor]):
+    if not any([name, surname, date_from, date_to, place, contributor]):
         return {"births": [], "families": [], "deaths": []}
     return crud.search_all(
         db,
-        query=q,
         name=name,
         surname=surname,
         date_from=date_from,
@@ -86,6 +85,7 @@ def search_general(
         has_link=has_link,
         limit=limit,
         exact=exact,
+        record_type=type,
     )
 
 

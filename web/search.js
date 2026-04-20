@@ -46,7 +46,6 @@ export function setupGeneralSearch() {
 
   function renderFields() {
     if (!container) return;
-    const queryVal = document.getElementById('general-query')?.value || '';
     const nameVal = document.getElementById('general-name')?.value || '';
     const surnameVal = document.getElementById('general-surname')?.value || '';
     const dateFromVal = document.getElementById('general-date_from')?.value || '';
@@ -58,10 +57,6 @@ export function setupGeneralSearch() {
     const hasLinkChecked = document.getElementById('general-has_link')?.checked || false;
 
     let html = `
-      <div class="input-wrapper">
-        <input type="text" id="general-query" placeholder="${t('search_placeholder')}" value="${queryVal}" />
-        <button type="button" class="clear-btn" style="display:${queryVal ? 'block' : 'none'}">&times;</button>
-      </div>
       <div class="input-wrapper">
         <input type="text" id="general-name" placeholder="${t('col_name')}" value="${nameVal}" />
         <button type="button" class="clear-btn" style="display:${nameVal ? 'block' : 'none'}">&times;</button>
@@ -139,16 +134,15 @@ export function setupGeneralSearch() {
   });
 }
 
-async function performGeneralSearch() {
+function performGeneralSearch() {
   const params = {};
-  const fields = ['query', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
+  const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
   fields.forEach(f => {
     const val = document.getElementById(`general-${f}`)?.value.trim();
-    if (val) params[f === 'query' ? 'q' : f] = val;
+    if (val) params[f] = val;
   });
 
-  const hasTextParam = ['q', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params[k]);
-  if (!hasTextParam) return;
+  if (!Object.keys(params).length) return;
 
   const exact = document.getElementById('general-exact')?.checked ?? true;
   if (exact) params.exact = 'true';
@@ -159,8 +153,7 @@ async function performGeneralSearch() {
   const shortParams = {};
   for (const [key, value] of Object.entries(params)) {
     if (key === 'exact' || key === 'has_link') continue;
-    const shortKey = PARAM_MAP[key] || key;
-    shortParams[shortKey] = value;
+    shortParams[PARAM_MAP[key] || key] = value;
   }
   if (!exact) shortParams.ex = '0';
   if (hasLink) shortParams.hl = '1';
@@ -168,40 +161,40 @@ async function performGeneralSearch() {
   pushOrReplaceURL(shortParams);
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
-  document.getElementById('count-general-births').textContent = '0';
-  document.getElementById('count-general-families').textContent = '0';
-  document.getElementById('count-general-deaths').textContent = '0';
+  document.getElementById('count-general-births').textContent = '…';
+  document.getElementById('count-general-families').textContent = '…';
+  document.getElementById('count-general-deaths').textContent = '…';
   document.getElementById('table-general-births').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-families').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-deaths').innerHTML = `<p>${t('searching')}</p>`;
 
-  const overlay = document.getElementById('search-overlay');
-  if (overlay) overlay.style.display = 'flex';
+  if (!lastGeneralResults) lastGeneralResults = { births: [], families: [], deaths: [] };
 
-  try {
-    const apiParams = new URLSearchParams(params);
-    const response = await fetch(`${API_BASE_URL}/api/search/general?${apiParams}`);
-    const results = await response.json();
-    lastGeneralResults = results;
-    tabsWithResults.add('tab-general');
+  const baseParams = new URLSearchParams(params);
 
-    document.getElementById('count-general-births').textContent = results.births?.length || 0;
-    document.getElementById('count-general-families').textContent = results.families?.length || 0;
-    document.getElementById('count-general-deaths').textContent = results.deaths?.length || 0;
+  const fetchType = (type, tableId, countId, columns, defaultSort, secondarySort) => {
+    const p = new URLSearchParams(baseParams);
+    p.set('type', type);
+    fetch(`${API_BASE_URL}/api/search/general?${p}`)
+      .then(r => r.json())
+      .then(results => {
+        const rows = results[type] || [];
+        lastGeneralResults[type] = rows;
+        tabsWithResults.add('tab-general');
+        document.getElementById(countId).textContent = rows.length;
+        renderTable(rows, tableId, columns, defaultSort, true, secondarySort, getContributorUrlMap());
+        collapseSidebarOnDesktop();
+        dismissKeyboardAndScrollToResults('general-results');
+      })
+      .catch(() => {
+        document.getElementById(countId).textContent = '0';
+        document.getElementById(tableId).innerHTML = `<p>${t('search_failed')}</p>`;
+      });
+  };
 
-    renderTable(results.births || [], 'table-general-births', birthColumns, 'surname', true, 'name', getContributorUrlMap());
-    renderTable(results.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name', getContributorUrlMap());
-    renderTable(results.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name', getContributorUrlMap());
-    collapseSidebarOnDesktop();
-    dismissKeyboardAndScrollToResults('general-results');
-  } catch (error) {
-    console.error('Search failed:', error);
-    document.getElementById('table-general-births').innerHTML = `<p>${t('search_failed')}</p>`;
-    document.getElementById('table-general-families').innerHTML = `<p>${t('search_failed')}</p>`;
-    document.getElementById('table-general-deaths').innerHTML = `<p>${t('search_failed')}</p>`;
-  } finally {
-    if (overlay) overlay.style.display = 'none';
-  }
+  fetchType('births',   'table-general-births',   'count-general-births',   birthColumns,  'surname',         'name');
+  fetchType('families', 'table-general-families',  'count-general-families', familyColumns, 'husband_surname', 'husband_name');
+  fetchType('deaths',   'table-general-deaths',    'count-general-deaths',   deathColumns,  'surname',         'name');
 }
 
 // --- Birth / Family advanced search (shared setup) ---
@@ -388,10 +381,10 @@ export function setupDeathSearchForm() {
 export function getTabURLParams(tabType) {
   const out = { t: tabType };
   if (tabType === 'general') {
-    const fields = ['query', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
+    const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
     fields.forEach(f => {
       const val = document.getElementById(`general-${f}`)?.value.trim();
-      if (val) out[f === 'query' ? 'q' : (PARAM_MAP[f] || f)] = val;
+      if (val) out[PARAM_MAP[f] || f] = val;
     });
     if (!document.getElementById('general-exact')?.checked) out.ex = '0';
     if (document.getElementById('general-has_link')?.checked) out.hl = '1';
@@ -414,7 +407,7 @@ export function getTabURLParams(tabType) {
 }
 
 export function clearAllSearchForms() {
-  ['general-query', 'general-name', 'general-surname', 'general-date_from', 'general-date_to', 'general-place', 'general-contributor'].forEach(id => {
+  ['general-name', 'general-surname', 'general-date_from', 'general-date_to', 'general-place', 'general-contributor'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
   });
@@ -435,13 +428,12 @@ export function restoreFromURL() {
   const q = params.get('q');
   const tParam = params.get('t');
 
-  const hasGenParam = ['q', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params.has(k) || params.has(PARAM_MAP[k] || k));
+  const hasGenParam = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params.has(k) || params.has(PARAM_MAP[k] || k));
   if ((!tParam || tParam === 'general') && hasGenParam) {
-    const fields = ['query', 'name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
+    const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
     fields.forEach(f => {
-      const paramKey = f === 'query' ? 'q' : f;
-      const shortKey = PARAM_MAP[paramKey] || paramKey;
-      const val = params.get(shortKey) || params.get(paramKey);
+      const shortKey = PARAM_MAP[f] || f;
+      const val = params.get(shortKey) || params.get(f);
       if (val) {
         const input = document.getElementById(`general-${f}`);
         if (input) {
