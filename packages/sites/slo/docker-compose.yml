@@ -20,9 +20,9 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
-      - VIRTUAL_HOST=${SGI_API_HOST}
+      - VIRTUAL_HOST=${API_HOST}
       - VIRTUAL_PORT=8000
-      - LETSENCRYPT_HOST=${SGI_API_HOST}
+      - LETSENCRYPT_HOST=${API_HOST}
     depends_on:
       - db
 
