@@ -63,63 +63,51 @@ data/             # Gitignored — raw GEDCOM files and extracted JSON
 
 **Windows**
 
-| Tool | Install | Notes |
-| ---- | ------- | ----- |
-| Git | [GitHub Desktop](https://desktop.github.com) *(recommended)* or [Git for Windows](https://git-scm.com) | GitHub Desktop bundles Git and makes `git` available system-wide in PowerShell/Command Prompt |
-| Node.js LTS + npm | [nodejs.org](https://nodejs.org) | Use the Windows installer; npm is included |
-| Docker Desktop | [docker.com/products/docker-desktop](https://docker.com/products/docker-desktop) | Enable the WSL2 backend during setup; required only to run the backend stack locally |
-| Text editor | [VS Code](https://code.visualstudio.com) *(recommended)* | |
+| Tool              | Install                                                                                                | Notes                                                                                                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Git               | [GitHub Desktop](https://desktop.github.com) _(recommended)_ or [Git for Windows](https://git-scm.com) | GitHub Desktop bundles Git and makes `git` available system-wide in PowerShell/Command Prompt; **Git for Windows also installs Git Bash**, which supports `python3`, `mkdir -p`, and most bash commands used in this guide |
+| Node.js LTS + npm | [nodejs.org](https://nodejs.org)                                                                       | Use the Windows installer; npm is included                                                                                                                                                                                 |
+| Python 3.11+      | [python.org/downloads](https://www.python.org/downloads/)                                              | Required for data processing (sections 1.1–1.2); tick **"Add Python to PATH"** during install; after install `python` and `pip` are available in PowerShell                                                                |
+| Docker Desktop    | [docker.com/products/docker-desktop](https://docker.com/products/docker-desktop)                       | Enable the WSL2 backend during setup; required only to run the backend stack locally                                                                                                                                       |
+| Text editor       | [VS Code](https://code.visualstudio.com) _(recommended)_                                               |                                                                                                                                                                                                                            |
 
 **macOS**
 
-| Tool | Install | Notes |
-| ---- | ------- | ----- |
-| Git | Pre-installed | Xcode Command Line Tools are prompted automatically on first `git` use; GitHub Desktop is an optional GUI |
-| Node.js LTS + npm | [nodejs.org](https://nodejs.org) or `brew install node` | npm is included |
-| Docker Desktop | [docker.com/products/docker-desktop](https://docker.com/products/docker-desktop) | Required only to run the backend stack locally |
+| Tool              | Install                                                                          | Notes                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Git               | Pre-installed                                                                    | Xcode Command Line Tools are prompted automatically on first `git` use; GitHub Desktop is an optional GUI |
+| Node.js LTS + npm | [nodejs.org](https://nodejs.org) or `brew install node`                          | npm is included                                                                                           |
+| Docker Desktop    | [docker.com/products/docker-desktop](https://docker.com/products/docker-desktop) | Required only to run the backend stack locally                                                            |
 
 **Linux (local dev)**
 
-| Tool | Install | Notes |
-| ---- | ------- | ----- |
-| Git | `sudo apt install git` | |
-| Node.js LTS + npm | [NodeSource instructions](https://github.com/nodesource/distributions) or `sudo apt install nodejs npm` | |
-| Docker Engine + Compose | [docs.docker.com/engine/install](https://docs.docker.com/engine/install/ubuntu/) | Required only to run the backend stack locally |
+| Tool                    | Install                                                                                                 | Notes                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Git                     | `sudo apt install git`                                                                                  |                                                |
+| Node.js LTS + npm       | [NodeSource instructions](https://github.com/nodesource/distributions) or `sudo apt install nodejs npm` |                                                |
+| Docker Engine + Compose | [docs.docker.com/engine/install](https://docs.docker.com/engine/install/ubuntu/)                        | Required only to run the backend stack locally |
 
 ---
 
 ### Server (Ubuntu Linux)
 
-| Tool | Notes |
-| ---- | ----- |
-| Docker Engine + Docker Compose v2 | Runs the PostgreSQL and FastAPI containers |
-| Caddy 2 | Reverse proxy and TLS termination |
-| *(Node.js not needed on the server)* | Frontend is built locally and deployed as static files |
+| Tool                                 | Notes                                                  |
+| ------------------------------------ | ------------------------------------------------------ |
+| Docker Engine + Docker Compose v2    | Runs the PostgreSQL and FastAPI containers             |
+| Caddy 2                              | Reverse proxy and TLS termination                      |
+| _(Node.js not needed on the server)_ | Frontend is built locally and deployed as static files |
 
 ---
 
 ### GEDCOM data tools (optional, local)
 
-[ged-tools](https://github.com/rodoslovje/ged-tools) is a Python 3 project used for GEDCOM cleanup and JSON extraction. It can run on any OS where Python 3.11+ is available, or directly on the server. Windows users who prefer not to install Python locally can run these steps on the server instead.
+[ged-tools](https://github.com/rodoslovje/ged-tools) is a Python 3 project used for GEDCOM cleanup and JSON extraction. It can run on any OS where Python 3.11+ is available, or directly on the server.
+
+**Windows users:** run all commands in **Git Bash** (installed with Git for Windows) — it supports `python3`, `source`, `mkdir -p`, and the other bash syntax used below. PowerShell alternatives are noted where they differ.
 
 ---
 
 ## 1. Data Extraction (Run Locally)
-
-### 1.0 Data Folder Structure
-
-The `data/` directory is gitignored. Create it manually with the following layout:
-
-```
-data/
-├── input/       # Raw .ged files as received from contributors
-├── filtered/    # Cleaned .ged files after privacy filtering (see step 1.1)
-└── output/      # JSON files extracted for DB import + metadata.json
-```
-
-```bash
-mkdir -p data/input data/filtered data/output
-```
 
 ### 1.1 GEDCOM Cleanup (Recommended)
 
@@ -136,15 +124,45 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+> **Windows (Git Bash):** the commands above work as-is in Git Bash.
+> **Windows (PowerShell):** use `python` instead of `python3`, and activate the venv with `.venv\Scripts\Activate.ps1`. If script execution is blocked, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once first.
+>
+> ```powershell
+> git clone https://github.com/rodoslovje/ged-tools.git
+> cd ged-tools
+> python -m venv .venv
+> .venv\Scripts\Activate.ps1
+> pip install -r requirements.txt
+> ```
+
+The `data/` directory is gitignored. Create it manually with the following layout:
+
+```
+data/
+├── input/       # Raw .ged files as received from contributors
+├── filtered/    # Cleaned .ged files after privacy filtering (see step 1.1)
+└── output/      # JSON files extracted for DB import + metadata.json
+```
+
+```bash
+mkdir -p data/input data/filtered data/output
+```
+
+> **Windows (PowerShell):** `mkdir data\input, data\filtered, data\output`
+
 Run the cleanup for all files in the input folder:
 
 ```bash
-# From inside the ged-tools directory
-python tools/gedcom-cleaner.py \
-  --input-dir /path/to/data/input \
-  --output-dir /path/to/data/filtered \
-  --preset index_cleanup_sgi
+# From inside the ged-tools directory (venv must be active)
+python tools/gedcom-cleaner.py --input-dir data/input --output-dir data/filtered --preset index_cleanup_sgi
 ```
+
+> **Windows (Git Bash):** use the same command; paths like `C:\Users\you\...` are written as `/c/Users/you/...` in Git Bash.
+> **Windows (PowerShell):** replace `python3` with `python` and use backslash paths:
+>
+> ```powershell
+> python tools\gedcom-cleaner.py --input-dir data\input --output-dir data\filtered --preset index_cleanup_sgi
+> ```
 
 The script runs in update mode by default — it skips files that are already up-to-date. The cleaned files in `data/filtered/` are then ready for JSON extraction.
 
@@ -161,14 +179,30 @@ The extraction script has moved to [ged-tools](https://github.com/rodoslovje/ged
 
    ```bash
    # From inside the ged-tools directory (venv already active from step 1.1)
-   python tools/gedcom-to-json.py --mode update --data-dir /path/to/genealogical-index/data
+   python tools/gedcom-to-json.py --mode update
    ```
+
+   > **Windows (PowerShell):** use the full Windows path, e.g. `--data-dir C:\path\to\srd-slo-index\data`
 
    Output JSON files and `metadata.json` are written to `data/output/`.
 
    **Arguments:**
    - `--mode update` _(default)_ — skips files already up-to-date
    - `--mode full` — reprocesses all files
+
+### 1.3 Sync to server
+
+```bash
+rsync -avz --delete data/output/ user@server.com:/var/sgi/srd-slo-index/data/
+```
+
+> **Windows:** `rsync` is not built into Windows. Choose one of:
+>
+> | Option                                | How                                                                                                                                                           |
+> | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | **Git Bash** _(recommended)_          | Git Bash does not ship `rsync` by default. Install it via [MSYS2](https://www.msys2.org): `pacman -S rsync`, then run the command above in the MSYS2 terminal |
+> | **WSL (Windows Subsystem for Linux)** | Install WSL (`wsl --install` in PowerShell), then run the rsync command inside WSL using Linux-style paths                                                    |
+> | **WinSCP** _(GUI alternative)_        | Use the [WinSCP](https://winscp.net) "Keep remote directory up to date" feature to mirror `data\output\` to the server                                        |
 
 ---
 
@@ -397,15 +431,15 @@ docker compose up -d --build api
 # 1. locally — clean raw GEDCOM files (remove living persons / recent deaths)
 #    see Section 1.1 for ged-tools setup; run from inside the ged-tools directory
 python tools/gedcom-cleaner.py \
-  --input-dir /path/to/data/input \
-  --output-dir /path/to/data/filtered \
+  --input-dir /path/to/srd-slo-index/data/input \
+  --output-dir /path/to/srd-slo-index/data/filtered \
   --preset index_cleanup_sgi
 
 # 2. locally — re-extract JSON from cleaned files (run from inside ged-tools directory)
-python tools/gedcom-to-json.py --mode update --data-dir /path/to/genealogical-index/data
+python tools/gedcom-to-json.py --mode update --data-dir /path/to/srd-slo-index/data
 
-# 3. copy data/output/ to server
-rsync -avz data/output/ user@yourserver:/path/to/data/output/
+# 3. copy data/output/ to server (Windows: see Section 1.3 for rsync alternatives)
+rsync -avz --delete data/output/ user@yourserver:/var/sgi/srd-slo-index/data/
 
 # 4. on server — reimport changed contributors
 cd packages/sites/slo
