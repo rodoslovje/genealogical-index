@@ -404,14 +404,13 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
             if (mSur) famParams.set('wsn', mSur);
             famParams.set('ex', '1');
 
-            const getBirthLink = (n, s, y, display) => {
+            const getBirthLink = (n, s, display) => {
               if (n === 'private' || n === 'unknown') return display;
               if (!n && !s) return display;
               const bParams = new URLSearchParams();
               bParams.set('t', 'birth');
               if (n) bParams.set('n', n);
               if (s) bParams.set('sn', s);
-              if (y) bParams.set('dob', y);
               bParams.set('ex', '1');
               return `<a href="?${bParams.toString()}" class="name-link" data-spa-nav>${display}</a>`;
             };
@@ -424,8 +423,8 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
 
             let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">
               <a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight: 600;">${t(labelKey)}: 👪</a><br>`;
-            if (fDisplay) htmlStr += `${getBirthLink(fName, fSur, father.year, fDisplay)}<br>`;
-            if (mDisplay) htmlStr += `${getBirthLink(mName, mSur, mother.year, mDisplay)}`;
+            if (fDisplay) htmlStr += `${getBirthLink(fName, fSur, fDisplay)}<br>`;
+            if (mDisplay) htmlStr += `${getBirthLink(mName, mSur, mDisplay)}`;
             htmlStr += `</div>`;
             return htmlStr;
           } catch(e) { return ''; }
