@@ -421,10 +421,10 @@ python tools/gedcom-cleaner.py \
   --preset index_cleanup_sgi
 
 # 2. locally — re-extract JSON from cleaned files (run from inside ged-tools directory)
-python tools/gedcom-to-json.py --mode update --data-dir /path/to/srd-slo-index/data
+python tools/gedcom-to-json.py --mode update
 
 # 3. copy data/output/ to server (Windows: see Section 1.3 for rsync alternatives)
-rsync -avz --delete data/output/ user@yourserver:/var/sgi//data/
+rsync -avz --delete data/output user@yourserver:/var/sgi/genealogical-index/data/
 
 # 4. on server — reimport changed contributors
 cd packages/sites/slo
@@ -435,7 +435,7 @@ docker compose exec api python tools/import_to_db.py --mode update
 
 ```bash
 npm run build:slo
-rsync -avz --delete packages/sites/slo/dist/ user@yourserver:/var/www/sgi/
+rsync -avz --delete packages/sites/slo/dist/ user@yourserver:/var/www/sites/sgi/
 ```
 
 ---
