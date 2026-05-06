@@ -16,6 +16,7 @@ Triggered automatically by import_to_db.py; can also be run via trigger_matches.
 import argparse
 import logging
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from sqlalchemy import create_engine, text
@@ -34,10 +35,13 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # --- tuning knobs ---
-YEAR_TOLERANCE = 5     # max year difference still considered a match
-CONFIDENCE_MIN = 0.72  # records below this threshold are not stored
-TRGM_THRESHOLD = 0.65  # pg_trgm.similarity_threshold for the % join operator
-WORK_MEM       = "256MB"  # per-session work_mem; raise if you have spare RAM
+YEAR_TOLERANCE     = 5       # max year difference still considered a match
+CONFIDENCE_MIN     = 0.72    # records below this threshold are not stored
+TRGM_THRESHOLD     = 0.65    # pg_trgm.similarity_threshold for the % join operator
+WORK_MEM           = "256MB" # per-session work_mem; raise if you have spare RAM
+PG_PARALLEL_WORKERS = 4      # PostgreSQL-internal parallel workers per query
+                              # (independent of Python --workers; requires max_worker_processes
+                              #  >= Python_workers * PG_PARALLEL_WORKERS on the server)
 
 # --- DB setup ---
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -257,24 +261,41 @@ def claim_next_job():
         return row[0] if row else None
 
 
+def _session_settings(conn):
+    """Apply per-transaction performance settings."""
+    conn.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {TRGM_THRESHOLD}"))
+    conn.execute(text(f"SET LOCAL work_mem = '{WORK_MEM}'"))
+    # Let PostgreSQL use multiple cores for the trgm self-join.
+    conn.execute(text(f"SET LOCAL max_parallel_workers_per_gather = {PG_PARALLEL_WORKERS}"))
+    # Lower the cost thresholds so parallel plans are chosen even for mid-sized chunks.
+    conn.execute(text("SET LOCAL min_parallel_table_scan_size = 0"))
+    conn.execute(text("SET LOCAL min_parallel_index_scan_size = 0"))
+    conn.execute(text("SET LOCAL parallel_tuple_cost = 0.01"))
+    conn.execute(text("SET LOCAL parallel_setup_cost = 100"))
+
+
 def process_job(contributor):
     params = {
         "contrib":   contributor,
         "yr_tol":    YEAR_TOLERANCE,
         "conf_min":  CONFIDENCE_MIN,
     }
+
+    # Clear stale matches (no trgm settings needed here)
     with engine.begin() as conn:
-        conn.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {TRGM_THRESHOLD}"))
-        conn.execute(text(f"SET LOCAL work_mem = '{WORK_MEM}'"))
-        conn.execute(text("DELETE FROM matches WHERE contributor_a = :contrib"), params)
+        deleted = conn.execute(
+            text("DELETE FROM matches WHERE contributor_a = :contrib"), params
+        ).rowcount
+    if deleted:
+        log.info(f"  [{contributor}] removed {deleted} stale matches")
 
     total = 0
     for sql, label in ((_BIRTH_INSERT, "birth"), (_FAMILY_INSERT, "family"), (_DEATH_INSERT, "death")):
+        t0 = time.monotonic()
         with engine.begin() as conn:
-            conn.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {TRGM_THRESHOLD}"))
-            conn.execute(text(f"SET LOCAL work_mem = '{WORK_MEM}'"))
+            _session_settings(conn)
             n = conn.execute(sql, params).rowcount
-        log.info(f"  [{contributor}] {label}: {n} matches")
+        log.info(f"  [{contributor}] {label}: {n} matches in {time.monotonic()-t0:.1f}s")
         total += n
 
     with engine.begin() as conn:
@@ -292,11 +313,13 @@ def worker(_):
         contributor = claim_next_job()
         if contributor is None:
             return
+        t0 = time.monotonic()
         log.info(f"Computing matches for: {contributor}")
         try:
             process_job(contributor)
+            log.info(f"Finished {contributor} in {time.monotonic()-t0:.0f}s")
         except Exception as exc:
-            log.error(f"Error processing {contributor}: {exc}")
+            log.error(f"Error processing {contributor} after {time.monotonic()-t0:.0f}s: {exc}")
             try:
                 with engine.begin() as conn:
                     conn.execute(
@@ -307,23 +330,35 @@ def worker(_):
                 pass
 
 
-def main(workers=1):
-    pending_count = engine.connect().execute(
-        text("SELECT COUNT(*) FROM match_jobs WHERE status='pending'")
-    ).scalar()
+def main(workers=2):
+    with engine.connect() as conn:
+        pending_count = conn.execute(
+            text("SELECT COUNT(*) FROM match_jobs WHERE status='pending'")
+        ).scalar()
 
     if not pending_count:
         log.info("No pending match jobs.")
         return
 
-    log.info(f"Processing {pending_count} pending job(s) with {workers} worker(s)...")
+    # Refresh planner statistics so the query planner has accurate row-count estimates.
+    # Critical after a bulk import — without this the planner may choose seq scans
+    # over index scans, or under-estimate parallelism benefit.
+    log.info("Running ANALYZE for fresh planner statistics...")
+    with engine.begin() as conn:
+        conn.execute(text("ANALYZE births"))
+        conn.execute(text("ANALYZE families"))
+        conn.execute(text("ANALYZE deaths"))
 
+    log.info(f"Processing {pending_count} pending job(s) with {workers} worker(s) "
+             f"(PG_PARALLEL_WORKERS={PG_PARALLEL_WORKERS}, WORK_MEM={WORK_MEM})...")
+
+    t0 = time.monotonic()
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [executor.submit(worker, i) for i in range(workers)]
         for f in as_completed(futures):
             f.result()  # re-raises any worker exception
 
-    log.info("Match computation complete.")
+    log.info(f"Match computation complete in {time.monotonic()-t0:.0f}s.")
 
 
 if __name__ == "__main__":
