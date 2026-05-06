@@ -368,6 +368,9 @@ async function loadSurnameCloud(contributors) {
 }
 
 async function renderMatchesPage(contributor, withPartner) {
+  // Close sidebar — not useful on the matches subpage
+  document.getElementById('sidebar')?.classList.remove('open');
+
   const container = document.getElementById('table-contributors');
   container.innerHTML = `<p>${t('matches_loading')}</p>`;
 
@@ -380,9 +383,8 @@ async function renderMatchesPage(contributor, withPartner) {
     return;
   }
 
-  const backHref = '?t=contributors';
   const heading = `<div class="matches-page-header">
-    <a href="${backHref}" data-spa-nav class="matches-back-link">← ${t('back_to_genealogists')}</a>
+    <a href="?t=contributors" data-spa-nav class="matches-back-link">← ${t('back_to_genealogists')}</a>
     <h2 class="matches-page-title">${t('matches_for')} <em>${contributor}</em></h2>
   </div>`;
 
@@ -391,36 +393,33 @@ async function renderMatchesPage(contributor, withPartner) {
     return;
   }
 
-  const rows = partners.map(p => {
-    const href = `?t=contributors&matches=${encodeURIComponent(contributor)}&with=${encodeURIComponent(p.contributor)}`;
-    const active = withPartner === p.contributor ? ' class="matches-active-row"' : '';
-    return `<tr${active}>
-      <td><a href="${href}" data-spa-nav>${p.contributor}</a></td>
-      <td>${p.births_count || 0}</td>
-      <td>${p.families_count || 0}</td>
-      <td>${p.deaths_count || 0}</td>
-      <td>${p.total_count}</td>
-      <td>${Math.round((p.max_confidence || 0) * 100)}%</td>
-    </tr>`;
-  }).join('');
+  // Map to renderTable row format
+  const tableData = partners.map(p => ({
+    contributor_ID: p.contributor,
+    _match_href: `?t=contributors&matches=${encodeURIComponent(contributor)}&with=${encodeURIComponent(p.contributor)}`,
+    total_births:   p.births_count   || 0,
+    total_families: p.families_count || 0,
+    total_deaths:   p.deaths_count   || 0,
+    total:          p.total_count,
+    confidence:     Math.round((p.max_confidence || 0) * 100),
+  }));
 
-  const summaryTable = `<div class="matches-summary">
-    <table class="connections-table">
-      <thead><tr>
-        <th>${t('col_contributor_ID')}</th>
-        <th>${t('col_total_births')}</th>
-        <th>${t('col_total_families')}</th>
-        <th>${t('col_total_deaths')}</th>
-        <th>${t('col_total')}</th>
-        <th>${t('matches_confidence')}</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
+  container.innerHTML = heading +
+    '<div id="matches-summary" class="table-responsive"></div>' +
+    '<div id="matches-detail"></div>';
 
-  container.innerHTML = heading + summaryTable + '<div id="matches-detail"></div>';
+  renderTable(tableData, 'matches-summary',
+    ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'confidence'],
+    'total', false);
 
+  // Highlight the active partner row
   if (withPartner) {
+    document.querySelectorAll('#matches-summary tbody tr').forEach(tr => {
+      const link = tr.querySelector('a[data-spa-nav]');
+      if (link && new URL(link.href, location.href).searchParams.get('with') === withPartner) {
+        tr.classList.add('matches-active-row');
+      }
+    });
     renderMatchDetail(contributor, withPartner);
   }
 }
@@ -449,32 +448,97 @@ async function renderMatchDetail(contributor, partner) {
   const byType = { birth: [], family: [], death: [] };
   records.forEach(r => byType[r.record_type]?.push(r));
 
+  const buildSearchUrl = (tab, pairs) => {
+    const p = new URLSearchParams({ t: tab, ex: '1' });
+    pairs.forEach(([key, val]) => { if (val) p.set(key, val); });
+    return '?' + p.toString();
+  };
+
   const typeConfig = [
-    { key: 'birth',  label: t('matches_births'),   fields: ['name', 'surname', 'date', 'place'] },
-    { key: 'family', label: t('matches_families'),  fields: ['husband_name', 'husband_surname', 'wife_name', 'wife_surname', 'date', 'place'] },
-    { key: 'death',  label: t('matches_deaths'),    fields: ['name', 'surname', 'date', 'place'] },
+    {
+      key: 'birth', label: t('matches_births'),
+      fields: [
+        { f: 'name',    h: t('col_name') },
+        { f: 'surname', h: t('col_surname') },
+        { f: 'date',    h: t('col_date_of_birth') },
+        { f: 'place',   h: t('col_place_of_birth') },
+      ],
+      searchUrl: rec => buildSearchUrl('birth', [['n', rec.name], ['sn', rec.surname]]),
+      linkedFields: new Set(['name', 'surname']),
+    },
+    {
+      key: 'family', label: t('matches_families'),
+      fields: [
+        { f: 'husband_name',    h: t('col_husband_name') },
+        { f: 'husband_surname', h: t('col_husband_surname') },
+        { f: 'wife_name',       h: t('col_wife_name') },
+        { f: 'wife_surname',    h: t('col_wife_surname') },
+        { f: 'date',            h: t('col_date_of_marriage') },
+        { f: 'place',           h: t('col_place_of_marriage') },
+      ],
+      searchUrl: (rec, field) => {
+        if (field === 'husband_name' || field === 'husband_surname')
+          return buildSearchUrl('family', [['hn', rec.husband_name], ['hsn', rec.husband_surname]]);
+        if (field === 'wife_name' || field === 'wife_surname')
+          return buildSearchUrl('family', [['wn', rec.wife_name], ['wsn', rec.wife_surname]]);
+        return null;
+      },
+      linkedFields: new Set(['husband_name', 'husband_surname', 'wife_name', 'wife_surname']),
+    },
+    {
+      key: 'death', label: t('matches_deaths'),
+      fields: [
+        { f: 'name',    h: t('col_name') },
+        { f: 'surname', h: t('col_surname') },
+        { f: 'date',    h: t('col_date_of_death') },
+        { f: 'place',   h: t('col_place_of_death') },
+      ],
+      searchUrl: rec => buildSearchUrl('death', [['n', rec.name], ['sn', rec.surname]]),
+      linkedFields: new Set(['name', 'surname']),
+    },
   ];
 
   let html = `<div class="matches-detail-section">
     <h3 class="matches-detail-heading">${contributor} × ${partner}</h3>`;
 
-  for (const { key, label, fields } of typeConfig) {
+  for (const { key, label, fields, searchUrl, linkedFields } of typeConfig) {
     const group = byType[key];
     if (!group.length) continue;
 
-    const headerCells = fields.map(f => `<th>${f.replace(/_/g, ' ')}</th>`).join('');
-    const groupRows = group.map(r => {
-      const aCells = fields.map(f => `<td>${r.record_a[f] || ''}</td>`).join('');
-      const bCells = fields.map(f => `<td>${r.record_b[f] || ''}</td>`).join('');
+    const makeCell = (rec, f) => {
+      const val = rec[f] || '';
+      if (val && linkedFields.has(f)) {
+        const href = searchUrl(rec, f);
+        if (href) return `<td><a href="${href}" data-spa-nav class="name-link">${val}</a></td>`;
+      }
+      return `<td>${val}</td>`;
+    };
+
+    const headerCells = fields.map(({ h }) => `<th>${h}</th>`).join('');
+    const groupRows = group.map((r, idx) => {
+      const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
+      const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
+      const bCells = fields.map(({ f }) => makeCell(r.record_b, f)).join('');
       const conf = Math.round((r.confidence || 0) * 100);
-      return `<tr class="match-row-a"><td rowspan="2" class="match-conf">${conf}%</td>${aCells}</tr>
-              <tr class="match-row-b">${bCells}</tr>`;
+      return `<tr class="match-pair-row ${pairCls}">
+                ${aCells}
+                <td class="match-pair-label match-pair-label-a">${contributor}</td>
+                <td rowspan="2" class="match-conf">${conf}%</td>
+              </tr>
+              <tr class="match-pair-row ${pairCls}">
+                ${bCells}
+                <td class="match-pair-label match-pair-label-b">${partner}</td>
+              </tr>`;
     }).join('');
 
     html += `<h4>${label} (${group.length})</h4>
     <div class="table-responsive">
       <table class="matches-detail-table">
-        <thead><tr><th>${t('matches_confidence')}</th>${headerCells}</tr></thead>
+        <thead><tr>
+          ${headerCells}
+          <th>${t('col_contributor_ID')}</th>
+          <th>${t('col_confidence')}</th>
+        </tr></thead>
         <tbody>${groupRows}</tbody>
       </table>
     </div>`;

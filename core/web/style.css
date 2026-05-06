@@ -653,9 +653,22 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   font-weight: 600;
   color: var(--secondary);
   vertical-align: middle;
+  white-space: nowrap;
 }
-.match-row-a td { background: #f7fbff; }
-.match-row-b td { background: #fff; border-top: none; }
+.match-pair-even { background: #eaf4fb; }
+.match-pair-odd  { background: #f5f7f9; }
+.match-pair-row td { border-top: none; }
+.match-pair-even:first-of-type td,
+tr.match-pair-odd + tr.match-pair-even td { border-top: 2px solid #c8d8e8; }
+.match-pair-label {
+  font-size: 0.78rem;
+  color: #666;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.match-pair-label-a { font-weight: 600; color: var(--primary); }
 
 /* --- Connections panel --- */
 .connections-table {

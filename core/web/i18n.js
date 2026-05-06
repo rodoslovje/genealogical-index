@@ -84,6 +84,7 @@ const translations = {
 
     // Matches
     col_matches: 'Matches',
+    col_confidence: 'Confidence',
     matches_loading: 'Loading…',
     matches_none: 'No matches found.',
     matches_confidence: 'Confidence',
@@ -178,6 +179,7 @@ const translations = {
 
     // Matches
     col_matches: 'Ujemanja',
+    col_confidence: 'Zaupanje',
     matches_loading: 'Nalaganje…',
     matches_none: 'Ni najdenih ujemanj.',
     matches_confidence: 'Zaupanje',
@@ -272,6 +274,7 @@ const translations = {
 
     // Matches
     col_matches: 'Podudaranja',
+    col_confidence: 'Pouzdanost',
     matches_loading: 'Učitavanje…',
     matches_none: 'Nema pronađenih podudaranja.',
     matches_confidence: 'Pouzdanost',
@@ -366,6 +369,7 @@ const translations = {
 
     // Matches
     col_matches: 'Übereinstimmungen',
+    col_confidence: 'Konfidenz',
     matches_loading: 'Laden…',
     matches_none: 'Keine Übereinstimmungen gefunden.',
     matches_confidence: 'Konfidenz',
@@ -460,6 +464,7 @@ const translations = {
 
     // Matches
     col_matches: 'Egyezések',
+    col_confidence: 'Megbízhatóság',
     matches_loading: 'Betöltés…',
     matches_none: 'Nem találhatók egyezések.',
     matches_confidence: 'Megbízhatóság',
@@ -554,6 +559,7 @@ const translations = {
 
     // Matches
     col_matches: 'Corrispondenze',
+    col_confidence: 'Confidenza',
     matches_loading: 'Caricamento…',
     matches_none: 'Nessuna corrispondenza trovata.',
     matches_confidence: 'Confidenza',

@@ -148,7 +148,7 @@ export function parseDateForSort(dateStr) {
 const CENTERED_COLUMNS = new Set([
   'contributor', 'contributor_ID',
   'total_births', 'total_families', 'total_deaths', 'total', 'total_links',
-  'last_modified', 'links',
+  'last_modified', 'links', 'matches', 'confidence',
 ]);
 
 const RIGHT_COLUMNS = new Set([
@@ -161,7 +161,7 @@ function getValue(row, col) {
     try { return row.links ? JSON.parse(row.links).length : 0; } catch { return 0; }
   }
   const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death';
-  const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
+  const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'confidence', 'matches'].includes(col);
   if (isGedcomDate) return parseDateForSort(row[col]);
   if (isNumeric) return Number(row[col] || 0);
   return String(row[col] || '').toLowerCase();
@@ -273,11 +273,17 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           ? `<a href="?t=contributors&matches=${encodeURIComponent(name)}" data-spa-nav>${count}</a>`
           : '—';
         html += `<td class="col-center">${cell}</td>`;
+      } else if (col === 'confidence') {
+        const val = row[col] != null ? `${row[col]}%` : '—';
+        html += `<td class="col-center">${val}</td>`;
       } else if (col === 'contributor_ID') {
         const name = row[col] || '';
-        const url = row._url || '';
-        if (url) {
-          html += `<td class="col-center"><a href="${url}" target="_blank" rel="noopener">${name}</a></td>`;
+        const internalHref = row._match_href || '';
+        const externalUrl = row._url || '';
+        if (internalHref) {
+          html += `<td class="col-center"><a href="${internalHref}" data-spa-nav>${name}</a></td>`;
+        } else if (externalUrl) {
+          html += `<td class="col-center"><a href="${externalUrl}" target="_blank" rel="noopener">${name}</a></td>`;
         } else {
           html += `<td class="col-center">${name}</td>`;
         }
@@ -290,7 +296,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           html += `<td>${name}</td>`;
         }
       } else if (CENTERED_COLUMNS.has(col)) {
-        const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links'].includes(col);
+        const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'confidence', 'matches'].includes(col);
         const val = isNumeric && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
