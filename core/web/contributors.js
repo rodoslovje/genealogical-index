@@ -507,14 +507,18 @@ async function renderMatchDetail(contributor, partner) {
 
     const makeCell = (rec, f) => {
       const val = rec[f] || '';
+      const cls = f === 'date' ? ' class="col-right"' : '';
       if (val && linkedFields.has(f)) {
         const href = searchUrl(rec, f);
-        if (href) return `<td><a href="${href}" data-spa-nav class="name-link">${val}</a></td>`;
+        if (href) return `<td${cls}><a href="${href}" data-spa-nav class="name-link">${val}</a></td>`;
       }
-      return `<td>${val}</td>`;
+      return `<td${cls}>${val}</td>`;
     };
 
-    const headerCells = fields.map(({ h }) => `<th>${h}</th>`).join('');
+    const headerCells = fields.map(({ h, f }) => {
+      const cls = f === 'date' ? ' class="col-right"' : '';
+      return `<th${cls}>${h}</th>`;
+    }).join('');
     const groupRows = group.map((r, idx) => {
       const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
       const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
@@ -522,12 +526,12 @@ async function renderMatchDetail(contributor, partner) {
       const conf = Math.round((r.confidence || 0) * 100);
       return `<tr class="match-pair-row ${pairCls}">
                 ${aCells}
-                <td class="match-pair-label match-pair-label-a">${contributor}</td>
-                <td rowspan="2" class="match-conf">${conf}%</td>
+                <td class="match-pair-label match-pair-label-a col-center">${contributor}</td>
+                <td rowspan="2" class="match-conf col-center">${conf}%</td>
               </tr>
               <tr class="match-pair-row ${pairCls}">
                 ${bCells}
-                <td class="match-pair-label match-pair-label-b">${partner}</td>
+                <td class="match-pair-label match-pair-label-b col-center">${partner}</td>
               </tr>`;
     }).join('');
 
@@ -536,8 +540,8 @@ async function renderMatchDetail(contributor, partner) {
       <table class="matches-detail-table">
         <thead><tr>
           ${headerCells}
-          <th>${t('col_contributor_ID')}</th>
-          <th>${t('col_confidence')}</th>
+          <th class="col-center">${t('col_contributor_ID')}</th>
+          <th class="col-center">${t('col_confidence')}</th>
         </tr></thead>
         <tbody>${groupRows}</tbody>
       </table>
