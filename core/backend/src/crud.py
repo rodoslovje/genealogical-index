@@ -24,6 +24,27 @@ _timeline_cache = {"data": None, "time": 0}
 _surnames_cache = {}  # keyed by contributor name (or "" for all)
 
 
+def get_contributor_matches(db: Session, contributor: str):
+    rows = db.execute(
+        text("""
+            SELECT
+                contributor_b                                               AS contributor,
+                SUM(CASE WHEN record_type = 'birth'  THEN 1 ELSE 0 END)   AS births_count,
+                SUM(CASE WHEN record_type = 'family' THEN 1 ELSE 0 END)   AS families_count,
+                SUM(CASE WHEN record_type = 'death'  THEN 1 ELSE 0 END)   AS deaths_count,
+                COUNT(*)                                                    AS total_count,
+                MAX(confidence)                                             AS max_confidence,
+                MAX(computed_at)::text                                      AS computed_at
+            FROM matches
+            WHERE contributor_a = :contrib
+            GROUP BY contributor_b
+            ORDER BY total_count DESC
+        """),
+        {"contrib": contributor},
+    ).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
 def get_contributors(db: Session):
     """Fetch pre-calculated stats, enriched with optional contributor links."""
     rows = db.query(models.Contributor).all()

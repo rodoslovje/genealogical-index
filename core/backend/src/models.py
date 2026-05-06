@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, Text, Float, DateTime
+import datetime
 from .database import Base
 
 
@@ -61,3 +62,26 @@ class Contributor(Base):
     families_count = Column(Integer, default=0)
     deaths_count = Column(Integer, default=0)
     links_count = Column(Integer, default=0)
+
+
+class MatchJob(Base):
+    __tablename__ = "match_jobs"
+
+    contributor = Column(Text, primary_key=True)
+    status = Column(Text, default="pending")
+    queued_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    completed_at = Column(DateTime, nullable=True)
+
+
+class Match(Base):
+    __tablename__ = "matches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    contributor_a = Column(Text, index=True)
+    contributor_b = Column(Text, index=True)
+    record_type = Column(Text)
+    record_a_id = Column(Integer)
+    record_b_id = Column(Integer)
+    confidence = Column(Float)
+    match_fields = Column(Text)
+    computed_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))

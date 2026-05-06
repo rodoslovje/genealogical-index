@@ -82,6 +82,12 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Digital Library of Slovenia',
 
+    // Connections
+    col_connections: 'Connections',
+    connections_loading: 'Loading…',
+    connections_none: 'No connections found.',
+    connections_confidence: 'Confidence',
+
     // Footer
     footer_version: 'Version',
     footer_data_update: 'Data update',
@@ -164,6 +170,12 @@ const translations = {
     icon_military: 'Žrtev vojne',
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Digitalna knjižnica Slovenije',
+
+    // Connections
+    col_connections: 'Povezave',
+    connections_loading: 'Nalaganje…',
+    connections_none: 'Ni najdenih povezav.',
+    connections_confidence: 'Zaupanje',
 
     // Footer
     footer_version: 'Različica',
@@ -248,6 +260,12 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Digitalna knjižnica Slovenije',
 
+    // Connections
+    col_connections: 'Veze',
+    connections_loading: 'Učitavanje…',
+    connections_none: 'Nema pronađenih veza.',
+    connections_confidence: 'Pouzdanost',
+
     // Footer
     footer_version: 'Verzija',
     footer_data_update: 'Ažuriranje podataka',
@@ -330,6 +348,12 @@ const translations = {
     icon_military: 'Kriegsopfer',
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Digitale Bibliothek Sloweniens',
+
+    // Connections
+    col_connections: 'Verbindungen',
+    connections_loading: 'Laden…',
+    connections_none: 'Keine Verbindungen gefunden.',
+    connections_confidence: 'Konfidenz',
 
     // Footer
     footer_version: 'Version',
@@ -414,6 +438,12 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Szlovénia Digitális Könyvtára',
 
+    // Connections
+    col_connections: 'Kapcsolatok',
+    connections_loading: 'Betöltés…',
+    connections_none: 'Nem találhatók kapcsolatok.',
+    connections_confidence: 'Megbízhatóság',
+
     // Footer
     footer_version: 'Verzió',
     footer_data_update: 'Adatfrissítés',
@@ -496,6 +526,12 @@ const translations = {
     icon_military: 'Vittima di guerra',
     icon_matricula: 'Matricula Online',
     icon_dlib: 'Biblioteca digitale della Slovenia',
+
+    // Connections
+    col_connections: 'Connessioni',
+    connections_loading: 'Caricamento…',
+    connections_none: 'Nessuna connessione trovata.',
+    connections_confidence: 'Confidenza',
 
     // Footer
     footer_version: 'Versione',

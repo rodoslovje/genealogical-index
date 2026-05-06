@@ -608,6 +608,28 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   text-decoration: underline;
 }
 
+/* --- Connections panel --- */
+.connections-table {
+  font-size: 0.78rem;
+  min-width: 300px;
+  border-collapse: collapse;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.connections-table th,
+.connections-table td {
+  padding: 2px 8px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.connections-table th {
+  background: var(--bg);
+  font-weight: 600;
+}
+.connections-table td:first-child {
+  text-align: left;
+}
+
 /* --- Charts --- */
 .charts-container {
   display: grid;

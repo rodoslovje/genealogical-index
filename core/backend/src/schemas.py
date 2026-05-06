@@ -92,3 +92,16 @@ class Contributor(BaseModel):
 class SurnameStat(BaseModel):
     surname: str
     count: int
+
+
+class MatchPartner(BaseModel):
+    contributor: str
+    births_count: int = 0
+    families_count: int = 0
+    deaths_count: int = 0
+    total_count: int = 0
+    max_confidence: float = 0.0
+    computed_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True

@@ -38,6 +38,11 @@ def read_contributors(db: Session = Depends(get_db)):
     return crud.get_contributors(db)
 
 
+@app.get("/api/contributors/{name}/matches", response_model=List[schemas.MatchPartner])
+def get_contributor_matches(name: str, db: Session = Depends(get_db)):
+    return crud.get_contributor_matches(db, name)
+
+
 @app.get("/api/stats/timeline", response_model=List[schemas.TimelineStat])
 def read_timeline(db: Session = Depends(get_db)):
     return crud.get_timeline_distribution(db)

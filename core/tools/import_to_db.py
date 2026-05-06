@@ -1,6 +1,8 @@
 import argparse
 import os
 import json
+import subprocess
+import sys
 import unicodedata
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -27,7 +29,7 @@ def setup_full(db):
     db.execute(
         text(
             """
-        DROP TABLE IF EXISTS births, families, deaths, contributors CASCADE;
+        DROP TABLE IF EXISTS births, families, deaths, contributors, match_jobs, matches CASCADE;
 
         CREATE TABLE contributors (
             id SERIAL PRIMARY KEY,
@@ -55,6 +57,26 @@ def setup_full(db):
         CREATE INDEX idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
         CREATE INDEX idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
         CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
+
+        CREATE TABLE match_jobs (
+            contributor TEXT PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'pending',
+            queued_at TIMESTAMPTZ DEFAULT NOW(),
+            completed_at TIMESTAMPTZ
+        );
+        CREATE TABLE matches (
+            id SERIAL PRIMARY KEY,
+            contributor_a TEXT NOT NULL,
+            contributor_b TEXT NOT NULL,
+            record_type TEXT NOT NULL,
+            record_a_id INTEGER NOT NULL,
+            record_b_id INTEGER NOT NULL,
+            confidence REAL NOT NULL,
+            match_fields TEXT,
+            computed_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX idx_matches_a ON matches(contributor_a);
+        CREATE INDEX idx_matches_b ON matches(contributor_b);
     """
         )
     )
@@ -129,6 +151,26 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
+
+        CREATE TABLE IF NOT EXISTS match_jobs (
+            contributor TEXT PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'pending',
+            queued_at TIMESTAMPTZ DEFAULT NOW(),
+            completed_at TIMESTAMPTZ
+        );
+        CREATE TABLE IF NOT EXISTS matches (
+            id SERIAL PRIMARY KEY,
+            contributor_a TEXT NOT NULL,
+            contributor_b TEXT NOT NULL,
+            record_type TEXT NOT NULL,
+            record_a_id INTEGER NOT NULL,
+            record_b_id INTEGER NOT NULL,
+            confidence REAL NOT NULL,
+            match_fields TEXT,
+            computed_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_matches_a ON matches(contributor_a);
+        CREATE INDEX IF NOT EXISTS idx_matches_b ON matches(contributor_b);
     """
         )
     )
@@ -422,6 +464,7 @@ def main():
         db.commit()
 
     total_contributors = len(metadata)
+    updated_contributors = []
     for index, meta in enumerate(metadata, start=1):
         contributor_id = meta["contributor"]
         last_modified = meta.get("last_modified", "")
@@ -531,8 +574,37 @@ def main():
                 imp_families,
                 imp_deaths,
             )
+            updated_contributors.append(contributor_id)
 
     print("\nData import finished successfully.")
+
+    if updated_contributors:
+        for c in updated_contributors:
+            db.execute(
+                text("""
+                    INSERT INTO match_jobs (contributor, status, queued_at)
+                    VALUES (:c, 'pending', NOW())
+                    ON CONFLICT (contributor) DO UPDATE SET status = 'pending', queued_at = NOW()
+                """),
+                {"c": c},
+            )
+        db.commit()
+        print(f"Queued match computation for {len(updated_contributors)} contributor(s).")
+
+        script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "compute_matches.py")
+        log_path = os.path.join(DATA_DIR, "compute_matches.log")
+        try:
+            subprocess.Popen(
+                [sys.executable, script],
+                stdout=open(log_path, "a"),
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+            print(f"Match computation started in background (log: {log_path}).")
+        except Exception as e:
+            print(f"Warning: could not start match computation automatically: {e}")
+            print("Run manually: python tools/compute_matches.py")
+
     db.close()
 
 

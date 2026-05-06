@@ -266,6 +266,14 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         } else {
           html += '<td></td>';
         }
+      } else if (col === 'connections') {
+        const name = row.contributor_ID || '';
+        html += `<td class="col-center">
+          <details class="expandable-cell connections-cell" data-contributor="${name}">
+            <summary title="${t('col_connections')}">🔗</summary>
+            <div class="expanded-content connections-content"></div>
+          </details>
+        </td>`;
       } else if (col === 'contributor_ID') {
         const name = row[col] || '';
         const url = row._url || '';

@@ -2,7 +2,7 @@ import { t } from './i18n.js';
 import { renderTable } from './table.js';
 import { API_BASE_URL } from './config.js';
 
-const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified'];
+const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified', 'connections'];
 let cachedData = null;
 let fetchPromise = null;
 let chartInstance = null;
@@ -104,6 +104,7 @@ export async function renderContributors() {
     renderTimelineChart(timeline);
     const initialFiltered = filterContributorData(data);
     renderTable(initialFiltered, 'table-contributors', contributorColumns, 'total', false);
+    initConnectionsPanel('table-contributors');
     loadSurnameCloud(initialFiltered.map(d => d.contributor_ID));
 
     const input = document.getElementById('contributors-query');
@@ -113,6 +114,7 @@ export async function renderContributors() {
         if (cachedData) {
           const filtered = filterContributorData(cachedData);
           renderTable(filtered, 'table-contributors', contributorColumns, 'total', false);
+          initConnectionsPanel('table-contributors');
           loadSurnameCloud(filtered.map(d => d.contributor_ID));
         }
       });
@@ -328,12 +330,59 @@ async function loadSurnameCloud(contributors) {
   }
 }
 
+function renderConnectionsTable(matches) {
+  const rows = matches.map(m => `
+    <tr>
+      <td>${m.contributor}</td>
+      <td>${m.births_count || 0}</td>
+      <td>${m.families_count || 0}</td>
+      <td>${m.deaths_count || 0}</td>
+      <td>${m.total_count}</td>
+      <td>${Math.round((m.max_confidence || 0) * 100)}%</td>
+    </tr>`).join('');
+  return `<table class="connections-table">
+    <thead><tr>
+      <th>${t('col_contributor_ID')}</th>
+      <th>${t('col_total_births')}</th>
+      <th>${t('col_total_families')}</th>
+      <th>${t('col_total_deaths')}</th>
+      <th>${t('col_total')}</th>
+      <th>${t('connections_confidence')}</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function initConnectionsPanel(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.connections-cell').forEach(details => {
+    details.addEventListener('toggle', async () => {
+      if (!details.open || details.dataset.loaded) return;
+      details.dataset.loaded = '1';
+      const name = details.dataset.contributor;
+      const content = details.querySelector('.connections-content');
+      content.innerHTML = `<em>${t('connections_loading')}</em>`;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(name)}/matches`);
+        const data = await res.json();
+        content.innerHTML = data.length
+          ? renderConnectionsTable(data)
+          : `<em>${t('connections_none')}</em>`;
+      } catch {
+        content.innerHTML = `<em>${t('search_failed')}</em>`;
+      }
+    });
+  });
+}
+
 /** Re-renders the contributors table if it is currently visible (re-translates column headers). */
 export function refreshContributorsIfVisible() {
   if (cachedData && document.getElementById('tab-contributors').classList.contains('active')) {
     renderChart(cachedData);
     if (timelineData) renderTimelineChart(timelineData);
     renderTable(cachedData, 'table-contributors', contributorColumns, 'total', false);
+    initConnectionsPanel('table-contributors');
     populateSurnameSelect(cachedData);
   }
 }
