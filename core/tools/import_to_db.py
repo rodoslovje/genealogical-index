@@ -194,14 +194,15 @@ def setup_update(db):
             match_fields TEXT,
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
-        CREATE INDEX IF NOT EXISTS idx_matches_a     ON matches(contributor_a);
-        CREATE INDEX IF NOT EXISTS idx_matches_b     ON matches(contributor_b);
-        CREATE INDEX IF NOT EXISTS idx_matches_owner ON matches(owner);
+        CREATE INDEX IF NOT EXISTS idx_matches_a ON matches(contributor_a);
+        CREATE INDEX IF NOT EXISTS idx_matches_b ON matches(contributor_b);
 
         -- Pair-once optimisation: each job only processes pairs where the other
         -- contributor sorts after it; both directions are stored in one INSERT.
+        -- Columns must be added before the index on owner can be created.
         ALTER TABLE matches    ADD COLUMN IF NOT EXISTS owner     TEXT    NOT NULL DEFAULT '';
         ALTER TABLE match_jobs ADD COLUMN IF NOT EXISTS pair_once BOOLEAN NOT NULL DEFAULT TRUE;
+        CREATE INDEX IF NOT EXISTS idx_matches_owner ON matches(owner);
     """))
     db.commit()
 
