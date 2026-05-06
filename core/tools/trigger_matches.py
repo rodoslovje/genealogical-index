@@ -78,10 +78,22 @@ def main():
         "--workers", type=int, default=2,
         help="Number of parallel workers for match computation (default: 2)"
     )
+    parser.add_argument(
+        "--clear", action="store_true",
+        help="Remove all pending jobs from the queue without running them"
+    )
     args = parser.parse_args()
 
     db = SessionLocal()
     try:
+        if args.clear:
+            n = db.execute(
+                text("DELETE FROM match_jobs WHERE status = 'pending'")
+            ).rowcount
+            db.commit()
+            print(f"Cleared {n} pending job(s) from queue.")
+            return
+
         if not args.all and not args.contributors:
             print_status(db)
             print("\nUse --all or --contributor NAME to queue jobs.")
