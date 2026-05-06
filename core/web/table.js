@@ -511,7 +511,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
               if (p.year) partnerDisplay += ` *${p.year}`;
               if (p.name === 'private' || p.name === 'unknown') partnerDisplay = p.name;
               const label = isHusband ? t('label_husband') : t('label_wife');
-              formattedList.push(`<a href="?${famParams.toString()}" data-spa-nav title="${label}">💍 ${partnerDisplay}</a>`);
+              formattedList.push(`<a href="?${famParams.toString()}" data-spa-nav title="${label}">${partnerDisplay}</a>`);
             });
           } catch (e) { console.error("Failed to parse JSON for partners", e); }
         };
