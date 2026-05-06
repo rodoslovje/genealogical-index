@@ -177,11 +177,6 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_family_year  ON families(marriage_year);
         CREATE INDEX IF NOT EXISTS idx_death_year   ON deaths(death_year);
 
-        -- Back-fill year columns for any rows imported before this column existed.
-        UPDATE births   SET birth_year   = CAST(SUBSTRING(date_of_birth    FROM '\d{4}') AS SMALLINT) WHERE birth_year   IS NULL AND date_of_birth    ~ '\d{4}';
-        UPDATE families SET marriage_year = CAST(SUBSTRING(date_of_marriage FROM '\d{4}') AS SMALLINT) WHERE marriage_year IS NULL AND date_of_marriage ~ '\d{4}';
-        UPDATE deaths   SET death_year   = CAST(SUBSTRING(date_of_death     FROM '\d{4}') AS SMALLINT) WHERE death_year   IS NULL AND date_of_death     ~ '\d{4}';
-
         CREATE TABLE IF NOT EXISTS match_jobs (
             contributor TEXT PRIMARY KEY,
             status TEXT NOT NULL DEFAULT 'pending',
