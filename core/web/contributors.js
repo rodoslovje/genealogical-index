@@ -385,7 +385,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
   const heading = `<div class="matches-page-header">
     <a href="?t=contributors" data-spa-nav class="matches-back-link">← ${t('back_to_genealogists')}</a>
-    <h2 class="matches-page-title">${t('matches_for')} <em>${contributor}</em></h2>
+    <h2 class="matches-page-title">${t('matches_for')} ${contributor}</h2>
   </div>`;
 
   if (!partners.length) {
@@ -405,6 +405,7 @@ async function renderMatchesPage(contributor, withPartner) {
   }));
 
   container.innerHTML = heading +
+    `<p>${t('matches_found_intro')} <strong>${contributor}</strong>:</p>` +
     '<div id="matches-summary" class="table-responsive"></div>' +
     '<div id="matches-detail"></div>';
 

@@ -109,6 +109,12 @@ window.addEventListener('resize', updateSidebarTop);
 
 hamburgerBtn.addEventListener('click', (e) => {
   e.stopPropagation();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('t') === 'contributors' && urlParams.get('matches')) {
+    return;
+  }
+
   if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
     const rect = sidebar.getBoundingClientRect();
     const sidebarVisible = rect.bottom > 0;
@@ -201,9 +207,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       showIntros(introMap[targetTab]);
     }
 
-    if (SEARCH_TABS.includes(targetTab)) {
+    const isMatchesPage = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('matches');
+
+    if (SEARCH_TABS.includes(targetTab) && !isMatchesPage) {
       sidebar.classList.add('open');
-    } else if (window.innerWidth > 768) {
+    } else if (window.innerWidth > 768 || isMatchesPage) {
       sidebar.classList.remove('open');
     }
 

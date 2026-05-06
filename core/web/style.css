@@ -631,7 +631,7 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 .matches-active-row td { background: #eaf4fb; }
 .matches-detail-section { margin-top: 28px; }
 .matches-detail-heading {
-  font-size: 1rem;
+  font-size: 1.3rem;
   font-weight: 600;
   margin-bottom: 12px;
   color: var(--primary);
