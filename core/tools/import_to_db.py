@@ -87,8 +87,9 @@ def setup_full(db):
             match_fields TEXT,
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
-        CREATE INDEX idx_matches_a ON matches(contributor_a);
-        CREATE INDEX idx_matches_b ON matches(contributor_b);
+        CREATE INDEX idx_matches_a  ON matches(contributor_a);
+        CREATE INDEX idx_matches_b  ON matches(contributor_b);
+        CREATE INDEX idx_matches_ab ON matches(contributor_a, contributor_b);
     """))
     db.commit()
 
@@ -231,8 +232,9 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_birth_year                ON births(birth_year);
         CREATE INDEX IF NOT EXISTS idx_family_year               ON families(marriage_year);
         CREATE INDEX IF NOT EXISTS idx_death_year                ON deaths(death_year);
-        CREATE INDEX IF NOT EXISTS idx_matches_a                 ON matches(contributor_a);
-        CREATE INDEX IF NOT EXISTS idx_matches_b                 ON matches(contributor_b);
+        CREATE INDEX IF NOT EXISTS idx_matches_a  ON matches(contributor_a);
+        CREATE INDEX IF NOT EXISTS idx_matches_b  ON matches(contributor_b);
+        CREATE INDEX IF NOT EXISTS idx_matches_ab ON matches(contributor_a, contributor_b);
     """))
     db.commit()
 

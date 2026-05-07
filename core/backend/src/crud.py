@@ -24,17 +24,26 @@ def _load_contributor_links():
 
 
 CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
+MATCH_COUNTS_TTL = 60  # shorter TTL — counts change during match computation
 _timeline_cache = {"data": None, "time": 0}
 _surnames_cache = {}  # keyed by contributor name (or "" for all)
+_match_counts_cache = {"data": None, "time": 0}
 
 
 def get_match_counts(db: Session):
+    now = time.time()
+    if (_match_counts_cache["data"] is not None
+            and now - _match_counts_cache["time"] < MATCH_COUNTS_TTL):
+        return _match_counts_cache["data"]
     rows = db.execute(text("""
         SELECT contributor_a AS contributor, COUNT(DISTINCT contributor_b) AS partners_count
         FROM matches
         GROUP BY contributor_a
     """)).fetchall()
-    return [dict(r._mapping) for r in rows]
+    result = [dict(r._mapping) for r in rows]
+    _match_counts_cache["data"] = result
+    _match_counts_cache["time"] = now
+    return result
 
 
 def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b: str):
