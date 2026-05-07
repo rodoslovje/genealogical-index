@@ -20,15 +20,9 @@ Without arguments, prints current job queue status.
 import argparse
 import os
 import sys
-import time
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-
-# Must match compute_matches.TRGM_THRESHOLD — the lower bound of similarity
-# accepted by the % operator in the actual match queries.  A pair with no
-# surnames within this threshold cannot produce any stored matches.
-_TRGM_THRESHOLD = 0.72
 
 try:
     from dotenv import load_dotenv
@@ -64,95 +58,6 @@ def queue_pairs(db, pairs):
         [{"a": a, "b": b} for a, b in pairs],
     )
     db.commit()
-
-
-def filter_pairs_by_surname_overlap(db, pairs):
-    """Drop pairs whose contributors share no trigram-similar surnames.
-
-    The actual match queries require surname similarity ≥ TRGM_THRESHOLD on
-    the matching record-type join, so a pair with zero surname overlap across
-    births / families / deaths cannot produce any stored matches.  Filtering
-    those pairs out here avoids ~300 ms of per-pair query overhead each.
-
-    Strategy: collect every (contributor, surname) tuple from all four sources
-    into a temp table, build a GiST trigram index on it, then run a single
-    self-join.  Self-joining the raw tables directly is much slower because
-    families alone has 300k+ rows and the planner can't dedupe (contributor,
-    surname) cheaply at scan time.
-    """
-    if not pairs:
-        return pairs
-
-    t0 = time.monotonic()
-    print("Building surname-overlap pre-filter (one-time work)...", flush=True)
-
-    db.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {_TRGM_THRESHOLD}"))
-    db.execute(text("SET LOCAL work_mem = '256MB'"))
-    db.execute(text("SET LOCAL maintenance_work_mem = '256MB'"))
-    db.execute(text("SET LOCAL max_parallel_workers_per_gather = 4"))
-    db.execute(text("SET LOCAL min_parallel_table_scan_size = 0"))
-    db.execute(text("SET LOCAL min_parallel_index_scan_size = 0"))
-    db.execute(text("""
-        CREATE TEMP TABLE _pf_surnames (
-            contributor TEXT,
-            surname TEXT,
-            PRIMARY KEY (contributor, surname)
-        )
-        ON COMMIT DROP
-    """))
-
-    # Per-source DISTINCT inserts — each materialises a small per-source unique
-    # set instead of one big UNION that has to dedupe ~830k rows in one pass.
-    sources = [
-        ("births", "surname", "births"),
-        ("families", "husband_surname", "family-husband"),
-        ("families", "wife_surname", "family-wife"),
-        ("deaths", "surname", "deaths"),
-    ]
-    for table, col, label in sources:
-        ts = time.monotonic()
-        n = db.execute(
-            text(
-                f"INSERT INTO _pf_surnames "
-                f"SELECT DISTINCT contributor, {col} FROM {table} "
-                f"WHERE {col} IS NOT NULL AND {col} <> '' "
-                f"ON CONFLICT DO NOTHING"
-            )
-        ).rowcount
-        print(
-            f"  collected {n:,} {label} surnames in " f"{time.monotonic()-ts:.1f}s",
-            flush=True,
-        )
-
-    ts = time.monotonic()
-    db.execute(text("CREATE INDEX ON _pf_surnames USING GIST (surname gist_trgm_ops)"))
-    db.execute(text("ANALYZE _pf_surnames"))
-    print(f"  built GiST index in {time.monotonic()-ts:.1f}s", flush=True)
-
-    ts = time.monotonic()
-    rows = db.execute(text("""
-        SELECT DISTINCT s1.contributor AS ca, s2.contributor AS cb
-        FROM _pf_surnames s1 JOIN _pf_surnames s2
-          ON s1.contributor < s2.contributor
-         AND s1.surname % s2.surname
-    """)).fetchall()
-    print(
-        f"  computed overlap in {time.monotonic()-ts:.1f}s "
-        f"({len(rows):,} overlapping contributor pairs)",
-        flush=True,
-    )
-    db.commit()
-
-    # Match by frozenset so the result is order-agnostic — guards against any
-    # collation difference between Python string ordering (used to canonicalise
-    # `pairs`) and PostgreSQL's column collation (used by `<`).
-    overlap = {frozenset((r.ca, r.cb)) for r in rows}
-    kept = [p for p in pairs if frozenset(p) in overlap]
-    print(
-        f"Surname-overlap pre-filter: {len(kept)}/{len(pairs)} pair(s) kept "
-        f"({len(pairs) - len(kept)} skipped) in {time.monotonic() - t0:.1f}s"
-    )
-    return kept
 
 
 def print_status(db):
@@ -269,7 +174,6 @@ def main():
             print(
                 f"Considering {len(pairs)} pair(s) for {len(names)} contributor(s)..."
             )
-            pairs = filter_pairs_by_surname_overlap(db, pairs)
             queue_pairs(db, pairs)
             print(f"Queued {len(pairs)} pairs.")
         else:
@@ -303,7 +207,6 @@ def main():
                         pairs.add((a, b))
             pairs = sorted(pairs)
             print(f"Considering {len(pairs)} pair(s) for: {', '.join(targets)}")
-            pairs = filter_pairs_by_surname_overlap(db, pairs)
             queue_pairs(db, pairs)
             print(f"Queued {len(pairs)} pairs.")
     finally:

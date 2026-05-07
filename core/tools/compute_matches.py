@@ -35,15 +35,15 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # --- tuning knobs ---
-YEAR_TOLERANCE     = 5       # max year difference still considered a match
-CONFIDENCE_MIN     = 0.80    # records below this threshold are not stored
-TRGM_THRESHOLD     = 0.72    # pg_trgm.similarity_threshold for the % join operator
-                              # kept below CONFIDENCE_MIN so pairs where one surname/name
-                              # field is weaker but year+place compensate are not missed
-WORK_MEM           = "256MB" # per-session work_mem; raise if you have spare RAM
-PG_PARALLEL_WORKERS = 4      # PostgreSQL-internal parallel workers per query
-                              # (independent of Python --workers; requires max_worker_processes
-                              #  >= Python_workers * PG_PARALLEL_WORKERS on the server)
+YEAR_TOLERANCE = 5  # max year difference still considered a match
+CONFIDENCE_MIN = 0.80  # records below this threshold are not stored
+TRGM_THRESHOLD = 0.72  # pg_trgm.similarity_threshold for the % join operator
+# kept below CONFIDENCE_MIN so pairs where one surname/name
+# field is weaker but year+place compensate are not missed
+WORK_MEM = "256MB"  # per-session work_mem; raise if you have spare RAM
+PG_PARALLEL_WORKERS = 4  # PostgreSQL-internal parallel workers per query
+# (independent of Python --workers; requires max_worker_processes
+#  >= Python_workers * PG_PARALLEL_WORKERS on the server)
 
 # --- DB setup ---
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -81,6 +81,7 @@ def _apply_session_params(dbapi_conn, _record):
     cur.execute("SET parallel_setup_cost = 100")
     cur.close()
 
+
 # ---------------------------------------------------------------------------
 # Each job compares exactly two contributors against each other.
 # Both A→B and B→A matches are stored in a single INSERT (UNION ALL) so the
@@ -93,12 +94,23 @@ _BIRTH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH cands AS (
+    WITH b1_sur AS (
+        SELECT DISTINCT surname FROM births WHERE contributor = :contrib_a AND surname IS NOT NULL
+    ),
+    b2_sur AS (
+        SELECT DISTINCT surname FROM births WHERE contributor = :contrib_b AND surname IS NOT NULL
+    ),
+    sur_matches AS (
+        SELECT b1s.surname AS sur1, b2s.surname AS sur2, similarity(b1s.surname, b2s.surname) AS s_sur
+        FROM b1_sur b1s
+        JOIN b2_sur b2s ON b1s.surname % b2s.surname
+    ),
+    cands AS (
         SELECT
             b1.id AS a_id,
             b2.id AS b_id,
-            similarity(b1.surname, b2.surname) AS s_sur,
-            similarity(b1.name,    b2.name)    AS s_name,
+            sm.s_sur,
+            similarity(b1.name, b2.name) AS s_name,
             CASE WHEN COALESCE(b1.place_of_birth,'') != ''
                       AND COALESCE(b2.place_of_birth,'') != ''
                  THEN similarity(b1.place_of_birth, b2.place_of_birth)
@@ -106,14 +118,12 @@ _BIRTH_INSERT = text(r"""
             CASE WHEN b1.birth_year IS NOT NULL AND b2.birth_year IS NOT NULL
                  THEN ABS(b1.birth_year - b2.birth_year)
                  ELSE NULL END AS yr_diff
-        FROM births b1
-        JOIN births b2
-            ON  b1.contributor = :contrib_a
-            AND b2.contributor = :contrib_b
-            AND (b1.birth_year IS NULL OR b2.birth_year IS NULL
+        FROM sur_matches sm
+        JOIN births b1 ON b1.contributor = :contrib_a AND b1.surname = sm.sur1
+        JOIN births b2 ON b2.contributor = :contrib_b AND b2.surname = sm.sur2
+        WHERE (b1.birth_year IS NULL OR b2.birth_year IS NULL
                  OR ABS(b1.birth_year - b2.birth_year) <= :yr_tol)
-            AND b1.surname % b2.surname
-            AND b1.name    % b2.name
+          AND b1.name % b2.name
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
@@ -147,12 +157,34 @@ _FAMILY_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH cands AS (
+    WITH f1_hsur AS (
+        SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL
+    ),
+    f2_hsur AS (
+        SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
+    ),
+    hsur_matches AS (
+        SELECT s1.husband_surname AS sur1, s2.husband_surname AS sur2, similarity(s1.husband_surname, s2.husband_surname) AS s_hsur
+        FROM f1_hsur s1
+        JOIN f2_hsur s2 ON s1.husband_surname % s2.husband_surname
+    ),
+    f1_wsur AS (
+        SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
+    ),
+    f2_wsur AS (
+        SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
+    ),
+    wsur_matches AS (
+        SELECT s1.wife_surname AS sur1, s2.wife_surname AS sur2, similarity(s1.wife_surname, s2.wife_surname) AS s_wsur
+        FROM f1_wsur s1
+        JOIN f2_wsur s2 ON s1.wife_surname % s2.wife_surname
+    ),
+    cands AS (
         SELECT
             f1.id AS a_id,
             f2.id AS b_id,
-            similarity(f1.husband_surname, f2.husband_surname) AS s_hsur,
-            similarity(f1.wife_surname,    f2.wife_surname)    AS s_wsur,
+            hm.s_hsur,
+            wm.s_wsur,
             CASE WHEN COALESCE(f1.husband_name,'') != ''
                       AND COALESCE(f2.husband_name,'') != ''
                  THEN similarity(f1.husband_name, f2.husband_name)
@@ -169,13 +201,14 @@ _FAMILY_INSERT = text(r"""
                  THEN ABS(f1.marriage_year - f2.marriage_year)
                  ELSE NULL END AS yr_diff
         FROM families f1
-        JOIN families f2
-            ON  f1.contributor = :contrib_a
-            AND f2.contributor = :contrib_b
-            AND (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
+        JOIN hsur_matches hm ON f1.husband_surname = hm.sur1
+        JOIN wsur_matches wm ON f1.wife_surname = wm.sur1
+        JOIN families f2 ON f2.contributor = :contrib_b
+                        AND f2.husband_surname = hm.sur2
+                        AND f2.wife_surname = wm.sur2
+        WHERE f1.contributor = :contrib_a
+          AND (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
                  OR ABS(f1.marriage_year - f2.marriage_year) <= :yr_tol)
-            AND f1.husband_surname % f2.husband_surname
-            AND f1.wife_surname    % f2.wife_surname
     ),
     scored AS (
         SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff,
@@ -215,12 +248,23 @@ _DEATH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH cands AS (
+    WITH d1_sur AS (
+        SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_a AND surname IS NOT NULL
+    ),
+    d2_sur AS (
+        SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_b AND surname IS NOT NULL
+    ),
+    sur_matches AS (
+        SELECT d1s.surname AS sur1, d2s.surname AS sur2, similarity(d1s.surname, d2s.surname) AS s_sur
+        FROM d1_sur d1s
+        JOIN d2_sur d2s ON d1s.surname % d2s.surname
+    ),
+    cands AS (
         SELECT
             d1.id AS a_id,
             d2.id AS b_id,
-            similarity(d1.surname, d2.surname) AS s_sur,
-            similarity(d1.name,    d2.name)    AS s_name,
+            sm.s_sur,
+            similarity(d1.name, d2.name) AS s_name,
             CASE WHEN COALESCE(d1.place_of_death,'') != ''
                       AND COALESCE(d2.place_of_death,'') != ''
                  THEN similarity(d1.place_of_death, d2.place_of_death)
@@ -228,14 +272,12 @@ _DEATH_INSERT = text(r"""
             CASE WHEN d1.death_year IS NOT NULL AND d2.death_year IS NOT NULL
                  THEN ABS(d1.death_year - d2.death_year)
                  ELSE NULL END AS yr_diff
-        FROM deaths d1
-        JOIN deaths d2
-            ON  d1.contributor = :contrib_a
-            AND d2.contributor = :contrib_b
-            AND (d1.death_year IS NULL OR d2.death_year IS NULL
+        FROM sur_matches sm
+        JOIN deaths d1 ON d1.contributor = :contrib_a AND d1.surname = sm.sur1
+        JOIN deaths d2 ON d2.contributor = :contrib_b AND d2.surname = sm.sur2
+        WHERE (d1.death_year IS NULL OR d2.death_year IS NULL
                  OR ABS(d1.death_year - d2.death_year) <= :yr_tol)
-            AND d1.surname % d2.surname
-            AND d1.name    % d2.name
+          AND d1.name % d2.name
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
@@ -287,8 +329,8 @@ def process_job(contrib_a, contrib_b):
     params = {
         "contrib_a": contrib_a,
         "contrib_b": contrib_b,
-        "yr_tol":    YEAR_TOLERANCE,
-        "conf_min":  CONFIDENCE_MIN,
+        "yr_tol": YEAR_TOLERANCE,
+        "conf_min": CONFIDENCE_MIN,
     }
     pair_label = f"{contrib_a}↔{contrib_b}"
 
@@ -299,28 +341,36 @@ def process_job(contrib_a, contrib_b):
     # concurrently across separate connections.
     total = 0
     with engine.begin() as conn:
-        deleted = conn.execute(text("""
+        deleted = conn.execute(
+            text("""
             DELETE FROM matches
             WHERE (contributor_a = :contrib_a AND contributor_b = :contrib_b)
                OR (contributor_a = :contrib_b AND contributor_b = :contrib_a)
-        """), params).rowcount
+        """),
+            params,
+        ).rowcount
         if deleted:
             log.info(f"  [{pair_label}] removed {deleted} stale matches")
 
         for sql, label in (
-            (_BIRTH_INSERT,  "birth"),
+            (_BIRTH_INSERT, "birth"),
             (_FAMILY_INSERT, "family"),
-            (_DEATH_INSERT,  "death"),
+            (_DEATH_INSERT, "death"),
         ):
             t0 = time.monotonic()
             n = conn.execute(sql, params).rowcount
-            log.info(f"  [{pair_label}] {label}: {n} matches in {time.monotonic()-t0:.1f}s")
+            log.info(
+                f"  [{pair_label}] {label}: {n} matches in {time.monotonic()-t0:.1f}s"
+            )
             total += n
 
-        conn.execute(text("""
+        conn.execute(
+            text("""
             UPDATE match_jobs SET status = 'done', completed_at = NOW()
             WHERE contributor_a = :contrib_a AND contributor_b = :contrib_b
-        """), params)
+        """),
+            params,
+        )
 
     log.info(f"  [{pair_label}] done — {total} total matches stored")
 
@@ -341,8 +391,10 @@ def worker(_):
             try:
                 with engine.begin() as conn:
                     conn.execute(
-                        text("UPDATE match_jobs SET status='error' "
-                             "WHERE contributor_a=:a AND contributor_b=:b"),
+                        text(
+                            "UPDATE match_jobs SET status='error' "
+                            "WHERE contributor_a=:a AND contributor_b=:b"
+                        ),
                         {"a": contrib_a, "b": contrib_b},
                     )
             except Exception:
@@ -363,9 +415,9 @@ def main(workers=4):
     # Runs once per table when NULL rows exist; skipped on subsequent calls.
     # Done BEFORE ANALYZE so the planner sees the populated histogram.
     for table, year_col, date_col in (
-        ("births",   "birth_year",    "date_of_birth"),
+        ("births", "birth_year", "date_of_birth"),
         ("families", "marriage_year", "date_of_marriage"),
-        ("deaths",   "death_year",    "date_of_death"),
+        ("deaths", "death_year", "date_of_death"),
     ):
         with engine.connect() as conn:
             null_rows = conn.execute(
@@ -375,11 +427,13 @@ def main(workers=4):
             log.info(f"Back-filling {year_col} for {null_rows:,} rows in {table}...")
             t_bf = time.monotonic()
             with engine.begin() as conn:
-                conn.execute(text(
-                    f"UPDATE {table} SET {year_col} = "
-                    f"CAST(SUBSTRING({date_col} FROM '\\d{{4}}') AS SMALLINT) "
-                    f"WHERE {year_col} IS NULL AND {date_col} ~ '\\d{{4}}'"
-                ))
+                conn.execute(
+                    text(
+                        f"UPDATE {table} SET {year_col} = "
+                        f"CAST(SUBSTRING({date_col} FROM '\\d{{4}}') AS SMALLINT) "
+                        f"WHERE {year_col} IS NULL AND {date_col} ~ '\\d{{4}}'"
+                    )
+                )
             log.info(f"  {table} back-fill done in {time.monotonic()-t_bf:.0f}s")
 
     # Refresh planner statistics so the query planner has accurate row-count estimates.
@@ -393,8 +447,10 @@ def main(workers=4):
         conn.execute(text("ANALYZE families"))
         conn.execute(text("ANALYZE deaths"))
 
-    log.info(f"Processing {pending_count} pending pair(s) with {workers} worker(s) "
-             f"(PG_PARALLEL_WORKERS={PG_PARALLEL_WORKERS}, WORK_MEM={WORK_MEM})...")
+    log.info(
+        f"Processing {pending_count} pending pair(s) with {workers} worker(s) "
+        f"(PG_PARALLEL_WORKERS={PG_PARALLEL_WORKERS}, WORK_MEM={WORK_MEM})..."
+    )
 
     t0 = time.monotonic()
     with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -408,9 +464,11 @@ def main(workers=4):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute cross-contributor matches.")
     parser.add_argument(
-        "--workers", type=int, default=4,
+        "--workers",
+        type=int,
+        default=4,
         help="Number of parallel workers (default: 4). "
-             "Each claims jobs independently via SELECT FOR UPDATE SKIP LOCKED."
+        "Each claims jobs independently via SELECT FOR UPDATE SKIP LOCKED.",
     )
     args = parser.parse_args()
     main(workers=args.workers)
