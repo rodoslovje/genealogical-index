@@ -74,34 +74,47 @@ def filter_pairs_by_surname_overlap(db, pairs):
     births / families / deaths cannot produce any stored matches.  Filtering
     those pairs out here avoids ~300 ms of per-pair query overhead each.
 
-    Uses the per-table GiST trigram indexes (idx_birth_surname_trgm etc.) so
-    each self-join is index-driven, not a Cartesian scan.
+    Strategy: collect every (contributor, surname) tuple from all four sources
+    into a temp table, build a GiST trigram index on it, then run a single
+    self-join.  Self-joining the raw tables directly is much slower because
+    families alone has 300k+ rows and the planner can't dedupe (contributor,
+    surname) cheaply at scan time.
     """
     if not pairs:
         return pairs
 
     t0 = time.monotonic()
+    print("Building surname-overlap pre-filter (one-time work)...", flush=True)
+
     db.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {_TRGM_THRESHOLD}"))
+    db.execute(text("""
+        CREATE TEMP TABLE _pf_surnames (contributor TEXT, surname TEXT)
+        ON COMMIT DROP
+    """))
+    db.execute(text("""
+        INSERT INTO _pf_surnames
+        SELECT contributor, surname FROM births
+            WHERE surname IS NOT NULL AND surname <> ''
+        UNION
+        SELECT contributor, husband_surname FROM families
+            WHERE husband_surname IS NOT NULL AND husband_surname <> ''
+        UNION
+        SELECT contributor, wife_surname FROM families
+            WHERE wife_surname IS NOT NULL AND wife_surname <> ''
+        UNION
+        SELECT contributor, surname FROM deaths
+            WHERE surname IS NOT NULL AND surname <> ''
+    """))
+    db.execute(text(
+        "CREATE INDEX ON _pf_surnames USING GIST (surname gist_trgm_ops)"
+    ))
+    db.execute(text("ANALYZE _pf_surnames"))
+
     rows = db.execute(text("""
-        SELECT b1.contributor AS ca, b2.contributor AS cb
-        FROM births b1 JOIN births b2
-          ON b1.contributor < b2.contributor
-         AND b1.surname % b2.surname
-        UNION
-        SELECT f1.contributor, f2.contributor
-        FROM families f1 JOIN families f2
-          ON f1.contributor < f2.contributor
-         AND f1.husband_surname % f2.husband_surname
-        UNION
-        SELECT f1.contributor, f2.contributor
-        FROM families f1 JOIN families f2
-          ON f1.contributor < f2.contributor
-         AND f1.wife_surname % f2.wife_surname
-        UNION
-        SELECT d1.contributor, d2.contributor
-        FROM deaths d1 JOIN deaths d2
-          ON d1.contributor < d2.contributor
-         AND d1.surname % d2.surname
+        SELECT DISTINCT s1.contributor AS ca, s2.contributor AS cb
+        FROM _pf_surnames s1 JOIN _pf_surnames s2
+          ON s1.contributor < s2.contributor
+         AND s1.surname % s2.surname
     """)).fetchall()
     db.commit()
 
