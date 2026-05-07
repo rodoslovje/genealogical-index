@@ -89,8 +89,15 @@ def filter_pairs_by_surname_overlap(db, pairs):
     db.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {_TRGM_THRESHOLD}"))
     db.execute(text("SET LOCAL work_mem = '256MB'"))
     db.execute(text("SET LOCAL maintenance_work_mem = '256MB'"))
+    db.execute(text("SET LOCAL max_parallel_workers_per_gather = 4"))
+    db.execute(text("SET LOCAL min_parallel_table_scan_size = 0"))
+    db.execute(text("SET LOCAL min_parallel_index_scan_size = 0"))
     db.execute(text("""
-        CREATE TEMP TABLE _pf_surnames (contributor TEXT, surname TEXT)
+        CREATE TEMP TABLE _pf_surnames (
+            contributor TEXT,
+            surname TEXT,
+            PRIMARY KEY (contributor, surname)
+        )
         ON COMMIT DROP
     """))
 
@@ -108,7 +115,8 @@ def filter_pairs_by_surname_overlap(db, pairs):
             text(
                 f"INSERT INTO _pf_surnames "
                 f"SELECT DISTINCT contributor, {col} FROM {table} "
-                f"WHERE {col} IS NOT NULL AND {col} <> ''"
+                f"WHERE {col} IS NOT NULL AND {col} <> '' "
+                f"ON CONFLICT DO NOTHING"
             )
         ).rowcount
         print(
