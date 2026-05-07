@@ -270,10 +270,113 @@ docker compose exec api python tools/import_to_db.py --mode update
 
 **Arguments:**
 
-- `--mode update` _(default)_ — only reimports contributors whose data has changed
-- `--mode full` — reimports all contributors
-- `--drop-tables` — drops and recreates all tables first (full reimport)
-- `--force-births` / `--force-families` / `--force-deaths` — force reimport of specific record types
+| Flag | Description |
+|---|---|
+| `--mode update` _(default)_ | Only reimports contributors whose source data has changed |
+| `--mode full` | Reimports all contributors regardless of modification time |
+| `--drop-tables` | Drops and recreates all tables first (full rebuild) |
+| `--force-births` | Forces reimport of birth records for all contributors |
+| `--force-families` | Forces reimport of family records for all contributors |
+| `--force-deaths` | Forces reimport of death records for all contributors |
+
+Import does **not** trigger match computation automatically — run that separately (see §2.5).
+
+---
+
+### 2.5 Compute cross-contributor matches
+
+Match computation finds records from different contributors that likely refer to the same person or family. It runs as a separate step so the site stays fully usable during long re-computation runs.
+
+#### How it works
+
+Matching is done at the contributor-pair level. For N contributors, there are N×(N−1)/2 unique pairs. Each pair job:
+
+1. Compares contributor A's records against contributor B's records using PostgreSQL trigram similarity (`pg_trgm`).
+2. Filters candidates by year proximity (±5 years) before the expensive trigram join — this uses the `birth_year` / `marriage_year` / `death_year` integer columns.
+3. Scores each candidate pair on surname, name, place, and year similarity.
+4. Stores matches above the confidence threshold in both directions (A→B and B→A) so the API can query from either perspective.
+
+Birth, family, and death queries for each pair run in parallel. Multiple pair jobs run concurrently across worker processes.
+
+#### Confidence formula
+
+| Field | Weight |
+|---|---|
+| Surname similarity | 35% |
+| Name similarity | 30% |
+| Place similarity | 15% |
+| Year proximity | 20% |
+
+Place and year fall back to a neutral 0.5 weight when data is missing on either side. 100% confidence requires all four fields to be exact-string matches.
+
+**Default thresholds** (tunable in `core/tools/compute_matches.py`):
+
+| Constant | Default | Description |
+|---|---|---|
+| `CONFIDENCE_MIN` | `0.80` | Minimum score to store a match |
+| `TRGM_THRESHOLD` | `0.72` | pg_trgm similarity threshold for candidate generation |
+| `YEAR_TOLERANCE` | `5` | Maximum year difference still considered a candidate |
+
+#### Running matches
+
+**First run or full rebuild — old results remain visible until each pair is replaced:**
+
+```bash
+docker compose exec api python tools/trigger_matches.py --all
+```
+
+**Full rebuild with old results dropped immediately (site shows no matches during the run):**
+
+```bash
+docker compose exec api python tools/trigger_matches.py --all --drop-all
+```
+
+**Recompute matches for one or more contributors after their data changed:**
+
+```bash
+docker compose exec api python tools/trigger_matches.py --contributor "Novak"
+docker compose exec api python tools/trigger_matches.py --contributor "Novak" --contributor "Horvat"
+```
+
+This queues all pairs that involve the named contributor(s) so every affected match is refreshed.
+
+**Control parallelism** (default: 2 workers):
+
+```bash
+docker compose exec api python tools/trigger_matches.py --all --workers 4
+```
+
+Each worker claims pair jobs independently. More workers help when the DB server has spare CPU cores. Note that each worker also spawns up to 3 internal PostgreSQL parallel workers (`PG_PARALLEL_WORKERS` in `compute_matches.py`), so set `--workers` conservatively relative to available CPU.
+
+**Monitor progress:**
+
+```bash
+# Show pending / running / done counts
+docker compose exec api python tools/trigger_matches.py
+
+# Stream the live log (if running in background)
+docker compose exec api tail -f data/output/compute_matches.log
+```
+
+**Stop a running computation:**
+
+```bash
+docker compose exec api python tools/trigger_matches.py --stop
+```
+
+Marks all pending and running jobs as stopped and cancels their active PostgreSQL queries. Workers exit cleanly after their current pair finishes.
+
+**Discard the pending queue without running:**
+
+```bash
+docker compose exec api python tools/trigger_matches.py --clear
+```
+
+#### Performance notes
+
+- For 262 contributors and 3 M records, a full `--all` run takes several hours with 2 workers.
+- Year columns (`birth_year`, `marriage_year`, `death_year`) must be populated for the year pre-filter to be effective. They are filled automatically during import. If you added the year columns after data was already imported, the first `trigger_matches.py` run back-fills them automatically before processing starts (one-time cost, logged as `Back-filling birth_year for X rows`).
+- The first `--all` run also runs `ANALYZE` on the three record tables so the query planner has accurate statistics for the trigram and B-tree indexes.
 
 ---
 
@@ -428,6 +531,13 @@ rsync -avz --delete data/output user@yourserver:/var/sgi/genealogical-index/data
 # 4. on server — reimport changed contributors
 cd sites/slo
 docker compose exec api python tools/import_to_db.py --mode update
+
+# 5. on server — recompute matches for changed contributors
+#    Old results for unaffected pairs stay visible while new ones are computed.
+docker compose exec api python tools/trigger_matches.py --contributor "ContributorName"
+
+# To recompute all matches (e.g. after a bulk update or threshold change):
+docker compose exec api python tools/trigger_matches.py --all
 ```
 
 ### Frontend change

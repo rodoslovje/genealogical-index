@@ -86,6 +86,10 @@ def main():
         help="Number of parallel workers for match computation (default: 2)"
     )
     parser.add_argument(
+        "--drop-all", action="store_true",
+        help="Delete all existing match results before queuing (use with --all for a clean rebuild)"
+    )
+    parser.add_argument(
         "--clear", action="store_true",
         help="Remove all pending jobs from the queue without running them"
     )
@@ -133,6 +137,11 @@ def main():
             print("\nUse --all or --contributor NAME to queue jobs.")
             return
 
+        if args.drop_all:
+            n = db.execute(text("DELETE FROM matches")).rowcount
+            db.commit()
+            print(f"Dropped {n} existing match record(s).")
+
         if args.all:
             names = [r.name for r in db.execute(
                 text("SELECT name FROM contributors ORDER BY name")
@@ -143,10 +152,6 @@ def main():
             pairs = [(names[i], names[j])
                      for i in range(len(names))
                      for j in range(i + 1, len(names))]
-            n = db.execute(text("DELETE FROM matches")).rowcount
-            db.commit()
-            if n:
-                print(f"Cleared {n} existing match record(s) for clean recomputation.")
             print(f"Queuing {len(pairs)} pair(s) for {len(names)} contributor(s)...")
             queue_pairs(db, pairs)
             print(f"Queued {len(pairs)} pairs.")
