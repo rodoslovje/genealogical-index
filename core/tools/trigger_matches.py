@@ -102,7 +102,7 @@ def main():
     parser.add_argument(
         "--clear",
         action="store_true",
-        help="Remove all pending jobs from the queue without running them",
+        help="Remove all jobs from the queue without running them",
     )
     parser.add_argument(
         "--stop",
@@ -116,11 +116,9 @@ def main():
     db = SessionLocal()
     try:
         if args.clear:
-            n = db.execute(
-                text("DELETE FROM match_jobs WHERE status = 'pending'")
-            ).rowcount
+            n = db.execute(text("DELETE FROM match_jobs")).rowcount
             db.commit()
-            print(f"Cleared {n} pending job(s) from queue.")
+            print(f"Cleared {n} job(s) from queue.")
             return
 
         if args.stop:
