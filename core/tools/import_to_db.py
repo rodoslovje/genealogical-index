@@ -93,9 +93,26 @@ def setup_full(db):
     db.commit()
 
 
+def _col_exists(db, table, column):
+    return db.execute(text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name=:t AND column_name=:c"
+    ), {"t": table, "c": column}).fetchone() is not None
+
+
 def setup_update(db):
-    """Create tables if they don't exist yet (update mode)."""
+    """Create tables and apply schema migrations (update mode).
+
+    Each logical step is committed independently so DDL locks are held for the
+    shortest possible time.  Migrations are guarded by schema checks so they
+    only run when actually needed — re-running import on an up-to-date database
+    is fast regardless of table size.
+    """
     print("Setting up database tables and extensions (update mode)...")
+
+    # ------------------------------------------------------------------ #
+    # 1. Extension + base tables — never touches existing data             #
+    # ------------------------------------------------------------------ #
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS contributors (
@@ -104,19 +121,53 @@ def setup_update(db):
             last_modified VARCHAR(255)
         );
         CREATE TABLE IF NOT EXISTS births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, place_of_birth TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT,
+            date_of_birth TEXT, place_of_birth TEXT,
+            father_name TEXT, father_surname TEXT,
+            mother_name TEXT, mother_surname TEXT,
+            contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, date_of_marriage TEXT, place_of_marriage TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY,
+            husband_name TEXT, husband_surname TEXT,
+            wife_name TEXT, wife_surname TEXT,
+            date_of_marriage TEXT, place_of_marriage TEXT,
+            contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, place_of_death TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT,
+            date_of_death TEXT, place_of_death TEXT,
+            father_name TEXT, father_surname TEXT,
+            mother_name TEXT, mother_surname TEXT,
+            contributor TEXT, links TEXT
         );
-        ALTER TABLE births ADD COLUMN IF NOT EXISTS links TEXT;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS links TEXT;
-        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS links TEXT;
+        CREATE TABLE IF NOT EXISTS matches (
+            id SERIAL PRIMARY KEY,
+            contributor_a TEXT NOT NULL,
+            contributor_b TEXT NOT NULL,
+            record_type TEXT NOT NULL,
+            record_a_id INTEGER NOT NULL,
+            record_b_id INTEGER NOT NULL,
+            confidence REAL NOT NULL,
+            match_fields TEXT,
+            computed_at TIMESTAMPTZ DEFAULT NOW()
+        );
+    """))
+    db.commit()
 
-        -- Migrate old single-URL 'link' column to JSON array 'links', then drop it
+    # ------------------------------------------------------------------ #
+    # 2. Column additions — each ALTER TABLE IF NOT EXISTS is instant      #
+    #    when the column already exists                                    #
+    # ------------------------------------------------------------------ #
+    db.execute(text("""
+        ALTER TABLE births  ADD COLUMN IF NOT EXISTS links TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS links TEXT;
+        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS links TEXT;
+    """))
+    db.commit()
+
+    # Migrate old single-URL 'link' column to JSON array 'links', then drop it
+    db.execute(text("""
         DO $$ BEGIN
             IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='births' AND column_name='link') THEN
                 UPDATE births SET links = '["' || link || '"]' WHERE link IS NOT NULL AND link != '' AND links IS NULL;
@@ -131,88 +182,100 @@ def setup_update(db):
                 ALTER TABLE deaths DROP COLUMN link;
             END IF;
         END $$;
+    """))
+    db.commit()
 
-        ALTER TABLE births ADD COLUMN IF NOT EXISTS father_name TEXT;
-        ALTER TABLE births ADD COLUMN IF NOT EXISTS father_surname TEXT;
-        ALTER TABLE births ADD COLUMN IF NOT EXISTS mother_name TEXT;
-        ALTER TABLE births ADD COLUMN IF NOT EXISTS mother_surname TEXT;
-        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS father_name TEXT;
-        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS father_surname TEXT;
-        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS mother_name TEXT;
-        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS mother_surname TEXT;
-        ALTER TABLE births ADD COLUMN IF NOT EXISTS husbands_list TEXT;
-        ALTER TABLE births ADD COLUMN IF NOT EXISTS wifes_list TEXT;
-        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS husbands_list TEXT;
-        ALTER TABLE deaths ADD COLUMN IF NOT EXISTS wifes_list TEXT;
-
+    db.execute(text("""
+        ALTER TABLE births  ADD COLUMN IF NOT EXISTS father_name TEXT;
+        ALTER TABLE births  ADD COLUMN IF NOT EXISTS father_surname TEXT;
+        ALTER TABLE births  ADD COLUMN IF NOT EXISTS mother_name TEXT;
+        ALTER TABLE births  ADD COLUMN IF NOT EXISTS mother_surname TEXT;
+        ALTER TABLE births  ADD COLUMN IF NOT EXISTS husbands_list TEXT;
+        ALTER TABLE births  ADD COLUMN IF NOT EXISTS wifes_list TEXT;
+        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS father_name TEXT;
+        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS father_surname TEXT;
+        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS mother_name TEXT;
+        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS mother_surname TEXT;
+        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS husbands_list TEXT;
+        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS wifes_list TEXT;
         ALTER TABLE families DROP COLUMN IF EXISTS children_json;
         ALTER TABLE families DROP COLUMN IF EXISTS children;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS children_list TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_parents TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_parents TEXT;
-
-        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS births_count INTEGER DEFAULT 0;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS births_count   INTEGER DEFAULT 0;
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS families_count INTEGER DEFAULT 0;
-        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS deaths_count INTEGER DEFAULT 0;
-        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS links_count INTEGER DEFAULT 0;
-
-        CREATE INDEX IF NOT EXISTS idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_birth_contributor  ON births(contributor);
-        CREATE INDEX IF NOT EXISTS idx_family_contributor ON families(contributor);
-        CREATE INDEX IF NOT EXISTS idx_death_contributor  ON deaths(contributor);
-
-        ALTER TABLE births   ADD COLUMN IF NOT EXISTS birth_year   SMALLINT;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS deaths_count   INTEGER DEFAULT 0;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS links_count    INTEGER DEFAULT 0;
+        ALTER TABLE births   ADD COLUMN IF NOT EXISTS birth_year    SMALLINT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS marriage_year SMALLINT;
-        ALTER TABLE deaths   ADD COLUMN IF NOT EXISTS death_year   SMALLINT;
-
-        CREATE INDEX IF NOT EXISTS idx_birth_year   ON births(birth_year);
-        CREATE INDEX IF NOT EXISTS idx_family_year  ON families(marriage_year);
-        CREATE INDEX IF NOT EXISTS idx_death_year   ON deaths(death_year);
-
-        CREATE TABLE IF NOT EXISTS match_jobs (
-            contributor TEXT PRIMARY KEY,
-            status TEXT NOT NULL DEFAULT 'pending',
-            queued_at TIMESTAMPTZ DEFAULT NOW(),
-            completed_at TIMESTAMPTZ
-        );
-        CREATE TABLE IF NOT EXISTS matches (
-            id SERIAL PRIMARY KEY,
-            contributor_a TEXT NOT NULL,
-            contributor_b TEXT NOT NULL,
-            record_type TEXT NOT NULL,
-            record_a_id INTEGER NOT NULL,
-            record_b_id INTEGER NOT NULL,
-            confidence REAL NOT NULL,
-            match_fields TEXT,
-            computed_at TIMESTAMPTZ DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS idx_matches_a ON matches(contributor_a);
-        CREATE INDEX IF NOT EXISTS idx_matches_b ON matches(contributor_b);
-
-        -- Migrate to pair-based job queue (contributor_a, contributor_b primary key).
-        -- The old single-contributor schema is incompatible, so drop and recreate.
-        DROP TABLE IF EXISTS match_jobs;
-        CREATE TABLE match_jobs (
-            contributor_a TEXT NOT NULL,
-            contributor_b TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            queued_at TIMESTAMPTZ DEFAULT NOW(),
-            completed_at TIMESTAMPTZ,
-            PRIMARY KEY (contributor_a, contributor_b)
-        );
-        CREATE INDEX idx_match_jobs_status ON match_jobs(status, queued_at);
-
-        -- Drop columns that are no longer needed after the pair-based redesign.
-        ALTER TABLE matches DROP COLUMN IF EXISTS owner;
-        DROP INDEX  IF EXISTS idx_matches_owner;
+        ALTER TABLE deaths   ADD COLUMN IF NOT EXISTS death_year    SMALLINT;
     """))
     db.commit()
+
+    # ------------------------------------------------------------------ #
+    # 3. Indexes — CREATE IF NOT EXISTS skips instantly when they exist;   #
+    #    only slow on the very first setup                                 #
+    # ------------------------------------------------------------------ #
+    db.execute(text("""
+        CREATE INDEX IF NOT EXISTS idx_birth_name_trgm          ON births   USING gist (name gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_birth_surname_trgm        ON births   USING gist (surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm     ON families USING gist (husband_surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm     ON families USING gist (wife_surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_death_name_trgm           ON deaths   USING gist (name gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_death_surname_trgm        ON deaths   USING gist (surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_birth_contributor         ON births(contributor);
+        CREATE INDEX IF NOT EXISTS idx_family_contributor        ON families(contributor);
+        CREATE INDEX IF NOT EXISTS idx_death_contributor         ON deaths(contributor);
+        CREATE INDEX IF NOT EXISTS idx_birth_year                ON births(birth_year);
+        CREATE INDEX IF NOT EXISTS idx_family_year               ON families(marriage_year);
+        CREATE INDEX IF NOT EXISTS idx_death_year                ON deaths(death_year);
+        CREATE INDEX IF NOT EXISTS idx_matches_a                 ON matches(contributor_a);
+        CREATE INDEX IF NOT EXISTS idx_matches_b                 ON matches(contributor_b);
+    """))
+    db.commit()
+
+    # ------------------------------------------------------------------ #
+    # 4. match_jobs migration — only runs when old single-contributor      #
+    #    schema is detected; skipped entirely on up-to-date databases      #
+    # ------------------------------------------------------------------ #
+    if _col_exists(db, "match_jobs", "contributor"):
+        print("  Migrating match_jobs to pair-based schema...")
+        db.execute(text("DROP TABLE match_jobs;"))
+        db.execute(text("""
+            CREATE TABLE match_jobs (
+                contributor_a TEXT NOT NULL,
+                contributor_b TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                queued_at TIMESTAMPTZ DEFAULT NOW(),
+                completed_at TIMESTAMPTZ,
+                PRIMARY KEY (contributor_a, contributor_b)
+            );
+            CREATE INDEX idx_match_jobs_status ON match_jobs(status, queued_at);
+        """))
+        db.commit()
+    else:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS match_jobs (
+                contributor_a TEXT NOT NULL,
+                contributor_b TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                queued_at TIMESTAMPTZ DEFAULT NOW(),
+                completed_at TIMESTAMPTZ,
+                PRIMARY KEY (contributor_a, contributor_b)
+            );
+            CREATE INDEX IF NOT EXISTS idx_match_jobs_status ON match_jobs(status, queued_at);
+        """))
+        db.commit()
+
+    # ------------------------------------------------------------------ #
+    # 5. matches column cleanup                                            #
+    # ------------------------------------------------------------------ #
+    if _col_exists(db, "matches", "owner"):
+        db.execute(text("ALTER TABLE matches DROP COLUMN owner;"))
+        db.execute(text("DROP INDEX IF EXISTS idx_matches_owner;"))
+        db.commit()
 
 
 def get_db_state(db, contributor_name):
