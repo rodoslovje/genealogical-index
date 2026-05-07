@@ -36,10 +36,10 @@ log = logging.getLogger(__name__)
 
 # --- tuning knobs ---
 YEAR_TOLERANCE     = 5       # max year difference still considered a match
-CONFIDENCE_MIN     = 0.72    # records below this threshold are not stored
-TRGM_THRESHOLD     = 0.72    # pg_trgm.similarity_threshold — must be ≥ CONFIDENCE_MIN so
-                              # the trigram pre-filter only passes candidates that can
-                              # actually reach the stored-confidence threshold
+CONFIDENCE_MIN     = 0.80    # records below this threshold are not stored
+TRGM_THRESHOLD     = 0.72    # pg_trgm.similarity_threshold for the % join operator
+                              # kept below CONFIDENCE_MIN so pairs where one surname/name
+                              # field is weaker but year+place compensate are not missed
 WORK_MEM           = "256MB" # per-session work_mem; raise if you have spare RAM
 PG_PARALLEL_WORKERS = 4      # PostgreSQL-internal parallel workers per query
                               # (independent of Python --workers; requires max_worker_processes
