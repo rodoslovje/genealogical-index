@@ -19,7 +19,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 try:
@@ -60,6 +60,26 @@ if not DATABASE_URL:
 # pool_size matches typical --workers usage; overflow handles bursts
 engine = create_engine(DATABASE_URL, pool_size=8, max_overflow=4)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@event.listens_for(engine, "connect")
+def _apply_session_params(dbapi_conn, _record):
+    """Apply session-wide tuning once when a pool connection is opened.
+
+    Previously these were SET LOCAL'd at the start of every match INSERT, which
+    added ~7 round-trips per pair on top of the 3 inserts.  Setting them at
+    connect time means each pooled connection carries the right values for its
+    entire lifetime, so the hot path is just the INSERT itself.
+    """
+    cur = dbapi_conn.cursor()
+    cur.execute(f"SET pg_trgm.similarity_threshold = {TRGM_THRESHOLD}")
+    cur.execute(f"SET work_mem = '{WORK_MEM}'")
+    cur.execute(f"SET max_parallel_workers_per_gather = {PG_PARALLEL_WORKERS}")
+    cur.execute("SET min_parallel_table_scan_size = 0")
+    cur.execute("SET min_parallel_index_scan_size = 0")
+    cur.execute("SET parallel_tuple_cost = 0.01")
+    cur.execute("SET parallel_setup_cost = 100")
+    cur.close()
 
 # ---------------------------------------------------------------------------
 # Each job compares exactly two contributors against each other.
@@ -263,26 +283,6 @@ def claim_next_job():
         return (row[0], row[1]) if row else (None, None)
 
 
-def _session_settings(conn):
-    """Apply per-transaction performance settings."""
-    conn.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {TRGM_THRESHOLD}"))
-    conn.execute(text(f"SET LOCAL work_mem = '{WORK_MEM}'"))
-    conn.execute(text(f"SET LOCAL max_parallel_workers_per_gather = {PG_PARALLEL_WORKERS}"))
-    conn.execute(text("SET LOCAL min_parallel_table_scan_size = 0"))
-    conn.execute(text("SET LOCAL min_parallel_index_scan_size = 0"))
-    conn.execute(text("SET LOCAL parallel_tuple_cost = 0.01"))
-    conn.execute(text("SET LOCAL parallel_setup_cost = 100"))
-
-
-def _run_insert(sql, label, pair_label, params):
-    t0 = time.monotonic()
-    with engine.begin() as conn:
-        _session_settings(conn)
-        n = conn.execute(sql, params).rowcount
-    log.info(f"  [{pair_label}] {label}: {n} matches in {time.monotonic()-t0:.1f}s")
-    return n
-
-
 def process_job(contrib_a, contrib_b):
     params = {
         "contrib_a": contrib_a,
@@ -292,29 +292,31 @@ def process_job(contrib_a, contrib_b):
     }
     pair_label = f"{contrib_a}↔{contrib_b}"
 
+    # Whole job runs in one transaction on one pooled connection: stale-match
+    # cleanup, the three record-type inserts, and the job-status update share
+    # transaction setup and the connection-level tuning settings.  Sequential
+    # within the txn, but the outer worker pool keeps multiple pairs running
+    # concurrently across separate connections.
+    total = 0
     with engine.begin() as conn:
         deleted = conn.execute(text("""
             DELETE FROM matches
             WHERE (contributor_a = :contrib_a AND contributor_b = :contrib_b)
                OR (contributor_a = :contrib_b AND contributor_b = :contrib_a)
         """), params).rowcount
-    if deleted:
-        log.info(f"  [{pair_label}] removed {deleted} stale matches")
+        if deleted:
+            log.info(f"  [{pair_label}] removed {deleted} stale matches")
 
-    total = 0
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        futures = {
-            pool.submit(_run_insert, sql, label, pair_label, params): label
-            for sql, label in (
-                (_BIRTH_INSERT,  "birth"),
-                (_FAMILY_INSERT, "family"),
-                (_DEATH_INSERT,  "death"),
-            )
-        }
-        for f in as_completed(futures):
-            total += f.result()
+        for sql, label in (
+            (_BIRTH_INSERT,  "birth"),
+            (_FAMILY_INSERT, "family"),
+            (_DEATH_INSERT,  "death"),
+        ):
+            t0 = time.monotonic()
+            n = conn.execute(sql, params).rowcount
+            log.info(f"  [{pair_label}] {label}: {n} matches in {time.monotonic()-t0:.1f}s")
+            total += n
 
-    with engine.begin() as conn:
         conn.execute(text("""
             UPDATE match_jobs SET status = 'done', completed_at = NOW()
             WHERE contributor_a = :contrib_a AND contributor_b = :contrib_b
@@ -347,7 +349,7 @@ def worker(_):
                 pass
 
 
-def main(workers=2):
+def main(workers=4):
     with engine.connect() as conn:
         pending_count = conn.execute(
             text("SELECT COUNT(*) FROM match_jobs WHERE status='pending'")
@@ -406,8 +408,8 @@ def main(workers=2):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute cross-contributor matches.")
     parser.add_argument(
-        "--workers", type=int, default=2,
-        help="Number of parallel workers (default: 2). "
+        "--workers", type=int, default=4,
+        help="Number of parallel workers (default: 4). "
              "Each claims jobs independently via SELECT FOR UPDATE SKIP LOCKED."
     )
     args = parser.parse_args()

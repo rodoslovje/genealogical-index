@@ -20,9 +20,15 @@ Without arguments, prints current job queue status.
 import argparse
 import os
 import sys
+import time
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+
+# Must match compute_matches.TRGM_THRESHOLD — the lower bound of similarity
+# accepted by the % operator in the actual match queries.  A pair with no
+# surnames within this threshold cannot produce any stored matches.
+_TRGM_THRESHOLD = 0.72
 
 try:
     from dotenv import load_dotenv
@@ -60,6 +66,55 @@ def queue_pairs(db, pairs):
     db.commit()
 
 
+def filter_pairs_by_surname_overlap(db, pairs):
+    """Drop pairs whose contributors share no trigram-similar surnames.
+
+    The actual match queries require surname similarity ≥ TRGM_THRESHOLD on
+    the matching record-type join, so a pair with zero surname overlap across
+    births / families / deaths cannot produce any stored matches.  Filtering
+    those pairs out here avoids ~300 ms of per-pair query overhead each.
+
+    Uses the per-table GiST trigram indexes (idx_birth_surname_trgm etc.) so
+    each self-join is index-driven, not a Cartesian scan.
+    """
+    if not pairs:
+        return pairs
+
+    t0 = time.monotonic()
+    db.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {_TRGM_THRESHOLD}"))
+    rows = db.execute(text("""
+        SELECT b1.contributor AS ca, b2.contributor AS cb
+        FROM births b1 JOIN births b2
+          ON b1.contributor < b2.contributor
+         AND b1.surname % b2.surname
+        UNION
+        SELECT f1.contributor, f2.contributor
+        FROM families f1 JOIN families f2
+          ON f1.contributor < f2.contributor
+         AND f1.husband_surname % f2.husband_surname
+        UNION
+        SELECT f1.contributor, f2.contributor
+        FROM families f1 JOIN families f2
+          ON f1.contributor < f2.contributor
+         AND f1.wife_surname % f2.wife_surname
+        UNION
+        SELECT d1.contributor, d2.contributor
+        FROM deaths d1 JOIN deaths d2
+          ON d1.contributor < d2.contributor
+         AND d1.surname % d2.surname
+    """)).fetchall()
+    db.commit()
+
+    # Match by frozenset so the result is order-agnostic — guards against any
+    # collation difference between Python string ordering (used to canonicalise
+    # `pairs`) and PostgreSQL's column collation (used by `<`).
+    overlap = {frozenset((r.ca, r.cb)) for r in rows}
+    kept = [p for p in pairs if frozenset(p) in overlap]
+    print(f"Surname-overlap pre-filter: {len(kept)}/{len(pairs)} pair(s) kept "
+          f"({len(pairs) - len(kept)} skipped) in {time.monotonic() - t0:.1f}s")
+    return kept
+
+
 def print_status(db):
     rows = db.execute(text("""
         SELECT status, COUNT(*) AS n
@@ -82,8 +137,8 @@ def main():
     parser.add_argument("--contributor", metavar="NAME", action="append", dest="contributors",
                         help="Queue a specific contributor (repeatable)")
     parser.add_argument(
-        "--workers", type=int, default=2,
-        help="Number of parallel workers for match computation (default: 2)"
+        "--workers", type=int, default=4,
+        help="Number of parallel workers for match computation (default: 4)"
     )
     parser.add_argument(
         "--drop-all", action="store_true",
@@ -152,7 +207,8 @@ def main():
             pairs = [(names[i], names[j])
                      for i in range(len(names))
                      for j in range(i + 1, len(names))]
-            print(f"Queuing {len(pairs)} pair(s) for {len(names)} contributor(s)...")
+            print(f"Considering {len(pairs)} pair(s) for {len(names)} contributor(s)...")
+            pairs = filter_pairs_by_surname_overlap(db, pairs)
             queue_pairs(db, pairs)
             print(f"Queued {len(pairs)} pairs.")
         else:
@@ -182,8 +238,10 @@ def main():
                         a, b = (t, other) if t < other else (other, t)
                         pairs.add((a, b))
             pairs = sorted(pairs)
-            print(f"Queuing {len(pairs)} pair(s) for: {', '.join(targets)}")
+            print(f"Considering {len(pairs)} pair(s) for: {', '.join(targets)}")
+            pairs = filter_pairs_by_surname_overlap(db, pairs)
             queue_pairs(db, pairs)
+            print(f"Queued {len(pairs)} pairs.")
     finally:
         db.close()
 
