@@ -62,34 +62,21 @@ engine = create_engine(DATABASE_URL, pool_size=8, max_overflow=4)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # ---------------------------------------------------------------------------
-# SQL factories — one helper per record type generates both pair_once and full
-# variants.  The only structural difference between modes:
-#
-#   pair_once=True  → b2.contributor > :contrib   (process each pair once)
-#                     DELETE WHERE owner = :contrib
-#                     INSERT stores BOTH A→B and B→A (UNION ALL), owner = :contrib
-#
-#   pair_once=False → b2.contributor != :contrib  (compare against every other)
-#                     DELETE WHERE contributor_a = :contrib OR contributor_b = :contrib
-#                     INSERT also stores both directions so the API can query either way
-#
-# Why both modes? --all uses pair_once for a 2x speedup: N*(N-1)/2 trigram JOINs
-# instead of N*(N-1).  --contributor uses full mode so a single reprocessed
-# contributor correctly replaces all its stale matches regardless of alphabetical
-# order.
+# Each job compares exactly two contributors against each other.
+# Both A→B and B→A matches are stored in a single INSERT (UNION ALL) so the
+# API can query from either contributor's perspective.  The JOIN is bounded to
+# two small contributor-filtered datasets instead of one contributor vs millions
+# of rows, allowing PostgreSQL to choose much more efficient query plans.
 # ---------------------------------------------------------------------------
 
-def _birth_insert(pair_once: bool) -> text:
-    cmp = ">" if pair_once else "!="
-    return text(f"""
+_BIRTH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields, owner)
+         confidence, match_fields)
     WITH cands AS (
         SELECT
             b1.id AS a_id,
             b2.id AS b_id,
-            b2.contributor AS b_contrib,
             similarity(b1.surname, b2.surname) AS s_sur,
             similarity(b1.name,    b2.name)    AS s_name,
             CASE WHEN COALESCE(b1.place_of_birth,'') != ''
@@ -101,15 +88,15 @@ def _birth_insert(pair_once: bool) -> text:
                  ELSE NULL END AS yr_diff
         FROM births b1
         JOIN births b2
-            ON  b1.contributor  = :contrib
-            AND b2.contributor {cmp} :contrib
+            ON  b1.contributor = :contrib_a
+            AND b2.contributor = :contrib_b
             AND (b1.birth_year IS NULL OR b2.birth_year IS NULL
                  OR ABS(b1.birth_year - b2.birth_year) <= :yr_tol)
             AND b1.surname % b2.surname
             AND b1.name    % b2.name
     ),
     scored AS (
-        SELECT a_id, b_id, b_contrib, s_sur, s_name, s_place, yr_diff,
+        SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
             s_sur  * 0.35 +
             s_name * 0.30 +
             COALESCE(s_place, 0.5) * 0.15 +
@@ -117,39 +104,33 @@ def _birth_insert(pair_once: bool) -> text:
             AS conf
         FROM cands
     )
-    SELECT :contrib, b_contrib, 'birth', a_id, b_id, conf,
+    SELECT :contrib_a, :contrib_b, 'birth', a_id, b_id, conf,
         jsonb_build_object(
             'surname',   round(s_sur::numeric, 3),
             'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL
-                              THEN round(s_place::numeric, 3) END,
+            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
             'year_diff', yr_diff
-        )::text, :contrib
+        )::text
     FROM scored WHERE conf >= :conf_min
     UNION ALL
-    SELECT b_contrib, :contrib, 'birth', b_id, a_id, conf,
+    SELECT :contrib_b, :contrib_a, 'birth', b_id, a_id, conf,
         jsonb_build_object(
             'surname',   round(s_sur::numeric, 3),
             'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL
-                              THEN round(s_place::numeric, 3) END,
+            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
             'year_diff', yr_diff
-        )::text, :contrib
+        )::text
     FROM scored WHERE conf >= :conf_min
 """)
 
-
-def _family_insert(pair_once: bool) -> text:
-    cmp = ">" if pair_once else "!="
-    return text(f"""
+_FAMILY_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields, owner)
+         confidence, match_fields)
     WITH cands AS (
         SELECT
             f1.id AS a_id,
             f2.id AS b_id,
-            f2.contributor AS b_contrib,
             similarity(f1.husband_surname, f2.husband_surname) AS s_hsur,
             similarity(f1.wife_surname,    f2.wife_surname)    AS s_wsur,
             CASE WHEN COALESCE(f1.husband_name,'') != ''
@@ -169,15 +150,15 @@ def _family_insert(pair_once: bool) -> text:
                  ELSE NULL END AS yr_diff
         FROM families f1
         JOIN families f2
-            ON  f1.contributor  = :contrib
-            AND f2.contributor {cmp} :contrib
+            ON  f1.contributor = :contrib_a
+            AND f2.contributor = :contrib_b
             AND (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
                  OR ABS(f1.marriage_year - f2.marriage_year) <= :yr_tol)
             AND f1.husband_surname % f2.husband_surname
             AND f1.wife_surname    % f2.wife_surname
     ),
     scored AS (
-        SELECT a_id, b_id, b_contrib, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff,
+        SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff,
             s_hsur * 0.25 +
             s_wsur * 0.25 +
             COALESCE(s_hname, 0.5) * 0.15 +
@@ -187,47 +168,37 @@ def _family_insert(pair_once: bool) -> text:
             AS conf
         FROM cands
     )
-    SELECT :contrib, b_contrib, 'family', a_id, b_id, conf,
+    SELECT :contrib_a, :contrib_b, 'family', a_id, b_id, conf,
         jsonb_build_object(
             'husband_surname', round(s_hsur::numeric, 3),
             'wife_surname',    round(s_wsur::numeric, 3),
-            'husband_name',    CASE WHEN s_hname IS NOT NULL
-                                    THEN round(s_hname::numeric, 3) END,
-            'wife_name',       CASE WHEN s_wname IS NOT NULL
-                                    THEN round(s_wname::numeric, 3) END,
-            'place',           CASE WHEN s_place IS NOT NULL
-                                    THEN round(s_place::numeric, 3) END,
+            'husband_name',    CASE WHEN s_hname IS NOT NULL THEN round(s_hname::numeric, 3) END,
+            'wife_name',       CASE WHEN s_wname IS NOT NULL THEN round(s_wname::numeric, 3) END,
+            'place',           CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
             'year_diff',       yr_diff
-        )::text, :contrib
+        )::text
     FROM scored WHERE conf >= :conf_min
     UNION ALL
-    SELECT b_contrib, :contrib, 'family', b_id, a_id, conf,
+    SELECT :contrib_b, :contrib_a, 'family', b_id, a_id, conf,
         jsonb_build_object(
             'husband_surname', round(s_hsur::numeric, 3),
             'wife_surname',    round(s_wsur::numeric, 3),
-            'husband_name',    CASE WHEN s_hname IS NOT NULL
-                                    THEN round(s_hname::numeric, 3) END,
-            'wife_name',       CASE WHEN s_wname IS NOT NULL
-                                    THEN round(s_wname::numeric, 3) END,
-            'place',           CASE WHEN s_place IS NOT NULL
-                                    THEN round(s_place::numeric, 3) END,
+            'husband_name',    CASE WHEN s_hname IS NOT NULL THEN round(s_hname::numeric, 3) END,
+            'wife_name',       CASE WHEN s_wname IS NOT NULL THEN round(s_wname::numeric, 3) END,
+            'place',           CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
             'year_diff',       yr_diff
-        )::text, :contrib
+        )::text
     FROM scored WHERE conf >= :conf_min
 """)
 
-
-def _death_insert(pair_once: bool) -> text:
-    cmp = ">" if pair_once else "!="
-    return text(f"""
+_DEATH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields, owner)
+         confidence, match_fields)
     WITH cands AS (
         SELECT
             d1.id AS a_id,
             d2.id AS b_id,
-            d2.contributor AS b_contrib,
             similarity(d1.surname, d2.surname) AS s_sur,
             similarity(d1.name,    d2.name)    AS s_name,
             CASE WHEN COALESCE(d1.place_of_death,'') != ''
@@ -239,15 +210,15 @@ def _death_insert(pair_once: bool) -> text:
                  ELSE NULL END AS yr_diff
         FROM deaths d1
         JOIN deaths d2
-            ON  d1.contributor  = :contrib
-            AND d2.contributor {cmp} :contrib
+            ON  d1.contributor = :contrib_a
+            AND d2.contributor = :contrib_b
             AND (d1.death_year IS NULL OR d2.death_year IS NULL
                  OR ABS(d1.death_year - d2.death_year) <= :yr_tol)
             AND d1.surname % d2.surname
             AND d1.name    % d2.name
     ),
     scored AS (
-        SELECT a_id, b_id, b_contrib, s_sur, s_name, s_place, yr_diff,
+        SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
             s_sur  * 0.35 +
             s_name * 0.30 +
             COALESCE(s_place, 0.5) * 0.15 +
@@ -255,50 +226,39 @@ def _death_insert(pair_once: bool) -> text:
             AS conf
         FROM cands
     )
-    SELECT :contrib, b_contrib, 'death', a_id, b_id, conf,
+    SELECT :contrib_a, :contrib_b, 'death', a_id, b_id, conf,
         jsonb_build_object(
             'surname',   round(s_sur::numeric, 3),
             'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL
-                              THEN round(s_place::numeric, 3) END,
+            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
             'year_diff', yr_diff
-        )::text, :contrib
+        )::text
     FROM scored WHERE conf >= :conf_min
     UNION ALL
-    SELECT b_contrib, :contrib, 'death', b_id, a_id, conf,
+    SELECT :contrib_b, :contrib_a, 'death', b_id, a_id, conf,
         jsonb_build_object(
             'surname',   round(s_sur::numeric, 3),
             'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL
-                              THEN round(s_place::numeric, 3) END,
+            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
             'year_diff', yr_diff
-        )::text, :contrib
+        )::text
     FROM scored WHERE conf >= :conf_min
 """)
 
 
-# Pre-compile both variants at import time.
-_BIRTH_INSERT_PAIR_ONCE  = _birth_insert(pair_once=True)
-_BIRTH_INSERT_FULL       = _birth_insert(pair_once=False)
-_FAMILY_INSERT_PAIR_ONCE = _family_insert(pair_once=True)
-_FAMILY_INSERT_FULL      = _family_insert(pair_once=False)
-_DEATH_INSERT_PAIR_ONCE  = _death_insert(pair_once=True)
-_DEATH_INSERT_FULL       = _death_insert(pair_once=False)
-
-
 def claim_next_job():
-    """Atomically claim the next pending job. Returns (contributor, pair_once) or (None, None)."""
+    """Atomically claim the next pending pair job. Returns (contrib_a, contrib_b) or (None, None)."""
     with engine.begin() as conn:
         row = conn.execute(text("""
             UPDATE match_jobs SET status = 'running'
-            WHERE contributor = (
-                SELECT contributor FROM match_jobs
+            WHERE (contributor_a, contributor_b) = (
+                SELECT contributor_a, contributor_b FROM match_jobs
                 WHERE status = 'pending'
-                ORDER BY queued_at, contributor
+                ORDER BY queued_at, contributor_a, contributor_b
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
             )
-            RETURNING contributor, pair_once
+            RETURNING contributor_a, contributor_b
         """)).fetchone()
         return (row[0], row[1]) if row else (None, None)
 
@@ -307,66 +267,49 @@ def _session_settings(conn):
     """Apply per-transaction performance settings."""
     conn.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {TRGM_THRESHOLD}"))
     conn.execute(text(f"SET LOCAL work_mem = '{WORK_MEM}'"))
-    # Let PostgreSQL use multiple cores for the trgm self-join.
     conn.execute(text(f"SET LOCAL max_parallel_workers_per_gather = {PG_PARALLEL_WORKERS}"))
-    # Lower the cost thresholds so parallel plans are chosen even for mid-sized chunks.
     conn.execute(text("SET LOCAL min_parallel_table_scan_size = 0"))
     conn.execute(text("SET LOCAL min_parallel_index_scan_size = 0"))
     conn.execute(text("SET LOCAL parallel_tuple_cost = 0.01"))
     conn.execute(text("SET LOCAL parallel_setup_cost = 100"))
 
 
-def _run_insert(sql, label, contributor, params):
+def _run_insert(sql, label, pair_label, params):
     t0 = time.monotonic()
     with engine.begin() as conn:
         _session_settings(conn)
         n = conn.execute(sql, params).rowcount
-    log.info(f"  [{contributor}] {label}: {n} matches in {time.monotonic()-t0:.1f}s")
+    log.info(f"  [{pair_label}] {label}: {n} matches in {time.monotonic()-t0:.1f}s")
     return n
 
 
-def process_job(contributor, pair_once: bool):
+def process_job(contrib_a, contrib_b):
     params = {
-        "contrib":   contributor,
+        "contrib_a": contrib_a,
+        "contrib_b": contrib_b,
         "yr_tol":    YEAR_TOLERANCE,
         "conf_min":  CONFIDENCE_MIN,
     }
+    pair_label = f"{contrib_a}↔{contrib_b}"
 
-    # Scope of deletion depends on mode:
-    # - pair_once: only delete rows this job previously owned; earlier contributors'
-    #   rows for pairs they "own" are left untouched.
-    # - full: delete every match involving this contributor regardless of who stored it,
-    #   then recompute fresh against all others (used for individual reprocessing).
     with engine.begin() as conn:
-        if pair_once:
-            delete_sql = text("DELETE FROM matches WHERE owner = :contrib")
-        else:
-            delete_sql = text(
-                "DELETE FROM matches WHERE contributor_a = :contrib OR contributor_b = :contrib"
-            )
-        deleted = conn.execute(delete_sql, params).rowcount
+        deleted = conn.execute(text("""
+            DELETE FROM matches
+            WHERE (contributor_a = :contrib_a AND contributor_b = :contrib_b)
+               OR (contributor_a = :contrib_b AND contributor_b = :contrib_a)
+        """), params).rowcount
     if deleted:
-        log.info(f"  [{contributor}] removed {deleted} stale matches")
+        log.info(f"  [{pair_label}] removed {deleted} stale matches")
 
-    if pair_once:
-        inserts = (
-            (_BIRTH_INSERT_PAIR_ONCE,  "birth"),
-            (_FAMILY_INSERT_PAIR_ONCE, "family"),
-            (_DEATH_INSERT_PAIR_ONCE,  "death"),
-        )
-    else:
-        inserts = (
-            (_BIRTH_INSERT_FULL,  "birth"),
-            (_FAMILY_INSERT_FULL, "family"),
-            (_DEATH_INSERT_FULL,  "death"),
-        )
-
-    # Run birth / family / death inserts in parallel — they hit different tables.
     total = 0
     with ThreadPoolExecutor(max_workers=3) as pool:
         futures = {
-            pool.submit(_run_insert, sql, label, contributor, params): label
-            for sql, label in inserts
+            pool.submit(_run_insert, sql, label, pair_label, params): label
+            for sql, label in (
+                (_BIRTH_INSERT,  "birth"),
+                (_FAMILY_INSERT, "family"),
+                (_DEATH_INSERT,  "death"),
+            )
         }
         for f in as_completed(futures):
             total += f.result()
@@ -374,31 +317,31 @@ def process_job(contributor, pair_once: bool):
     with engine.begin() as conn:
         conn.execute(text("""
             UPDATE match_jobs SET status = 'done', completed_at = NOW()
-            WHERE contributor = :contrib
-        """), {"contrib": contributor})
+            WHERE contributor_a = :contrib_a AND contributor_b = :contrib_b
+        """), params)
 
-    log.info(f"  [{contributor}] done — {total} total matches stored")
+    log.info(f"  [{pair_label}] done — {total} total matches stored")
 
 
 def worker(_):
-    """Claim and process jobs until none remain."""
+    """Claim and process pair jobs until none remain."""
     while True:
-        contributor, pair_once = claim_next_job()
-        if contributor is None:
+        contrib_a, contrib_b = claim_next_job()
+        if contrib_a is None:
             return
         t0 = time.monotonic()
-        mode = "pair_once" if pair_once else "full"
-        log.info(f"Computing matches for: {contributor} [{mode}]")
+        log.info(f"Computing matches for: {contrib_a} ↔ {contrib_b}")
         try:
-            process_job(contributor, pair_once)
-            log.info(f"Finished {contributor} in {time.monotonic()-t0:.0f}s")
+            process_job(contrib_a, contrib_b)
+            log.info(f"Finished {contrib_a}↔{contrib_b} in {time.monotonic()-t0:.0f}s")
         except Exception as exc:
-            log.error(f"Error processing {contributor} after {time.monotonic()-t0:.0f}s: {exc}")
+            log.error(f"Error on {contrib_a}↔{contrib_b}: {exc}")
             try:
                 with engine.begin() as conn:
                     conn.execute(
-                        text("UPDATE match_jobs SET status='error' WHERE contributor=:c"),
-                        {"c": contributor},
+                        text("UPDATE match_jobs SET status='error' "
+                             "WHERE contributor_a=:a AND contributor_b=:b"),
+                        {"a": contrib_a, "b": contrib_b},
                     )
             except Exception:
                 pass
@@ -448,7 +391,7 @@ def main(workers=2):
         conn.execute(text("ANALYZE families"))
         conn.execute(text("ANALYZE deaths"))
 
-    log.info(f"Processing {pending_count} pending job(s) with {workers} worker(s) "
+    log.info(f"Processing {pending_count} pending pair(s) with {workers} worker(s) "
              f"(PG_PARALLEL_WORKERS={PG_PARALLEL_WORKERS}, WORK_MEM={WORK_MEM})...")
 
     t0 = time.monotonic()

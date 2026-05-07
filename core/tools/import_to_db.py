@@ -68,12 +68,14 @@ def setup_full(db):
         CREATE INDEX idx_death_year   ON deaths(death_year);
 
         CREATE TABLE match_jobs (
-            contributor TEXT PRIMARY KEY,
+            contributor_a TEXT NOT NULL,
+            contributor_b TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending',
-            pair_once BOOLEAN NOT NULL DEFAULT TRUE,
             queued_at TIMESTAMPTZ DEFAULT NOW(),
-            completed_at TIMESTAMPTZ
+            completed_at TIMESTAMPTZ,
+            PRIMARY KEY (contributor_a, contributor_b)
         );
+        CREATE INDEX idx_match_jobs_status ON match_jobs(status, queued_at);
         CREATE TABLE matches (
             id SERIAL PRIMARY KEY,
             contributor_a TEXT NOT NULL,
@@ -83,12 +85,10 @@ def setup_full(db):
             record_b_id INTEGER NOT NULL,
             confidence REAL NOT NULL,
             match_fields TEXT,
-            owner TEXT NOT NULL DEFAULT '',
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
-        CREATE INDEX idx_matches_a     ON matches(contributor_a);
-        CREATE INDEX idx_matches_b     ON matches(contributor_b);
-        CREATE INDEX idx_matches_owner ON matches(owner);
+        CREATE INDEX idx_matches_a ON matches(contributor_a);
+        CREATE INDEX idx_matches_b ON matches(contributor_b);
     """))
     db.commit()
 
@@ -195,12 +195,22 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_matches_a ON matches(contributor_a);
         CREATE INDEX IF NOT EXISTS idx_matches_b ON matches(contributor_b);
 
-        -- Pair-once optimisation: each job only processes pairs where the other
-        -- contributor sorts after it; both directions are stored in one INSERT.
-        -- Columns must be added before the index on owner can be created.
-        ALTER TABLE matches    ADD COLUMN IF NOT EXISTS owner     TEXT    NOT NULL DEFAULT '';
-        ALTER TABLE match_jobs ADD COLUMN IF NOT EXISTS pair_once BOOLEAN NOT NULL DEFAULT TRUE;
-        CREATE INDEX IF NOT EXISTS idx_matches_owner ON matches(owner);
+        -- Migrate to pair-based job queue (contributor_a, contributor_b primary key).
+        -- The old single-contributor schema is incompatible, so drop and recreate.
+        DROP TABLE IF EXISTS match_jobs;
+        CREATE TABLE match_jobs (
+            contributor_a TEXT NOT NULL,
+            contributor_b TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            queued_at TIMESTAMPTZ DEFAULT NOW(),
+            completed_at TIMESTAMPTZ,
+            PRIMARY KEY (contributor_a, contributor_b)
+        );
+        CREATE INDEX idx_match_jobs_status ON match_jobs(status, queued_at);
+
+        -- Drop columns that are no longer needed after the pair-based redesign.
+        ALTER TABLE matches DROP COLUMN IF EXISTS owner;
+        DROP INDEX  IF EXISTS idx_matches_owner;
     """))
     db.commit()
 

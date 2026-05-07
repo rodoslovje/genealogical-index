@@ -44,17 +44,19 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def queue_contributors(db, contributors, pair_once: bool = True):
-    for c in contributors:
-        db.execute(
-            text("""
-                INSERT INTO match_jobs (contributor, status, pair_once, queued_at)
-                VALUES (:c, 'pending', :pair_once, NOW())
-                ON CONFLICT (contributor) DO UPDATE
-                    SET status = 'pending', pair_once = :pair_once, queued_at = NOW()
-            """),
-            {"c": c, "pair_once": pair_once},
-        )
+def queue_pairs(db, pairs):
+    """Queue a list of (contributor_a, contributor_b) pairs for matching."""
+    if not pairs:
+        return
+    db.execute(
+        text("""
+            INSERT INTO match_jobs (contributor_a, contributor_b, status, queued_at)
+            VALUES (:a, :b, 'pending', NOW())
+            ON CONFLICT (contributor_a, contributor_b) DO UPDATE
+                SET status = 'pending', queued_at = NOW()
+        """),
+        [{"a": a, "b": b} for a, b in pairs],
+    )
     db.commit()
 
 
@@ -68,7 +70,8 @@ def print_status(db):
     if not rows:
         print("match_jobs table is empty — no matches have been computed yet.")
         return
-    print("Current match_jobs status:")
+    total = sum(r.n for r in rows)
+    print(f"Current match_jobs status ({total} pairs total):")
     for r in rows:
         print(f"  {r.status:10s}  {r.n}")
 
@@ -131,24 +134,24 @@ def main():
             return
 
         if args.all:
-            rows = db.execute(text("SELECT name FROM contributors ORDER BY name")).fetchall()
-            targets = [r.name for r in rows]
-            if not targets:
+            names = [r.name for r in db.execute(
+                text("SELECT name FROM contributors ORDER BY name")
+            ).fetchall()]
+            if not names:
                 print("No contributors found in database.")
                 return
-            # Clear all existing matches before a full pair_once recomputation so
-            # there are no leftover rows from previous full-mode individual runs that
-            # would conflict with the new ownership assignments.
+            pairs = [(names[i], names[j])
+                     for i in range(len(names))
+                     for j in range(i + 1, len(names))]
             n = db.execute(text("DELETE FROM matches")).rowcount
             db.commit()
             if n:
                 print(f"Cleared {n} existing match record(s) for clean recomputation.")
-            print(f"Queuing {len(targets)} contributor(s) [pair_once mode]...")
-            queue_contributors(db, targets, pair_once=True)
+            print(f"Queuing {len(pairs)} pair(s) for {len(names)} contributor(s)...")
+            queue_pairs(db, pairs)
+            print(f"Queued {len(pairs)} pairs.")
         else:
-            # Individual contributor reprocessing: compare against ALL other
-            # contributors and take ownership of every match involving this
-            # contributor.  This ensures correctness even when data has changed.
+            # Validate requested contributors.
             targets = []
             for name in args.contributors:
                 row = db.execute(
@@ -161,10 +164,21 @@ def main():
             if not targets:
                 print("No valid contributors to queue.")
                 return
-            print(f"Queuing {len(targets)} contributor(s) [full mode]...")
-            queue_contributors(db, targets, pair_once=False)
 
-        print(f"Queued: {', '.join(targets)}")
+            # Queue every pair that involves any of the requested contributors so
+            # all their matches are refreshed after a data change.
+            all_names = [r.name for r in db.execute(
+                text("SELECT name FROM contributors")
+            ).fetchall()]
+            pairs = set()
+            for t in targets:
+                for other in all_names:
+                    if other != t:
+                        a, b = (t, other) if t < other else (other, t)
+                        pairs.add((a, b))
+            pairs = sorted(pairs)
+            print(f"Queuing {len(pairs)} pair(s) for: {', '.join(targets)}")
+            queue_pairs(db, pairs)
     finally:
         db.close()
 
