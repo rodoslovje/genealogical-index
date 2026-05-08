@@ -385,35 +385,36 @@ def import_contributor(
         if os.path.exists(births_file):
             with open(births_file, "r", encoding="utf-8") as f:
                 births_data = json.load(f)
-            print(f"  -> Inserting {len(births_data)} birth records...")
-            for birth in births_data:
-                birth["contributor"] = contributor_id
-                if isinstance(birth.get("links"), list):
-                    birth["links"] = json.dumps(birth["links"], ensure_ascii=False)
-                birth.setdefault("links", None)
-                birth.setdefault("father_name", None)
-                birth.setdefault("father_surname", None)
-                birth.setdefault("mother_name", None)
-                birth.setdefault("mother_surname", None)
-                birth.setdefault("husbands_list", None)
-                birth.setdefault("wifes_list", None)
-                if isinstance(birth.get("husbands_list"), list):
-                    birth["husbands_list"] = json.dumps(
-                        birth["husbands_list"], ensure_ascii=False
-                    )
-                if isinstance(birth.get("wifes_list"), list):
-                    birth["wifes_list"] = json.dumps(
-                        birth["wifes_list"], ensure_ascii=False
-                    )
-                birth["birth_year"] = _extract_year(birth.get("date_of_birth"))
+            if births_data:
+                print(f"  -> Inserting {len(births_data)} birth records...")
+                for birth in births_data:
+                    birth["contributor"] = contributor_id
+                    if isinstance(birth.get("links"), list):
+                        birth["links"] = json.dumps(birth["links"], ensure_ascii=False)
+                    birth.setdefault("links", None)
+                    birth.setdefault("father_name", None)
+                    birth.setdefault("father_surname", None)
+                    birth.setdefault("mother_name", None)
+                    birth.setdefault("mother_surname", None)
+                    birth.setdefault("husbands_list", None)
+                    birth.setdefault("wifes_list", None)
+                    if isinstance(birth.get("husbands_list"), list):
+                        birth["husbands_list"] = json.dumps(
+                            birth["husbands_list"], ensure_ascii=False
+                        )
+                    if isinstance(birth.get("wifes_list"), list):
+                        birth["wifes_list"] = json.dumps(
+                            birth["wifes_list"], ensure_ascii=False
+                        )
+                    birth["birth_year"] = _extract_year(birth.get("date_of_birth"))
                 db.execute(
-                    text(
-                        "INSERT INTO births (name, surname, date_of_birth, birth_year, place_of_birth, "
-                        "father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links) "
-                        "VALUES (:name, :surname, :date_of_birth, :birth_year, :place_of_birth, "
-                        ":father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)"
-                    ),
-                    birth,
+                    text("""
+                        INSERT INTO births (name, surname, date_of_birth, birth_year, place_of_birth,
+                        father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links)
+                        VALUES (:name, :surname, :date_of_birth, :birth_year, :place_of_birth,
+                        :father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)
+                    """),
+                    births_data,
                 )
         else:
             visible = [
@@ -435,36 +436,41 @@ def import_contributor(
         if os.path.exists(families_file):
             with open(families_file, "r", encoding="utf-8") as f:
                 families_data = json.load(f)
-            print(f"  -> Inserting {len(families_data)} family records...")
-            for family in families_data:
-                family["contributor"] = contributor_id
-                if isinstance(family.get("links"), list):
-                    family["links"] = json.dumps(family["links"], ensure_ascii=False)
-                family.setdefault("links", None)
-                family.setdefault("children_list", None)
-                family.setdefault("husband_parents", None)
-                family.setdefault("wife_parents", None)
-                if isinstance(family.get("children_list"), list):
-                    family["children_list"] = json.dumps(
-                        family["children_list"], ensure_ascii=False
+            if families_data:
+                print(f"  -> Inserting {len(families_data)} family records...")
+                for family in families_data:
+                    family["contributor"] = contributor_id
+                    if isinstance(family.get("links"), list):
+                        family["links"] = json.dumps(
+                            family["links"], ensure_ascii=False
+                        )
+                    family.setdefault("links", None)
+                    family.setdefault("children_list", None)
+                    family.setdefault("husband_parents", None)
+                    family.setdefault("wife_parents", None)
+                    if isinstance(family.get("children_list"), list):
+                        family["children_list"] = json.dumps(
+                            family["children_list"], ensure_ascii=False
+                        )
+                    if isinstance(family.get("husband_parents"), list):
+                        family["husband_parents"] = json.dumps(
+                            family["husband_parents"], ensure_ascii=False
+                        )
+                    if isinstance(family.get("wife_parents"), list):
+                        family["wife_parents"] = json.dumps(
+                            family["wife_parents"], ensure_ascii=False
+                        )
+                    family["marriage_year"] = _extract_year(
+                        family.get("date_of_marriage")
                     )
-                if isinstance(family.get("husband_parents"), list):
-                    family["husband_parents"] = json.dumps(
-                        family["husband_parents"], ensure_ascii=False
-                    )
-                if isinstance(family.get("wife_parents"), list):
-                    family["wife_parents"] = json.dumps(
-                        family["wife_parents"], ensure_ascii=False
-                    )
-                family["marriage_year"] = _extract_year(family.get("date_of_marriage"))
                 db.execute(
-                    text(
-                        "INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname, "
-                        "children_list, husband_parents, wife_parents, date_of_marriage, marriage_year, place_of_marriage, contributor, links) "
-                        "VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname, "
-                        ":children_list, :husband_parents, :wife_parents, :date_of_marriage, :marriage_year, :place_of_marriage, :contributor, :links)"
-                    ),
-                    family,
+                    text("""
+                        INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname,
+                        children_list, husband_parents, wife_parents, date_of_marriage, marriage_year, place_of_marriage, contributor, links)
+                        VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname,
+                        :children_list, :husband_parents, :wife_parents, :date_of_marriage, :marriage_year, :place_of_marriage, :contributor, :links)
+                    """),
+                    families_data,
                 )
         else:
             visible = [
@@ -486,35 +492,36 @@ def import_contributor(
         if os.path.exists(deaths_file):
             with open(deaths_file, "r", encoding="utf-8") as f:
                 deaths_data = json.load(f)
-            print(f"  -> Inserting {len(deaths_data)} death records...")
-            for death in deaths_data:
-                death["contributor"] = contributor_id
-                if isinstance(death.get("links"), list):
-                    death["links"] = json.dumps(death["links"], ensure_ascii=False)
-                death.setdefault("links", None)
-                death.setdefault("father_name", None)
-                death.setdefault("father_surname", None)
-                death.setdefault("mother_name", None)
-                death.setdefault("mother_surname", None)
-                death.setdefault("husbands_list", None)
-                death.setdefault("wifes_list", None)
-                if isinstance(death.get("husbands_list"), list):
-                    death["husbands_list"] = json.dumps(
-                        death["husbands_list"], ensure_ascii=False
-                    )
-                if isinstance(death.get("wifes_list"), list):
-                    death["wifes_list"] = json.dumps(
-                        death["wifes_list"], ensure_ascii=False
-                    )
-                death["death_year"] = _extract_year(death.get("date_of_death"))
+            if deaths_data:
+                print(f"  -> Inserting {len(deaths_data)} death records...")
+                for death in deaths_data:
+                    death["contributor"] = contributor_id
+                    if isinstance(death.get("links"), list):
+                        death["links"] = json.dumps(death["links"], ensure_ascii=False)
+                    death.setdefault("links", None)
+                    death.setdefault("father_name", None)
+                    death.setdefault("father_surname", None)
+                    death.setdefault("mother_name", None)
+                    death.setdefault("mother_surname", None)
+                    death.setdefault("husbands_list", None)
+                    death.setdefault("wifes_list", None)
+                    if isinstance(death.get("husbands_list"), list):
+                        death["husbands_list"] = json.dumps(
+                            death["husbands_list"], ensure_ascii=False
+                        )
+                    if isinstance(death.get("wifes_list"), list):
+                        death["wifes_list"] = json.dumps(
+                            death["wifes_list"], ensure_ascii=False
+                        )
+                    death["death_year"] = _extract_year(death.get("date_of_death"))
                 db.execute(
-                    text(
-                        "INSERT INTO deaths (name, surname, date_of_death, death_year, place_of_death, "
-                        "father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links) "
-                        "VALUES (:name, :surname, :date_of_death, :death_year, :place_of_death, "
-                        ":father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)"
-                    ),
-                    death,
+                    text("""
+                        INSERT INTO deaths (name, surname, date_of_death, death_year, place_of_death,
+                        father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links)
+                        VALUES (:name, :surname, :date_of_death, :death_year, :place_of_death,
+                        :father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)
+                    """),
+                    deaths_data,
                 )
         else:
             visible = [

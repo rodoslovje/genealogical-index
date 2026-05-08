@@ -164,9 +164,12 @@ def main():
             return
 
         if args.drop_all:
-            n = db.execute(text("DELETE FROM matches")).rowcount
+            n_matches = db.execute(text("DELETE FROM matches")).rowcount
+            n_jobs = db.execute(text("DELETE FROM match_jobs")).rowcount
             db.commit()
-            print(f"Dropped {n} existing match record(s).")
+            print(
+                f"Dropped {n_matches} existing match record(s) and {n_jobs} job record(s)."
+            )
 
         if args.all:
             names = [

@@ -270,14 +270,14 @@ docker compose exec api python tools/import_to_db.py --mode update
 
 **Arguments:**
 
-| Flag | Description |
-|---|---|
-| `--mode update` _(default)_ | Only reimports contributors whose source data has changed |
-| `--mode full` | Reimports all contributors regardless of modification time |
-| `--drop-tables` | Drops and recreates all tables first (full rebuild) |
-| `--force-births` | Forces reimport of birth records for all contributors |
-| `--force-families` | Forces reimport of family records for all contributors |
-| `--force-deaths` | Forces reimport of death records for all contributors |
+| Flag                        | Description                                                |
+| --------------------------- | ---------------------------------------------------------- |
+| `--mode update` _(default)_ | Only reimports contributors whose source data has changed  |
+| `--mode full`               | Reimports all contributors regardless of modification time |
+| `--drop-tables`             | Drops and recreates all tables first (full rebuild)        |
+| `--force-births`            | Forces reimport of birth records for all contributors      |
+| `--force-families`          | Forces reimport of family records for all contributors     |
+| `--force-deaths`            | Forces reimport of death records for all contributors      |
 
 Import does **not** trigger match computation automatically — run that separately (see §2.5).
 
@@ -300,22 +300,22 @@ Birth, family, and death queries for each pair run in parallel. Multiple pair jo
 
 #### Confidence formula
 
-| Field | Weight |
-|---|---|
-| Surname similarity | 35% |
-| Name similarity | 30% |
-| Place similarity | 15% |
-| Year proximity | 20% |
+| Field              | Weight |
+| ------------------ | ------ |
+| Surname similarity | 35%    |
+| Name similarity    | 30%    |
+| Place similarity   | 15%    |
+| Year proximity     | 20%    |
 
 Place and year fall back to a neutral 0.5 weight when data is missing on either side. 100% confidence requires all four fields to be exact-string matches.
 
 **Default thresholds** (tunable in `core/tools/compute_matches.py`):
 
-| Constant | Default | Description |
-|---|---|---|
-| `CONFIDENCE_MIN` | `0.80` | Minimum score to store a match |
-| `TRGM_THRESHOLD` | `0.72` | pg_trgm similarity threshold for candidate generation |
-| `YEAR_TOLERANCE` | `5` | Maximum year difference still considered a candidate |
+| Constant         | Default | Description                                           |
+| ---------------- | ------- | ----------------------------------------------------- |
+| `CONFIDENCE_MIN` | `0.80`  | Minimum score to store a match                        |
+| `TRGM_THRESHOLD` | `0.72`  | pg_trgm similarity threshold for candidate generation |
+| `YEAR_TOLERANCE` | `5`     | Maximum year difference still considered a candidate  |
 
 #### Running matches
 
@@ -366,7 +366,13 @@ docker compose exec api python tools/trigger_matches.py --stop
 
 Marks all pending and running jobs as stopped and cancels their active PostgreSQL queries. Workers exit cleanly after their current pair finishes.
 
-**Discard the pending queue without running:**
+**Resume a stopped computation or retry failed jobs:**
+
+```bash
+docker compose exec api python tools/trigger_matches.py --resume
+```
+
+**Discard all jobs from the queue without running:**
 
 ```bash
 docker compose exec api python tools/trigger_matches.py --clear
