@@ -41,12 +41,33 @@ function buildURL(params) {
   return url;
 }
 
+export function toUnicodeSearch(params) {
+  const p = params instanceof URLSearchParams ? params : new URLSearchParams(params);
+  const str = p.toString().replace(/\+/g, ' ');
+  return str.replace(/%[0-9A-F]{2}(?:%[0-9A-F]{2})*/ig, match => {
+    try {
+      const decoded = decodeURIComponent(match);
+      if (/[&+=?#%]/.test(decoded)) return match;
+      return decoded;
+    } catch (e) {
+      return match;
+    }
+  });
+}
+
+export function toUnicodeHref(params) {
+  const str = toUnicodeSearch(params);
+  return '?' + str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 /**
  * Updates the browser URL with the given params without adding a history entry.
  * Empty/null/undefined values are omitted.
  */
 export function updateURL(params) {
-  history.replaceState(null, '', buildURL(params));
+  const url = buildURL(params);
+  const search = toUnicodeSearch(url.searchParams);
+  history.replaceState(null, '', url.pathname + (search ? '?' + search : ''));
 }
 
 /**
@@ -54,5 +75,7 @@ export function updateURL(params) {
  * Use this when a user-initiated search is performed.
  */
 export function pushURL(params) {
-  history.pushState(null, '', buildURL(params));
+  const url = buildURL(params);
+  const search = toUnicodeSearch(url.searchParams);
+  history.pushState(null, '', url.pathname + (search ? '?' + search : ''));
 }

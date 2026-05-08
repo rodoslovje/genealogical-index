@@ -1,5 +1,5 @@
 import { t, getCurrentLang } from './i18n.js';
-import { PARAM_MAP_REVERSE } from './url.js';
+import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 
 export function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
@@ -282,7 +282,7 @@ export function formatSpecialCell(col, row) {
         if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
         if (c.year) childDisplay += ` *${c.year}`;
 
-        return `<a href="?${params.toString()}" data-spa-nav>${childDisplay}</a>`;
+        return `<a href="${toUnicodeHref(params)}" data-spa-nav>${childDisplay}</a>`;
       });
     } catch (e) {
       console.error("Failed to parse JSON for children", e);
@@ -316,10 +316,10 @@ export function formatSpecialCell(col, row) {
       if (name) p.set('n', name);
       if (surname) p.set('sn', surname);
       p.set('ex', '1');
-      return `<a href="?${p.toString()}" class="name-link" data-spa-nav>${display}</a>`;
+      return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${display}</a>`;
     };
 
-    let content = `<a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight:600;">${t('col_parents')}: 👪</a>`;
+    let content = `<a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight:600;">${t('col_parents')}: 👪</a>`;
     if (hasFather) content += `<br>${makeBirthLink(row.father_name, row.father_surname)}`;
     if (hasMother) content += `<br>${makeBirthLink(row.mother_name, row.mother_surname)}`;
 
@@ -365,7 +365,7 @@ export function formatSpecialCell(col, row) {
           if (n) bParams.set('n', n);
           if (s) bParams.set('sn', s);
           bParams.set('ex', '1');
-          return `<a href="?${bParams.toString()}" class="name-link" data-spa-nav>${display}</a>`;
+      return `<a href="${toUnicodeHref(bParams)}" class="name-link" data-spa-nav>${display}</a>`;
         };
 
         const fDisplay = [fName, fSur].filter(Boolean).join(' ') + fYear;
@@ -375,7 +375,7 @@ export function formatSpecialCell(col, row) {
         if (mDisplay) parentsCount++;
 
         let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">
-          <a href="?${famParams.toString()}" class="name-link" data-spa-nav style="font-weight: 600;">${t(labelKey)}: 👪</a><br>`;
+          <a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight: 600;">${t(labelKey)}: 👪</a><br>`;
         if (fDisplay) htmlStr += `${getBirthLink(fName, fSur, fDisplay)}<br>`;
         if (mDisplay) htmlStr += `${getBirthLink(mName, mSur, mDisplay)}`;
         htmlStr += `</div>`;
@@ -421,7 +421,7 @@ export function formatSpecialCell(col, row) {
           if (p.year) partnerDisplay += ` *${p.year}`;
           if (p.name === 'private' || p.name === 'unknown') partnerDisplay = p.name;
           const label = isHusband ? t('label_husband') : t('label_wife');
-          formattedList.push(`<a href="?${famParams.toString()}" data-spa-nav title="${label}">${partnerDisplay}</a>`);
+          formattedList.push(`<a href="${toUnicodeHref(famParams)}" data-spa-nav title="${label}">${partnerDisplay}</a>`);
         });
       } catch (e) { console.error("Failed to parse JSON for partners", e); }
     };
@@ -543,7 +543,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       } else if (col === 'contributor') {
         const name = row[col] || '';
         if (name) {
-          html += `<td><a href="?t=contributors&contributor=${encodeURIComponent(name)}" data-spa-nav>${name}</a></td>`;
+          html += `<td><a href="${toUnicodeHref({ t: 'contributors', contributor: name })}" data-spa-nav>${name}</a></td>`;
         } else {
           html += `<td></td>`;
         }
@@ -560,21 +560,21 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.husband_name) params.set('n', row.husband_name);
         if (row.husband_surname) params.set('sn', row.husband_surname);
         params.set('ex', '1');
-        html += `<td><a href="?${params.toString()}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
+        html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
       } else if ((col === 'wife_name' || col === 'wife_surname') && row[col]) {
         const params = new URLSearchParams();
         params.set('t', 'birth');
         if (row.wife_name) params.set('n', row.wife_name);
         if (row.wife_surname) params.set('sn', row.wife_surname);
         params.set('ex', '1');
-        html += `<td><a href="?${params.toString()}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
+        html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
       } else if ((col === 'name' || col === 'surname') && row[col] && row.date_of_death !== undefined) {
         const params = new URLSearchParams();
         params.set('t', 'birth');
         if (row.name) params.set('n', row.name);
         if (row.surname) params.set('sn', row.surname);
         params.set('ex', '1');
-        html += `<td><a href="?${params.toString()}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
+        html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
       } else if (col === 'children' || col === 'parents' || col === 'partners') {
         const inner = formatSpecialCell(col, row);
         html += `<td>${inner || ''}</td>`;

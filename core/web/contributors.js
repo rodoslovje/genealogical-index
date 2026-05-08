@@ -1,6 +1,7 @@
 import { t } from './i18n.js';
 import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
 import { API_BASE_URL } from './config.js';
+import { toUnicodeHref, toUnicodeSearch } from './url.js';
 
 const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified', 'matches'];
 let cachedData = null;
@@ -156,7 +157,7 @@ export async function renderContributors() {
     const initialFiltered = enrichWithMatchCounts(filterContributorData(data));
     const tableData = initialFiltered.map(d => ({
       ...d,
-      _contributor_href: `?t=contributors&contributor=${encodeURIComponent(d.contributor_ID)}`
+      _contributor_href: toUnicodeHref({ t: 'contributors', contributor: d.contributor_ID })
     }));
     renderTable(tableData, 'table-contributors', contributorColumns, 'total', false);
     loadSurnameCloud(initialFiltered.map(d => d.contributor_ID), 'surname-cloud');
@@ -169,7 +170,7 @@ export async function renderContributors() {
           const filtered = enrichWithMatchCounts(filterContributorData(cachedData));
           const filteredTableData = filtered.map(d => ({
             ...d,
-            _contributor_href: `?t=contributors&contributor=${encodeURIComponent(d.contributor_ID)}`
+            _contributor_href: toUnicodeHref({ t: 'contributors', contributor: d.contributor_ID })
           }));
           renderTable(filteredTableData, 'table-contributors', contributorColumns, 'total', false);
           loadSurnameCloud(filtered.map(d => d.contributor_ID), 'surname-cloud');
@@ -319,6 +320,50 @@ function renderTimelineChart(data) {
 
 let cloudAbortControllers = {};
 
+function downloadCloudAsSVG(cloudEl, filename) {
+  const rect = cloudEl.getBoundingClientRect();
+  const paddingBottom = 20;
+  const svgHeight = rect.height + paddingBottom;
+  const words = cloudEl.querySelectorAll('.cloud-word');
+  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${svgHeight}" viewBox="0 0 ${rect.width} ${svgHeight}">`;
+
+  let bgColor = window.getComputedStyle(document.body).backgroundColor;
+  if (!bgColor || bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+    bgColor = 'white';
+  }
+  svgContent += `<rect width="100%" height="100%" fill="${bgColor}"/>`;
+
+  words.forEach(w => {
+    const wRect = w.getBoundingClientRect();
+    const computed = window.getComputedStyle(w);
+    const x = wRect.left - rect.left;
+    const y = (wRect.top - rect.top) + (parseFloat(computed.fontSize) * 0.15); // Slight bump to align baseline
+
+    const text = w.textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const fontFamily = computed.fontFamily.replace(/"/g, "'");
+    svgContent += `<text x="${x}" y="${y}" font-family="${fontFamily}" font-size="${computed.fontSize}" font-weight="${computed.fontWeight}" fill="${computed.color}" opacity="${computed.opacity}" dominant-baseline="hanging">${text}</text>`;
+  });
+
+  const rawUrl = window.location.href;
+  let decodedUrl = rawUrl;
+  try {
+    const u = new URL(rawUrl);
+    decodedUrl = u.origin + u.pathname + (u.searchParams.toString() ? '?' + toUnicodeSearch(u.searchParams) : '');
+  } catch (e) {}
+  const escapeXml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  svgContent += `<a href="${escapeXml(rawUrl)}" target="_blank" rel="noopener"><text x="${rect.width - 5}" y="${svgHeight - 5}" font-family="system-ui, -apple-system, sans-serif" font-size="10px" fill="#777" text-anchor="end">Source: ${escapeXml(decodedUrl)}</text></a>`;
+
+  svgContent += `</svg>`;
+  const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 function populateSurnameSelect(contributorData) {
   const select = document.getElementById('surname-cloud-select');
   if (!select) return;
@@ -379,9 +424,87 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
         const contrib = el.dataset.contributor;
         const urlParams = { t: 'general', sn, ex: '1' };
         if (contrib) urlParams.c = contrib;
-        window.open('?' + new URLSearchParams(urlParams).toString(), '_blank');
+        window.open('?' + toUnicodeSearch(urlParams), '_blank');
       });
     });
+
+    const section = cloud.closest('#surname-cloud-section, .surname-cloud-section');
+    if (section) {
+      let headerDiv = section.querySelector('.surname-cloud-header');
+      if (!headerDiv) {
+        let heading = section.querySelector('h3, .section-heading');
+        if (!heading) {
+          heading = document.createElement('h3');
+          heading.className = 'section-heading';
+          heading.textContent = t('section_surnames');
+          section.insertBefore(heading, section.firstChild);
+        }
+
+        heading.dataset.i18n = 'section_surnames';
+        heading.style.margin = '0';
+        heading.style.padding = '0';
+        heading.style.border = 'none';
+
+        if (heading.parentElement && heading.parentElement.tagName === 'DIV' && heading.parentElement !== section) {
+          headerDiv = heading.parentElement;
+          headerDiv.classList.add('surname-cloud-header');
+        } else {
+          headerDiv = document.createElement('div');
+          headerDiv.className = 'surname-cloud-header';
+          heading.parentNode.insertBefore(headerDiv, heading);
+          headerDiv.appendChild(heading);
+        }
+      }
+
+      if (headerDiv) {
+        headerDiv.style.display = 'flex';
+        headerDiv.style.justifyContent = 'space-between';
+        headerDiv.style.alignItems = 'flex-end';
+        headerDiv.style.borderBottom = '1px solid var(--border)';
+        headerDiv.style.paddingBottom = '5px';
+        headerDiv.style.marginBottom = '10px';
+
+        headerDiv.querySelectorAll('.export-btn').forEach(b => b.remove());
+
+        let controls = headerDiv.querySelector('.surname-cloud-controls');
+        if (!controls) {
+          controls = document.createElement('div');
+          controls.className = 'surname-cloud-controls';
+          controls.style.display = 'flex';
+          controls.style.gap = '10px';
+          controls.style.alignItems = 'center';
+          headerDiv.appendChild(controls);
+        }
+
+        const select = section.querySelector('select');
+        if (select && select.parentElement !== controls) {
+          controls.appendChild(select);
+        }
+
+        const btnCsv = document.createElement('button');
+        btnCsv.className = 'export-btn export-surnames-csv-btn';
+        btnCsv.title = t('download_csv');
+        btnCsv.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV`;
+
+        btnCsv.addEventListener('click', () => {
+          const exportData = data.map(d => ({ surname: d.surname, total: d.count })).sort((a, b) => b.total - a.total);
+          const filename = list.length === 1 ? `sgi-surnames-${list[0]}.csv` : 'sgi-surnames.csv';
+          exportToCSV(exportData, ['surname', 'total'], filename);
+        });
+
+        const btnSvg = document.createElement('button');
+        btnSvg.className = 'export-btn export-surnames-svg-btn';
+        btnSvg.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>SVG`;
+
+        btnSvg.addEventListener('click', () => {
+          const filename = list.length === 1 ? `sgi-surnames-${list[0]}.svg` : 'sgi-surnames.svg';
+          downloadCloudAsSVG(cloud, filename);
+        });
+
+        controls.appendChild(btnCsv);
+        controls.appendChild(btnSvg);
+      }
+    }
   } catch (err) {
     if (err.name !== 'AbortError') {
       cloud.innerHTML = `<span class="cloud-placeholder">${t('search_failed')}</span>`;
@@ -427,14 +550,16 @@ async function renderMatchesPage(contributor, withPartner) {
     </div>
     ${urlHtml}
     <div class="surname-cloud-section" style="margin-bottom: 24px;">
-      <h3 class="section-heading">${t('section_surnames')}</h3>
+      <div class="surname-cloud-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">
+        <h3 class="section-heading" data-i18n="section_surnames" style="margin: 0; padding: 0; border: none;">${t('section_surnames')}</h3>
+      </div>
       <p>${t('contributor_surnames_intro')} <strong>${contributor}</strong> ${t('contributor_surnames_outro')}</p>
       <div class="surname-cloud" id="contributor-surname-cloud" data-i18n-title="chart_surnames_title"></div>
     </div>`;
 
     if (!partners.length) {
       container.innerHTML = heading +
-        `<h3 class="section-heading" style="margin-top: 2rem;">${t('col_matches')}</h3>` +
+        `<h3 class="section-heading" style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${t('col_matches')}</h3>` +
         `<p>${t('matches_none')}</p>`;
       loadSurnameCloud([contributor], 'contributor-surname-cloud');
       return;
@@ -443,7 +568,7 @@ async function renderMatchesPage(contributor, withPartner) {
     // Map to renderTable row format
     const tableData = partners.map(p => ({
       contributor_ID: p.contributor,
-      _match_href: `?t=contributors&contributor=${encodeURIComponent(contributor)}&with=${encodeURIComponent(p.contributor)}`,
+      _match_href: toUnicodeHref({ t: 'contributors', contributor: contributor, with: p.contributor }),
       total_births:   p.births_count   || 0,
       total_families: p.families_count || 0,
       total_deaths:   p.deaths_count   || 0,
@@ -452,7 +577,7 @@ async function renderMatchesPage(contributor, withPartner) {
     }));
 
     container.innerHTML = heading +
-      `<h3 class="section-heading" style="margin-top: 2rem;">${t('col_matches')}</h3>` +
+      `<h3 class="section-heading" style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${t('col_matches')}</h3>` +
       `<p>${t('matches_found_intro')} <strong>${contributor}</strong>. ${t('matches_found_outro')}</p>` +
       '<div id="matches-summary" class="table-responsive"></div>' +
       '<div id="matches-detail"></div>';
@@ -511,7 +636,7 @@ async function renderMatchDetail(contributor, partner) {
   const buildSearchUrl = (tab, pairs) => {
     const p = new URLSearchParams({ t: tab, ex: '1' });
     pairs.forEach(([key, val]) => { if (val) p.set(key, val); });
-    return '?' + p.toString();
+    return toUnicodeHref(p);
   };
 
   const typeConfig = [
@@ -569,7 +694,7 @@ async function renderMatchDetail(contributor, partner) {
   const partnerUrlHtml = partnerUrl ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener" class="export-btn" style="text-decoration: none;">🔗 ${partnerUrl}</a></div></div>` : '';
 
   let html = `<div class="matches-detail-section">
-    <h3 class="section-heading">${contributor} × ${partner}</h3>
+    <h3 class="section-heading" style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${contributor} × ${partner}</h3>
     <p>${t('matches_detail_intro')}</p>
     ${partnerUrlHtml}`;
 

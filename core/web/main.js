@@ -3,6 +3,7 @@ import siteConfig from '@site-config';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
 import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
+import { toUnicodeSearch } from './url.js';
 
 const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family', 'tab-death', 'tab-contributors'];
 export const tabsWithResults = new Set();
@@ -169,11 +170,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       for (const [k, v] of Object.entries(params)) {
         if (v) url.searchParams.set(k, v);
       }
+      const newUrlStr = url.pathname + (url.searchParams.toString() ? '?' + toUnicodeSearch(url.searchParams) : '');
       const currentT = new URLSearchParams(window.location.search).get('t') || 'general';
       if (currentT !== urlT) {
-        history.pushState(null, '', url);
+        history.pushState(null, '', newUrlStr);
       } else {
-        history.replaceState(null, '', url);
+        history.replaceState(null, '', newUrlStr);
       }
     }
 
@@ -312,7 +314,8 @@ document.addEventListener('click', (e) => {
   if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
   e.preventDefault();
   const url = new URL(link.href, window.location.href);
-  history.pushState(null, '', url);
+  const newUrlStr = url.pathname + (url.searchParams.toString() ? '?' + toUnicodeSearch(url.searchParams) : '');
+  history.pushState(null, '', newUrlStr);
   navigateToURL(url.search);
 });
 
