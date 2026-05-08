@@ -101,19 +101,20 @@ _BIRTH_INSERT = text(r"""
         SELECT DISTINCT surname FROM births WHERE contributor = :contrib_b AND surname IS NOT NULL
     ),
     sur_matches AS MATERIALIZED (
-        SELECT b1s.surname AS sur1, b2s.surname AS sur2, similarity(b1s.surname, b2s.surname) AS s_sur
+        SELECT b1s.surname AS sur1, b2s.surname AS sur2,
+               CASE WHEN b1s.surname = b2s.surname THEN 1.0 ELSE similarity(b1s.surname, b2s.surname) END AS s_sur
         FROM b1_sur b1s
-        JOIN b2_sur b2s ON b1s.surname % b2s.surname
+        JOIN b2_sur b2s ON b1s.surname = b2s.surname OR b1s.surname % b2s.surname
     ),
     cands AS (
         SELECT
             b1.id AS a_id,
             b2.id AS b_id,
             sm.s_sur,
-            similarity(b1.name, b2.name) AS s_name,
+            CASE WHEN b1.name = b2.name THEN 1.0 ELSE similarity(b1.name, b2.name) END AS s_name,
             CASE WHEN COALESCE(b1.place_of_birth,'') != ''
                       AND COALESCE(b2.place_of_birth,'') != ''
-                 THEN similarity(b1.place_of_birth, b2.place_of_birth)
+                 THEN CASE WHEN b1.place_of_birth = b2.place_of_birth THEN 1.0 ELSE similarity(b1.place_of_birth, b2.place_of_birth) END
                  ELSE NULL END AS s_place,
             CASE WHEN b1.birth_year IS NOT NULL AND b2.birth_year IS NOT NULL
                  THEN ABS(b1.birth_year - b2.birth_year)
@@ -123,7 +124,7 @@ _BIRTH_INSERT = text(r"""
         JOIN births b2 ON b2.contributor = :contrib_b AND b2.surname = sm.sur2
         WHERE (b1.birth_year IS NULL OR b2.birth_year IS NULL
                  OR ABS(b1.birth_year - b2.birth_year) <= :yr_tol)
-          AND b1.name % b2.name
+          AND (b1.name = b2.name OR b1.name % b2.name)
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
@@ -164,9 +165,10 @@ _FAMILY_INSERT = text(r"""
         SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
     ),
     hsur_matches AS MATERIALIZED (
-        SELECT s1.husband_surname AS sur1, s2.husband_surname AS sur2, similarity(s1.husband_surname, s2.husband_surname) AS s_hsur
+        SELECT s1.husband_surname AS sur1, s2.husband_surname AS sur2,
+               CASE WHEN s1.husband_surname = s2.husband_surname THEN 1.0 ELSE similarity(s1.husband_surname, s2.husband_surname) END AS s_hsur
         FROM f1_hsur s1
-        JOIN f2_hsur s2 ON s1.husband_surname % s2.husband_surname
+        JOIN f2_hsur s2 ON s1.husband_surname = s2.husband_surname OR s1.husband_surname % s2.husband_surname
     ),
     f1_wsur AS MATERIALIZED (
         SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
@@ -175,9 +177,10 @@ _FAMILY_INSERT = text(r"""
         SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
     ),
     wsur_matches AS MATERIALIZED (
-        SELECT s1.wife_surname AS sur1, s2.wife_surname AS sur2, similarity(s1.wife_surname, s2.wife_surname) AS s_wsur
+        SELECT s1.wife_surname AS sur1, s2.wife_surname AS sur2,
+               CASE WHEN s1.wife_surname = s2.wife_surname THEN 1.0 ELSE similarity(s1.wife_surname, s2.wife_surname) END AS s_wsur
         FROM f1_wsur s1
-        JOIN f2_wsur s2 ON s1.wife_surname % s2.wife_surname
+        JOIN f2_wsur s2 ON s1.wife_surname = s2.wife_surname OR s1.wife_surname % s2.wife_surname
     ),
     cands AS (
         SELECT
@@ -187,15 +190,15 @@ _FAMILY_INSERT = text(r"""
             wm.s_wsur,
             CASE WHEN COALESCE(f1.husband_name,'') != ''
                       AND COALESCE(f2.husband_name,'') != ''
-                 THEN similarity(f1.husband_name, f2.husband_name)
+                 THEN CASE WHEN f1.husband_name = f2.husband_name THEN 1.0 ELSE similarity(f1.husband_name, f2.husband_name) END
                  ELSE NULL END AS s_hname,
             CASE WHEN COALESCE(f1.wife_name,'') != ''
                       AND COALESCE(f2.wife_name,'') != ''
-                 THEN similarity(f1.wife_name, f2.wife_name)
+                 THEN CASE WHEN f1.wife_name = f2.wife_name THEN 1.0 ELSE similarity(f1.wife_name, f2.wife_name) END
                  ELSE NULL END AS s_wname,
             CASE WHEN COALESCE(f1.place_of_marriage,'') != ''
                       AND COALESCE(f2.place_of_marriage,'') != ''
-                 THEN similarity(f1.place_of_marriage, f2.place_of_marriage)
+                 THEN CASE WHEN f1.place_of_marriage = f2.place_of_marriage THEN 1.0 ELSE similarity(f1.place_of_marriage, f2.place_of_marriage) END
                  ELSE NULL END AS s_place,
             CASE WHEN f1.marriage_year IS NOT NULL AND f2.marriage_year IS NOT NULL
                  THEN ABS(f1.marriage_year - f2.marriage_year)
@@ -255,19 +258,20 @@ _DEATH_INSERT = text(r"""
         SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_b AND surname IS NOT NULL
     ),
     sur_matches AS MATERIALIZED (
-        SELECT d1s.surname AS sur1, d2s.surname AS sur2, similarity(d1s.surname, d2s.surname) AS s_sur
+        SELECT d1s.surname AS sur1, d2s.surname AS sur2,
+               CASE WHEN d1s.surname = d2s.surname THEN 1.0 ELSE similarity(d1s.surname, d2s.surname) END AS s_sur
         FROM d1_sur d1s
-        JOIN d2_sur d2s ON d1s.surname % d2s.surname
+        JOIN d2_sur d2s ON d1s.surname = d2s.surname OR d1s.surname % d2s.surname
     ),
     cands AS (
         SELECT
             d1.id AS a_id,
             d2.id AS b_id,
             sm.s_sur,
-            similarity(d1.name, d2.name) AS s_name,
+            CASE WHEN d1.name = d2.name THEN 1.0 ELSE similarity(d1.name, d2.name) END AS s_name,
             CASE WHEN COALESCE(d1.place_of_death,'') != ''
                       AND COALESCE(d2.place_of_death,'') != ''
-                 THEN similarity(d1.place_of_death, d2.place_of_death)
+                 THEN CASE WHEN d1.place_of_death = d2.place_of_death THEN 1.0 ELSE similarity(d1.place_of_death, d2.place_of_death) END
                  ELSE NULL END AS s_place,
             CASE WHEN d1.death_year IS NOT NULL AND d2.death_year IS NOT NULL
                  THEN ABS(d1.death_year - d2.death_year)
@@ -277,7 +281,7 @@ _DEATH_INSERT = text(r"""
         JOIN deaths d2 ON d2.contributor = :contrib_b AND d2.surname = sm.sur2
         WHERE (d1.death_year IS NULL OR d2.death_year IS NULL
                  OR ABS(d1.death_year - d2.death_year) <= :yr_tol)
-          AND d1.name % d2.name
+          AND (d1.name = d2.name OR d1.name % d2.name)
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
@@ -308,21 +312,24 @@ _DEATH_INSERT = text(r"""
 """)
 
 
-def claim_next_job():
-    """Atomically claim the next pending pair job. Returns (contrib_a, contrib_b) or (None, None)."""
+def claim_jobs(batch_size=10):
+    """Atomically claim a batch of pending pair jobs. Returns a list of (contrib_a, contrib_b)."""
     with engine.begin() as conn:
-        row = conn.execute(text("""
+        rows = conn.execute(
+            text("""
             UPDATE match_jobs SET status = 'running'
-            WHERE (contributor_a, contributor_b) = (
+            WHERE (contributor_a, contributor_b) IN (
                 SELECT contributor_a, contributor_b FROM match_jobs
                 WHERE status = 'pending'
                 ORDER BY queued_at, contributor_a, contributor_b
                 FOR UPDATE SKIP LOCKED
-                LIMIT 1
+                LIMIT :batch_size
             )
             RETURNING contributor_a, contributor_b
-        """)).fetchone()
-        return (row[0], row[1]) if row else (None, None)
+        """),
+            {"batch_size": batch_size},
+        ).fetchall()
+        return [(r[0], r[1]) for r in rows]
 
 
 def process_job(contrib_a, contrib_b):
@@ -378,27 +385,30 @@ def process_job(contrib_a, contrib_b):
 def worker(_):
     """Claim and process pair jobs until none remain."""
     while True:
-        contrib_a, contrib_b = claim_next_job()
-        if contrib_a is None:
+        jobs = claim_jobs(batch_size=10)
+        if not jobs:
             return
-        t0 = time.monotonic()
-        log.info(f"Computing matches for: {contrib_a} ↔ {contrib_b}")
-        try:
-            process_job(contrib_a, contrib_b)
-            log.info(f"Finished {contrib_a}↔{contrib_b} in {time.monotonic()-t0:.0f}s")
-        except Exception as exc:
-            log.error(f"Error on {contrib_a}↔{contrib_b}: {exc}")
+        for contrib_a, contrib_b in jobs:
+            t0 = time.monotonic()
+            log.info(f"Computing matches for: {contrib_a} ↔ {contrib_b}")
             try:
-                with engine.begin() as conn:
-                    conn.execute(
-                        text(
-                            "UPDATE match_jobs SET status='error' "
-                            "WHERE contributor_a=:a AND contributor_b=:b"
-                        ),
-                        {"a": contrib_a, "b": contrib_b},
-                    )
-            except Exception:
-                pass
+                process_job(contrib_a, contrib_b)
+                log.info(
+                    f"Finished {contrib_a}↔{contrib_b} in {time.monotonic()-t0:.0f}s"
+                )
+            except Exception as exc:
+                log.error(f"Error on {contrib_a}↔{contrib_b}: {exc}")
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(
+                            text(
+                                "UPDATE match_jobs SET status='error' "
+                                "WHERE contributor_a=:a AND contributor_b=:b"
+                            ),
+                            {"a": contrib_a, "b": contrib_b},
+                        )
+                except Exception:
+                    pass
 
 
 def main(workers=4):

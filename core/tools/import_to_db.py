@@ -56,11 +56,11 @@ def setup_full(db):
         CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
 
         -- B-tree indexes on contributor — lets the planner quickly isolate one contributor's rows
-        -- Composite indexes allow instantaneous Index-Only Scans for DISTINCT surname/name
+        -- Composite indexes allow instantaneous Index-Only Scans for DISTINCT surnames
         -- and fast equality joins during the match compute phase.
-        CREATE INDEX idx_birth_contrib_sur_name  ON births(contributor, surname, name);
+        CREATE INDEX idx_birth_contrib_sur  ON births(contributor, surname);
         CREATE INDEX idx_family_contrib_surs ON families(contributor, husband_surname, wife_surname);
-        CREATE INDEX idx_death_contrib_sur_name  ON deaths(contributor, surname, name);
+        CREATE INDEX idx_death_contrib_sur  ON deaths(contributor, surname);
 
         -- B-tree indexes on year columns — used to pre-filter candidates by year range
         -- before the trigram similarity join, significantly reducing the candidate set.
@@ -88,7 +88,6 @@ def setup_full(db):
             match_fields TEXT,
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
-        CREATE INDEX idx_matches_a  ON matches(contributor_a);
         CREATE INDEX idx_matches_b  ON matches(contributor_b);
         CREATE INDEX idx_matches_ab ON matches(contributor_a, contributor_b);
     """))
@@ -234,12 +233,12 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_death_name_trgm           ON deaths   USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_surname_trgm        ON deaths   USING gist (surname gist_trgm_ops);
 
-        CREATE INDEX IF NOT EXISTS idx_birth_contrib_sur_name    ON births(contributor, surname, name);
+        CREATE INDEX IF NOT EXISTS idx_birth_contrib_sur         ON births(contributor, surname);
         CREATE INDEX IF NOT EXISTS idx_family_contrib_surs       ON families(contributor, husband_surname, wife_surname);
-        CREATE INDEX IF NOT EXISTS idx_death_contrib_sur_name    ON deaths(contributor, surname, name);
+        CREATE INDEX IF NOT EXISTS idx_death_contrib_sur         ON deaths(contributor, surname);
 
-        DROP INDEX IF EXISTS idx_birth_contrib_sur;
-        DROP INDEX IF EXISTS idx_death_contrib_sur;
+        DROP INDEX IF EXISTS idx_birth_contrib_sur_name;
+        DROP INDEX IF EXISTS idx_death_contrib_sur_name;
         DROP INDEX IF EXISTS idx_birth_contributor;
         DROP INDEX IF EXISTS idx_family_contributor;
         DROP INDEX IF EXISTS idx_death_contributor;
@@ -247,9 +246,9 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_birth_year                ON births(birth_year);
         CREATE INDEX IF NOT EXISTS idx_family_year               ON families(marriage_year);
         CREATE INDEX IF NOT EXISTS idx_death_year                ON deaths(death_year);
-        CREATE INDEX IF NOT EXISTS idx_matches_a  ON matches(contributor_a);
         CREATE INDEX IF NOT EXISTS idx_matches_b  ON matches(contributor_b);
         CREATE INDEX IF NOT EXISTS idx_matches_ab ON matches(contributor_a, contributor_b);
+        DROP INDEX IF EXISTS idx_matches_a;
     """))
     db.commit()
 
