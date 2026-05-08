@@ -56,11 +56,11 @@ def setup_full(db):
         CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
 
         -- B-tree indexes on contributor — lets the planner quickly isolate one contributor's rows
-        -- Composite indexes allow instantaneous Index-Only Scans for DISTINCT surnames
+        -- Composite indexes allow instantaneous Index-Only Scans for DISTINCT surname/name
         -- and fast equality joins during the match compute phase.
-        CREATE INDEX idx_birth_contrib_sur  ON births(contributor, surname);
+        CREATE INDEX idx_birth_contrib_sur_name  ON births(contributor, surname, name);
         CREATE INDEX idx_family_contrib_surs ON families(contributor, husband_surname, wife_surname);
-        CREATE INDEX idx_death_contrib_sur  ON deaths(contributor, surname);
+        CREATE INDEX idx_death_contrib_sur_name  ON deaths(contributor, surname, name);
 
         -- B-tree indexes on year columns — used to pre-filter candidates by year range
         -- before the trigram similarity join, significantly reducing the candidate set.
@@ -234,10 +234,12 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_death_name_trgm           ON deaths   USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_surname_trgm        ON deaths   USING gist (surname gist_trgm_ops);
 
-        CREATE INDEX IF NOT EXISTS idx_birth_contrib_sur         ON births(contributor, surname);
+        CREATE INDEX IF NOT EXISTS idx_birth_contrib_sur_name    ON births(contributor, surname, name);
         CREATE INDEX IF NOT EXISTS idx_family_contrib_surs       ON families(contributor, husband_surname, wife_surname);
-        CREATE INDEX IF NOT EXISTS idx_death_contrib_sur         ON deaths(contributor, surname);
+        CREATE INDEX IF NOT EXISTS idx_death_contrib_sur_name    ON deaths(contributor, surname, name);
 
+        DROP INDEX IF EXISTS idx_birth_contrib_sur;
+        DROP INDEX IF EXISTS idx_death_contrib_sur;
         DROP INDEX IF EXISTS idx_birth_contributor;
         DROP INDEX IF EXISTS idx_family_contributor;
         DROP INDEX IF EXISTS idx_death_contributor;
