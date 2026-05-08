@@ -27,7 +27,7 @@ const translations = {
     chart_surnames_all: 'All genealogists',
     chart_surnames_select: 'Select genealogist…',
     chart_surnames_loading: 'Loading…',
-    section_surnames: 'Surnames',
+    section_surnames: 'Top Surnames',
 
     // Result section headings
     results_births: 'Birth',
@@ -96,7 +96,7 @@ const translations = {
     matches_found_outro: 'Select a matching genealogist to view all matches between the two.',
     matches_detail_intro: 'All matches between {0} and {1} are shown below.',
     contributor_surnames_intro: 'Genealogist',
-    contributor_surnames_outro: 'has the following surnames in their tree:',
+    contributor_surnames_outro: 'has the following top surnames in their tree:',
     more_info_about: 'More information about',
     back_to_genealogists: 'Genealogists',
     matches_births: 'Births',
@@ -136,7 +136,7 @@ const translations = {
     chart_surnames_all: 'Vsi rodoslovci',
     chart_surnames_select: 'Izberite rodoslovca…',
     chart_surnames_loading: 'Nalaganje…',
-    section_surnames: 'Priimki',
+    section_surnames: 'Najpogostejši priimki',
 
     // Result section headings
     results_births: 'Rojstvo',
@@ -205,7 +205,7 @@ const translations = {
     matches_found_outro: 'Z izbiro posameznega rodoslovca vam prikažemo vse ujemke med njima.',
     matches_detail_intro: 'Prikazana so vsa ujemanja med rodoslovcem {0} in rodoslovcem {1}.',
     contributor_surnames_intro: 'Rodoslovec',
-    contributor_surnames_outro: 'ima v svojem drevesu naslednje priimke:',
+    contributor_surnames_outro: 'ima v svojem drevesu naslednje najpogostejše priimke:',
     more_info_about: 'Več informacij o',
     back_to_genealogists: 'Rodoslovci',
     matches_births: 'Rojstva',
@@ -245,7 +245,7 @@ const translations = {
     chart_surnames_all: 'Svi rodoslovci',
     chart_surnames_select: 'Odaberi rodoslovca…',
     chart_surnames_loading: 'Učitavanje…',
-    section_surnames: 'Prezimena',
+    section_surnames: 'Najčešća prezimena',
 
     // Result section headings
     results_births: 'Rođenje',
@@ -314,7 +314,7 @@ const translations = {
     matches_found_outro: 'Odabirom podudarnog rodoslovca prikazat će se sva podudaranja između dva rodoslovca.',
     matches_detail_intro: 'Prikazana su sva podudaranja između rodoslovca {0} i rodoslovca {1}.',
     contributor_surnames_intro: 'Rodoslovac',
-    contributor_surnames_outro: 'ima u svom stablu sljedeća prezimena:',
+    contributor_surnames_outro: 'ima u svom stablu sljedeća najčešća prezimena:',
     more_info_about: 'Više informacija o',
     back_to_genealogists: 'Rodoslovci',
     matches_births: 'Rođenja',
@@ -354,7 +354,7 @@ const translations = {
     chart_surnames_all: 'Alle Genealogen',
     chart_surnames_select: 'Genealogen auswählen…',
     chart_surnames_loading: 'Laden…',
-    section_surnames: 'Nachnamen',
+    section_surnames: 'Häufigste Nachnamen',
 
     // Result section headings
     results_births: 'Geburt',
@@ -423,7 +423,7 @@ const translations = {
     matches_found_outro: 'Wählen Sie einen übereinstimmenden Genealogen aus, um alle Übereinstimmungen zwischen den beiden anzuzeigen.',
     matches_detail_intro: 'Alle Übereinstimmungen zwischen {0} und {1} werden unten angezeigt.',
     contributor_surnames_intro: 'Der Genealoge',
-    contributor_surnames_outro: 'hat folgende Nachnamen in seinem Stammbaum:',
+    contributor_surnames_outro: 'hat die folgenden häufigsten Nachnamen in seinem Stammbaum:',
     more_info_about: 'Weitere Informationen über',
     back_to_genealogists: 'Genealogen',
     matches_births: 'Geburten',
@@ -463,7 +463,7 @@ const translations = {
     chart_surnames_all: 'Összes genealógus',
     chart_surnames_select: 'Válasszon genealógust…',
     chart_surnames_loading: 'Betöltés…',
-    section_surnames: 'Vezetéknevek',
+    section_surnames: 'Leggyakoribb vezetéknevek',
 
     // Result section headings
     results_births: 'Születés',
@@ -532,7 +532,7 @@ const translations = {
     matches_found_outro: 'Válasszon ki egy egyező genealógust a kettejük közötti összes egyezés megtekintéséhez.',
     matches_detail_intro: 'A {0} és {1} közötti összes egyezés alább látható.',
     contributor_surnames_intro: 'A genealógus',
-    contributor_surnames_outro: 'a következő vezetéknevekkel rendelkezik a családfájában:',
+    contributor_surnames_outro: 'a következő leggyakoribb vezetéknevekkel rendelkezik a családfájában:',
     more_info_about: 'További információk róla:',
     back_to_genealogists: 'Genealógusok',
     matches_births: 'Születések',
@@ -572,7 +572,7 @@ const translations = {
     chart_surnames_all: 'Tutti i genealogisti',
     chart_surnames_select: 'Seleziona genealogista…',
     chart_surnames_loading: 'Caricamento…',
-    section_surnames: 'Cognomi',
+    section_surnames: 'Cognomi più frequenti',
 
     // Result section headings
     results_births: 'Nascita',
@@ -641,7 +641,7 @@ const translations = {
     matches_found_outro: 'Seleziona un genealogista corrispondente per visualizzare tutte le corrispondenze tra i due.',
     matches_detail_intro: 'Tutte le corrispondenze tra {0} e {1} sono mostrate di seguito.',
     contributor_surnames_intro: 'Il genealogista',
-    contributor_surnames_outro: 'ha i seguenti cognomi nel suo albero:',
+    contributor_surnames_outro: 'ha i seguenti cognomi più frequenti nel suo albero:',
     more_info_about: 'Maggiori informazioni su',
     back_to_genealogists: 'Genealogisti',
     matches_births: 'Nascite',

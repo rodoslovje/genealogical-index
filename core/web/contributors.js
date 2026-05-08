@@ -606,7 +606,7 @@ async function renderMatchesPage(contributor, withPartner) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
         </button>
       </div>` +
-      `<p>${t('matches_found_intro')} <strong>${contributor}</strong>. ${t('matches_found_outro')}</p>` +
+      `<p>${t('matches_found_intro')} <strong>${contributor}</strong>.<br>${t('matches_found_outro')}</p>` +
       '<div id="matches-summary" class="table-responsive"></div>' +
       '<div id="matches-detail"></div>';
 
