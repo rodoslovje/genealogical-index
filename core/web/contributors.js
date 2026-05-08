@@ -126,10 +126,12 @@ export async function renderContributors() {
 
   const chartsContainer = document.getElementById('charts-container');
   const surnameCloudSection = document.getElementById('surname-cloud-section');
+  let tableHeader = document.getElementById('table-contributors-header');
 
   if (contributor) {
     if (chartsContainer) chartsContainer.style.display = 'none';
     if (surnameCloudSection) surnameCloudSection.style.display = 'none';
+    if (tableHeader) tableHeader.style.display = 'none';
     await renderMatchesPage(contributor, withPartner);
     return;
   }
@@ -138,8 +140,22 @@ export async function renderContributors() {
 
   if (chartsContainer) chartsContainer.style.display = 'grid';
   if (surnameCloudSection) surnameCloudSection.style.display = '';
+  if (tableHeader) tableHeader.style.display = '';
 
   const container = document.getElementById('table-contributors');
+
+  if (!tableHeader) {
+    tableHeader = document.createElement('h2');
+    tableHeader.id = 'table-contributors-header';
+    tableHeader.className = 'section-heading';
+    tableHeader.style.marginTop = '2rem';
+    tableHeader.style.borderBottom = '1px solid var(--border)';
+    tableHeader.style.paddingBottom = '5px';
+    tableHeader.style.marginBottom = '10px';
+    container.parentNode.insertBefore(tableHeader, container);
+  }
+  tableHeader.dataset.i18n = 'tab_contributors';
+  tableHeader.textContent = t('tab_contributors');
 
   const overlay = document.getElementById('search-overlay');
   if (overlay) {
@@ -577,16 +593,28 @@ async function renderMatchesPage(contributor, withPartner) {
     }));
 
     container.innerHTML = heading +
-      `<h3 class="section-heading" style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${t('col_matches')}</h3>` +
+      `<div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 2rem; margin-bottom: 10px;">
+        <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('col_matches')}</h3>
+        <button class="export-btn export-matches-summary-btn" title="${t('download_csv')}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
+        </button>
+      </div>` +
       `<p>${t('matches_found_intro')} <strong>${contributor}</strong>. ${t('matches_found_outro')}</p>` +
       '<div id="matches-summary" class="table-responsive"></div>' +
       '<div id="matches-detail"></div>';
 
     loadSurnameCloud([contributor], 'contributor-surname-cloud');
 
-    renderTable(tableData, 'matches-summary',
-      ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'confidence'],
-      'total', false);
+    const summaryCols = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'confidence'];
+
+    renderTable(tableData, 'matches-summary', summaryCols, 'total', false);
+
+    const summaryBtn = container.querySelector('.export-matches-summary-btn');
+    if (summaryBtn) {
+      summaryBtn.addEventListener('click', () => {
+        exportToCSV(tableData, summaryCols, `sgi-matches-${contributor}.csv`);
+      });
+    }
 
     // Highlight the active partner row
     if (withPartner) {

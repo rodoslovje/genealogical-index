@@ -57,6 +57,9 @@ export function exportToCSV(data, columns, filename) {
         parseList(row.husbands_list, t('label_husband'));
         parseList(row.wifes_list, t('label_wife'));
         val = parts.join(' | ');
+      } else if (col === 'matches') {
+        val = row.matches_count || '';
+        if (Number(val) === 0) val = '';
       } else {
         val = row[col] != null ? row[col] : '';
         if (col === 'total_links' && Number(val) === 0) val = '';
