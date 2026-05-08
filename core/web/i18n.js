@@ -106,6 +106,11 @@ const translations = {
     // Footer
     footer_version: 'Version',
     footer_data_update: 'Data update',
+
+    // Other indexes
+    other_indexes: 'Genealogical indexes:',
+    country_slo: 'Slovenia',
+    country_cro: 'Croatia',
   },
   sl: {
     // Navigation tabs
@@ -210,6 +215,11 @@ const translations = {
     // Footer
     footer_version: 'Različica',
     footer_data_update: 'Posodobitev podatkov',
+
+    // Other indexes
+    other_indexes: 'Rodoslovni indeksi:',
+    country_slo: 'Slovenija',
+    country_cro: 'Hrvaška',
   },
   hr: {
     // Navigation tabs
@@ -314,6 +324,11 @@ const translations = {
     // Footer
     footer_version: 'Verzija',
     footer_data_update: 'Ažuriranje podataka',
+
+    // Other indexes
+    other_indexes: 'Rodoslovni indeksi:',
+    country_slo: 'Slovenija',
+    country_cro: 'Hrvatska',
   },
   de: {
     // Navigation tabs
@@ -418,6 +433,11 @@ const translations = {
     // Footer
     footer_version: 'Version',
     footer_data_update: 'Datenaktualisierung',
+
+    // Other indexes
+    other_indexes: 'Genealogische Indizes:',
+    country_slo: 'Slowenien',
+    country_cro: 'Kroatien',
   },
   hu: {
     // Navigation tabs
@@ -522,6 +542,11 @@ const translations = {
     // Footer
     footer_version: 'Verzió',
     footer_data_update: 'Adatfrissítés',
+
+    // Other indexes
+    other_indexes: 'Genealógiai indexek:',
+    country_slo: 'Szlovénia',
+    country_cro: 'Horvátország',
   },
   it: {
     // Navigation tabs
@@ -626,6 +651,11 @@ const translations = {
     // Footer
     footer_version: 'Versione',
     footer_data_update: 'Aggiornamento dati',
+
+    // Other indexes
+    other_indexes: 'Indici genealogici:',
+    country_slo: 'Slovenia',
+    country_cro: 'Croazia',
   },
 };
 

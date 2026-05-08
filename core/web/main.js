@@ -66,7 +66,21 @@ export function renderIntros() {
       ${indexLink}
     </div>
   </div>`;
-  const html = paragraphs + logo;
+
+  const otherIndexesList = [
+    `<span>🇸🇮 <a href="https://indeks.rodoslovje.si/" target="_blank" rel="noopener" style="font-weight: 500; text-decoration: none;">${t('country_slo')}</a></span>`,
+    `<span>🇭🇷 <a href="https://indeks.rodoslovlje.hr/" target="_blank" rel="noopener" style="font-weight: 500; text-decoration: none;">${t('country_cro')}</a></span>`
+  ];
+  const otherIndexesHtml = `
+    <div class="other-indexes" style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; font-size: 1.05rem;">
+      <div style="font-weight: 600;">${t('other_indexes')}</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+        ${otherIndexesList.join('')}
+      </div>
+    </div>
+  `;
+
+  const html = paragraphs + logo + otherIndexesHtml;
   ['intro-general', 'intro-birth', 'intro-family', 'intro-death'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
