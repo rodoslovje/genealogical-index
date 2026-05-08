@@ -111,7 +111,7 @@ hamburgerBtn.addEventListener('click', (e) => {
   e.stopPropagation();
 
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('t') === 'contributors' && urlParams.get('matches')) {
+  if (urlParams.get('t') === 'contributors' && urlParams.get('contributor')) {
     return;
   }
 
@@ -207,7 +207,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       showIntros(introMap[targetTab]);
     }
 
-    const isMatchesPage = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('matches');
+    const isMatchesPage = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('contributor');
 
     if (SEARCH_TABS.includes(targetTab) && !isMatchesPage) {
       sidebar.classList.add('open');

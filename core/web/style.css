@@ -625,15 +625,16 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 .matches-back-link:hover { text-decoration: underline; }
 .matches-page-title {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary);
 }
 .matches-active-row td { background: #eaf4fb; }
 .matches-detail-section { margin-top: 28px; }
-.matches-detail-heading {
+.section-heading {
   font-size: 1.3rem;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin: 0 0 12px 0;
   color: var(--primary);
 }
 .matches-detail-table {

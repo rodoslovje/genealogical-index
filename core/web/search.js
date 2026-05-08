@@ -404,7 +404,10 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     const apiParams = new URLSearchParams({ ...fieldParams, ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}) });
 
     const overlay = document.getElementById('search-overlay');
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay) {
+      overlay.style.display = 'flex';
+      await new Promise(r => setTimeout(r, 10)); // Yield to allow browser to paint the overlay
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/search/advanced/${endpoint}?${apiParams}`);

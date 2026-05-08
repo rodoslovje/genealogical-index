@@ -1,7 +1,7 @@
 import { t, getCurrentLang } from './i18n.js';
 import { PARAM_MAP_REVERSE } from './url.js';
 
-function exportToCSV(data, columns, filename) {
+export function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
   const headers = columns.map(col => `"${t('col_' + col).replace(/"/g, '""')}"`).join(',');
   const rows = data.map(row => {
@@ -102,6 +102,8 @@ function exportToCSV(data, columns, filename) {
         label = t('exact_search');
       } else if (field === 'hl' || field === 'has_link') {
         label = t('has_link');
+      } else if (field === 'with') {
+        label = t('filter_with');
       } else if (field.endsWith('_to')) {
         const baseField = field.replace('_to', '');
         const baseLabel = t('col_' + baseField) !== 'col_' + baseField ? t('col_' + baseField) : baseField;
@@ -521,18 +523,15 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           html += '<td></td>';
         }
       } else if (col === 'matches') {
-        const name = row.contributor_ID || '';
         const count = row.matches_count || 0;
-        const cell = count > 0
-          ? `<a href="?t=contributors&matches=${encodeURIComponent(name)}" data-spa-nav>${count}</a>`
-          : '';
+        const cell = count > 0 ? count : '';
         html += `<td class="col-center">${cell}</td>`;
       } else if (col === 'confidence') {
         const val = row[col] != null ? `${row[col]}%` : '—';
         html += `<td class="col-center">${val}</td>`;
       } else if (col === 'contributor_ID') {
         const name = row[col] || '';
-        const internalHref = row._match_href || '';
+        const internalHref = row._match_href || row._contributor_href || '';
         const externalUrl = row._url || '';
         if (internalHref) {
           html += `<td class="col-center"><a href="${internalHref}" data-spa-nav>${name}</a></td>`;
@@ -543,11 +542,10 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         }
       } else if (col === 'contributor') {
         const name = row[col] || '';
-        const url = contributorUrlMap[name] || '';
-        if (url) {
-          html += `<td><a href="${url}" target="_blank" rel="noopener">${name}</a></td>`;
+        if (name) {
+          html += `<td><a href="?t=contributors&contributor=${encodeURIComponent(name)}" data-spa-nav>${name}</a></td>`;
         } else {
-          html += `<td>${name}</td>`;
+          html += `<td></td>`;
         }
       } else if (CENTERED_COLUMNS.has(col)) {
         const isNumeric = ['total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'confidence', 'matches'].includes(col);

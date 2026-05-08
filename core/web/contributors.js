@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { renderTable, formatSpecialCell } from './table.js';
+import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
 import { API_BASE_URL } from './config.js';
 
 const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified', 'matches'];
@@ -99,7 +99,12 @@ export async function renderTotalsBar() {
     setEl('total-links', links.toLocaleString());
     setEl('total-last-update', lastUpdate);
     setEl('data-updated', lastUpdate);
-    document.getElementById('totals-bar').style.display = '';
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('contributor')) {
+      document.getElementById('totals-bar').style.display = 'none';
+    } else {
+      document.getElementById('totals-bar').style.display = '';
+    }
   } catch { /* silently skip if API unavailable */ }
 }
 
@@ -115,24 +120,31 @@ function filterContributorData(data) {
 
 export async function renderContributors() {
   const urlParams = new URLSearchParams(window.location.search);
-  const matchesFor = urlParams.get('matches');
+  const contributor = urlParams.get('contributor');
   const withPartner = urlParams.get('with');
 
   const chartsContainer = document.getElementById('charts-container');
   const surnameCloudSection = document.getElementById('surname-cloud-section');
 
-  if (matchesFor) {
+  if (contributor) {
     if (chartsContainer) chartsContainer.style.display = 'none';
     if (surnameCloudSection) surnameCloudSection.style.display = 'none';
-    await renderMatchesPage(matchesFor, withPartner);
+    await renderMatchesPage(contributor, withPartner);
     return;
   }
+
+  document.title = t('site_title');
 
   if (chartsContainer) chartsContainer.style.display = 'grid';
   if (surnameCloudSection) surnameCloudSection.style.display = '';
 
   const container = document.getElementById('table-contributors');
-  container.innerHTML = `<p>${t('loading_contributors')}</p>`;
+
+  const overlay = document.getElementById('search-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    await new Promise(r => setTimeout(r, 10)); // Yield to allow browser to paint the overlay
+  }
 
   try {
     const [data, timeline, counts] = await Promise.all([
@@ -142,8 +154,12 @@ export async function renderContributors() {
     renderChart(data);
     renderTimelineChart(timeline);
     const initialFiltered = enrichWithMatchCounts(filterContributorData(data));
-    renderTable(initialFiltered, 'table-contributors', contributorColumns, 'total', false);
-    loadSurnameCloud(initialFiltered.map(d => d.contributor_ID));
+    const tableData = initialFiltered.map(d => ({
+      ...d,
+      _contributor_href: `?t=contributors&contributor=${encodeURIComponent(d.contributor_ID)}`
+    }));
+    renderTable(tableData, 'table-contributors', contributorColumns, 'total', false);
+    loadSurnameCloud(initialFiltered.map(d => d.contributor_ID), 'surname-cloud');
 
     const input = document.getElementById('contributors-query');
     if (input && !input.dataset.bound) {
@@ -151,13 +167,19 @@ export async function renderContributors() {
       input.addEventListener('input', () => {
         if (cachedData) {
           const filtered = enrichWithMatchCounts(filterContributorData(cachedData));
-          renderTable(filtered, 'table-contributors', contributorColumns, 'total', false);
-          loadSurnameCloud(filtered.map(d => d.contributor_ID));
+          const filteredTableData = filtered.map(d => ({
+            ...d,
+            _contributor_href: `?t=contributors&contributor=${encodeURIComponent(d.contributor_ID)}`
+          }));
+          renderTable(filteredTableData, 'table-contributors', contributorColumns, 'total', false);
+          loadSurnameCloud(filtered.map(d => d.contributor_ID), 'surname-cloud');
         }
       });
     }
   } catch {
     container.innerHTML = `<p>${t('contributors_failed')}</p>`;
+  } finally {
+    if (overlay) overlay.style.display = 'none';
   }
 }
 
@@ -295,7 +317,7 @@ function renderTimelineChart(data) {
 
 // --- Surname Word Cloud ---
 
-let cloudAbortController = null;
+let cloudAbortControllers = {};
 
 function populateSurnameSelect(contributorData) {
   const select = document.getElementById('surname-cloud-select');
@@ -306,7 +328,7 @@ function populateSurnameSelect(contributorData) {
     return;
   }
   select.innerHTML = buildSelectOptions(contributorData);
-  select.addEventListener('change', () => loadSurnameCloud(select.value));
+  select.addEventListener('change', () => loadSurnameCloud(select.value, 'surname-cloud'));
   select.dataset.bound = '1';
 }
 
@@ -317,20 +339,20 @@ function buildSelectOptions(contributorData) {
     sorted.map(d => `<option value="${d.contributor_ID}">${d.contributor_ID}</option>`).join('');
 }
 
-async function loadSurnameCloud(contributors) {
-  const cloud = document.getElementById('surname-cloud');
+async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
+  const cloud = document.getElementById(targetId);
   if (!cloud) return;
 
   cloud.innerHTML = `<span class="cloud-placeholder">${t('chart_surnames_loading')}</span>`;
 
-  if (cloudAbortController) cloudAbortController.abort();
-  cloudAbortController = new AbortController();
+  if (cloudAbortControllers[targetId]) cloudAbortControllers[targetId].abort();
+  cloudAbortControllers[targetId] = new AbortController();
 
   try {
     const list = Array.isArray(contributors) ? contributors : (contributors ? [contributors] : []);
     const qs = list.length ? `contributors=${list.map(encodeURIComponent).join(',')}&` : '';
     const url = `${API_BASE_URL}/api/stats/top_surnames?${qs}limit=80`;
-    const res = await fetch(url, { signal: cloudAbortController.signal });
+    const res = await fetch(url, { signal: cloudAbortControllers[targetId].signal });
     const data = await res.json();
 
     if (!data.length) {
@@ -371,80 +393,117 @@ async function renderMatchesPage(contributor, withPartner) {
   // Close sidebar — not useful on the matches subpage
   document.getElementById('sidebar')?.classList.remove('open');
 
+  const totalsBar = document.getElementById('totals-bar');
+  if (totalsBar) totalsBar.style.display = 'none';
+
   const container = document.getElementById('table-contributors');
-  container.innerHTML = `<p>${t('matches_loading')}</p>`;
 
-  let partners;
+  const overlay = document.getElementById('search-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    await new Promise(r => setTimeout(r, 10)); // Yield to allow browser to paint the overlay
+  }
+
   try {
-    const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches`);
-    partners = await res.json();
-  } catch {
-    container.innerHTML = `<p>${t('search_failed')}</p>`;
-    return;
-  }
+    await ensureData();
 
-  const heading = `<div class="matches-page-header">
-    <a href="?t=contributors" data-spa-nav class="matches-back-link">← ${t('back_to_genealogists')}</a>
-    <h2 class="matches-page-title">${t('matches_for')} ${contributor}</h2>
-  </div>`;
+    let partners;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches`);
+      partners = await res.json();
+    } catch {
+      container.innerHTML = `<p>${t('search_failed')}</p>`;
+      return;
+    }
 
-  if (!partners.length) {
-    container.innerHTML = heading + `<p>${t('matches_none')}</p>`;
-    return;
-  }
+    document.title = `${contributor} | ${t('site_title')}`;
 
-  // Map to renderTable row format
-  const tableData = partners.map(p => ({
-    contributor_ID: p.contributor,
-    _match_href: `?t=contributors&matches=${encodeURIComponent(contributor)}&with=${encodeURIComponent(p.contributor)}`,
-    total_births:   p.births_count   || 0,
-    total_families: p.families_count || 0,
-    total_deaths:   p.deaths_count   || 0,
-    total:          p.total_count,
-    confidence:     Math.round((p.max_confidence || 0) * 100),
-  }));
+    const urlMap = getContributorUrlMap();
+    const url = urlMap[contributor];
+    const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener" class="export-btn" style="text-decoration: none;">🔗 ${url}</a></div></div>` : '';
 
-  container.innerHTML = heading +
-    `<p>${t('matches_found_intro')} <strong>${contributor}</strong>:</p>` +
-    '<div id="matches-summary" class="table-responsive"></div>' +
-    '<div id="matches-detail"></div>';
+    const heading = `<div class="matches-page-header">
+      <h2 class="matches-page-title">${contributor}</h2>
+    </div>
+    ${urlHtml}
+    <div class="surname-cloud-section" style="margin-bottom: 24px;">
+      <h3 class="section-heading">${t('section_surnames')}</h3>
+      <p>${t('contributor_surnames_intro')} <strong>${contributor}</strong> ${t('contributor_surnames_outro')}</p>
+      <div class="surname-cloud" id="contributor-surname-cloud" data-i18n-title="chart_surnames_title"></div>
+    </div>`;
 
-  renderTable(tableData, 'matches-summary',
-    ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'confidence'],
-    'total', false);
+    if (!partners.length) {
+      container.innerHTML = heading +
+        `<h3 class="section-heading" style="margin-top: 2rem;">${t('col_matches')}</h3>` +
+        `<p>${t('matches_none')}</p>`;
+      loadSurnameCloud([contributor], 'contributor-surname-cloud');
+      return;
+    }
 
-  // Highlight the active partner row
-  if (withPartner) {
-    document.querySelectorAll('#matches-summary tbody tr').forEach(tr => {
-      const link = tr.querySelector('a[data-spa-nav]');
-      if (link && new URL(link.href, location.href).searchParams.get('with') === withPartner) {
-        tr.classList.add('matches-active-row');
-      }
-    });
-    renderMatchDetail(contributor, withPartner);
+    // Map to renderTable row format
+    const tableData = partners.map(p => ({
+      contributor_ID: p.contributor,
+      _match_href: `?t=contributors&contributor=${encodeURIComponent(contributor)}&with=${encodeURIComponent(p.contributor)}`,
+      total_births:   p.births_count   || 0,
+      total_families: p.families_count || 0,
+      total_deaths:   p.deaths_count   || 0,
+      total:          p.total_count,
+      confidence:     Math.round((p.max_confidence || 0) * 100),
+    }));
+
+    container.innerHTML = heading +
+      `<h3 class="section-heading" style="margin-top: 2rem;">${t('col_matches')}</h3>` +
+      `<p>${t('matches_found_intro')} <strong>${contributor}</strong>. ${t('matches_found_outro')}</p>` +
+      '<div id="matches-summary" class="table-responsive"></div>' +
+      '<div id="matches-detail"></div>';
+
+    loadSurnameCloud([contributor], 'contributor-surname-cloud');
+
+    renderTable(tableData, 'matches-summary',
+      ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'confidence'],
+      'total', false);
+
+    // Highlight the active partner row
+    if (withPartner) {
+      document.querySelectorAll('#matches-summary tbody tr').forEach(tr => {
+        const link = tr.querySelector('a[data-spa-nav]');
+        if (link && new URL(link.href, location.href).searchParams.get('with') === withPartner) {
+          tr.classList.add('matches-active-row');
+        }
+      });
+      await renderMatchDetail(contributor, withPartner);
+    }
+  } finally {
+    if (overlay) overlay.style.display = 'none';
   }
 }
 
 async function renderMatchDetail(contributor, partner) {
   const detailEl = document.getElementById('matches-detail');
   if (!detailEl) return;
-  detailEl.innerHTML = `<p>${t('matches_loading')}</p>`;
 
-  let records;
+  const overlay = document.getElementById('search-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    await new Promise(r => setTimeout(r, 10)); // Yield to allow browser to paint the overlay
+  }
+
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}`
-    );
-    records = await res.json();
-  } catch {
-    detailEl.innerHTML = `<p>${t('search_failed')}</p>`;
-    return;
-  }
+    let records;
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}`
+      );
+      records = await res.json();
+    } catch {
+      detailEl.innerHTML = `<p>${t('search_failed')}</p>`;
+      return;
+    }
 
-  if (!records.length) {
-    detailEl.innerHTML = `<p>${t('matches_none')}</p>`;
-    return;
-  }
+    if (!records.length) {
+      detailEl.innerHTML = `<p>${t('matches_none')}</p>`;
+      return;
+    }
 
   const byType = { birth: [], family: [], death: [] };
   records.forEach(r => byType[r.record_type]?.push(r));
@@ -505,8 +564,14 @@ async function renderMatchDetail(contributor, partner) {
     },
   ];
 
+  const urlMap = getContributorUrlMap();
+  const partnerUrl = urlMap[partner];
+  const partnerUrlHtml = partnerUrl ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener" class="export-btn" style="text-decoration: none;">🔗 ${partnerUrl}</a></div></div>` : '';
+
   let html = `<div class="matches-detail-section">
-    <h3 class="matches-detail-heading">${contributor} × ${partner}</h3>`;
+    <h3 class="section-heading">${contributor} × ${partner}</h3>
+    <p>${t('matches_detail_intro')}</p>
+    ${partnerUrlHtml}`;
 
   for (const { key, label, fields, searchUrl, linkedFields } of typeConfig) {
     const group = byType[key];
@@ -546,7 +611,12 @@ async function renderMatchDetail(contributor, partner) {
               </tr>`;
     }).join('');
 
-    html += `<h4>${label} (${group.length})</h4>
+    html += `<div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 1.5rem; margin-bottom: 10px;">
+      <h4 style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
+      <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
+      </button>
+    </div>
     <div class="table-responsive">
       <table class="matches-detail-table">
         <thead><tr>
@@ -561,7 +631,30 @@ async function renderMatchDetail(contributor, partner) {
 
   html += '</div>';
   detailEl.innerHTML = html;
-  detailEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  detailEl.querySelectorAll('.export-matches-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const typeKey = btn.dataset.type;
+      const typeData = byType[typeKey];
+      const config = typeConfig.find(c => c.key === typeKey);
+      const flatData = [];
+      typeData.forEach(r => {
+        flatData.push({ ...r.record_a, contributor_ID: contributor, confidence: Math.round((r.confidence || 0) * 100) });
+        flatData.push({ ...r.record_b, contributor_ID: partner, confidence: Math.round((r.confidence || 0) * 100) });
+      });
+      const cols = [...config.fields.map(f => f.f), 'contributor_ID', 'confidence'];
+      exportToCSV(flatData, cols, `sgi-matches-${typeKey}-${contributor}-${partner}.csv`);
+    });
+  });
+
+  setTimeout(() => {
+    const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')) || 61;
+    const y = detailEl.getBoundingClientRect().top + window.scrollY - navHeight - 24;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }, 50);
+  } finally {
+    if (overlay) overlay.style.display = 'none';
+  }
 }
 
 /** Re-renders the contributors view if it is currently active (e.g. after language change). */
