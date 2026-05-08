@@ -566,7 +566,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
     const urlMap = getContributorUrlMap();
     const url = urlMap[contributor];
-    const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener" class="export-btn" style="text-decoration: none;">🔗 ${url}</a></div></div>` : '';
+    const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${url}</a></div></div>` : '';
 
     const heading = `<div class="matches-page-header">
       <h2 class="matches-page-title">${contributor}</h2>
@@ -727,7 +727,7 @@ async function renderMatchDetail(contributor, partner) {
 
   const urlMap = getContributorUrlMap();
   const partnerUrl = urlMap[partner];
-  const partnerUrlHtml = partnerUrl ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener" class="export-btn" style="text-decoration: none;">🔗 ${partnerUrl}</a></div></div>` : '';
+  const partnerUrlHtml = partnerUrl ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${partnerUrl}</a></div></div>` : '';
 
   const primaryHtml = `<strong>${contributor}</strong>`;
   const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a></strong>`;

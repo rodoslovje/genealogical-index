@@ -5,6 +5,14 @@ import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, pref
 import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
 import { toUnicodeSearch } from './url.js';
 
+// --- Global Link Styles ---
+const globalStyles = document.createElement('style');
+globalStyles.textContent = `
+  a, a:visited { color: #3498db; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+`;
+document.head.appendChild(globalStyles);
+
 const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family', 'tab-death', 'tab-contributors'];
 export const tabsWithResults = new Set();
 
@@ -68,8 +76,8 @@ export function renderIntros() {
   </div>`;
 
   const otherIndexesList = [
-    `<span>🇸🇮 <a href="https://indeks.rodoslovje.si/" target="_blank" rel="noopener" style="font-weight: 500; text-decoration: none;">${t('country_slo')}</a></span>`,
-    `<span>🇭🇷 <a href="https://indeks.rodoslovlje.hr/" target="_blank" rel="noopener" style="font-weight: 500; text-decoration: none;">${t('country_cro')}</a></span>`
+    `<span>🇸🇮 <a href="https://indeks.rodoslovje.si/" target="_blank" rel="noopener" style="font-weight: 500;">${t('country_slo')}</a></span>`,
+    `<span>🇭🇷 <a href="https://indeks.rodoslovlje.hr/" target="_blank" rel="noopener" style="font-weight: 500;">${t('country_cro')}</a></span>`
   ];
   const otherIndexesHtml = `
     <div class="other-indexes" style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; font-size: 1.05rem;">
