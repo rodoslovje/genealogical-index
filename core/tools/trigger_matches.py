@@ -188,7 +188,7 @@ def main():
             )
             queue_pairs(db, pairs)
             print(f"Queued {len(pairs)} pairs.")
-        else:
+        elif args.contributors:
             # Validate requested contributors.
             targets = []
             for name in args.contributors:
