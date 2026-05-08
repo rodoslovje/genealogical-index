@@ -56,10 +56,11 @@ def setup_full(db):
         CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
 
         -- B-tree indexes on contributor — lets the planner quickly isolate one contributor's rows
-        -- before applying the expensive trgm join against the rest of the table.
-        CREATE INDEX idx_birth_contributor  ON births(contributor);
-        CREATE INDEX idx_family_contributor ON families(contributor);
-        CREATE INDEX idx_death_contributor  ON deaths(contributor);
+        -- Composite indexes allow instantaneous Index-Only Scans for DISTINCT surnames
+        -- and fast equality joins during the match compute phase.
+        CREATE INDEX idx_birth_contrib_sur  ON births(contributor, surname);
+        CREATE INDEX idx_family_contrib_surs ON families(contributor, husband_surname, wife_surname);
+        CREATE INDEX idx_death_contrib_sur  ON deaths(contributor, surname);
 
         -- B-tree indexes on year columns — used to pre-filter candidates by year range
         -- before the trigram similarity join, significantly reducing the candidate set.
@@ -95,10 +96,16 @@ def setup_full(db):
 
 
 def _col_exists(db, table, column):
-    return db.execute(text(
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_name=:t AND column_name=:c"
-    ), {"t": table, "c": column}).fetchone() is not None
+    return (
+        db.execute(
+            text(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name=:t AND column_name=:c"
+            ),
+            {"t": table, "c": column},
+        ).fetchone()
+        is not None
+    )
 
 
 def setup_update(db):
@@ -226,9 +233,15 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_name_trgm           ON deaths   USING gist (name gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_death_surname_trgm        ON deaths   USING gist (surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_birth_contributor         ON births(contributor);
-        CREATE INDEX IF NOT EXISTS idx_family_contributor        ON families(contributor);
-        CREATE INDEX IF NOT EXISTS idx_death_contributor         ON deaths(contributor);
+
+        CREATE INDEX IF NOT EXISTS idx_birth_contrib_sur         ON births(contributor, surname);
+        CREATE INDEX IF NOT EXISTS idx_family_contrib_surs       ON families(contributor, husband_surname, wife_surname);
+        CREATE INDEX IF NOT EXISTS idx_death_contrib_sur         ON deaths(contributor, surname);
+
+        DROP INDEX IF EXISTS idx_birth_contributor;
+        DROP INDEX IF EXISTS idx_family_contributor;
+        DROP INDEX IF EXISTS idx_death_contributor;
+
         CREATE INDEX IF NOT EXISTS idx_birth_year                ON births(birth_year);
         CREATE INDEX IF NOT EXISTS idx_family_year               ON families(marriage_year);
         CREATE INDEX IF NOT EXISTS idx_death_year                ON deaths(death_year);
@@ -321,7 +334,7 @@ def find_data_file(directory, filename):
     return exact_path
 
 
-_YEAR_RE = re.compile(r'\d{4}')
+_YEAR_RE = re.compile(r"\d{4}")
 
 
 def _extract_year(date_str):
