@@ -278,8 +278,11 @@ docker compose exec api python tools/import_to_db.py --mode update
 | `--force-births`            | Forces reimport of birth records for all contributors      |
 | `--force-families`          | Forces reimport of family records for all contributors     |
 | `--force-deaths`            | Forces reimport of death records for all contributors      |
+| `--workers N`               | Number of parallel workers for auto-matching (default: 4)  |
+| `--skip-matches`            | Skips the automatic match computation after import         |
+| `-d, --detach`              | Runs the automatic match computation in the background     |
 
-Import does **not** trigger match computation automatically — run that separately (see §2.5).
+By default, the import script **automatically triggers match computation** for any updated contributors. You can skip this with `--skip-matches` and run it separately (see §2.5).
 
 ---
 
@@ -347,6 +350,14 @@ docker compose exec api python tools/trigger_matches.py --all --workers 4
 ```
 
 Each worker claims pair jobs independently. More workers help when the DB server has spare CPU cores. Note that each worker also spawns up to 3 internal PostgreSQL parallel workers (`PG_PARALLEL_WORKERS` in `compute_matches.py`), so set `--workers` conservatively relative to available CPU.
+
+**Run in background:**
+
+Add the `-d` or `--detach` flag to any command that starts the workers (e.g. `--all`, `--resume`) to run the computation in the background and exit immediately.
+
+```bash
+docker compose exec api python tools/trigger_matches.py --all -d
+```
 
 **Monitor progress:**
 
@@ -535,15 +546,12 @@ python tools/gedcom-to-json.py --mode update
 rsync -avz --delete data/output user@yourserver:/var/sgi/genealogical-index/data/
 
 # 4. on server — reimport changed contributors
+#    (Matches for updated contributors are automatically computed at the end of the import)
 cd sites/slo
 docker compose exec api python tools/import_to_db.py --mode update
 
-# 5. on server — recompute matches for changed contributors
-#    Old results for unaffected pairs stay visible while new ones are computed.
-docker compose exec api python tools/trigger_matches.py --contributor "ContributorName"
-
-# To recompute all matches (e.g. after a bulk update or threshold change):
-docker compose exec api python tools/trigger_matches.py --all
+# 5. on server — manually recompute matches (only needed if you used --skip-matches or changed thresholds)
+# docker compose exec api python tools/trigger_matches.py --all
 ```
 
 ### Frontend change

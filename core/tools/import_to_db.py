@@ -568,6 +568,23 @@ def main():
         action="store_true",
         help="Force re-import of death records for all contributors.",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="Number of parallel workers for automatic match computation (default: 4)",
+    )
+    parser.add_argument(
+        "--skip-matches",
+        action="store_true",
+        help="Skip automatic match computation after import.",
+    )
+    parser.add_argument(
+        "-d",
+        "--detach",
+        action="store_true",
+        help="Run automatic match computation in the background and exit immediately.",
+    )
     args = parser.parse_args()
     full_mode = args.mode == "full" or args.drop_tables
 
@@ -733,12 +750,63 @@ def main():
 
     print("\nData import finished successfully.")
     if updated_contributors:
-        print(
-            f"Updated {len(updated_contributors)} contributor(s). "
-            "Run matches manually: python tools/trigger_matches.py --all"
-        )
+        if not args.skip_matches:
+            print(
+                f"Updated {len(updated_contributors)} contributor(s). "
+                "Automatically triggering match computation..."
+            )
+            import sys
 
-    db.close()
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            import trigger_matches
+            import compute_matches
+
+            all_names = [
+                r.name
+                for r in db.execute(text("SELECT name FROM contributors")).fetchall()
+            ]
+            pairs = set()
+            for t in updated_contributors:
+                for other in all_names:
+                    if other != t:
+                        a, b = (t, other) if t < other else (other, t)
+                        pairs.add((a, b))
+            pairs = sorted(pairs)
+
+            if pairs:
+                trigger_matches.queue_pairs(db, pairs)
+                print(f"Queued {len(pairs)} pairs for matching.")
+
+            # Close DB connection before yielding to compute_matches workers
+            db.close()
+            db = None
+
+            if pairs:
+                if args.detach:
+                    import subprocess
+
+                    script_path = "/app/tools/compute_matches.py"
+                    log_file = "/app/data/output/compute_matches.log"
+                    print(
+                        f"Starting match computation in the background. Log: {log_file}"
+                    )
+                    with open(log_file, "a") as f:
+                        subprocess.Popen(
+                            ["python", script_path, f"--workers={args.workers}"],
+                            stdout=f,
+                            stderr=f,
+                            start_new_session=True,
+                        )
+                else:
+                    compute_matches.main(workers=args.workers)
+        else:
+            print(
+                f"Updated {len(updated_contributors)} contributor(s). "
+                "Run matches manually: python tools/trigger_matches.py --all"
+            )
+
+    if db is not None:
+        db.close()
 
 
 if __name__ == "__main__":

@@ -116,6 +116,12 @@ def main():
         action="store_true",
         help="Change 'stopped' and 'error' jobs back to 'pending' and resume matching",
     )
+    parser.add_argument(
+        "-d",
+        "--detach",
+        action="store_true",
+        help="Run match computation in the background and exit immediately.",
+    )
     args = parser.parse_args()
 
     db = SessionLocal()
@@ -227,11 +233,38 @@ def main():
     finally:
         db.close()
 
-    # Run compute_matches directly in the same process
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import compute_matches
+    # If we ran a command that doesn't queue jobs, exit before starting workers.
+    if not (args.all or args.contributors or args.resume):
+        return
 
-    compute_matches.main(workers=args.workers)
+    # Check if there are any pending jobs before starting workers.
+    with SessionLocal() as db_check:
+        has_pending = db_check.execute(
+            text("SELECT 1 FROM match_jobs WHERE status = 'pending' LIMIT 1")
+        ).first()
+    if not has_pending:
+        print("No pending jobs to process.")
+        return
+
+    if args.detach:
+        import subprocess
+
+        script_path = "/app/tools/compute_matches.py"
+        log_file = "/app/data/output/compute_matches.log"
+        print(f"Starting match computation in the background. Log: {log_file}")
+        with open(log_file, "a") as f:
+            # Using start_new_session=True to fully detach the process
+            subprocess.Popen(
+                ["python", script_path, f"--workers={args.workers}"],
+                stdout=f,
+                stderr=f,
+                start_new_session=True,
+            )
+    else:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import compute_matches
+
+        compute_matches.main(workers=args.workers)
 
 
 if __name__ == "__main__":
