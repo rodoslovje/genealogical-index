@@ -286,17 +286,23 @@ _DEATH_INSERT = text(r"""
                  THEN CASE WHEN d1.place_of_death = d2.place_of_death THEN 1.0 ELSE similarity(d1.place_of_death, d2.place_of_death) END
                  ELSE NULL END AS s_place,
             CASE WHEN COALESCE(d1.father_name,'') != '' AND COALESCE(d2.father_name,'') != ''
-                 THEN CASE WHEN d1.father_name = d2.father_name THEN 1.0 ELSE similarity(d1.father_name, d2.father_name) END ELSE NULL END AS s_fname,
+                 THEN CASE WHEN d1.father_name = d2.father_name THEN 1.0 ELSE similarity(d1.father_name, d2.father_name) END
+                 WHEN COALESCE(d1.father_name,'') != '' OR COALESCE(d2.father_name,'') != '' THEN 0.5 ELSE NULL END AS s_fname,
             CASE WHEN COALESCE(d1.father_surname,'') != '' AND COALESCE(d2.father_surname,'') != ''
-                 THEN CASE WHEN d1.father_surname = d2.father_surname THEN 1.0 ELSE similarity(d1.father_surname, d2.father_surname) END ELSE NULL END AS s_fsur,
+                 THEN CASE WHEN d1.father_surname = d2.father_surname THEN 1.0 ELSE similarity(d1.father_surname, d2.father_surname) END
+                 WHEN COALESCE(d1.father_surname,'') != '' OR COALESCE(d2.father_surname,'') != '' THEN 0.5 ELSE NULL END AS s_fsur,
             CASE WHEN COALESCE(d1.mother_name,'') != '' AND COALESCE(d2.mother_name,'') != ''
-                 THEN CASE WHEN d1.mother_name = d2.mother_name THEN 1.0 ELSE similarity(d1.mother_name, d2.mother_name) END ELSE NULL END AS s_mname,
+                 THEN CASE WHEN d1.mother_name = d2.mother_name THEN 1.0 ELSE similarity(d1.mother_name, d2.mother_name) END
+                 WHEN COALESCE(d1.mother_name,'') != '' OR COALESCE(d2.mother_name,'') != '' THEN 0.5 ELSE NULL END AS s_mname,
             CASE WHEN COALESCE(d1.mother_surname,'') != '' AND COALESCE(d2.mother_surname,'') != ''
-                 THEN CASE WHEN d1.mother_surname = d2.mother_surname THEN 1.0 ELSE similarity(d1.mother_surname, d2.mother_surname) END ELSE NULL END AS s_msur,
+                 THEN CASE WHEN d1.mother_surname = d2.mother_surname THEN 1.0 ELSE similarity(d1.mother_surname, d2.mother_surname) END
+                 WHEN COALESCE(d1.mother_surname,'') != '' OR COALESCE(d2.mother_surname,'') != '' THEN 0.5 ELSE NULL END AS s_msur,
             CASE WHEN COALESCE(d1.husbands_list,'') NOT IN ('', '[]') AND COALESCE(d2.husbands_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN d1.husbands_list = d2.husbands_list THEN 1.0 ELSE similarity(d1.husbands_list, d2.husbands_list) END ELSE NULL END AS s_hlist,
+                 THEN CASE WHEN d1.husbands_list = d2.husbands_list THEN 1.0 ELSE similarity(d1.husbands_list, d2.husbands_list) END
+                 WHEN COALESCE(d1.husbands_list,'') NOT IN ('', '[]') OR COALESCE(d2.husbands_list,'') NOT IN ('', '[]') THEN 0.5 ELSE NULL END AS s_hlist,
             CASE WHEN COALESCE(d1.wifes_list,'') NOT IN ('', '[]') AND COALESCE(d2.wifes_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN d1.wifes_list = d2.wifes_list THEN 1.0 ELSE similarity(d1.wifes_list, d2.wifes_list) END ELSE NULL END AS s_wlist,
+                 THEN CASE WHEN d1.wifes_list = d2.wifes_list THEN 1.0 ELSE similarity(d1.wifes_list, d2.wifes_list) END
+                 WHEN COALESCE(d1.wifes_list,'') NOT IN ('', '[]') OR COALESCE(d2.wifes_list,'') NOT IN ('', '[]') THEN 0.5 ELSE NULL END AS s_wlist,
             CASE WHEN d1.death_year IS NOT NULL AND d2.death_year IS NOT NULL
                  THEN ABS(d1.death_year - d2.death_year)
                  ELSE NULL END AS yr_diff
