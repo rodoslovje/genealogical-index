@@ -552,6 +552,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
   try {
     await ensureData();
+    const contribData = cachedData.find(d => d.contributor_ID === contributor);
 
     let partners;
     try {
@@ -568,9 +569,22 @@ async function renderMatchesPage(contributor, withPartner) {
     const url = urlMap[contributor];
     const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${url}</a></div></div>` : '';
 
+    let statsHtml = '';
+    if (contribData) {
+      statsHtml = `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 15px;">
+        <span>${t('col_total_births')}: <strong>${contribData.total_births.toLocaleString()}</strong></span>
+        <span>${t('col_total_families')}: <strong>${contribData.total_families.toLocaleString()}</strong></span>
+        <span>${t('col_total_deaths')}: <strong>${contribData.total_deaths.toLocaleString()}</strong></span>
+        <span>${t('col_total')}: <strong>${contribData.total.toLocaleString()}</strong></span>
+        <span>${t('col_total_links')}: <strong>${contribData.total_links.toLocaleString()}</strong></span>
+        <span>${t('col_last_update')}: <strong>${contribData.last_modified}</strong></span>
+      </div>`;
+    }
+
     const heading = `<div class="matches-page-header">
       <h2 class="matches-page-title">${contributor}</h2>
     </div>
+    ${statsHtml}
     ${urlHtml}
     <div class="surname-cloud-section" style="margin-bottom: 24px;">
       <div class="surname-cloud-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">
