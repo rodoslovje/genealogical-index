@@ -94,7 +94,7 @@ _BIRTH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    cands AS (
+    WITH cands AS (
         SELECT
             b1.id AS a_id,
             b2.id AS b_id,
@@ -146,7 +146,7 @@ _FAMILY_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    cands AS (
+    WITH cands AS (
         SELECT
             f1.id AS a_id,
             f2.id AS b_id,
@@ -215,7 +215,7 @@ _DEATH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    cands AS (
+    WITH cands AS (
         SELECT
             d1.id AS a_id,
             d2.id AS b_id,
