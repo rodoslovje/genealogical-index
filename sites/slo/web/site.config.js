@@ -12,6 +12,7 @@ const siteConfig = {
   contactEmail: 'indeks@rodoslovje.si',
 
   apiHost: 'indeks-api.rodoslovje.si',
+  filePrefix: 'sgi',
 
   // Languages shown in the dropdown, ordered alphabetically by language name
   languages: ['de', 'en', 'hr', 'hu', 'it', 'sl'],

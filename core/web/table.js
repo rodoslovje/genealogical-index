@@ -1,5 +1,6 @@
 import { t, getCurrentLang } from './i18n.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
+import siteConfig from '@site-config';
 
 export function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
@@ -598,7 +599,10 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
     btn.className = 'export-btn';
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV`;
     btn.title = t('download_csv'); // Keeps the tooltip translation for accessibility
-    btn.addEventListener('click', () => exportToCSV(data, columns, `sgi-${containerId.replace('table-', '')}.csv`));
+    btn.addEventListener('click', () => {
+      const prefix = siteConfig.filePrefix || 'sgi';
+      exportToCSV(data, columns, `${prefix}-${containerId.replace('table-', '')}.csv`);
+    });
 
     if (headerEl.classList.contains('totals-bar')) {
       headerEl.appendChild(btn);

@@ -2,6 +2,7 @@ import { t } from './i18n.js';
 import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
 import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
+import siteConfig from '@site-config';
 
 const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified', 'matches'];
 let cachedData = null;
@@ -503,8 +504,9 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
         btnCsv.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV`;
 
         btnCsv.addEventListener('click', () => {
+          const prefix = siteConfig.filePrefix || 'sgi';
           const exportData = data.map(d => ({ surname: d.surname, total: d.count })).sort((a, b) => b.total - a.total);
-          const filename = list.length === 1 ? `sgi-surnames-${list[0]}.csv` : 'sgi-surnames.csv';
+          const filename = list.length === 1 ? `${prefix}-surnames-${list[0]}.csv` : `${prefix}-surnames.csv`;
           exportToCSV(exportData, ['surname', 'total'], filename);
         });
 
@@ -513,7 +515,8 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
         btnSvg.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>SVG`;
 
         btnSvg.addEventListener('click', () => {
-          const filename = list.length === 1 ? `sgi-surnames-${list[0]}.svg` : 'sgi-surnames.svg';
+          const prefix = siteConfig.filePrefix || 'sgi';
+          const filename = list.length === 1 ? `${prefix}-surnames-${list[0]}.svg` : `${prefix}-surnames.svg`;
           downloadCloudAsSVG(cloud, filename);
         });
 
@@ -531,6 +534,10 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
 async function renderMatchesPage(contributor, withPartner) {
   // Close sidebar — not useful on the matches subpage
   document.getElementById('sidebar')?.classList.remove('open');
+
+  if (!withPartner) {
+    window.scrollTo(0, 0);
+  }
 
   const totalsBar = document.getElementById('totals-bar');
   if (totalsBar) totalsBar.style.display = 'none';
@@ -612,7 +619,8 @@ async function renderMatchesPage(contributor, withPartner) {
     const summaryBtn = container.querySelector('.export-matches-summary-btn');
     if (summaryBtn) {
       summaryBtn.addEventListener('click', () => {
-        exportToCSV(tableData, summaryCols, `sgi-matches-${contributor}.csv`);
+        const prefix = siteConfig.filePrefix || 'sgi';
+        exportToCSV(tableData, summaryCols, `${prefix}-matches-${contributor}.csv`);
       });
     }
 
@@ -721,9 +729,13 @@ async function renderMatchDetail(contributor, partner) {
   const partnerUrl = urlMap[partner];
   const partnerUrlHtml = partnerUrl ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener" class="export-btn" style="text-decoration: none;">🔗 ${partnerUrl}</a></div></div>` : '';
 
+  const primaryHtml = `<strong>${contributor}</strong>`;
+  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a></strong>`;
+  const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
+
   let html = `<div class="matches-detail-section">
     <h3 class="section-heading" style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${contributor} × ${partner}</h3>
-    <p>${t('matches_detail_intro')}</p>
+    <p>${introText}</p>
     ${partnerUrlHtml}`;
 
   for (const { key, label, fields, searchUrl, linkedFields } of typeConfig) {
@@ -753,6 +765,7 @@ async function renderMatchDetail(contributor, partner) {
       const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
       const bCells = fields.map(({ f }) => makeCell(r.record_b, f)).join('');
       const conf = Math.round((r.confidence || 0) * 100);
+      const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a>`;
       return `<tr class="match-pair-row ${pairCls}">
                 ${aCells}
                 <td class="match-pair-label match-pair-label-a col-center">${contributor}</td>
@@ -760,7 +773,7 @@ async function renderMatchDetail(contributor, partner) {
               </tr>
               <tr class="match-pair-row ${pairCls}">
                 ${bCells}
-                <td class="match-pair-label match-pair-label-b col-center">${partner}</td>
+                <td class="match-pair-label match-pair-label-b col-center">${partnerLink}</td>
               </tr>`;
     }).join('');
 
@@ -787,6 +800,7 @@ async function renderMatchDetail(contributor, partner) {
 
   detailEl.querySelectorAll('.export-matches-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      const prefix = siteConfig.filePrefix || 'sgi';
       const typeKey = btn.dataset.type;
       const typeData = byType[typeKey];
       const config = typeConfig.find(c => c.key === typeKey);
@@ -796,7 +810,7 @@ async function renderMatchDetail(contributor, partner) {
         flatData.push({ ...r.record_b, contributor_ID: partner, confidence: Math.round((r.confidence || 0) * 100) });
       });
       const cols = [...config.fields.map(f => f.f), 'contributor_ID', 'confidence'];
-      exportToCSV(flatData, cols, `sgi-matches-${typeKey}-${contributor}-${partner}.csv`);
+      exportToCSV(flatData, cols, `${prefix}-matches-${typeKey}-${contributor}-${partner}.csv`);
     });
   });
 

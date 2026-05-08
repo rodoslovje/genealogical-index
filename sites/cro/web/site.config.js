@@ -12,6 +12,7 @@ const siteConfig = {
   contactEmail: 'rodoslovlje@rodoslovlje.hr',
 
   apiHost: 'indeks-api.rodoslovlje.hr',
+  filePrefix: 'cgi',
 
   // Languages shown in the dropdown, ordered alphabetically by language name
   languages: ['de', 'en', 'hr', 'hu', 'it', 'sl'],
