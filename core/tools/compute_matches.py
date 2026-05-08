@@ -104,6 +104,18 @@ _BIRTH_INSERT = text(r"""
                       AND COALESCE(b2.place_of_birth,'') != ''
                  THEN CASE WHEN b1.place_of_birth = b2.place_of_birth THEN 1.0 ELSE similarity(b1.place_of_birth, b2.place_of_birth) END
                  ELSE NULL END AS s_place,
+            CASE WHEN COALESCE(b1.father_name,'') != '' AND COALESCE(b2.father_name,'') != ''
+                 THEN CASE WHEN b1.father_name = b2.father_name THEN 1.0 ELSE similarity(b1.father_name, b2.father_name) END ELSE NULL END AS s_fname,
+            CASE WHEN COALESCE(b1.father_surname,'') != '' AND COALESCE(b2.father_surname,'') != ''
+                 THEN CASE WHEN b1.father_surname = b2.father_surname THEN 1.0 ELSE similarity(b1.father_surname, b2.father_surname) END ELSE NULL END AS s_fsur,
+            CASE WHEN COALESCE(b1.mother_name,'') != '' AND COALESCE(b2.mother_name,'') != ''
+                 THEN CASE WHEN b1.mother_name = b2.mother_name THEN 1.0 ELSE similarity(b1.mother_name, b2.mother_name) END ELSE NULL END AS s_mname,
+            CASE WHEN COALESCE(b1.mother_surname,'') != '' AND COALESCE(b2.mother_surname,'') != ''
+                 THEN CASE WHEN b1.mother_surname = b2.mother_surname THEN 1.0 ELSE similarity(b1.mother_surname, b2.mother_surname) END ELSE NULL END AS s_msur,
+            CASE WHEN COALESCE(b1.husbands_list,'') NOT IN ('', '[]') AND COALESCE(b2.husbands_list,'') NOT IN ('', '[]')
+                 THEN CASE WHEN b1.husbands_list = b2.husbands_list THEN 1.0 ELSE similarity(b1.husbands_list, b2.husbands_list) END ELSE NULL END AS s_hlist,
+            CASE WHEN COALESCE(b1.wifes_list,'') NOT IN ('', '[]') AND COALESCE(b2.wifes_list,'') NOT IN ('', '[]')
+                 THEN CASE WHEN b1.wifes_list = b2.wifes_list THEN 1.0 ELSE similarity(b1.wifes_list, b2.wifes_list) END ELSE NULL END AS s_wlist,
             CASE WHEN b1.birth_year IS NOT NULL AND b2.birth_year IS NOT NULL
                  THEN ABS(b1.birth_year - b2.birth_year)
                  ELSE NULL END AS yr_diff
@@ -115,12 +127,27 @@ _BIRTH_INSERT = text(r"""
           AND (b1.name = b2.name OR similarity(b1.name, b2.name) >= :trgm_thresh)
     ),
     scored AS (
-        SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
-            s_sur  * 0.35 +
-            s_name * 0.30 +
-            COALESCE(s_place, 0.5) * 0.15 +
-            COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 0.20
-            AS conf
+        SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff, s_fname, s_fsur, s_mname, s_msur, s_hlist, s_wlist,
+            (
+                s_sur  * 35.0 +
+                s_name * 30.0 +
+                COALESCE(s_place, 0.5) * 15.0 +
+                COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 20.0 +
+                COALESCE(s_fname, 0.0) * 10.0 +
+                COALESCE(s_fsur,  0.0) * 10.0 +
+                COALESCE(s_mname, 0.0) * 10.0 +
+                COALESCE(s_msur,  0.0) * 10.0 +
+                COALESCE(s_hlist, 0.0) * 15.0 +
+                COALESCE(s_wlist, 0.0) * 15.0
+            ) / (
+                100.0 +
+                CASE WHEN s_fname IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_fsur  IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_mname IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_msur  IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_hlist IS NOT NULL THEN 15.0 ELSE 0.0 END +
+                CASE WHEN s_wlist IS NOT NULL THEN 15.0 ELSE 0.0 END
+            ) AS conf
         FROM cands
     )
     SELECT :contrib_a, :contrib_b, 'birth', a_id, b_id, conf,
@@ -128,7 +155,13 @@ _BIRTH_INSERT = text(r"""
             'surname',   round(s_sur::numeric, 3),
             'name',      round(s_name::numeric, 3),
             'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff', yr_diff
+            'year_diff', yr_diff,
+            'fname',     CASE WHEN s_fname IS NOT NULL THEN round(s_fname::numeric, 3) END,
+            'fsur',      CASE WHEN s_fsur  IS NOT NULL THEN round(s_fsur::numeric, 3) END,
+            'mname',     CASE WHEN s_mname IS NOT NULL THEN round(s_mname::numeric, 3) END,
+            'msur',      CASE WHEN s_msur  IS NOT NULL THEN round(s_msur::numeric, 3) END,
+            'hlist',     CASE WHEN s_hlist IS NOT NULL THEN round(s_hlist::numeric, 3) END,
+            'wlist',     CASE WHEN s_wlist IS NOT NULL THEN round(s_wlist::numeric, 3) END
         )::text
     FROM scored WHERE conf >= :conf_min
     UNION ALL
@@ -137,7 +170,13 @@ _BIRTH_INSERT = text(r"""
             'surname',   round(s_sur::numeric, 3),
             'name',      round(s_name::numeric, 3),
             'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff', yr_diff
+            'year_diff', yr_diff,
+            'fname',     CASE WHEN s_fname IS NOT NULL THEN round(s_fname::numeric, 3) END,
+            'fsur',      CASE WHEN s_fsur  IS NOT NULL THEN round(s_fsur::numeric, 3) END,
+            'mname',     CASE WHEN s_mname IS NOT NULL THEN round(s_mname::numeric, 3) END,
+            'msur',      CASE WHEN s_msur  IS NOT NULL THEN round(s_msur::numeric, 3) END,
+            'hlist',     CASE WHEN s_hlist IS NOT NULL THEN round(s_hlist::numeric, 3) END,
+            'wlist',     CASE WHEN s_wlist IS NOT NULL THEN round(s_wlist::numeric, 3) END
         )::text
     FROM scored WHERE conf >= :conf_min
 """)
@@ -164,6 +203,12 @@ _FAMILY_INSERT = text(r"""
                       AND COALESCE(f2.place_of_marriage,'') != ''
                  THEN CASE WHEN f1.place_of_marriage = f2.place_of_marriage THEN 1.0 ELSE similarity(f1.place_of_marriage, f2.place_of_marriage) END
                  ELSE NULL END AS s_place,
+            CASE WHEN COALESCE(f1.husband_parents,'') NOT IN ('', '[]') AND COALESCE(f2.husband_parents,'') NOT IN ('', '[]')
+                 THEN CASE WHEN f1.husband_parents = f2.husband_parents THEN 1.0 ELSE similarity(f1.husband_parents, f2.husband_parents) END ELSE NULL END AS s_hp,
+            CASE WHEN COALESCE(f1.wife_parents,'') NOT IN ('', '[]') AND COALESCE(f2.wife_parents,'') NOT IN ('', '[]')
+                 THEN CASE WHEN f1.wife_parents = f2.wife_parents THEN 1.0 ELSE similarity(f1.wife_parents, f2.wife_parents) END ELSE NULL END AS s_wp,
+            CASE WHEN COALESCE(f1.children_list,'') NOT IN ('', '[]') AND COALESCE(f2.children_list,'') NOT IN ('', '[]')
+                 THEN CASE WHEN f1.children_list = f2.children_list THEN 1.0 ELSE similarity(f1.children_list, f2.children_list) END ELSE NULL END AS s_cl,
             CASE WHEN f1.marriage_year IS NOT NULL AND f2.marriage_year IS NOT NULL
                  THEN ABS(f1.marriage_year - f2.marriage_year)
                  ELSE NULL END AS yr_diff
@@ -178,14 +223,23 @@ _FAMILY_INSERT = text(r"""
                  OR ABS(f1.marriage_year - f2.marriage_year) <= :yr_tol)
     ),
     scored AS (
-        SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff,
-            s_hsur * 0.25 +
-            s_wsur * 0.25 +
-            COALESCE(s_hname, 0.5) * 0.15 +
-            COALESCE(s_wname, 0.5) * 0.15 +
-            COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 0.10 +
-            COALESCE(s_place, 0.5) * 0.10
-            AS conf
+        SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff, s_hp, s_wp, s_cl,
+            (
+                s_hsur * 25.0 +
+                s_wsur * 25.0 +
+                COALESCE(s_hname, 0.5) * 15.0 +
+                COALESCE(s_wname, 0.5) * 15.0 +
+                COALESCE(s_place, 0.5) * 10.0 +
+                COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 10.0 +
+                COALESCE(s_hp, 0.0) * 15.0 +
+                COALESCE(s_wp, 0.0) * 15.0 +
+                COALESCE(s_cl, 0.0) * 15.0
+            ) / (
+                100.0 +
+                CASE WHEN s_hp IS NOT NULL THEN 15.0 ELSE 0.0 END +
+                CASE WHEN s_wp IS NOT NULL THEN 15.0 ELSE 0.0 END +
+                CASE WHEN s_cl IS NOT NULL THEN 15.0 ELSE 0.0 END
+            ) AS conf
         FROM cands
     )
     SELECT :contrib_a, :contrib_b, 'family', a_id, b_id, conf,
@@ -195,7 +249,10 @@ _FAMILY_INSERT = text(r"""
             'husband_name',    CASE WHEN s_hname IS NOT NULL THEN round(s_hname::numeric, 3) END,
             'wife_name',       CASE WHEN s_wname IS NOT NULL THEN round(s_wname::numeric, 3) END,
             'place',           CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff',       yr_diff
+            'year_diff',       yr_diff,
+            'husband_parents', CASE WHEN s_hp IS NOT NULL THEN round(s_hp::numeric, 3) END,
+            'wife_parents',    CASE WHEN s_wp IS NOT NULL THEN round(s_wp::numeric, 3) END,
+            'children',        CASE WHEN s_cl IS NOT NULL THEN round(s_cl::numeric, 3) END
         )::text
     FROM scored WHERE conf >= :conf_min
     UNION ALL
@@ -206,7 +263,10 @@ _FAMILY_INSERT = text(r"""
             'husband_name',    CASE WHEN s_hname IS NOT NULL THEN round(s_hname::numeric, 3) END,
             'wife_name',       CASE WHEN s_wname IS NOT NULL THEN round(s_wname::numeric, 3) END,
             'place',           CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff',       yr_diff
+            'year_diff',       yr_diff,
+            'husband_parents', CASE WHEN s_hp IS NOT NULL THEN round(s_hp::numeric, 3) END,
+            'wife_parents',    CASE WHEN s_wp IS NOT NULL THEN round(s_wp::numeric, 3) END,
+            'children',        CASE WHEN s_cl IS NOT NULL THEN round(s_cl::numeric, 3) END
         )::text
     FROM scored WHERE conf >= :conf_min
 """)
@@ -225,6 +285,18 @@ _DEATH_INSERT = text(r"""
                       AND COALESCE(d2.place_of_death,'') != ''
                  THEN CASE WHEN d1.place_of_death = d2.place_of_death THEN 1.0 ELSE similarity(d1.place_of_death, d2.place_of_death) END
                  ELSE NULL END AS s_place,
+            CASE WHEN COALESCE(d1.father_name,'') != '' AND COALESCE(d2.father_name,'') != ''
+                 THEN CASE WHEN d1.father_name = d2.father_name THEN 1.0 ELSE similarity(d1.father_name, d2.father_name) END ELSE NULL END AS s_fname,
+            CASE WHEN COALESCE(d1.father_surname,'') != '' AND COALESCE(d2.father_surname,'') != ''
+                 THEN CASE WHEN d1.father_surname = d2.father_surname THEN 1.0 ELSE similarity(d1.father_surname, d2.father_surname) END ELSE NULL END AS s_fsur,
+            CASE WHEN COALESCE(d1.mother_name,'') != '' AND COALESCE(d2.mother_name,'') != ''
+                 THEN CASE WHEN d1.mother_name = d2.mother_name THEN 1.0 ELSE similarity(d1.mother_name, d2.mother_name) END ELSE NULL END AS s_mname,
+            CASE WHEN COALESCE(d1.mother_surname,'') != '' AND COALESCE(d2.mother_surname,'') != ''
+                 THEN CASE WHEN d1.mother_surname = d2.mother_surname THEN 1.0 ELSE similarity(d1.mother_surname, d2.mother_surname) END ELSE NULL END AS s_msur,
+            CASE WHEN COALESCE(d1.husbands_list,'') NOT IN ('', '[]') AND COALESCE(d2.husbands_list,'') NOT IN ('', '[]')
+                 THEN CASE WHEN d1.husbands_list = d2.husbands_list THEN 1.0 ELSE similarity(d1.husbands_list, d2.husbands_list) END ELSE NULL END AS s_hlist,
+            CASE WHEN COALESCE(d1.wifes_list,'') NOT IN ('', '[]') AND COALESCE(d2.wifes_list,'') NOT IN ('', '[]')
+                 THEN CASE WHEN d1.wifes_list = d2.wifes_list THEN 1.0 ELSE similarity(d1.wifes_list, d2.wifes_list) END ELSE NULL END AS s_wlist,
             CASE WHEN d1.death_year IS NOT NULL AND d2.death_year IS NOT NULL
                  THEN ABS(d1.death_year - d2.death_year)
                  ELSE NULL END AS yr_diff
@@ -236,31 +308,47 @@ _DEATH_INSERT = text(r"""
           AND (d1.name = d2.name OR similarity(d1.name, d2.name) >= :trgm_thresh)
     ),
     scored AS (
-        SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
-            s_sur  * 0.35 +
-            s_name * 0.30 +
-            COALESCE(s_place, 0.5) * 0.15 +
-            COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 0.20
-            AS conf
+        SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff, s_fname, s_fsur, s_mname, s_msur, s_hlist, s_wlist,
+            (
+                s_sur  * 35.0 +
+                s_name * 30.0 +
+                COALESCE(s_place, 0.5) * 15.0 +
+                COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 20.0 +
+                COALESCE(s_fname, 0.0) * 10.0 +
+                COALESCE(s_fsur,  0.0) * 10.0 +
+                COALESCE(s_mname, 0.0) * 10.0 +
+                COALESCE(s_msur,  0.0) * 10.0 +
+                COALESCE(s_hlist, 0.0) * 15.0 +
+                COALESCE(s_wlist, 0.0) * 15.0
+            ) / (
+                100.0 +
+                CASE WHEN s_fname IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_fsur  IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_mname IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_msur  IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_hlist IS NOT NULL THEN 15.0 ELSE 0.0 END +
+                CASE WHEN s_wlist IS NOT NULL THEN 15.0 ELSE 0.0 END
+            ) AS conf
         FROM cands
+    ),
+    filtered AS (
+        SELECT a_id, b_id, conf, jsonb_build_object(
+            'surname',   round(s_sur::numeric, 3),
+            'name',      round(s_name::numeric, 3),
+            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
+            'year_diff', yr_diff,
+            'fname',     CASE WHEN s_fname IS NOT NULL THEN round(s_fname::numeric, 3) END,
+            'fsur',      CASE WHEN s_fsur  IS NOT NULL THEN round(s_fsur::numeric, 3) END,
+            'mname',     CASE WHEN s_mname IS NOT NULL THEN round(s_mname::numeric, 3) END,
+            'msur',      CASE WHEN s_msur  IS NOT NULL THEN round(s_msur::numeric, 3) END,
+            'hlist',     CASE WHEN s_hlist IS NOT NULL THEN round(s_hlist::numeric, 3) END,
+            'wlist',     CASE WHEN s_wlist IS NOT NULL THEN round(s_wlist::numeric, 3) END
+        )::text AS match_fields
+        FROM scored WHERE conf >= :conf_min
     )
-    SELECT :contrib_a, :contrib_b, 'death', a_id, b_id, conf,
-        jsonb_build_object(
-            'surname',   round(s_sur::numeric, 3),
-            'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff', yr_diff
-        )::text
-    FROM scored WHERE conf >= :conf_min
+    SELECT :contrib_a, :contrib_b, 'death', a_id, b_id, conf, match_fields FROM filtered
     UNION ALL
-    SELECT :contrib_b, :contrib_a, 'death', b_id, a_id, conf,
-        jsonb_build_object(
-            'surname',   round(s_sur::numeric, 3),
-            'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff', yr_diff
-        )::text
-    FROM scored WHERE conf >= :conf_min
+    SELECT :contrib_b, :contrib_a, 'death', b_id, a_id, conf, match_fields FROM filtered
 """)
 
 
