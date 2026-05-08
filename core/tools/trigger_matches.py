@@ -111,6 +111,11 @@ def main():
         "PostgreSQL queries so the compute_matches process exits after the "
         "current INSERT finishes",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Change 'stopped' and 'error' jobs back to 'pending' and resume matching",
+    )
     args = parser.parse_args()
 
     db = SessionLocal()
@@ -144,7 +149,16 @@ def main():
             print("Workers will exit after their current INSERT completes.")
             return
 
-        if not args.all and not args.contributors:
+        if args.resume:
+            n = db.execute(
+                text(
+                    "UPDATE match_jobs SET status = 'pending' WHERE status IN ('stopped', 'error')"
+                )
+            ).rowcount
+            db.commit()
+            print(f"Resumed {n} job(s). They are now pending.")
+
+        if not args.all and not args.contributors and not args.resume:
             print_status(db)
             print("\nUse --all or --contributor NAME to queue jobs.")
             return

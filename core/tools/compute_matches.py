@@ -94,13 +94,13 @@ _BIRTH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH b1_sur AS (
+    WITH b1_sur AS MATERIALIZED (
         SELECT DISTINCT surname FROM births WHERE contributor = :contrib_a AND surname IS NOT NULL
     ),
-    b2_sur AS (
+    b2_sur AS MATERIALIZED (
         SELECT DISTINCT surname FROM births WHERE contributor = :contrib_b AND surname IS NOT NULL
     ),
-    sur_matches AS (
+    sur_matches AS MATERIALIZED (
         SELECT b1s.surname AS sur1, b2s.surname AS sur2, similarity(b1s.surname, b2s.surname) AS s_sur
         FROM b1_sur b1s
         JOIN b2_sur b2s ON b1s.surname % b2s.surname
@@ -157,24 +157,24 @@ _FAMILY_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH f1_hsur AS (
+    WITH f1_hsur AS MATERIALIZED (
         SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL
     ),
-    f2_hsur AS (
+    f2_hsur AS MATERIALIZED (
         SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
     ),
-    hsur_matches AS (
+    hsur_matches AS MATERIALIZED (
         SELECT s1.husband_surname AS sur1, s2.husband_surname AS sur2, similarity(s1.husband_surname, s2.husband_surname) AS s_hsur
         FROM f1_hsur s1
         JOIN f2_hsur s2 ON s1.husband_surname % s2.husband_surname
     ),
-    f1_wsur AS (
+    f1_wsur AS MATERIALIZED (
         SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
     ),
-    f2_wsur AS (
+    f2_wsur AS MATERIALIZED (
         SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
     ),
-    wsur_matches AS (
+    wsur_matches AS MATERIALIZED (
         SELECT s1.wife_surname AS sur1, s2.wife_surname AS sur2, similarity(s1.wife_surname, s2.wife_surname) AS s_wsur
         FROM f1_wsur s1
         JOIN f2_wsur s2 ON s1.wife_surname % s2.wife_surname
@@ -248,13 +248,13 @@ _DEATH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH d1_sur AS (
+    WITH d1_sur AS MATERIALIZED (
         SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_a AND surname IS NOT NULL
     ),
-    d2_sur AS (
+    d2_sur AS MATERIALIZED (
         SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_b AND surname IS NOT NULL
     ),
-    sur_matches AS (
+    sur_matches AS MATERIALIZED (
         SELECT d1s.surname AS sur1, d2s.surname AS sur2, similarity(d1s.surname, d2s.surname) AS s_sur
         FROM d1_sur d1s
         JOIN d2_sur d2s ON d1s.surname % d2s.surname
