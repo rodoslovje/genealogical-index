@@ -94,24 +94,23 @@ _BIRTH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH b1_names AS MATERIALIZED (
-        SELECT DISTINCT surname, name FROM births WHERE contributor = :contrib_a AND surname IS NOT NULL AND name IS NOT NULL
+    WITH b1_sur AS MATERIALIZED (
+        SELECT DISTINCT surname FROM births WHERE contributor = :contrib_a AND surname IS NOT NULL
     ),
-    b2_names AS MATERIALIZED (
-        SELECT DISTINCT surname, name FROM births WHERE contributor = :contrib_b AND surname IS NOT NULL AND name IS NOT NULL
+    b2_sur AS MATERIALIZED (
+        SELECT DISTINCT surname FROM births WHERE contributor = :contrib_b AND surname IS NOT NULL
     ),
-    name_matches AS MATERIALIZED (
-        SELECT n1.surname AS sur1, n2.surname AS sur2, n1.name AS nam1, n2.name AS nam2,
-               similarity(n1.surname, n2.surname) AS s_sur, similarity(n1.name, n2.name) AS s_name
-        FROM b1_names n1
-        JOIN b2_names n2 ON n1.surname % n2.surname AND n1.name % n2.name
+    sur_matches AS MATERIALIZED (
+        SELECT b1s.surname AS sur1, b2s.surname AS sur2, similarity(b1s.surname, b2s.surname) AS s_sur
+        FROM b1_sur b1s
+        JOIN b2_sur b2s ON b1s.surname % b2s.surname
     ),
     cands AS (
         SELECT
             b1.id AS a_id,
             b2.id AS b_id,
-            nm.s_sur,
-            nm.s_name,
+            sm.s_sur,
+            similarity(b1.name, b2.name) AS s_name,
             CASE WHEN COALESCE(b1.place_of_birth,'') != ''
                       AND COALESCE(b2.place_of_birth,'') != ''
                  THEN similarity(b1.place_of_birth, b2.place_of_birth)
@@ -119,11 +118,12 @@ _BIRTH_INSERT = text(r"""
             CASE WHEN b1.birth_year IS NOT NULL AND b2.birth_year IS NOT NULL
                  THEN ABS(b1.birth_year - b2.birth_year)
                  ELSE NULL END AS yr_diff
-        FROM name_matches nm
-        JOIN births b1 ON b1.contributor = :contrib_a AND b1.surname = nm.sur1 AND b1.name = nm.nam1
-        JOIN births b2 ON b2.contributor = :contrib_b AND b2.surname = nm.sur2 AND b2.name = nm.nam2
+        FROM sur_matches sm
+        JOIN births b1 ON b1.contributor = :contrib_a AND b1.surname = sm.sur1
+        JOIN births b2 ON b2.contributor = :contrib_b AND b2.surname = sm.sur2
         WHERE (b1.birth_year IS NULL OR b2.birth_year IS NULL
                  OR ABS(b1.birth_year - b2.birth_year) <= :yr_tol)
+          AND b1.name % b2.name
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
@@ -157,26 +157,34 @@ _FAMILY_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH f1_surs AS MATERIALIZED (
-        SELECT DISTINCT husband_surname, wife_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL AND wife_surname IS NOT NULL
+    WITH f1_hsur AS MATERIALIZED (
+        SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL
     ),
-    f2_surs AS MATERIALIZED (
-        SELECT DISTINCT husband_surname, wife_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL AND wife_surname IS NOT NULL
+    f2_hsur AS MATERIALIZED (
+        SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
     ),
-    sur_matches AS MATERIALIZED (
-        SELECT s1.husband_surname AS h1, s2.husband_surname AS h2,
-               s1.wife_surname AS w1, s2.wife_surname AS w2,
-               similarity(s1.husband_surname, s2.husband_surname) AS s_hsur,
-               similarity(s1.wife_surname, s2.wife_surname) AS s_wsur
-        FROM f1_surs s1
-        JOIN f2_surs s2 ON s1.husband_surname % s2.husband_surname AND s1.wife_surname % s2.wife_surname
+    hsur_matches AS MATERIALIZED (
+        SELECT s1.husband_surname AS sur1, s2.husband_surname AS sur2, similarity(s1.husband_surname, s2.husband_surname) AS s_hsur
+        FROM f1_hsur s1
+        JOIN f2_hsur s2 ON s1.husband_surname % s2.husband_surname
+    ),
+    f1_wsur AS MATERIALIZED (
+        SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
+    ),
+    f2_wsur AS MATERIALIZED (
+        SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
+    ),
+    wsur_matches AS MATERIALIZED (
+        SELECT s1.wife_surname AS sur1, s2.wife_surname AS sur2, similarity(s1.wife_surname, s2.wife_surname) AS s_wsur
+        FROM f1_wsur s1
+        JOIN f2_wsur s2 ON s1.wife_surname % s2.wife_surname
     ),
     cands AS (
         SELECT
             f1.id AS a_id,
             f2.id AS b_id,
-            sm.s_hsur,
-            sm.s_wsur,
+            hm.s_hsur,
+            wm.s_wsur,
             CASE WHEN COALESCE(f1.husband_name,'') != ''
                       AND COALESCE(f2.husband_name,'') != ''
                  THEN similarity(f1.husband_name, f2.husband_name)
@@ -192,10 +200,14 @@ _FAMILY_INSERT = text(r"""
             CASE WHEN f1.marriage_year IS NOT NULL AND f2.marriage_year IS NOT NULL
                  THEN ABS(f1.marriage_year - f2.marriage_year)
                  ELSE NULL END AS yr_diff
-        FROM sur_matches sm
-        JOIN families f1 ON f1.contributor = :contrib_a AND f1.husband_surname = sm.h1 AND f1.wife_surname = sm.w1
-        JOIN families f2 ON f2.contributor = :contrib_b AND f2.husband_surname = sm.h2 AND f2.wife_surname = sm.w2
-        WHERE (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
+        FROM families f1
+        JOIN hsur_matches hm ON f1.husband_surname = hm.sur1
+        JOIN wsur_matches wm ON f1.wife_surname = wm.sur1
+        JOIN families f2 ON f2.contributor = :contrib_b
+                        AND f2.husband_surname = hm.sur2
+                        AND f2.wife_surname = wm.sur2
+        WHERE f1.contributor = :contrib_a
+          AND (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
                  OR ABS(f1.marriage_year - f2.marriage_year) <= :yr_tol)
     ),
     scored AS (
@@ -236,24 +248,23 @@ _DEATH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH d1_names AS MATERIALIZED (
-        SELECT DISTINCT surname, name FROM deaths WHERE contributor = :contrib_a AND surname IS NOT NULL AND name IS NOT NULL
+    WITH d1_sur AS MATERIALIZED (
+        SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_a AND surname IS NOT NULL
     ),
-    d2_names AS MATERIALIZED (
-        SELECT DISTINCT surname, name FROM deaths WHERE contributor = :contrib_b AND surname IS NOT NULL AND name IS NOT NULL
+    d2_sur AS MATERIALIZED (
+        SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_b AND surname IS NOT NULL
     ),
-    name_matches AS MATERIALIZED (
-        SELECT n1.surname AS sur1, n2.surname AS sur2, n1.name AS nam1, n2.name AS nam2,
-               similarity(n1.surname, n2.surname) AS s_sur, similarity(n1.name, n2.name) AS s_name
-        FROM d1_names n1
-        JOIN d2_names n2 ON n1.surname % n2.surname AND n1.name % n2.name
+    sur_matches AS MATERIALIZED (
+        SELECT d1s.surname AS sur1, d2s.surname AS sur2, similarity(d1s.surname, d2s.surname) AS s_sur
+        FROM d1_sur d1s
+        JOIN d2_sur d2s ON d1s.surname % d2s.surname
     ),
     cands AS (
         SELECT
             d1.id AS a_id,
             d2.id AS b_id,
-            nm.s_sur,
-            nm.s_name,
+            sm.s_sur,
+            similarity(d1.name, d2.name) AS s_name,
             CASE WHEN COALESCE(d1.place_of_death,'') != ''
                       AND COALESCE(d2.place_of_death,'') != ''
                  THEN similarity(d1.place_of_death, d2.place_of_death)
@@ -261,11 +272,12 @@ _DEATH_INSERT = text(r"""
             CASE WHEN d1.death_year IS NOT NULL AND d2.death_year IS NOT NULL
                  THEN ABS(d1.death_year - d2.death_year)
                  ELSE NULL END AS yr_diff
-        FROM name_matches nm
-        JOIN deaths d1 ON d1.contributor = :contrib_a AND d1.surname = nm.sur1 AND d1.name = nm.nam1
-        JOIN deaths d2 ON d2.contributor = :contrib_b AND d2.surname = nm.sur2 AND d2.name = nm.nam2
+        FROM sur_matches sm
+        JOIN deaths d1 ON d1.contributor = :contrib_a AND d1.surname = sm.sur1
+        JOIN deaths d2 ON d2.contributor = :contrib_b AND d2.surname = sm.sur2
         WHERE (d1.death_year IS NULL OR d2.death_year IS NULL
                  OR ABS(d1.death_year - d2.death_year) <= :yr_tol)
+          AND d1.name % d2.name
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
