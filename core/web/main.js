@@ -40,6 +40,7 @@ function setupClearableInput(inputElement, onEnterCallback) {
     inputElement.value = '';
     toggleClearBtn();
     inputElement.focus();
+    inputElement.dispatchEvent(new Event('input'));
   });
 
   inputElement.addEventListener('input', toggleClearBtn);
@@ -273,7 +274,10 @@ async function init() {
   try {
     initI18n();
 
-    setupClearableInput(document.getElementById('contributors-query'));
+    setupClearableInput(document.getElementById('contributors-query'), () => {
+      sidebar.classList.remove('open');
+      document.activeElement?.blur();
+    });
 
     setupGeneralSearch();
     setupBirthSearchForm();
