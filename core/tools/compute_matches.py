@@ -94,18 +94,6 @@ _BIRTH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH b1_sur AS MATERIALIZED (
-        SELECT DISTINCT surname FROM births WHERE contributor = :contrib_a AND surname IS NOT NULL
-    ),
-    b2_sur AS MATERIALIZED (
-        SELECT DISTINCT surname FROM births WHERE contributor = :contrib_b AND surname IS NOT NULL
-    ),
-    sur_matches AS MATERIALIZED (
-        SELECT b1s.surname AS sur1, b2s.surname AS sur2,
-               CASE WHEN b1s.surname = b2s.surname THEN 1.0 ELSE similarity(b1s.surname, b2s.surname) END AS s_sur
-        FROM b1_sur b1s
-        JOIN b2_sur b2s ON b1s.surname = b2s.surname OR b1s.surname % b2s.surname
-    ),
     cands AS (
         SELECT
             b1.id AS a_id,
@@ -124,7 +112,7 @@ _BIRTH_INSERT = text(r"""
         JOIN births b2 ON b2.contributor = :contrib_b AND b2.surname = sm.sur2
         WHERE (b1.birth_year IS NULL OR b2.birth_year IS NULL
                  OR ABS(b1.birth_year - b2.birth_year) <= :yr_tol)
-          AND (b1.name = b2.name OR b1.name % b2.name)
+          AND (b1.name = b2.name OR similarity(b1.name, b2.name) >= :trgm_thresh)
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
@@ -158,36 +146,12 @@ _FAMILY_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH f1_hsur AS MATERIALIZED (
-        SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL
-    ),
-    f2_hsur AS MATERIALIZED (
-        SELECT DISTINCT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
-    ),
-    hsur_matches AS MATERIALIZED (
-        SELECT s1.husband_surname AS sur1, s2.husband_surname AS sur2,
-               CASE WHEN s1.husband_surname = s2.husband_surname THEN 1.0 ELSE similarity(s1.husband_surname, s2.husband_surname) END AS s_hsur
-        FROM f1_hsur s1
-        JOIN f2_hsur s2 ON s1.husband_surname = s2.husband_surname OR s1.husband_surname % s2.husband_surname
-    ),
-    f1_wsur AS MATERIALIZED (
-        SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
-    ),
-    f2_wsur AS MATERIALIZED (
-        SELECT DISTINCT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
-    ),
-    wsur_matches AS MATERIALIZED (
-        SELECT s1.wife_surname AS sur1, s2.wife_surname AS sur2,
-               CASE WHEN s1.wife_surname = s2.wife_surname THEN 1.0 ELSE similarity(s1.wife_surname, s2.wife_surname) END AS s_wsur
-        FROM f1_wsur s1
-        JOIN f2_wsur s2 ON s1.wife_surname = s2.wife_surname OR s1.wife_surname % s2.wife_surname
-    ),
     cands AS (
         SELECT
             f1.id AS a_id,
             f2.id AS b_id,
-            hm.s_hsur,
-            wm.s_wsur,
+            hm.s_sur AS s_hsur,
+            wm.s_sur AS s_wsur,
             CASE WHEN COALESCE(f1.husband_name,'') != ''
                       AND COALESCE(f2.husband_name,'') != ''
                  THEN CASE WHEN f1.husband_name = f2.husband_name THEN 1.0 ELSE similarity(f1.husband_name, f2.husband_name) END
@@ -204,8 +168,8 @@ _FAMILY_INSERT = text(r"""
                  THEN ABS(f1.marriage_year - f2.marriage_year)
                  ELSE NULL END AS yr_diff
         FROM families f1
-        JOIN hsur_matches hm ON f1.husband_surname = hm.sur1
-        JOIN wsur_matches wm ON f1.wife_surname = wm.sur1
+        JOIN sur_matches hm ON f1.husband_surname = hm.sur1
+        JOIN sur_matches wm ON f1.wife_surname = wm.sur1
         JOIN families f2 ON f2.contributor = :contrib_b
                         AND f2.husband_surname = hm.sur2
                         AND f2.wife_surname = wm.sur2
@@ -251,18 +215,6 @@ _DEATH_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
-    WITH d1_sur AS MATERIALIZED (
-        SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_a AND surname IS NOT NULL
-    ),
-    d2_sur AS MATERIALIZED (
-        SELECT DISTINCT surname FROM deaths WHERE contributor = :contrib_b AND surname IS NOT NULL
-    ),
-    sur_matches AS MATERIALIZED (
-        SELECT d1s.surname AS sur1, d2s.surname AS sur2,
-               CASE WHEN d1s.surname = d2s.surname THEN 1.0 ELSE similarity(d1s.surname, d2s.surname) END AS s_sur
-        FROM d1_sur d1s
-        JOIN d2_sur d2s ON d1s.surname = d2s.surname OR d1s.surname % d2s.surname
-    ),
     cands AS (
         SELECT
             d1.id AS a_id,
@@ -281,7 +233,7 @@ _DEATH_INSERT = text(r"""
         JOIN deaths d2 ON d2.contributor = :contrib_b AND d2.surname = sm.sur2
         WHERE (d1.death_year IS NULL OR d2.death_year IS NULL
                  OR ABS(d1.death_year - d2.death_year) <= :yr_tol)
-          AND (d1.name = d2.name OR d1.name % d2.name)
+          AND (d1.name = d2.name OR similarity(d1.name, d2.name) >= :trgm_thresh)
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff,
@@ -338,6 +290,7 @@ def process_job(contrib_a, contrib_b):
         "contrib_b": contrib_b,
         "yr_tol": YEAR_TOLERANCE,
         "conf_min": CONFIDENCE_MIN,
+        "trgm_thresh": TRGM_THRESHOLD,
     }
     pair_label = f"{contrib_a}↔{contrib_b}"
 
@@ -358,6 +311,41 @@ def process_job(contrib_a, contrib_b):
         ).rowcount
         if deleted:
             log.info(f"  [{pair_label}] removed {deleted} stale matches")
+
+        conn.execute(
+            text("""
+            CREATE TEMP TABLE a_sur ON COMMIT DROP AS
+            SELECT surname AS sur FROM births WHERE contributor = :contrib_a AND surname IS NOT NULL
+            UNION SELECT husband_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL
+            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
+            UNION SELECT surname FROM deaths WHERE contributor = :contrib_a AND surname IS NOT NULL;
+
+            ALTER TABLE a_sur ADD PRIMARY KEY (sur);
+
+            CREATE TEMP TABLE b_sur ON COMMIT DROP AS
+            SELECT surname AS sur FROM births WHERE contributor = :contrib_b AND surname IS NOT NULL
+            UNION SELECT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
+            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
+            UNION SELECT surname FROM deaths WHERE contributor = :contrib_b AND surname IS NOT NULL;
+
+            ALTER TABLE b_sur ADD PRIMARY KEY (sur);
+
+            CREATE INDEX b_sur_trgm ON b_sur USING gist(sur gist_trgm_ops);
+            ANALYZE a_sur;
+            ANALYZE b_sur;
+
+            CREATE TEMP TABLE sur_matches ON COMMIT DROP AS
+            SELECT a.sur AS sur1, b.sur AS sur2,
+                   CASE WHEN a.sur = b.sur THEN 1.0 ELSE similarity(a.sur, b.sur) END AS s_sur
+            FROM a_sur a
+            JOIN b_sur b ON a.sur % b.sur;
+
+            CREATE INDEX sur_matches_1 ON sur_matches(sur1);
+            CREATE INDEX sur_matches_2 ON sur_matches(sur2);
+            ANALYZE sur_matches;
+        """),
+            params,
+        )
 
         for sql, label in (
             (_BIRTH_INSERT, "birth"),
