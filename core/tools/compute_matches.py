@@ -131,19 +131,28 @@ _PERSON_INSERT = text(r"""
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_bplace, s_dplace,
                b_yr_diff, d_yr_diff, s_parents, s_partners,
+            -- Always-counted (sum = 90): surname 35 + name 30 + birth_place 10 + birth_year 15.
+            -- Birth fields are essential identity signals, so missing values get the
+            -- COALESCE(0.5) "neutral" treatment rather than being skipped — a record
+            -- with no birth info cannot reach 100%.
+            -- Conditional (only count if present on both sides): death_place 10,
+            -- death_year 10, parents 20, partners 15.  Their absence neither helps
+            -- nor hurts; their presence with a perfect match keeps the score at 100%.
             (
                 s_sur  * 35.0 +
                 s_name * 30.0 +
                 COALESCE(s_bplace, 0.5) * 10.0 +
-                COALESCE(s_dplace, 0.5) * 10.0 +
                 COALESCE(GREATEST(0.0, 1.0 - b_yr_diff::float / :yr_tol), 0.5) * 15.0 +
-                COALESCE(GREATEST(0.0, 1.0 - d_yr_diff::float / :yr_tol), 0.5) * 10.0 +
+                COALESCE(s_dplace, 0.0) * 10.0 +
+                COALESCE(GREATEST(0.0, 1.0 - d_yr_diff::float / :yr_tol), 0.0) * 10.0 +
                 COALESCE(s_parents,  0.0) * 20.0 +
                 COALESCE(s_partners, 0.0) * 15.0
             ) / (
-                100.0 +
-                CASE WHEN s_parents  IS NOT NULL THEN 20.0 ELSE 0.0 END +
-                CASE WHEN s_partners IS NOT NULL THEN 15.0 ELSE 0.0 END
+                90.0 +
+                CASE WHEN s_dplace    IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN d_yr_diff   IS NOT NULL THEN 10.0 ELSE 0.0 END +
+                CASE WHEN s_parents   IS NOT NULL THEN 20.0 ELSE 0.0 END +
+                CASE WHEN s_partners  IS NOT NULL THEN 15.0 ELSE 0.0 END
             ) AS conf
         FROM cands
     ),
