@@ -2,6 +2,10 @@ import { t, getCurrentLang } from './i18n.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
 
+function isPrivate(val) {
+  return val === 'private' || val === '<private>';
+}
+
 export function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
   const headers = columns.map(col => `"${t('col_' + col).replace(/"/g, '""')}"`).join(',');
@@ -34,7 +38,7 @@ export function exportToCSV(data, columns, filename) {
         try {
           const arr = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
           val = arr.map(c => {
-             if (c.name === 'private' || c.name === 'unknown') return c.name;
+             if (isPrivate(c.name) || c.name === 'unknown') return c.name;
              let d = c.name || '';
              if (c.surname && c.surname !== row.husband_surname) d += ' ' + c.surname;
              if (c.year) d += ' *' + c.year;
@@ -273,7 +277,7 @@ export function formatSpecialCell(col, row) {
       const pList = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
       count = pList.length;
       formattedList = pList.map(c => {
-        if (c.name === 'private' || c.name === 'unknown') return c.name;
+        if (isPrivate(c.name) || c.name === 'unknown') return c.name;
 
         const params = new URLSearchParams();
         params.set('t', 'birth');
@@ -314,7 +318,7 @@ export function formatSpecialCell(col, row) {
 
     const makeBirthLink = (name, surname) => {
       const display = [name, surname].filter(Boolean).join(' ');
-      if (name === 'private' || name === 'unknown') return display;
+      if (isPrivate(name) || name === 'unknown') return display;
       const p = new URLSearchParams();
       p.set('t', 'birth');
       if (name) p.set('n', name);
@@ -345,24 +349,24 @@ export function formatSpecialCell(col, row) {
         const mother = pList[1] || {};
         if (!father.name && !mother.name) return '';
 
-        const fName = father.name === 'private' || father.name === 'unknown' ? father.name : father.name || '';
-        const fSur = father.name === 'private' || father.name === 'unknown' ? '' : father.surname || '';
+        const fName = isPrivate(father.name) || father.name === 'unknown' ? father.name : father.name || '';
+        const fSur = isPrivate(father.name) || father.name === 'unknown' ? '' : father.surname || '';
         const fYear = father.year ? ` *${father.year}` : '';
 
-        const mName = mother.name === 'private' || mother.name === 'unknown' ? mother.name : mother.name || '';
-        const mSur = mother.name === 'private' || mother.name === 'unknown' ? '' : mother.surname || '';
+        const mName = isPrivate(mother.name) || mother.name === 'unknown' ? mother.name : mother.name || '';
+        const mSur = isPrivate(mother.name) || mother.name === 'unknown' ? '' : mother.surname || '';
         const mYear = mother.year ? ` *${mother.year}` : '';
 
         const famParams = new URLSearchParams();
         famParams.set('t', 'family');
-        if (fName && fName !== 'unknown' && fName !== 'private') famParams.set('hn', fName);
+        if (fName && fName !== 'unknown' && !isPrivate(fName)) famParams.set('hn', fName);
         if (fSur) famParams.set('hsn', fSur);
-        if (mName && mName !== 'unknown' && mName !== 'private') famParams.set('wn', mName);
+        if (mName && mName !== 'unknown' && !isPrivate(mName)) famParams.set('wn', mName);
         if (mSur) famParams.set('wsn', mSur);
         famParams.set('ex', '1');
 
         const getBirthLink = (n, s, display) => {
-          if (n === 'private' || n === 'unknown') return display;
+          if (isPrivate(n) || n === 'unknown') return display;
           if (!n && !s) return display;
           const bParams = new URLSearchParams();
           bParams.set('t', 'birth');
@@ -409,21 +413,21 @@ export function formatSpecialCell(col, row) {
           const famParams = new URLSearchParams();
           famParams.set('t', 'family');
           if (isHusband) {
-            if (p.name && p.name !== 'unknown' && p.name !== 'private') famParams.set('hn', p.name);
+            if (p.name && p.name !== 'unknown' && !isPrivate(p.name)) famParams.set('hn', p.name);
             if (p.surname) famParams.set('hsn', p.surname);
-            if (row.name && row.name !== 'unknown' && row.name !== 'private') famParams.set('wn', row.name);
+            if (row.name && row.name !== 'unknown' && !isPrivate(row.name)) famParams.set('wn', row.name);
             if (row.surname) famParams.set('wsn', row.surname);
           } else {
-            if (row.name && row.name !== 'unknown' && row.name !== 'private') famParams.set('hn', row.name);
+            if (row.name && row.name !== 'unknown' && !isPrivate(row.name)) famParams.set('hn', row.name);
             if (row.surname) famParams.set('hsn', row.surname);
-            if (p.name && p.name !== 'unknown' && p.name !== 'private') famParams.set('wn', p.name);
+            if (p.name && p.name !== 'unknown' && !isPrivate(p.name)) famParams.set('wn', p.name);
             if (p.surname) famParams.set('wsn', p.surname);
           }
           famParams.set('ex', '1');
           let partnerDisplay = p.name || '';
           if (p.surname) partnerDisplay += ` ${p.surname}`;
           if (p.year) partnerDisplay += ` *${p.year}`;
-          if (p.name === 'private' || p.name === 'unknown') partnerDisplay = p.name;
+          if (isPrivate(p.name) || p.name === 'unknown') partnerDisplay = p.name;
           const label = isHusband ? t('label_husband') : t('label_wife');
           formattedList.push(`<a href="${toUnicodeHref(famParams)}" data-spa-nav title="${label}">${partnerDisplay}</a>`);
         });
