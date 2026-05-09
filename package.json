@@ -11,7 +11,10 @@
     "preview:slo": "npm run preview --workspace=sites/slo",
     "dev:cro": "npm run dev --workspace=sites/cro",
     "build:cro": "npm run build --workspace=sites/cro",
-    "preview:cro": "npm run preview --workspace=sites/cro"
+    "preview:cro": "npm run preview --workspace=sites/cro",
+    "dev:test": "npm run dev --workspace=sites/test",
+    "build:test": "npm run build --workspace=sites/test",
+    "preview:test": "npm run preview --workspace=sites/test"
   },
   "devDependencies": {
     "vite": "^8.0.9"

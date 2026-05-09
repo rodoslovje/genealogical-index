@@ -15,7 +15,13 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     # Fallback to local .env file if running outside of Docker Compose
     load_dotenv("../.env")
-    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@localhost:5432/{os.getenv('POSTGRES_DB')}"
+    import urllib.parse
+
+    _db_host = "db" if os.path.exists("/.dockerenv") else "localhost"
+    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote_plus(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
+    # Prevent a poisoned DATABASE_URL from .env affecting downstream scripts
+    if "DATABASE_URL" in os.environ:
+        os.environ["DATABASE_URL"] = DATABASE_URL
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
