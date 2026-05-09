@@ -105,9 +105,13 @@ button:hover { opacity: 0.9; }
 h2 .export-btn {
   float: right;
   margin-top: -2px;
+  margin-left: 10px;
 }
 .totals-bar .export-btn {
   margin-left: auto;
+}
+.totals-bar .export-btn ~ .export-btn {
+  margin-left: 10px;
 }
 
 .table-responsive { overflow-x: clip; margin-bottom: 2rem; }

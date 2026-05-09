@@ -776,21 +776,34 @@ async function renderMatchDetail(contributor, partner) {
               </tr>`;
     }).join('');
 
-    html += `<div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 1.5rem; margin-bottom: 10px;">
-      <h4 style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
-      <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
-      </button>
-    </div>
-    <div class="table-responsive">
-      <table class="matches-detail-table">
-        <thead><tr>
-          ${headerCells}
-          <th class="col-center">${t('col_contributor_ID')}</th>
-          <th class="col-center">${t('col_confidence')}</th>
-        </tr></thead>
-        <tbody>${groupRows}</tbody>
-      </table>
+    // Only show the expand-all toggle when this group's table actually contains
+    // expandable cells (parents/partners/children).
+    const hasExpandable = fields.some(f => f.f === 'parents' || f.f === 'partners' || f.f === 'children');
+    const expandBtnHtml = hasExpandable
+      ? `<button class="export-btn expand-toggle-btn expand-matches-btn" data-type="${key}" data-all-open="0" title="${t('expand_all')}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>${t('expand_all')}
+        </button>`
+      : '';
+    html += `<div class="matches-section" data-type="${key}">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 1.5rem; margin-bottom: 10px;">
+        <h4 style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
+        <div class="matches-section-actions" style="display: flex; gap: 10px;">
+          ${expandBtnHtml}
+          <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
+          </button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="matches-detail-table">
+          <thead><tr>
+            ${headerCells}
+            <th class="col-center">${t('col_contributor_ID')}</th>
+            <th class="col-center">${t('col_confidence')}</th>
+          </tr></thead>
+          <tbody>${groupRows}</tbody>
+        </table>
+      </div>
     </div>`;
   }
 
@@ -810,6 +823,22 @@ async function renderMatchDetail(contributor, partner) {
       });
       const cols = [...config.fields.map(f => f.f), 'contributor_ID', 'confidence'];
       exportToCSV(flatData, cols, `${prefix}-matches-${typeKey}-${contributor}-${partner}.csv`);
+    });
+  });
+
+  detailEl.querySelectorAll('.expand-matches-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const section = btn.closest('.matches-section');
+      if (!section) return;
+      const targetOpen = btn.dataset.allOpen !== '1';
+      section.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
+      btn.dataset.allOpen = targetOpen ? '1' : '0';
+      const text = targetOpen ? t('collapse_all') : t('expand_all');
+      const icon = targetOpen
+        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`
+        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+      btn.innerHTML = `${icon}${text}`;
+      btn.title = text;
     });
   });
 

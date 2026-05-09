@@ -579,10 +579,38 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   container.innerHTML = html;
 
   if (isHeaderValid) {
-    let btn = headerEl.querySelector('.export-btn');
-    if (btn) btn.remove();
+    headerEl.querySelectorAll('.export-btn, .expand-toggle-btn').forEach(b => b.remove());
 
-    btn = document.createElement('button');
+    // Expand/collapse-all toggle — only show when the rendered table actually
+    // has expandable cells (parents/partners/children).  Skipping it on tables
+    // that don't keeps the header uncluttered.
+    const expandables = container.querySelectorAll('details.expandable-cell');
+    let expandBtn = null;
+    if (expandables.length) {
+      expandBtn = document.createElement('button');
+      expandBtn.className = 'export-btn expand-toggle-btn';
+      const setExpandLabel = (allOpen) => {
+        const icon = allOpen
+          // Two arrows pointing inward (collapse)
+          ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`
+          // Two arrows pointing outward (expand)
+          : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+        const text = allOpen ? t('collapse_all') : t('expand_all');
+        expandBtn.innerHTML = `${icon}${text}`;
+        expandBtn.title = text;
+        expandBtn.dataset.allOpen = allOpen ? '1' : '0';
+      };
+      // Initial state reflects current details (typically all collapsed).
+      const initialAllOpen = Array.from(expandables).every(d => d.open);
+      setExpandLabel(initialAllOpen);
+      expandBtn.addEventListener('click', () => {
+        const targetOpen = expandBtn.dataset.allOpen !== '1';
+        container.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
+        setExpandLabel(targetOpen);
+      });
+    }
+
+    const btn = document.createElement('button');
     btn.className = 'export-btn';
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV`;
     btn.title = t('download_csv'); // Keeps the tooltip translation for accessibility
@@ -592,8 +620,11 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
     });
 
     if (headerEl.classList.contains('totals-bar')) {
+      if (expandBtn) headerEl.appendChild(expandBtn);
       headerEl.appendChild(btn);
     } else {
+      // Prepended in reverse order so the visible left-to-right order is: CSV, Expand
+      if (expandBtn) headerEl.insertBefore(expandBtn, headerEl.firstChild);
       headerEl.insertBefore(btn, headerEl.firstChild);
     }
   }
