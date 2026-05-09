@@ -14,6 +14,20 @@ globalStyles.textContent = `
 document.head.appendChild(globalStyles);
 
 const SEARCH_TABS = ['tab-general', 'tab-person', 'tab-family', 'tab-contributors'];
+
+/** Rewrite legacy ?t=birth / ?t=death values to ?t=person via replaceState.
+ *  Runs at app load and when SPA-navigating into a legacy URL so the address
+ *  bar always shows the canonical tab.  Other params (n, sn, dob, pob, dod, pod…)
+ *  already line up with the unified person form so nothing else needs renaming. */
+function normalizeLegacyURL() {
+  const params = new URLSearchParams(window.location.search);
+  const t = params.get('t');
+  const mapped = t && LEGACY_TAB_MAP[t];
+  if (!mapped) return;
+  params.set('t', mapped);
+  const url = window.location.pathname + '?' + toUnicodeSearch(params);
+  history.replaceState(null, '', url);
+}
 export const tabsWithResults = new Set();
 
 // --- Clearable inputs ---
@@ -288,10 +302,13 @@ async function init() {
 
     sidebar.classList.add('open');
 
-    // Infer active tab from URL params (legacy birth/death map to person)
+    // Rewrite legacy ?t=birth or ?t=death URLs to ?t=person before any other
+    // logic looks at the URL, so the address bar shows the canonical form.
+    normalizeLegacyURL();
+
+    // Infer active tab from the (now-normalized) URL.
     const urlParams = new URLSearchParams(window.location.search);
-    const urlTRaw = urlParams.get('t');
-    const urlT = LEGACY_TAB_MAP[urlTRaw] || urlTRaw;
+    const urlT = urlParams.get('t');
     let urlTab = 'general';
     if (urlT === 'contributors') urlTab = 'contributors';
     else if (urlT === 'person') urlTab = 'person';
@@ -317,9 +334,10 @@ init();
 
 // --- SPA navigation (shared by link clicks and popstate) ---
 function navigateToURL(urlSearch) {
-  const urlParams = new URLSearchParams(urlSearch);
-  const rawT = urlParams.get('t') || 'general';
-  const urlT = LEGACY_TAB_MAP[rawT] || rawT;
+  // If the user followed a legacy ?t=birth / ?t=death link, rewrite it before doing anything.
+  normalizeLegacyURL();
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlT = urlParams.get('t') || 'general';
   const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors' };
   const targetTab = tabMap[urlT] || 'tab-general';
   isInitializing = true;
