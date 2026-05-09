@@ -297,7 +297,6 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 .date-range {
   display: flex;
   gap: 8px;
-  margin-bottom: 10px;
 }
 
 .date-range .input-wrapper {
@@ -307,6 +306,27 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 
 .date-range .input-wrapper:last-child {
   flex: 0 0 38%;
+}
+
+/* Visual grouping for related fields (e.g. birth: date+place; death: date+place). */
+.field-group {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.field-group-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666;
+  margin-bottom: 2px;
 }
 
 .input-wrapper input {

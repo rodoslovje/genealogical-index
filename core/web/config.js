@@ -8,7 +8,7 @@ export const personColumns = ['name', 'surname', 'parents', 'partners',
   'date_of_birth', 'place_of_birth', 'date_of_death', 'place_of_death',
   'links', 'contributor'];
 export const familyColumns = ['husband_name', 'husband_surname', 'wife_name', 'wife_surname',
-  'parents', 'children', 'date_of_marriage', 'place_of_marriage',
+  'parents', 'date_of_marriage', 'place_of_marriage', 'children',
   'links', 'contributor'];
 
 // Columns excluded from the search form (display-only in results table)

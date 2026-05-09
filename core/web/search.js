@@ -297,35 +297,88 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   const exactId = `${prefix}exact`;
   const hasLinkId = `${prefix}has_link`;
 
+  // Group related fields (date+place, name+surname) under a small section label
+  // so they read as one block.  Other columns flow normally.
+  const FIELD_GROUPS = {
+    husband_name:     { startLabelKey: 'label_husband',  members: ['husband_name', 'husband_surname'] },
+    wife_name:        { startLabelKey: 'label_wife',     members: ['wife_name', 'wife_surname'] },
+    date_of_birth:    { startLabelKey: 'label_birth',    members: ['date_of_birth', 'place_of_birth'] },
+    date_of_death:    { startLabelKey: 'label_death',    members: ['date_of_death', 'place_of_death'] },
+    date_of_marriage: { startLabelKey: 'label_marriage', members: ['date_of_marriage', 'place_of_marriage'] },
+  };
+  const GROUPED_FIELDS = new Set();
+  Object.values(FIELD_GROUPS).forEach(g => g.members.forEach(m => GROUPED_FIELDS.add(m)));
+
+  // When a column is rendered inside its group's box, the group label already
+  // conveys the prefix ("Husband", "Birth", ...) — show just the short term.
+  const GROUPED_PLACEHOLDER_KEYS = {
+    husband_name: 'col_name',
+    husband_surname: 'col_surname',
+    wife_name: 'col_name',
+    wife_surname: 'col_surname',
+    date_of_birth: 'col_date',
+    place_of_birth: 'col_place',
+    date_of_death: 'col_date',
+    place_of_death: 'col_place',
+    date_of_marriage: 'col_date',
+    place_of_marriage: 'col_place',
+  };
+
+  function renderInput(col, { grouped = false } = {}) {
+    const inputId = `${prefix}${col}`;
+    const labelKey = grouped && GROUPED_PLACEHOLDER_KEYS[col] ? GROUPED_PLACEHOLDER_KEYS[col] : `col_${col}`;
+    const label = t(labelKey);
+    const val = document.getElementById(inputId)?.value || '';
+    if (DATE_RANGE_COLUMNS.has(col)) {
+      const toId = `${prefix}${col}_to`;
+      const toVal = document.getElementById(toId)?.value || '';
+      return `<div class="date-range">
+                <div class="input-wrapper">
+                  <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
+                  <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
+                </div>
+                <div class="input-wrapper">
+                  <input type="text" id="${toId}" placeholder="${t('date_to')}" value="${toVal}" />
+                  <button type="button" class="clear-btn" style="display:${toVal ? 'block' : 'none'}">&times;</button>
+                </div>
+              </div>`;
+    }
+    return `<div class="input-wrapper">
+              <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
+              <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
+            </div>`;
+  }
+
   function renderFields() {
     const approxExists = document.getElementById(`${prefix}exact-approx`);
     const exactChecked = approxExists ? document.getElementById(exactId)?.checked : true;
     const hasLinkChecked = document.getElementById(hasLinkId)?.checked || false;
+    const visibleColumns = columns.filter(col => !DISPLAY_ONLY_COLUMNS.has(col));
     let html = '';
-    columns.filter(col => !DISPLAY_ONLY_COLUMNS.has(col)).forEach(col => {
-      const inputId = `${prefix}${col}`;
-      const label = t(`col_${col}`);
-      const val = document.getElementById(inputId)?.value || '';
-      if (DATE_RANGE_COLUMNS.has(col)) {
-        const toId = `${prefix}${col}_to`;
-        const toVal = document.getElementById(toId)?.value || '';
-        html += `<div class="date-range">
-                   <div class="input-wrapper">
-                     <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
-                     <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
-                   </div>
-                   <div class="input-wrapper">
-                     <input type="text" id="${toId}" placeholder="${t('date_to')}" value="${toVal}" />
-                     <button type="button" class="clear-btn" style="display:${toVal ? 'block' : 'none'}">&times;</button>
-                   </div>
+    let i = 0;
+    while (i < visibleColumns.length) {
+      const col = visibleColumns[i];
+      const group = FIELD_GROUPS[col];
+      if (group) {
+        const memberSet = new Set(group.members);
+        const inner = [];
+        while (i < visibleColumns.length && memberSet.has(visibleColumns[i])) {
+          inner.push(renderInput(visibleColumns[i], { grouped: true }));
+          i++;
+        }
+        html += `<div class="field-group">
+                   <div class="field-group-label">${t(group.startLabelKey)}</div>
+                   ${inner.join('')}
                  </div>`;
+      } else if (GROUPED_FIELDS.has(col)) {
+        // Member of a group whose start column wasn't present — render standalone.
+        html += renderInput(col);
+        i++;
       } else {
-        html += `<div class="input-wrapper">
-                   <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
-                   <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
-                 </div>`;
+        html += renderInput(col);
+        i++;
       }
-    });
+    }
     html += `<label class="exact-toggle">
                <input type="checkbox" id="${hasLinkId}"${hasLinkChecked ? ' checked' : ''} />
                <span>${t('has_link')}</span>
