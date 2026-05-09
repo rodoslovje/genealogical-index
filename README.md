@@ -237,6 +237,7 @@ Edit `.env`:
 POSTGRES_DB=sgi_db
 POSTGRES_USER=sgi_user
 POSTGRES_PASSWORD=a_strong_password_here
+POSTGRES_HOST=db
 
 # API hostname (without https://) — must match your Caddy config
 API_HOST=api.yourdomain.com

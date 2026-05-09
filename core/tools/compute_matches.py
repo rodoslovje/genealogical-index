@@ -54,10 +54,12 @@ if not DATABASE_URL:
         pass
     import urllib.parse
 
-    _db_host = "db" if os.path.exists("/.dockerenv") else "localhost"
-    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote_plus(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
-    if "DATABASE_URL" in os.environ:
-        os.environ["DATABASE_URL"] = DATABASE_URL
+    _db_host = os.getenv(
+        "POSTGRES_HOST", "db" if os.path.exists("/.dockerenv") else "localhost"
+    )
+    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
+
+os.environ["DATABASE_URL"] = DATABASE_URL
 
 # pool_size matches typical --workers usage; overflow handles bursts
 engine = create_engine(DATABASE_URL, pool_size=8, max_overflow=4)

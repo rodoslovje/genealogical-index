@@ -11,7 +11,7 @@ const siteConfig = {
   indexUrl:    null,
   contactEmail: 'indeks@rodoslovje.si',
 
-  apiHost: 'tgi-api.rodoslovje.si',
+  apiHost: 'tgi-api.renko.fyi',
   filePrefix: 'tgi',
 
   // Languages shown in the dropdown, ordered alphabetically by language name
