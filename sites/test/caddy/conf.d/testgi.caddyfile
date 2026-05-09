@@ -1,0 +1,17 @@
+# Test Genealogical Index — Caddy site block
+# Place this file in the Caddy conf.d/ directory on your server.
+# Replace the domain names to match your environment.
+
+# Frontend — serves the built Vite app
+tgi.renko.fyi {
+    root * /var/www/sites/tgi
+    file_server
+    try_files {path} /index.html
+    encode gzip
+}
+
+# Backend API — reverse proxy to the Docker container
+tgi-api.renko.fyi {
+    reverse_proxy tgi_api:8000
+    encode gzip
+}

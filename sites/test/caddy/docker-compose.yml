@@ -1,0 +1,27 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      # Root Caddyfile — imports all snippets from conf.d/
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Per-service config snippets — add one .caddyfile per project
+      - ./conf.d:/etc/caddy/conf.d:ro
+      # Persistent Caddy data: TLS certs, OCSP staples, etc.
+      - caddy_data:/data
+      # Static websites served by Caddy (bind-mount from host)
+      # Each site lives in its own subdirectory, e.g. /var/www/sgi
+      - /var/www:/var/www:ro
+
+volumes:
+  caddy_data:
+
+networks:
+  default:
+    name: caddy_net
+    external: true

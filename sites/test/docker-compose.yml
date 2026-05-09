@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tgi_postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  api:
+    build: ../../core/backend
+    container_name: tgi_api
+    volumes:
+      - ../../data:/app/data
+      - ../../core/tools:/app/tools
+      - ../../core/backend/src:/app/src
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+      - VIRTUAL_HOST=${API_HOST}
+      - VIRTUAL_PORT=8000
+      - LETSENCRYPT_HOST=${API_HOST}
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: caddy_net
+    external: true
