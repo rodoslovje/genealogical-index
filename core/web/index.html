@@ -26,9 +26,8 @@
           </div>
           <div class="header-nav">
             <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
-            <button class="tab-btn" data-target="tab-birth" data-i18n="tab_birth">Birth</button>
+            <button class="tab-btn" data-target="tab-person" data-i18n="tab_person">Person</button>
             <button class="tab-btn" data-target="tab-family" data-i18n="tab_family">Family</button>
-            <button class="tab-btn" data-target="tab-death" data-i18n="tab_death">Death</button>
             <button class="tab-btn" data-target="tab-contributors" data-i18n="tab_contributors">Genealogists</button>
           </div>
           <div class="lang-switcher" id="lang-switcher">
@@ -56,20 +55,18 @@
           <section id="tab-general" class="tab-content active">
             <div id="intro-general" class="intro-text"></div>
             <div id="general-results" class="results-container" style="display: none;">
-              <h2><span data-i18n="results_births">Birth</span> (<span id="count-general-births">0</span>)</h2>
-              <div class="table-responsive" id="table-general-births"></div>
+              <h2><span data-i18n="results_persons">Person</span> (<span id="count-general-persons">0</span>)</h2>
+              <div class="table-responsive" id="table-general-persons"></div>
               <h2><span data-i18n="results_families">Family</span> (<span id="count-general-families">0</span>)</h2>
               <div class="table-responsive" id="table-general-families"></div>
-              <h2><span data-i18n="results_deaths">Death</span> (<span id="count-general-deaths">0</span>)</h2>
-              <div class="table-responsive" id="table-general-deaths"></div>
             </div>
           </section>
 
-          <section id="tab-birth" class="tab-content">
-            <div id="intro-birth" class="intro-text"></div>
-            <div id="birth-results" class="results-container" style="display: none;">
-              <h2><span data-i18n="results_births">Birth</span> (<span id="count-birth-results">0</span>)</h2>
-              <div class="table-responsive" id="table-birth-results"></div>
+          <section id="tab-person" class="tab-content">
+            <div id="intro-person" class="intro-text"></div>
+            <div id="person-results" class="results-container" style="display: none;">
+              <h2><span data-i18n="results_persons">Person</span> (<span id="count-person-results">0</span>)</h2>
+              <div class="table-responsive" id="table-person-results"></div>
             </div>
           </section>
 
@@ -81,20 +78,11 @@
             </div>
           </section>
 
-          <section id="tab-death" class="tab-content">
-            <div id="intro-death" class="intro-text"></div>
-            <div id="death-results" class="results-container" style="display: none;">
-              <h2><span data-i18n="results_deaths">Death</span> (<span id="count-death-results">0</span>)</h2>
-              <div class="table-responsive" id="table-death-results"></div>
-            </div>
-          </section>
-
           <section id="tab-contributors" class="tab-content">
             <div id="totals-bar" class="totals-bar" style="display:none;">
               <span><span data-i18n="tab_contributors">Genealogists</span>: <strong id="total-contributors">…</strong></span>
-              <span><span data-i18n="col_total_births">Birth</span>: <strong id="total-births">…</strong></span>
-              <span><span data-i18n="col_total_families">Family</span>: <strong id="total-families">…</strong></span>
-              <span><span data-i18n="col_total_deaths">Death</span>: <strong id="total-deaths">…</strong></span>
+              <span><span data-i18n="col_total_persons">Persons</span>: <strong id="total-persons">…</strong></span>
+              <span><span data-i18n="col_total_families">Families</span>: <strong id="total-families">…</strong></span>
               <span><span data-i18n="col_total">Total</span>: <strong id="total-all">…</strong></span>
               <span><span data-i18n="col_total_links">Links</span>: <strong id="total-links">…</strong></span>
               <span><span data-i18n="col_last_update">Last update</span>: <strong id="total-last-update">…</strong></span>
@@ -117,9 +105,8 @@
         <aside id="sidebar">
           <div class="sidebar-nav">
             <button class="tab-btn active" data-target="tab-general" data-i18n="tab_search">Search</button>
-            <button class="tab-btn" data-target="tab-birth" data-i18n="tab_birth">Birth</button>
+            <button class="tab-btn" data-target="tab-person" data-i18n="tab_person">Person</button>
             <button class="tab-btn" data-target="tab-family" data-i18n="tab_family">Family</button>
-            <button class="tab-btn" data-target="tab-death" data-i18n="tab_death">Death</button>
             <button class="tab-btn" data-target="tab-contributors" data-i18n="tab_contributors">Genealogists</button>
           </div>
 
@@ -127,20 +114,14 @@
             <div id="general-search-controls" class="search-box"></div>
           </div>
 
-          <div id="birth-search-sidebar" class="sidebar-section">
-            <div class="search-box" id="birth-search-controls">
+          <div id="person-search-sidebar" class="sidebar-section">
+            <div class="search-box" id="person-search-controls">
               <!-- Controls injected by JS -->
             </div>
           </div>
 
           <div id="family-search-sidebar" class="sidebar-section">
             <div class="search-box" id="family-search-controls">
-              <!-- Controls injected by JS -->
-            </div>
-          </div>
-
-          <div id="death-search-sidebar" class="sidebar-section">
-            <div class="search-box" id="death-search-controls">
               <!-- Controls injected by JS -->
             </div>
           </div>

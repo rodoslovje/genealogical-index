@@ -2,22 +2,21 @@ from typing import List, Optional, Any
 from pydantic import BaseModel
 
 
-class BirthBase(BaseModel):
+class PersonBase(BaseModel):
     name: str
     surname: str
-    date_of_birth: str
-    place_of_birth: str
-    father_name: Optional[str] = None
-    father_surname: Optional[str] = None
-    mother_name: Optional[str] = None
-    mother_surname: Optional[str] = None
-    husbands_list: Optional[Any] = None
-    wifes_list: Optional[Any] = None
+    sex: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    place_of_birth: Optional[str] = None
+    date_of_death: Optional[str] = None
+    place_of_death: Optional[str] = None
+    parents_list: Optional[Any] = None
+    partners_list: Optional[Any] = None
     contributor: str
     links: Optional[str] = None
 
 
-class Birth(BirthBase):
+class Person(PersonBase):
     id: int
 
     class Config:
@@ -45,32 +44,9 @@ class Family(FamilyBase):
         from_attributes = True
 
 
-class DeathBase(BaseModel):
-    name: str
-    surname: str
-    date_of_death: str
-    place_of_death: str
-    father_name: Optional[str] = None
-    father_surname: Optional[str] = None
-    mother_name: Optional[str] = None
-    mother_surname: Optional[str] = None
-    husbands_list: Optional[Any] = None
-    wifes_list: Optional[Any] = None
-    contributor: str
-    links: Optional[str] = None
-
-
-class Death(DeathBase):
-    id: int
-
-    class Config:
-        from_attributes = True
-
-
 class GeneralSearchResponse(BaseModel):
-    births: List[Birth]
+    persons: List[Person]
     families: List[Family]
-    deaths: List[Death]
 
 
 class TimelineStat(BaseModel):
@@ -83,9 +59,8 @@ class TimelineStat(BaseModel):
 class Contributor(BaseModel):
     name: str
     last_modified: str
-    births_count: int
+    persons_count: int
     families_count: int
-    deaths_count: int
     links_count: int
     url: Optional[str] = None
 
@@ -100,9 +75,8 @@ class SurnameStat(BaseModel):
 
 class MatchPartner(BaseModel):
     contributor: str
-    births_count: int = 0
+    persons_count: int = 0
     families_count: int = 0
-    deaths_count: int = 0
     total_count: int = 0
     max_confidence: float = 0.0
     computed_at: Optional[str] = None

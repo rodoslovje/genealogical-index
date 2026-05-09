@@ -6,9 +6,8 @@ const translations = {
   en: {
     // Navigation tabs
     tab_search: 'Search',
-    tab_birth: 'Birth',
+    tab_person: 'Person',
     tab_family: 'Family',
-    tab_death: 'Death',
     tab_contributors: 'Genealogists',
 
     // Search controls
@@ -30,9 +29,11 @@ const translations = {
     section_surnames: 'Top Surnames',
 
     // Result section headings
-    results_births: 'Birth',
+    results_persons: 'Person',
     results_families: 'Family',
-    results_deaths: 'Death',
+    chart_births: 'Births',
+    chart_marriages: 'Marriages',
+    chart_deaths: 'Deaths',
 
     // Status messages
     loading: 'Loading genealogical data...',
@@ -66,9 +67,8 @@ const translations = {
     col_date_of_marriage: 'Date of Marriage',
     col_place_of_marriage: 'Place of Marriage',
     col_contributor_ID: 'Genealogist',
-    col_total_births: 'Birth',
-    col_total_families: 'Family',
-    col_total_deaths: 'Death',
+    col_total_persons: 'Persons',
+    col_total_families: 'Families',
     col_total: 'Total',
     col_last_modified: 'Last Change',
     col_last_update: 'Last update',
@@ -99,9 +99,8 @@ const translations = {
     contributor_surnames_outro: 'has the following top surnames in their tree:',
     more_info_about: 'More information about',
     back_to_genealogists: 'Genealogists',
-    matches_births: 'Births',
+    matches_persons: 'Persons',
     matches_families: 'Families',
-    matches_deaths: 'Deaths',
 
     // Footer
     footer_version: 'Version',
@@ -115,9 +114,8 @@ const translations = {
   sl: {
     // Navigation tabs
     tab_search: 'Iskanje',
-    tab_birth: 'Rojstvo',
+    tab_person: 'Oseba',
     tab_family: 'Družina',
-    tab_death: 'Smrt',
     tab_contributors: 'Rodoslovci',
 
     // Search controls
@@ -139,9 +137,11 @@ const translations = {
     section_surnames: 'Najpogostejši priimki',
 
     // Result section headings
-    results_births: 'Rojstvo',
-    results_families: 'Družina',
-    results_deaths: 'Smrt',
+    results_persons: 'Osebe',
+    results_families: 'Družine',
+    chart_births: 'Rojstva',
+    chart_marriages: 'Poroke',
+    chart_deaths: 'Smrti',
 
     // Status messages
     loading: 'Nalaganje genealoških podatkov...',
@@ -175,9 +175,8 @@ const translations = {
     col_date_of_marriage: 'Datum poroke',
     col_place_of_marriage: 'Kraj poroke',
     col_contributor_ID: 'Rodoslovec',
-    col_total_births: 'Rojstvo',
-    col_total_families: 'Družina',
-    col_total_deaths: 'Smrt',
+    col_total_persons: 'Osebe',
+    col_total_families: 'Družine',
     col_total: 'Skupaj',
     col_last_modified: 'Zadnja sprememba',
     col_last_update: 'Zadnja posodobitev',
@@ -208,9 +207,8 @@ const translations = {
     contributor_surnames_outro: 'ima v svojem drevesu naslednje najpogostejše priimke:',
     more_info_about: 'Več informacij o',
     back_to_genealogists: 'Rodoslovci',
-    matches_births: 'Rojstva',
+    matches_persons: 'Osebe',
     matches_families: 'Družine',
-    matches_deaths: 'Smrti',
 
     // Footer
     footer_version: 'Različica',
@@ -224,9 +222,8 @@ const translations = {
   hr: {
     // Navigation tabs
     tab_search: 'Pretraga',
-    tab_birth: 'Rođenje',
+    tab_person: 'Osoba',
     tab_family: 'Obitelj',
-    tab_death: 'Smrt',
     tab_contributors: 'Rodoslovci',
 
     // Search controls
@@ -248,9 +245,11 @@ const translations = {
     section_surnames: 'Najčešća prezimena',
 
     // Result section headings
-    results_births: 'Rođenje',
-    results_families: 'Obitelj',
-    results_deaths: 'Smrt',
+    results_persons: 'Osobe',
+    results_families: 'Obitelji',
+    chart_births: 'Rođenja',
+    chart_marriages: 'Vjenčanja',
+    chart_deaths: 'Smrti',
 
     // Status messages
     loading: 'Učitavanje rodoslovnih podataka...',
@@ -284,9 +283,8 @@ const translations = {
     col_date_of_marriage: 'Datum vjenčanja',
     col_place_of_marriage: 'Mjesto vjenčanja',
     col_contributor_ID: 'Rodoslovac',
-    col_total_births: 'Rođenje',
-    col_total_families: 'Obitelj',
-    col_total_deaths: 'Smrt',
+    col_total_persons: 'Osobe',
+    col_total_families: 'Obitelji',
     col_total: 'Ukupno',
     col_last_modified: 'Zadnja izmjena',
     col_last_update: 'Zadnje ažuriranje',
@@ -317,9 +315,8 @@ const translations = {
     contributor_surnames_outro: 'ima u svom stablu sljedeća najčešća prezimena:',
     more_info_about: 'Više informacija o',
     back_to_genealogists: 'Rodoslovci',
-    matches_births: 'Rođenja',
+    matches_persons: 'Osobe',
     matches_families: 'Obitelji',
-    matches_deaths: 'Smrti',
 
     // Footer
     footer_version: 'Verzija',
@@ -333,9 +330,8 @@ const translations = {
   de: {
     // Navigation tabs
     tab_search: 'Suche',
-    tab_birth: 'Geburt',
+    tab_person: 'Person',
     tab_family: 'Familie',
-    tab_death: 'Tod',
     tab_contributors: 'Genealogen',
 
     // Search controls
@@ -357,9 +353,11 @@ const translations = {
     section_surnames: 'Häufigste Nachnamen',
 
     // Result section headings
-    results_births: 'Geburt',
-    results_families: 'Familie',
-    results_deaths: 'Tod',
+    results_persons: 'Personen',
+    results_families: 'Familien',
+    chart_births: 'Geburten',
+    chart_marriages: 'Heiraten',
+    chart_deaths: 'Sterbefälle',
 
     // Status messages
     loading: 'Genealogische Daten werden geladen...',
@@ -393,9 +391,8 @@ const translations = {
     col_date_of_marriage: 'Heiratsdatum',
     col_place_of_marriage: 'Heiratsort',
     col_contributor_ID: 'Genealoge',
-    col_total_births: 'Geburt',
-    col_total_families: 'Familie',
-    col_total_deaths: 'Tod',
+    col_total_persons: 'Personen',
+    col_total_families: 'Familien',
     col_total: 'Gesamt',
     col_last_modified: 'Letzte Änderung',
     col_last_update: 'Letztes Update',
@@ -426,9 +423,8 @@ const translations = {
     contributor_surnames_outro: 'hat die folgenden häufigsten Nachnamen in seinem Stammbaum:',
     more_info_about: 'Weitere Informationen über',
     back_to_genealogists: 'Genealogen',
-    matches_births: 'Geburten',
+    matches_persons: 'Personen',
     matches_families: 'Familien',
-    matches_deaths: 'Sterbefälle',
 
     // Footer
     footer_version: 'Version',
@@ -442,9 +438,8 @@ const translations = {
   hu: {
     // Navigation tabs
     tab_search: 'Keresés',
-    tab_birth: 'Születés',
+    tab_person: 'Személy',
     tab_family: 'Család',
-    tab_death: 'Halál',
     tab_contributors: 'Genealógusok',
 
     // Search controls
@@ -466,9 +461,11 @@ const translations = {
     section_surnames: 'Leggyakoribb vezetéknevek',
 
     // Result section headings
-    results_births: 'Születés',
-    results_families: 'Család',
-    results_deaths: 'Halál',
+    results_persons: 'Személyek',
+    results_families: 'Családok',
+    chart_births: 'Születések',
+    chart_marriages: 'Házasságkötések',
+    chart_deaths: 'Halálozások',
 
     // Status messages
     loading: 'Genealógiai adatok betöltése...',
@@ -502,9 +499,8 @@ const translations = {
     col_date_of_marriage: 'Házasságkötés dátuma',
     col_place_of_marriage: 'Házasságkötés helye',
     col_contributor_ID: 'Genealógus',
-    col_total_births: 'Születés',
-    col_total_families: 'Család',
-    col_total_deaths: 'Halál',
+    col_total_persons: 'Személyek',
+    col_total_families: 'Családok',
     col_total: 'Összesen',
     col_last_modified: 'Utolsó módosítás',
     col_last_update: 'Utolsó frissítés',
@@ -535,9 +531,8 @@ const translations = {
     contributor_surnames_outro: 'a következő leggyakoribb vezetéknevekkel rendelkezik a családfájában:',
     more_info_about: 'További információk róla:',
     back_to_genealogists: 'Genealógusok',
-    matches_births: 'Születések',
+    matches_persons: 'Személyek',
     matches_families: 'Családok',
-    matches_deaths: 'Halálozások',
 
     // Footer
     footer_version: 'Verzió',
@@ -551,9 +546,8 @@ const translations = {
   it: {
     // Navigation tabs
     tab_search: 'Ricerca',
-    tab_birth: 'Nascita',
+    tab_person: 'Persona',
     tab_family: 'Famiglia',
-    tab_death: 'Morte',
     tab_contributors: 'Genealogisti',
 
     // Search controls
@@ -575,9 +569,11 @@ const translations = {
     section_surnames: 'Cognomi più frequenti',
 
     // Result section headings
-    results_births: 'Nascita',
-    results_families: 'Famiglia',
-    results_deaths: 'Morte',
+    results_persons: 'Persone',
+    results_families: 'Famiglie',
+    chart_births: 'Nascite',
+    chart_marriages: 'Matrimoni',
+    chart_deaths: 'Morti',
 
     // Status messages
     loading: 'Caricamento dei dati genealogici...',
@@ -611,9 +607,8 @@ const translations = {
     col_date_of_marriage: 'Data di matrimonio',
     col_place_of_marriage: 'Luogo di matrimonio',
     col_contributor_ID: 'Genealogista',
-    col_total_births: 'Nascita',
-    col_total_families: 'Famiglia',
-    col_total_deaths: 'Morte',
+    col_total_persons: 'Persone',
+    col_total_families: 'Famiglie',
     col_total: 'Totale',
     col_last_modified: 'Ultima modifica',
     col_last_update: 'Ultimo aggiornamento',
@@ -644,9 +639,8 @@ const translations = {
     contributor_surnames_outro: 'ha i seguenti cognomi più frequenti nel suo albero:',
     more_info_about: 'Maggiori informazioni su',
     back_to_genealogists: 'Genealogisti',
-    matches_births: 'Nascite',
+    matches_persons: 'Persone',
     matches_families: 'Famiglie',
-    matches_deaths: 'Morti',
 
     // Footer
     footer_version: 'Versione',

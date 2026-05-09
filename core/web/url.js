@@ -26,6 +26,12 @@ export const PARAM_MAP = {
   date_to:          'dt',
 };
 
+/** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point at the unified person tab. */
+export const LEGACY_TAB_MAP = {
+  birth: 'person',
+  death: 'person',
+};
+
 export const PARAM_MAP_REVERSE = Object.fromEntries(
   Object.entries(PARAM_MAP).map(([field, short]) => [short, field])
 );

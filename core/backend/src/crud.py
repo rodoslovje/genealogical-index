@@ -49,58 +49,54 @@ def get_match_counts(db: Session):
 def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b: str):
     results = []
 
-    birth_rows = db.execute(
+    person_rows = db.execute(
         text("""
         SELECT m.confidence, m.match_fields,
-               b1.id AS a_id, b1.name AS a_name, b1.surname AS a_surname,
-               b1.date_of_birth AS a_date, b1.place_of_birth AS a_place,
-               b1.father_name AS a_fname, b1.father_surname AS a_fsur,
-               b1.mother_name AS a_mname, b1.mother_surname AS a_msur,
-               b1.husbands_list AS a_hl, b1.wifes_list AS a_wl,
-               b2.id AS b_id, b2.name AS b_name, b2.surname AS b_surname,
-               b2.date_of_birth AS b_date, b2.place_of_birth AS b_place,
-               b2.father_name AS b_fname, b2.father_surname AS b_fsur,
-               b2.mother_name AS b_mname, b2.mother_surname AS b_msur,
-               b2.husbands_list AS b_hl, b2.wifes_list AS b_wl
+               p1.id AS a_id, p1.name AS a_name, p1.surname AS a_surname, p1.sex AS a_sex,
+               p1.date_of_birth AS a_dob, p1.place_of_birth AS a_pob,
+               p1.date_of_death AS a_dod, p1.place_of_death AS a_pod,
+               p1.parents_list AS a_parents, p1.partners_list AS a_partners,
+               p2.id AS b_id, p2.name AS b_name, p2.surname AS b_surname, p2.sex AS b_sex,
+               p2.date_of_birth AS b_dob, p2.place_of_birth AS b_pob,
+               p2.date_of_death AS b_dod, p2.place_of_death AS b_pod,
+               p2.parents_list AS b_parents, p2.partners_list AS b_partners
         FROM matches m
-        JOIN births b1 ON m.record_a_id = b1.id
-        JOIN births b2 ON m.record_b_id = b2.id
-        WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'birth'
+        JOIN persons p1 ON m.record_a_id = p1.id
+        JOIN persons p2 ON m.record_b_id = p2.id
+        WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'person'
         ORDER BY m.confidence DESC
     """),
         {"a": contributor_a, "b": contributor_b},
     ).fetchall()
-    for r in birth_rows:
+    for r in person_rows:
         results.append(
             {
-                "record_type": "birth",
+                "record_type": "person",
                 "confidence": r.confidence,
                 "match_fields": r.match_fields,
                 "record_a": {
                     "id": r.a_id,
                     "name": r.a_name,
                     "surname": r.a_surname,
-                    "date": r.a_date,
-                    "place": r.a_place,
-                    "father_name": r.a_fname,
-                    "father_surname": r.a_fsur,
-                    "mother_name": r.a_mname,
-                    "mother_surname": r.a_msur,
-                    "husbands_list": r.a_hl,
-                    "wifes_list": r.a_wl,
+                    "sex": r.a_sex,
+                    "date_of_birth": r.a_dob,
+                    "place_of_birth": r.a_pob,
+                    "date_of_death": r.a_dod,
+                    "place_of_death": r.a_pod,
+                    "parents_list": r.a_parents,
+                    "partners_list": r.a_partners,
                 },
                 "record_b": {
                     "id": r.b_id,
                     "name": r.b_name,
                     "surname": r.b_surname,
-                    "date": r.b_date,
-                    "place": r.b_place,
-                    "father_name": r.b_fname,
-                    "father_surname": r.b_fsur,
-                    "mother_name": r.b_mname,
-                    "mother_surname": r.b_msur,
-                    "husbands_list": r.b_hl,
-                    "wifes_list": r.b_wl,
+                    "sex": r.b_sex,
+                    "date_of_birth": r.b_dob,
+                    "place_of_birth": r.b_pob,
+                    "date_of_death": r.b_dod,
+                    "place_of_death": r.b_pod,
+                    "parents_list": r.b_parents,
+                    "partners_list": r.b_partners,
                 },
             }
         )
@@ -136,8 +132,8 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                     "husband_surname": r.a_hsur,
                     "wife_name": r.a_wname,
                     "wife_surname": r.a_wsur,
-                    "date": r.a_date,
-                    "place": r.a_place,
+                    "date_of_marriage": r.a_date,
+                    "place_of_marriage": r.a_place,
                     "husband_parents": r.a_hp,
                     "wife_parents": r.a_wp,
                     "children_list": r.a_cl,
@@ -148,67 +144,11 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                     "husband_surname": r.b_hsur,
                     "wife_name": r.b_wname,
                     "wife_surname": r.b_wsur,
-                    "date": r.b_date,
-                    "place": r.b_place,
+                    "date_of_marriage": r.b_date,
+                    "place_of_marriage": r.b_place,
                     "husband_parents": r.b_hp,
                     "wife_parents": r.b_wp,
                     "children_list": r.b_cl,
-                },
-            }
-        )
-
-    death_rows = db.execute(
-        text("""
-        SELECT m.confidence, m.match_fields,
-               d1.id AS a_id, d1.name AS a_name, d1.surname AS a_surname,
-               d1.date_of_death AS a_date, d1.place_of_death AS a_place,
-               d1.father_name AS a_fname, d1.father_surname AS a_fsur,
-               d1.mother_name AS a_mname, d1.mother_surname AS a_msur,
-               d1.husbands_list AS a_hl, d1.wifes_list AS a_wl,
-               d2.id AS b_id, d2.name AS b_name, d2.surname AS b_surname,
-               d2.date_of_death AS b_date, d2.place_of_death AS b_place,
-               d2.father_name AS b_fname, d2.father_surname AS b_fsur,
-               d2.mother_name AS b_mname, d2.mother_surname AS b_msur,
-               d2.husbands_list AS b_hl, d2.wifes_list AS b_wl
-        FROM matches m
-        JOIN deaths d1 ON m.record_a_id = d1.id
-        JOIN deaths d2 ON m.record_b_id = d2.id
-        WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'death'
-        ORDER BY m.confidence DESC
-    """),
-        {"a": contributor_a, "b": contributor_b},
-    ).fetchall()
-    for r in death_rows:
-        results.append(
-            {
-                "record_type": "death",
-                "confidence": r.confidence,
-                "match_fields": r.match_fields,
-                "record_a": {
-                    "id": r.a_id,
-                    "name": r.a_name,
-                    "surname": r.a_surname,
-                    "date": r.a_date,
-                    "place": r.a_place,
-                    "father_name": r.a_fname,
-                    "father_surname": r.a_fsur,
-                    "mother_name": r.a_mname,
-                    "mother_surname": r.a_msur,
-                    "husbands_list": r.a_hl,
-                    "wifes_list": r.a_wl,
-                },
-                "record_b": {
-                    "id": r.b_id,
-                    "name": r.b_name,
-                    "surname": r.b_surname,
-                    "date": r.b_date,
-                    "place": r.b_place,
-                    "father_name": r.b_fname,
-                    "father_surname": r.b_fsur,
-                    "mother_name": r.b_mname,
-                    "mother_surname": r.b_msur,
-                    "husbands_list": r.b_hl,
-                    "wifes_list": r.b_wl,
                 },
             }
         )
@@ -221,9 +161,8 @@ def get_contributor_matches(db: Session, contributor: str):
         text("""
             SELECT
                 contributor_b                                               AS contributor,
-                SUM(CASE WHEN record_type = 'birth'  THEN 1 ELSE 0 END)   AS births_count,
+                SUM(CASE WHEN record_type = 'person' THEN 1 ELSE 0 END)   AS persons_count,
                 SUM(CASE WHEN record_type = 'family' THEN 1 ELSE 0 END)   AS families_count,
-                SUM(CASE WHEN record_type = 'death'  THEN 1 ELSE 0 END)   AS deaths_count,
                 COUNT(*)                                                    AS total_count,
                 MAX(confidence)                                             AS max_confidence,
                 MAX(computed_at)::text                                      AS computed_at
@@ -247,17 +186,17 @@ def get_contributors(db: Session):
 
 
 def get_timeline_distribution(db: Session):
-    """Extracts 4-digit years from births, marriages, and deaths for the timeline."""
+    """Extracts 4-digit years from persons (birth & death) and families (marriage)."""
     now = time.time()
     if _timeline_cache["data"] is not None and (
         now - _timeline_cache["time"] < CACHE_TTL
     ):
         return _timeline_cache["data"]
 
-    birth_year = cast(func.substring(models.Birth.date_of_birth, r"\d{4}"), Integer)
+    birth_year = cast(func.substring(models.Person.date_of_birth, r"\d{4}"), Integer)
     births = (
-        db.query(birth_year.label("year"), func.count(models.Birth.id))
-        .filter(models.Birth.date_of_birth.op("~")(r"\d{4}"))
+        db.query(birth_year.label("year"), func.count(models.Person.id))
+        .filter(models.Person.date_of_birth.op("~")(r"\d{4}"))
         .group_by("year")
         .all()
     )
@@ -270,10 +209,10 @@ def get_timeline_distribution(db: Session):
         .all()
     )
 
-    death_year = cast(func.substring(models.Death.date_of_death, r"\d{4}"), Integer)
+    death_year = cast(func.substring(models.Person.date_of_death, r"\d{4}"), Integer)
     deaths = (
-        db.query(death_year.label("year"), func.count(models.Death.id))
-        .filter(models.Death.date_of_death.op("~")(r"\d{4}"))
+        db.query(death_year.label("year"), func.count(models.Person.id))
+        .filter(models.Person.date_of_death.op("~")(r"\d{4}"))
         .group_by("year")
         .all()
     )
@@ -309,14 +248,14 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
     if cached and (now - cached["time"] < CACHE_TTL):
         return cached["data"][:limit]
 
-    q = db.query(models.Birth.surname, func.count(models.Birth.id)).group_by(
-        models.Birth.surname
+    q = db.query(models.Person.surname, func.count(models.Person.id)).group_by(
+        models.Person.surname
     )
     if contributors:
         if len(contributors) == 1:
-            q = q.filter(models.Birth.contributor == contributors[0])
+            q = q.filter(models.Person.contributor == contributors[0])
         else:
-            q = q.filter(models.Birth.contributor.in_(contributors))
+            q = q.filter(models.Person.contributor.in_(contributors))
 
     counts = {}
     for surname, c in q.all():
@@ -365,13 +304,11 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
         decade_max = decade_prefix * 10 + 9
         decade_conds = [column.op("~")(r"\d{3}_")]
         if exact:
-            # Entire decade must fall within the search range
             if from_year:
                 decade_conds.append(decade_min >= from_year)
             if to_year:
                 decade_conds.append(decade_max <= to_year)
         else:
-            # Any overlap with the search range is enough
             if from_year:
                 decade_conds.append(decade_max >= from_year)
             if to_year:
@@ -384,13 +321,11 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
         century_max = century_prefix * 100 + 99
         century_conds = [column.op("~")(r"\d{2}__")]
         if exact:
-            # Entire century must fall within the search range
             if from_year:
                 century_conds.append(century_min >= from_year)
             if to_year:
                 century_conds.append(century_max <= to_year)
         else:
-            # Any overlap with the search range is enough
             if from_year:
                 century_conds.append(century_max >= from_year)
             if to_year:
@@ -413,8 +348,6 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
 
 def _text_filter(column, value, exact: bool):
     if exact:
-        # Match value as a whole word using ILIKE patterns — all are index-friendly.
-        # Covers: full field, start, end, and middle word positions.
         v = value.replace("%", r"\%").replace("_", r"\_")
         return or_(
             column.ilike(v),
@@ -423,6 +356,14 @@ def _text_filter(column, value, exact: bool):
             column.ilike(f"% {v} %"),
         )
     return or_(column.op("%>")(cast(value, Text)), column.ilike(f"%{value}%"))
+
+
+def _set_trgm(db: Session, exact: bool):
+    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
+    db.execute(
+        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
+    )
 
 
 def search_all(
@@ -439,39 +380,42 @@ def search_all(
     exact: bool = False,
     record_type: str = None,
 ):
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
-    db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
-    )
+    _set_trgm(db, exact)
 
-    births = []
-    if record_type in (None, "births"):
-        births_q = db.query(models.Birth)
+    persons = []
+    if record_type in (None, "persons"):
+        q = db.query(models.Person)
         if name:
-            births_q = births_q.filter(_text_filter(models.Birth.name, name, exact))
+            q = q.filter(_text_filter(models.Person.name, name, exact))
         if surname:
-            births_q = births_q.filter(
-                _text_filter(models.Birth.surname, surname, exact)
-            )
+            q = q.filter(_text_filter(models.Person.surname, surname, exact))
         if place:
-            births_q = births_q.filter(
-                _text_filter(models.Birth.place_of_birth, place, exact)
+            q = q.filter(
+                or_(
+                    _text_filter(models.Person.place_of_birth, place, exact),
+                    _text_filter(models.Person.place_of_death, place, exact),
+                )
             )
+        # Date range filters apply to either birth or death.
         date_cond_b = _date_filter(
-            models.Birth.date_of_birth, date_from, date_to, exact
+            models.Person.date_of_birth, date_from, date_to, exact
         )
-        if date_cond_b is not None:
-            births_q = births_q.filter(date_cond_b)
+        date_cond_d = _date_filter(
+            models.Person.date_of_death, date_from, date_to, exact
+        )
+        if date_cond_b is not None and date_cond_d is not None:
+            q = q.filter(or_(date_cond_b, date_cond_d))
+        elif date_cond_b is not None:
+            q = q.filter(date_cond_b)
         if contributor:
-            births_q = births_q.filter(
-                _text_filter(models.Birth.contributor, contributor, exact)
+            q = q.filter(
+                _text_filter(models.Person.contributor, contributor, exact)
             )
         if has_link:
-            births_q = births_q.filter(
-                models.Birth.links.isnot(None), models.Birth.links != ""
+            q = q.filter(
+                models.Person.links.isnot(None), models.Person.links != ""
             )
-        births = births_q.offset(skip).limit(limit).all()
+        persons = q.offset(skip).limit(limit).all()
 
     families = []
     if record_type in (None, "families"):
@@ -509,75 +453,59 @@ def search_all(
             )
         families = families_q.offset(skip).limit(limit).all()
 
-    deaths = []
-    if record_type in (None, "deaths"):
-        deaths_q = db.query(models.Death)
-        if name:
-            deaths_q = deaths_q.filter(_text_filter(models.Death.name, name, exact))
-        if surname:
-            deaths_q = deaths_q.filter(
-                _text_filter(models.Death.surname, surname, exact)
-            )
-        if place:
-            deaths_q = deaths_q.filter(
-                _text_filter(models.Death.place_of_death, place, exact)
-            )
-        date_cond_d = _date_filter(
-            models.Death.date_of_death, date_from, date_to, exact
-        )
-        if date_cond_d is not None:
-            deaths_q = deaths_q.filter(date_cond_d)
-        if contributor:
-            deaths_q = deaths_q.filter(
-                _text_filter(models.Death.contributor, contributor, exact)
-            )
-        if has_link:
-            deaths_q = deaths_q.filter(
-                models.Death.links.isnot(None), models.Death.links != ""
-            )
-        deaths = deaths_q.offset(skip).limit(limit).all()
-
-    return {"births": births, "families": families, "deaths": deaths}
+    return {"persons": persons, "families": families}
 
 
-def search_advanced_births(
+def search_advanced_persons(
     db: Session,
     name: str = None,
     surname: str = None,
     date_of_birth: str = None,
     date_of_birth_to: str = None,
     place_of_birth: str = None,
+    date_of_death: str = None,
+    date_of_death_to: str = None,
+    place_of_death: str = None,
     contributor: str = None,
     has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
 ):
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
-    db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
-    )
+    _set_trgm(db, exact)
 
-    query = db.query(models.Birth)
+    query = db.query(models.Person)
 
     if name:
-        query = query.filter(_text_filter(models.Birth.name, name, exact))
+        query = query.filter(_text_filter(models.Person.name, name, exact))
     if surname:
-        query = query.filter(_text_filter(models.Birth.surname, surname, exact))
+        query = query.filter(_text_filter(models.Person.surname, surname, exact))
     if place_of_birth:
         query = query.filter(
-            _text_filter(models.Birth.place_of_birth, place_of_birth, exact)
+            _text_filter(models.Person.place_of_birth, place_of_birth, exact)
         )
-    date_cond = _date_filter(
-        models.Birth.date_of_birth, date_of_birth, date_of_birth_to, exact
+    if place_of_death:
+        query = query.filter(
+            _text_filter(models.Person.place_of_death, place_of_death, exact)
+        )
+    bcond = _date_filter(
+        models.Person.date_of_birth, date_of_birth, date_of_birth_to, exact
     )
-    if date_cond is not None:
-        query = query.filter(date_cond)
+    if bcond is not None:
+        query = query.filter(bcond)
+    dcond = _date_filter(
+        models.Person.date_of_death, date_of_death, date_of_death_to, exact
+    )
+    if dcond is not None:
+        query = query.filter(dcond)
     if contributor:
-        query = query.filter(_text_filter(models.Birth.contributor, contributor, exact))
+        query = query.filter(
+            _text_filter(models.Person.contributor, contributor, exact)
+        )
     if has_link:
-        query = query.filter(models.Birth.links.isnot(None), models.Birth.links != "")
+        query = query.filter(
+            models.Person.links.isnot(None), models.Person.links != ""
+        )
 
     return query.offset(skip).limit(limit).all()
 
@@ -598,11 +526,7 @@ def search_advanced_families(
     limit: int = 100,
     exact: bool = False,
 ):
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
-    db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
-    )
+    _set_trgm(db, exact)
 
     query = db.query(models.Family)
 
@@ -621,8 +545,6 @@ def search_advanced_families(
             _text_filter(models.Family.wife_surname, wife_surname, exact)
         )
     if children:
-        # children_list is a JSON array: names appear as JSON string values surrounded by quotes.
-        # Use ILIKE '%"value"%' for exact word match, or '%value%' for approximate.
         v = children.replace("%", r"\%").replace("_", r"\_")
         if exact:
             children_filter = models.Family.children_list.ilike(f'%"{v}"%')
@@ -647,47 +569,5 @@ def search_advanced_families(
         )
     if has_link:
         query = query.filter(models.Family.links.isnot(None), models.Family.links != "")
-
-    return query.offset(skip).limit(limit).all()
-
-
-def search_advanced_deaths(
-    db: Session,
-    name: str = None,
-    surname: str = None,
-    date_of_death: str = None,
-    date_of_death_to: str = None,
-    place_of_death: str = None,
-    contributor: str = None,
-    has_link: bool = False,
-    skip: int = 0,
-    limit: int = 100,
-    exact: bool = False,
-):
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
-    db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
-    )
-
-    query = db.query(models.Death)
-
-    if name:
-        query = query.filter(_text_filter(models.Death.name, name, exact))
-    if surname:
-        query = query.filter(_text_filter(models.Death.surname, surname, exact))
-    if place_of_death:
-        query = query.filter(
-            _text_filter(models.Death.place_of_death, place_of_death, exact)
-        )
-    date_cond = _date_filter(
-        models.Death.date_of_death, date_of_death, date_of_death_to, exact
-    )
-    if date_cond is not None:
-        query = query.filter(date_cond)
-    if contributor:
-        query = query.filter(_text_filter(models.Death.contributor, contributor, exact))
-    if has_link:
-        query = query.filter(models.Death.links.isnot(None), models.Death.links != "")
 
     return query.offset(skip).limit(limit).all()

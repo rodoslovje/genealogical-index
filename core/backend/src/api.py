@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -88,7 +88,7 @@ def search_general(
     db: Session = Depends(get_db),
 ):
     if not any([name, surname, date_from, date_to, place, contributor]):
-        return {"births": [], "families": [], "deaths": []}
+        return {"persons": [], "families": []}
     return crud.search_all(
         db,
         name=name,
@@ -104,26 +104,32 @@ def search_general(
     )
 
 
-@app.get("/api/search/advanced/births", response_model=List[schemas.Birth])
-def search_advanced_births(
+@app.get("/api/search/advanced/persons", response_model=List[schemas.Person])
+def search_advanced_persons(
     name: Optional[str] = None,
     surname: Optional[str] = None,
     date_of_birth: Optional[str] = None,
     date_of_birth_to: Optional[str] = None,
     place_of_birth: Optional[str] = None,
+    date_of_death: Optional[str] = None,
+    date_of_death_to: Optional[str] = None,
+    place_of_death: Optional[str] = None,
     contributor: Optional[str] = None,
     has_link: bool = False,
     limit: int = 500,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
-    return crud.search_advanced_births(
+    return crud.search_advanced_persons(
         db,
-        name,
-        surname,
-        date_of_birth,
+        name=name,
+        surname=surname,
+        date_of_birth=date_of_birth,
         date_of_birth_to=date_of_birth_to,
         place_of_birth=place_of_birth,
+        date_of_death=date_of_death,
+        date_of_death_to=date_of_death_to,
+        place_of_death=place_of_death,
         contributor=contributor,
         has_link=has_link,
         limit=limit,
@@ -157,33 +163,6 @@ def search_advanced_families(
         date_of_marriage,
         date_of_marriage_to=date_of_marriage_to,
         place_of_marriage=place_of_marriage,
-        contributor=contributor,
-        has_link=has_link,
-        limit=limit,
-        exact=exact,
-    )
-
-
-@app.get("/api/search/advanced/deaths", response_model=List[schemas.Death])
-def search_advanced_deaths(
-    name: Optional[str] = None,
-    surname: Optional[str] = None,
-    date_of_death: Optional[str] = None,
-    date_of_death_to: Optional[str] = None,
-    place_of_death: Optional[str] = None,
-    contributor: Optional[str] = None,
-    has_link: bool = False,
-    limit: int = 500,
-    exact: bool = False,
-    db: Session = Depends(get_db),
-):
-    return crud.search_advanced_deaths(
-        db,
-        name,
-        surname,
-        date_of_death,
-        date_of_death_to=date_of_death_to,
-        place_of_death=place_of_death,
         contributor=contributor,
         has_link=has_link,
         limit=limit,

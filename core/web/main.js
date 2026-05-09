@@ -2,8 +2,8 @@ import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import siteConfig from '@site-config';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
-import { setupGeneralSearch, setupBirthSearchForm, setupFamilySearchForm, setupDeathSearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
-import { toUnicodeSearch } from './url.js';
+import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
+import { toUnicodeSearch, LEGACY_TAB_MAP } from './url.js';
 
 // --- Global Link Styles ---
 const globalStyles = document.createElement('style');
@@ -13,7 +13,7 @@ globalStyles.textContent = `
 `;
 document.head.appendChild(globalStyles);
 
-const SEARCH_TABS = ['tab-general', 'tab-birth', 'tab-family', 'tab-death', 'tab-contributors'];
+const SEARCH_TABS = ['tab-general', 'tab-person', 'tab-family', 'tab-contributors'];
 export const tabsWithResults = new Set();
 
 // --- Clearable inputs ---
@@ -90,7 +90,7 @@ export function renderIntros() {
   `;
 
   const html = paragraphs + logo + otherIndexesHtml;
-  ['intro-general', 'intro-birth', 'intro-family', 'intro-death'].forEach(id => {
+  ['intro-general', 'intro-person', 'intro-family'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
   });
@@ -102,7 +102,7 @@ export function hideIntro(id) {
 }
 
 export function showIntros(onlyId = null) {
-  ['intro-general', 'intro-birth', 'intro-family', 'intro-death'].forEach(id => {
+  ['intro-general', 'intro-person', 'intro-family'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.style.display = (!onlyId || id === onlyId) ? '' : 'none';
@@ -180,9 +180,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
     const tabTypeMap = {
       'tab-general':      'general',
-      'tab-birth':        'birth',
+      'tab-person':       'person',
       'tab-family':       'family',
-      'tab-death':        'death',
       'tab-contributors': 'contributors',
     };
     const urlT = tabTypeMap[targetTab];
@@ -212,18 +211,16 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
     const resultsMap = {
       'tab-general': 'general-results',
-      'tab-birth':   'birth-results',
+      'tab-person':  'person-results',
       'tab-family':  'family-results',
-      'tab-death':   'death-results',
     };
-    ['tab-general', 'tab-birth', 'tab-family', 'tab-death'].forEach(tab => {
+    ['tab-general', 'tab-person', 'tab-family'].forEach(tab => {
       if (tab !== targetTab) document.getElementById(resultsMap[tab])?.style.setProperty('display', 'none');
     });
     const introMap = {
       'tab-general': 'intro-general',
-      'tab-birth':   'intro-birth',
+      'tab-person':  'intro-person',
       'tab-family':  'intro-family',
-      'tab-death':   'intro-death',
     };
     if (tabsWithResults.has(targetTab)) {
       document.getElementById(resultsMap[targetTab]).style.display = 'block';
@@ -246,9 +243,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
     const sidebarSectionMap = {
       'tab-general':      'general-search-sidebar',
-      'tab-birth':        'birth-search-sidebar',
+      'tab-person':       'person-search-sidebar',
       'tab-family':       'family-search-sidebar',
-      'tab-death':        'death-search-sidebar',
       'tab-contributors': 'contributors-search-sidebar',
     };
     const sidebarSection = sidebarSectionMap[targetTab];
@@ -280,9 +276,8 @@ async function init() {
     });
 
     setupGeneralSearch();
-    setupBirthSearchForm();
+    setupPersonSearchForm();
     setupFamilySearchForm();
-    setupDeathSearchForm();
     renderIntros();
     prefetchContributors();
 
@@ -293,14 +288,14 @@ async function init() {
 
     sidebar.classList.add('open');
 
-    // Infer active tab from URL params
+    // Infer active tab from URL params (legacy birth/death map to person)
     const urlParams = new URLSearchParams(window.location.search);
-    const urlT = urlParams.get('t');
+    const urlTRaw = urlParams.get('t');
+    const urlT = LEGACY_TAB_MAP[urlTRaw] || urlTRaw;
     let urlTab = 'general';
     if (urlT === 'contributors') urlTab = 'contributors';
-    else if (urlT === 'birth') urlTab = 'birth';
+    else if (urlT === 'person') urlTab = 'person';
     else if (urlT === 'family') urlTab = 'family';
-    else if (urlT === 'death') urlTab = 'death';
     isInitializing = true;
     document.querySelector(`.tab-btn[data-target="tab-${urlTab}"]`)?.click();
     isInitializing = false;
@@ -323,8 +318,9 @@ init();
 // --- SPA navigation (shared by link clicks and popstate) ---
 function navigateToURL(urlSearch) {
   const urlParams = new URLSearchParams(urlSearch);
-  const urlT = urlParams.get('t') || 'general';
-  const tabMap = { general: 'tab-general', birth: 'tab-birth', family: 'tab-family', death: 'tab-death', contributors: 'tab-contributors' };
+  const rawT = urlParams.get('t') || 'general';
+  const urlT = LEGACY_TAB_MAP[rawT] || rawT;
+  const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors' };
   const targetTab = tabMap[urlT] || 'tab-general';
   isInitializing = true;
   document.querySelector(`.tab-btn[data-target="${targetTab}"]`)?.click();

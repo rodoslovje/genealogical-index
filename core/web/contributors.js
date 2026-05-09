@@ -4,7 +4,7 @@ import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
 
-const contributorColumns = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'total_links', 'last_modified', 'matches'];
+const contributorColumns = ['contributor_ID', 'total_persons', 'total_families', 'total', 'total_links', 'last_modified', 'matches'];
 let cachedData = null;
 let fetchPromise = null;
 let chartInstance = null;
@@ -24,10 +24,9 @@ function ensureData() {
       .then(metadata => {
         cachedData = metadata.map(m => ({
           contributor_ID: m.name,
-          total_births: m.births_count,
-          total_families: m.families_count,
-          total_deaths: m.deaths_count || 0,
-          total: m.births_count + m.families_count + (m.deaths_count || 0),
+          total_persons: m.persons_count || 0,
+          total_families: m.families_count || 0,
+          total: (m.persons_count || 0) + (m.families_count || 0),
           total_links: m.links_count || 0,
           last_modified: m.last_modified ? m.last_modified.slice(0, 10) : '',
           _url: m.url || '',
@@ -88,16 +87,14 @@ function setEl(id, value) {
 export async function renderTotalsBar() {
   try {
     const data = await ensureData();
-    const births = data.reduce((s, r) => s + r.total_births, 0);
+    const persons = data.reduce((s, r) => s + r.total_persons, 0);
     const families = data.reduce((s, r) => s + r.total_families, 0);
-    const deaths = data.reduce((s, r) => s + r.total_deaths, 0);
     const links = data.reduce((s, r) => s + r.total_links, 0);
     const lastUpdate = data.reduce((max, r) => r.last_modified > max ? r.last_modified : max, '');
     setEl('total-contributors', data.length.toLocaleString());
-    setEl('total-births', births.toLocaleString());
+    setEl('total-persons', persons.toLocaleString());
     setEl('total-families', families.toLocaleString());
-    setEl('total-deaths', deaths.toLocaleString());
-    setEl('total-all', (births + families + deaths).toLocaleString());
+    setEl('total-all', (persons + families).toLocaleString());
     setEl('total-links', links.toLocaleString());
     setEl('total-last-update', lastUpdate);
     setEl('data-updated', lastUpdate);
@@ -304,9 +301,9 @@ function renderTimelineChart(data) {
     data: {
       labels: labels,
       datasets: [
-        { label: t('results_births'), data: births, backgroundColor: '#3498db', borderRadius: 2 },
-        { label: t('results_families'), data: marriages, backgroundColor: '#2ecc71', borderRadius: 2 },
-        { label: t('results_deaths'), data: deaths, backgroundColor: '#e74c3c', borderRadius: 2 }
+        { label: t('chart_births'), data: births, backgroundColor: '#3498db', borderRadius: 2 },
+        { label: t('chart_marriages'), data: marriages, backgroundColor: '#2ecc71', borderRadius: 2 },
+        { label: t('chart_deaths'), data: deaths, backgroundColor: '#e74c3c', borderRadius: 2 }
       ]
     },
     options: {
@@ -572,9 +569,8 @@ async function renderMatchesPage(contributor, withPartner) {
     let statsHtml = '';
     if (contribData) {
       statsHtml = `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 15px;">
-        <span>${t('col_total_births')}: <strong>${contribData.total_births.toLocaleString()}</strong></span>
+        <span>${t('col_total_persons')}: <strong>${contribData.total_persons.toLocaleString()}</strong></span>
         <span>${t('col_total_families')}: <strong>${contribData.total_families.toLocaleString()}</strong></span>
-        <span>${t('col_total_deaths')}: <strong>${contribData.total_deaths.toLocaleString()}</strong></span>
         <span>${t('col_total')}: <strong>${contribData.total.toLocaleString()}</strong></span>
         <span>${t('col_total_links')}: <strong>${contribData.total_links.toLocaleString()}</strong></span>
         <span>${t('col_last_update')}: <strong>${contribData.last_modified}</strong></span>
@@ -606,9 +602,8 @@ async function renderMatchesPage(contributor, withPartner) {
     const tableData = partners.map(p => ({
       contributor_ID: p.contributor,
       _match_href: toUnicodeHref({ t: 'contributors', contributor: contributor, with: p.contributor }),
-      total_births:   p.births_count   || 0,
+      total_persons:  p.persons_count  || 0,
       total_families: p.families_count || 0,
-      total_deaths:   p.deaths_count   || 0,
       total:          p.total_count,
       confidence:     Math.round((p.max_confidence || 0) * 100),
     }));
@@ -626,7 +621,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
     loadSurnameCloud([contributor], 'contributor-surname-cloud');
 
-    const summaryCols = ['contributor_ID', 'total_births', 'total_families', 'total_deaths', 'total', 'confidence'];
+    const summaryCols = ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'];
 
     renderTable(tableData, 'matches-summary', summaryCols, 'total', false);
 
@@ -680,7 +675,7 @@ async function renderMatchDetail(contributor, partner) {
       return;
     }
 
-  const byType = { birth: [], family: [], death: [] };
+  const byType = { person: [], family: [] };
   records.forEach(r => byType[r.record_type]?.push(r));
 
   const buildSearchUrl = (tab, pairs) => {
@@ -691,29 +686,31 @@ async function renderMatchDetail(contributor, partner) {
 
   const typeConfig = [
     {
-      key: 'birth', label: t('matches_births'),
+      key: 'person', label: t('matches_persons'),
       fields: [
-        { f: 'name',    h: t('col_name') },
-        { f: 'surname', h: t('col_surname') },
-        { f: 'parents', h: t('col_parents') },
-        { f: 'partners',h: t('col_partners') },
-        { f: 'date',    h: t('col_date_of_birth') },
-        { f: 'place',   h: t('col_place_of_birth') },
+        { f: 'name',           h: t('col_name') },
+        { f: 'surname',        h: t('col_surname') },
+        { f: 'parents',        h: t('col_parents') },
+        { f: 'partners',       h: t('col_partners') },
+        { f: 'date_of_birth',  h: t('col_date_of_birth') },
+        { f: 'place_of_birth', h: t('col_place_of_birth') },
+        { f: 'date_of_death',  h: t('col_date_of_death') },
+        { f: 'place_of_death', h: t('col_place_of_death') },
       ],
-      searchUrl: rec => buildSearchUrl('birth', [['n', rec.name], ['sn', rec.surname]]),
+      searchUrl: rec => buildSearchUrl('person', [['n', rec.name], ['sn', rec.surname]]),
       linkedFields: new Set(['name', 'surname']),
     },
     {
       key: 'family', label: t('matches_families'),
       fields: [
-        { f: 'husband_name',    h: t('col_husband_name') },
-        { f: 'husband_surname', h: t('col_husband_surname') },
-        { f: 'wife_name',       h: t('col_wife_name') },
-        { f: 'wife_surname',    h: t('col_wife_surname') },
-        { f: 'parents',         h: t('col_parents') },
-        { f: 'children',        h: t('col_children') },
-        { f: 'date',            h: t('col_date_of_marriage') },
-        { f: 'place',           h: t('col_place_of_marriage') },
+        { f: 'husband_name',      h: t('col_husband_name') },
+        { f: 'husband_surname',   h: t('col_husband_surname') },
+        { f: 'wife_name',         h: t('col_wife_name') },
+        { f: 'wife_surname',      h: t('col_wife_surname') },
+        { f: 'parents',           h: t('col_parents') },
+        { f: 'children',          h: t('col_children') },
+        { f: 'date_of_marriage',  h: t('col_date_of_marriage') },
+        { f: 'place_of_marriage', h: t('col_place_of_marriage') },
       ],
       searchUrl: (rec, field) => {
         if (field === 'husband_name' || field === 'husband_surname')
@@ -723,19 +720,6 @@ async function renderMatchDetail(contributor, partner) {
         return null;
       },
       linkedFields: new Set(['husband_name', 'husband_surname', 'wife_name', 'wife_surname']),
-    },
-    {
-      key: 'death', label: t('matches_deaths'),
-      fields: [
-        { f: 'name',    h: t('col_name') },
-        { f: 'surname', h: t('col_surname') },
-        { f: 'parents', h: t('col_parents') },
-        { f: 'partners',h: t('col_partners') },
-        { f: 'date',    h: t('col_date_of_death') },
-        { f: 'place',   h: t('col_place_of_death') },
-      ],
-      searchUrl: rec => buildSearchUrl('death', [['n', rec.name], ['sn', rec.surname]]),
-      linkedFields: new Set(['name', 'surname']),
     },
   ];
 
@@ -756,13 +740,14 @@ async function renderMatchDetail(contributor, partner) {
     const group = byType[key];
     if (!group.length) continue;
 
+    const isDateField = f => f === 'date_of_birth' || f === 'date_of_death' || f === 'date_of_marriage';
     const makeCell = (rec, f) => {
       if (f === 'parents' || f === 'children' || f === 'partners') {
         const inner = formatSpecialCell(f, rec);
         return `<td>${inner || ''}</td>`;
       }
       const val = rec[f] || '';
-      const cls = f === 'date' ? ' class="col-right"' : '';
+      const cls = isDateField(f) ? ' class="col-right"' : '';
       if (val && linkedFields.has(f)) {
         const href = searchUrl(rec, f);
         if (href) return `<td${cls}><a href="${href}" data-spa-nav class="name-link">${val}</a></td>`;
@@ -771,7 +756,7 @@ async function renderMatchDetail(contributor, partner) {
     };
 
     const headerCells = fields.map(({ h, f }) => {
-      const cls = f === 'date' ? ' class="col-right"' : '';
+      const cls = isDateField(f) ? ' class="col-right"' : '';
       return `<th${cls}>${h}</th>`;
     }).join('');
     const groupRows = group.map((r, idx) => {

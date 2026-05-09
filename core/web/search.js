@@ -1,12 +1,12 @@
 import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
-import { API_BASE_URL, birthColumns, familyColumns, deathColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
-import { updateURL, pushURL, PARAM_MAP } from './url.js';
+import { API_BASE_URL, personColumns, familyColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
+import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP } from './url.js';
 import { hideIntro, tabsWithResults } from './main.js';
 import { getContributorUrlMap } from './contributors.js';
 
 let lastGeneralResults = null;
-const lastAdvResults = { birth: null, family: null, death: null };
+const lastAdvResults = { person: null, family: null };
 
 // Set to true during URL-driven restore so searches use replaceState, not pushState
 let isRestoring = false;
@@ -43,46 +43,30 @@ const MONTH_MAP = {
   gen:1, mag:5, giu:6, lug:7, ago:8, set:9, ott:10, dic:12,
 };
 
-// Letters allowed in month names (Latin + Slovenian/Croatian diacritics + German umlauts + Hungarian accents)
-const MON_RE = '[A-Za-z\u010D\u0161\u017E\u010C\u0160\u017D\u00E4\u00F6\u00FC\u00C4\u00D6\u00DC\u00E1\u00E9\u00ED\u00F3\u0151\u00FA\u0171\u00C1\u00C9\u00CD\u00D3\u0150\u00DA\u0170]+';
+const MON_RE = '[A-Za-zčšžČŠŽäöüÄÖÜáéíóőúűÁÉÍÓŐÚŰ]+';
 
-/**
- * Normalize a user-entered date string to GEDCOM-compatible format (e.g. "5 MAR 1875").
- * Supported input formats:
- *   - d.m.yyyy / dd.mm.yyyy          (European dot-separated, day first; spaces around dot allowed)
- *   - m/d/yyyy / mm/dd/yyyy          (US slash-separated, month first; spaces around slash allowed)
- *   - d MonthName yyyy               (any language, full or abbreviated; any whitespace between parts)
- *   - m.yyyy / MonthName.yyyy        (month-year only, dot separator)
- *   - m/yyyy / MonthName/yyyy        (month-year only, slash separator)
- *   - MonthName yyyy                 (month-year only, space separator)
- *   - yyyy / d MMM yyyy              (pass through)
- */
 function normalizeSearchDate(val) {
   if (!val) return val;
   const str = val.trim();
 
-  // d.m.yyyy — European dot notation (day.month.year), optional spaces around dots
   const dotMatch = str.match(/^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})$/);
   if (dotMatch) {
     const m = parseInt(dotMatch[2], 10);
     if (m >= 1 && m <= 12) return `${parseInt(dotMatch[1], 10)} ${MONTH_NAMES_EN[m - 1]} ${dotMatch[3]}`;
   }
 
-  // m/d/yyyy — US slash notation (month/day/year), optional spaces around slashes
   const slashMatch = str.match(/^(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})$/);
   if (slashMatch) {
     const m = parseInt(slashMatch[1], 10);
     if (m >= 1 && m <= 12) return `${parseInt(slashMatch[2], 10)} ${MONTH_NAMES_EN[m - 1]} ${slashMatch[3]}`;
   }
 
-  // d MonthName yyyy — any supported language, any amount of whitespace between parts
   const wordMatch = str.match(new RegExp(`^(\\d{1,2})\\s+(${MON_RE})\\s+(\\d{4})$`));
   if (wordMatch) {
     const m = MONTH_MAP[wordMatch[2].toLowerCase()];
     if (m) return `${parseInt(wordMatch[1], 10)} ${MONTH_NAMES_EN[m - 1]} ${wordMatch[3]}`;
   }
 
-  // m.yyyy or MonthName.yyyy — month-year with dot separator (e.g. "7.1885", "Jul.1885")
   const monDotYearMatch = str.match(new RegExp(`^(\\d{1,2}|${MON_RE})\\s*\\.\\s*(\\d{4})$`));
   if (monDotYearMatch) {
     const raw = monDotYearMatch[1];
@@ -91,7 +75,6 @@ function normalizeSearchDate(val) {
     if (m >= 1 && m <= 12) return `${MONTH_NAMES_EN[m - 1]} ${year}`;
   }
 
-  // m/yyyy or MonthName/yyyy — month-year with slash separator (e.g. "7/1885", "Jul/1885")
   const monSlashYearMatch = str.match(new RegExp(`^(\\d{1,2}|${MON_RE})\\s*\\/\\s*(\\d{4})$`));
   if (monSlashYearMatch) {
     const raw = monSlashYearMatch[1];
@@ -100,21 +83,18 @@ function normalizeSearchDate(val) {
     if (m >= 1 && m <= 12) return `${MONTH_NAMES_EN[m - 1]} ${year}`;
   }
 
-  // MonthName yyyy — month-year with space separator (e.g. "Jul 1885", "luglio 1885")
   const monSpaceYearMatch = str.match(new RegExp(`^(${MON_RE})\\s+(\\d{4})$`));
   if (monSpaceYearMatch) {
     const m = MONTH_MAP[monSpaceYearMatch[1].toLowerCase()];
     if (m) return `${MONTH_NAMES_EN[m - 1]} ${monSpaceYearMatch[2]}`;
   }
 
-  // yyyy-m-d — ISO-like (year-month-day), e.g. "1875-3-5" or "1875-03-05"
   const isoFullMatch = str.match(/^(\d{4})\s*-\s*(\d{1,2})\s*-\s*(\d{1,2})$/);
   if (isoFullMatch) {
     const m = parseInt(isoFullMatch[2], 10);
     if (m >= 1 && m <= 12) return `${parseInt(isoFullMatch[3], 10)} ${MONTH_NAMES_EN[m - 1]} ${isoFullMatch[1]}`;
   }
 
-  // yyyy-m — ISO-like month-year only, e.g. "1885-7" or "1885-07"
   const isoMonthMatch = str.match(/^(\d{4})\s*-\s*(\d{1,2})$/);
   if (isoMonthMatch) {
     const m = parseInt(isoMonthMatch[2], 10);
@@ -125,7 +105,6 @@ function normalizeSearchDate(val) {
 }
 
 function pushOrReplaceURL(params) {
-  // If the current URL has no search conditions (only t=xxx or empty), replace instead of push
   const current = new URLSearchParams(window.location.search);
   current.delete('t');
   const hasExistingSearch = current.toString() !== '';
@@ -240,9 +219,8 @@ export function setupGeneralSearch() {
   onLanguageChange(() => {
     if (container) renderFields();
     if (lastGeneralResults) {
-      renderTable(lastGeneralResults.births || [], 'table-general-births', birthColumns, 'surname', true, 'name', getContributorUrlMap());
+      renderTable(lastGeneralResults.persons || [], 'table-general-persons', personColumns, 'surname', true, 'name', getContributorUrlMap());
       renderTable(lastGeneralResults.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name', getContributorUrlMap());
-      renderTable(lastGeneralResults.deaths || [], 'table-general-deaths', deathColumns, 'surname', true, 'name', getContributorUrlMap());
     }
   });
 }
@@ -277,14 +255,12 @@ function performGeneralSearch() {
   pushOrReplaceURL(shortParams);
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
-  document.getElementById('count-general-births').textContent = '…';
+  document.getElementById('count-general-persons').textContent = '…';
   document.getElementById('count-general-families').textContent = '…';
-  document.getElementById('count-general-deaths').textContent = '…';
-  document.getElementById('table-general-births').innerHTML = `<p>${t('searching')}</p>`;
+  document.getElementById('table-general-persons').innerHTML = `<p>${t('searching')}</p>`;
   document.getElementById('table-general-families').innerHTML = `<p>${t('searching')}</p>`;
-  document.getElementById('table-general-deaths').innerHTML = `<p>${t('searching')}</p>`;
 
-  if (!lastGeneralResults) lastGeneralResults = { births: [], families: [], deaths: [] };
+  if (!lastGeneralResults) lastGeneralResults = { persons: [], families: [] };
 
   const baseParams = new URLSearchParams(params);
 
@@ -308,12 +284,11 @@ function performGeneralSearch() {
       });
   };
 
-  fetchType('births',   'table-general-births',   'count-general-births',   birthColumns,  'surname',         'name');
-  fetchType('families', 'table-general-families',  'count-general-families', familyColumns, 'husband_surname', 'husband_name');
-  fetchType('deaths',   'table-general-deaths',    'count-general-deaths',   deathColumns,  'surname',         'name');
+  fetchType('persons',  'table-general-persons',  'count-general-persons',  personColumns, 'surname',         'name');
+  fetchType('families', 'table-general-families', 'count-general-families', familyColumns, 'husband_surname', 'husband_name');
 }
 
-// --- Birth / Family advanced search (shared setup) ---
+// --- Person / Family advanced search (shared setup) ---
 
 function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, tableId, introId, defaultSort, defaultSecondarySort = null, urlType }) {
   const container = document.getElementById(controlsId);
@@ -406,7 +381,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     const overlay = document.getElementById('search-overlay');
     if (overlay) {
       overlay.style.display = 'flex';
-      await new Promise(r => setTimeout(r, 10)); // Yield to allow browser to paint the overlay
+      await new Promise(r => setTimeout(r, 10));
     }
 
     try {
@@ -454,18 +429,18 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   });
 }
 
-export function setupBirthSearchForm() {
+export function setupPersonSearchForm() {
   setupSearchForm({
-    controlsId: 'birth-search-controls',
-    columns: birthColumns,
-    endpoint: 'births',
-    resultsId: 'birth-results',
-    countId: 'count-birth-results',
-    tableId: 'table-birth-results',
-    introId: 'intro-birth',
+    controlsId: 'person-search-controls',
+    columns: personColumns,
+    endpoint: 'persons',
+    resultsId: 'person-results',
+    countId: 'count-person-results',
+    tableId: 'table-person-results',
+    introId: 'intro-person',
     defaultSort: 'surname',
     defaultSecondarySort: 'name',
-    urlType: 'birth',
+    urlType: 'person',
   });
 }
 
@@ -484,19 +459,9 @@ export function setupFamilySearchForm() {
   });
 }
 
-export function setupDeathSearchForm() {
-  setupSearchForm({
-    controlsId: 'death-search-controls',
-    columns: deathColumns,
-    endpoint: 'deaths',
-    resultsId: 'death-results',
-    countId: 'count-death-results',
-    tableId: 'table-death-results',
-    introId: 'intro-death',
-    defaultSort: 'surname',
-    defaultSecondarySort: 'name',
-    urlType: 'death',
-  });
+function resolveTabType(rawT) {
+  if (!rawT) return null;
+  return LEGACY_TAB_MAP[rawT] || rawT;
 }
 
 export function getTabURLParams(tabType) {
@@ -509,8 +474,8 @@ export function getTabURLParams(tabType) {
     });
     if (!document.getElementById('general-exact')?.checked) out.ex = '0';
     if (document.getElementById('general-has_link')?.checked) out.hl = '1';
-  } else if (tabType === 'birth' || tabType === 'family' || tabType === 'death') {
-    const columns = tabType === 'birth' ? birthColumns : tabType === 'family' ? familyColumns : deathColumns;
+  } else if (tabType === 'person' || tabType === 'family') {
+    const columns = tabType === 'person' ? personColumns : familyColumns;
     const prefix = `adv-${tabType}-`;
     columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(col => {
       const val = document.getElementById(`${prefix}${col}`)?.value.trim();
@@ -534,7 +499,7 @@ export function clearAllSearchForms() {
   });
   const genHasLink = document.getElementById('general-has_link'); if (genHasLink) genHasLink.checked = false;
   const genExact = document.getElementById('general-exact'); if (genExact) genExact.checked = true;
-  ['birth', 'family', 'death'].forEach(type => {
+  ['person', 'family'].forEach(type => {
     document.querySelectorAll(`#${type}-search-controls input`).forEach(el => {
       if (el.type === 'checkbox') el.checked = false;
       if (el.type === 'radio' && el.value === 'exact') el.checked = true;
@@ -546,8 +511,7 @@ export function clearAllSearchForms() {
 export function restoreFromURL() {
   isRestoring = true;
   const params = new URLSearchParams(window.location.search);
-  const q = params.get('q');
-  const tParam = params.get('t');
+  const tParam = resolveTabType(params.get('t'));
 
   const hasGenParam = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params.has(k) || params.has(PARAM_MAP[k] || k));
   if ((!tParam || tParam === 'general') && hasGenParam) {
@@ -573,8 +537,8 @@ export function restoreFromURL() {
       if (cb) cb.checked = true;
     }
     document.getElementById('btn-general-search')?.click();
-  } else if (tParam === 'birth' || tParam === 'family' || tParam === 'death') {
-    const columns = tParam === 'birth' ? birthColumns : tParam === 'family' ? familyColumns : deathColumns;
+  } else if (tParam === 'person' || tParam === 'family') {
+    const columns = tParam === 'person' ? personColumns : familyColumns;
     const prefix = `adv-${tParam}-`;
     let hasCriteria = false;
     columns.forEach(col => {
@@ -612,6 +576,5 @@ export function restoreFromURL() {
     }
     if (hasCriteria) document.getElementById(`btn-adv-search-${tParam}`)?.click();
   }
-  // Reset flag after a tick so any async search triggered above can check it
   setTimeout(() => { isRestoring = false; }, 0);
 }

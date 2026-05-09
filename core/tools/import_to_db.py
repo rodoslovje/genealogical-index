@@ -37,47 +37,48 @@ def setup_full(db):
     print("Setting up database tables and extensions (full rebuild)...")
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
     db.execute(text("""
-        DROP TABLE IF EXISTS births, families, deaths, contributors, match_jobs, matches CASCADE;
+        DROP TABLE IF EXISTS persons, births, families, deaths, contributors, match_jobs, matches CASCADE;
 
         CREATE TABLE contributors (
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) UNIQUE NOT NULL,
             last_modified VARCHAR(255),
-            births_count INTEGER DEFAULT 0,
+            persons_count INTEGER DEFAULT 0,
             families_count INTEGER DEFAULT 0,
-            deaths_count INTEGER DEFAULT 0,
             links_count INTEGER DEFAULT 0
         );
-        CREATE TABLE births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, husbands_list TEXT, wifes_list TEXT, contributor TEXT, links TEXT
+        CREATE TABLE persons (
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, sex TEXT,
+            date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT,
+            date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
+            parents_list TEXT, partners_list TEXT,
+            contributor TEXT, links TEXT
         );
         CREATE TABLE families (
-            id SERIAL PRIMARY KEY, husband_name TEXT, husband_surname TEXT, wife_name TEXT, wife_surname TEXT, children_list TEXT, husband_parents TEXT, wife_parents TEXT, date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT, contributor TEXT, links TEXT
-        );
-        CREATE TABLE deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, date_of_death TEXT, death_year SMALLINT, place_of_death TEXT, father_name TEXT, father_surname TEXT, mother_name TEXT, mother_surname TEXT, husbands_list TEXT, wifes_list TEXT, contributor TEXT, links TEXT
+            id SERIAL PRIMARY KEY,
+            husband_name TEXT, husband_surname TEXT, husband_year SMALLINT,
+            wife_name TEXT, wife_surname TEXT, wife_year SMALLINT,
+            date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
+            children_list TEXT, husband_parents TEXT, wife_parents TEXT,
+            contributor TEXT, links TEXT
         );
 
-        CREATE INDEX idx_birth_name_trgm ON births USING gist (name gist_trgm_ops);
-        CREATE INDEX idx_birth_surname_trgm ON births USING gist (surname gist_trgm_ops);
-        CREATE INDEX idx_family_h_surname_trgm ON families USING gist (husband_surname gist_trgm_ops);
-        CREATE INDEX idx_family_w_surname_trgm ON families USING gist (wife_surname gist_trgm_ops);
+        CREATE INDEX idx_person_name_trgm    ON persons  USING gist (name gist_trgm_ops);
+        CREATE INDEX idx_person_surname_trgm ON persons  USING gist (surname gist_trgm_ops);
+        CREATE INDEX idx_family_h_surname_trgm   ON families USING gist (husband_surname gist_trgm_ops);
+        CREATE INDEX idx_family_w_surname_trgm   ON families USING gist (wife_surname gist_trgm_ops);
         CREATE INDEX idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
-        CREATE INDEX idx_death_name_trgm ON deaths USING gist (name gist_trgm_ops);
-        CREATE INDEX idx_death_surname_trgm ON deaths USING gist (surname gist_trgm_ops);
 
-        -- B-tree indexes on contributor — lets the planner quickly isolate one contributor's rows
         -- Composite indexes allow instantaneous Index-Only Scans for DISTINCT surnames
         -- and fast equality joins during the match compute phase.
-        CREATE INDEX idx_birth_contrib_sur  ON births(contributor, surname);
+        CREATE INDEX idx_person_contrib_sur  ON persons(contributor, surname);
         CREATE INDEX idx_family_contrib_surs ON families(contributor, husband_surname, wife_surname);
-        CREATE INDEX idx_death_contrib_sur  ON deaths(contributor, surname);
 
         -- B-tree indexes on year columns — used to pre-filter candidates by year range
         -- before the trigram similarity join, significantly reducing the candidate set.
-        CREATE INDEX idx_birth_year   ON births(birth_year);
-        CREATE INDEX idx_family_year  ON families(marriage_year);
-        CREATE INDEX idx_death_year   ON deaths(death_year);
+        CREATE INDEX idx_person_birth_year ON persons(birth_year);
+        CREATE INDEX idx_person_death_year ON persons(death_year);
+        CREATE INDEX idx_family_year       ON families(marriage_year);
 
         CREATE TABLE match_jobs (
             contributor_a TEXT NOT NULL,
@@ -118,45 +119,56 @@ def _col_exists(db, table, column):
     )
 
 
-def setup_update(db):
-    """Create tables and apply schema migrations (update mode).
+def _table_exists(db, table):
+    return (
+        db.execute(
+            text(
+                "SELECT 1 FROM information_schema.tables WHERE table_name=:t"
+            ),
+            {"t": table},
+        ).fetchone()
+        is not None
+    )
 
-    Each logical step is committed independently so DDL locks are held for the
-    shortest possible time.  Migrations are guarded by schema checks so they
-    only run when actually needed — re-running import on an up-to-date database
-    is fast regardless of table size.
-    """
+
+def setup_update(db):
+    """Migrate from old (births/deaths) schema to new persons schema, or create from scratch."""
     print("Setting up database tables and extensions (update mode)...")
 
-    # ------------------------------------------------------------------ #
-    # 1. Extension + base tables — never touches existing data             #
-    # ------------------------------------------------------------------ #
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.commit()
+
+    # Detect legacy schema and drop it — the data shape change is fundamental,
+    # so we discard births/deaths/old matches and re-import everything.
+    if _table_exists(db, "births") or _table_exists(db, "deaths"):
+        print("  Legacy schema detected — dropping old births/deaths tables and matches.")
+        db.execute(text("""
+            DROP TABLE IF EXISTS births CASCADE;
+            DROP TABLE IF EXISTS deaths CASCADE;
+            TRUNCATE matches;
+            DELETE FROM match_jobs;
+        """))
+        db.commit()
+
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS contributors (
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) UNIQUE NOT NULL,
             last_modified VARCHAR(255)
         );
-        CREATE TABLE IF NOT EXISTS births (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT,
-            date_of_birth TEXT, place_of_birth TEXT,
-            father_name TEXT, father_surname TEXT,
-            mother_name TEXT, mother_surname TEXT,
+        CREATE TABLE IF NOT EXISTS persons (
+            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, sex TEXT,
+            date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT,
+            date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
+            parents_list TEXT, partners_list TEXT,
             contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS families (
             id SERIAL PRIMARY KEY,
-            husband_name TEXT, husband_surname TEXT,
-            wife_name TEXT, wife_surname TEXT,
-            date_of_marriage TEXT, place_of_marriage TEXT,
-            contributor TEXT, links TEXT
-        );
-        CREATE TABLE IF NOT EXISTS deaths (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT,
-            date_of_death TEXT, place_of_death TEXT,
-            father_name TEXT, father_surname TEXT,
-            mother_name TEXT, mother_surname TEXT,
+            husband_name TEXT, husband_surname TEXT, husband_year SMALLINT,
+            wife_name TEXT, wife_surname TEXT, wife_year SMALLINT,
+            date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
+            children_list TEXT, husband_parents TEXT, wife_parents TEXT,
             contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS matches (
@@ -170,152 +182,62 @@ def setup_update(db):
             match_fields TEXT,
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
+        CREATE TABLE IF NOT EXISTS match_jobs (
+            contributor_a TEXT NOT NULL,
+            contributor_b TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            queued_at TIMESTAMPTZ DEFAULT NOW(),
+            completed_at TIMESTAMPTZ,
+            PRIMARY KEY (contributor_a, contributor_b)
+        );
     """))
     db.commit()
 
-    # ------------------------------------------------------------------ #
-    # 2. Column additions — each ALTER TABLE IF NOT EXISTS is instant      #
-    #    when the column already exists                                    #
-    # ------------------------------------------------------------------ #
+    # contributors column migration: drop births_count/deaths_count, add persons_count
     db.execute(text("""
-        ALTER TABLE births  ADD COLUMN IF NOT EXISTS links TEXT;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS links TEXT;
-        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS links TEXT;
-    """))
-    db.commit()
-
-    # Migrate old single-URL 'link' column to JSON array 'links', then drop it
-    db.execute(text("""
-        DO $$ BEGIN
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='births' AND column_name='link') THEN
-                UPDATE births SET links = '["' || link || '"]' WHERE link IS NOT NULL AND link != '' AND links IS NULL;
-                ALTER TABLE births DROP COLUMN link;
-            END IF;
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='families' AND column_name='link') THEN
-                UPDATE families SET links = '["' || link || '"]' WHERE link IS NOT NULL AND link != '' AND links IS NULL;
-                ALTER TABLE families DROP COLUMN link;
-            END IF;
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='deaths' AND column_name='link') THEN
-                UPDATE deaths SET links = '["' || link || '"]' WHERE link IS NOT NULL AND link != '' AND links IS NULL;
-                ALTER TABLE deaths DROP COLUMN link;
-            END IF;
-        END $$;
-    """))
-    db.commit()
-
-    db.execute(text("""
-        ALTER TABLE births  ADD COLUMN IF NOT EXISTS father_name TEXT;
-        ALTER TABLE births  ADD COLUMN IF NOT EXISTS father_surname TEXT;
-        ALTER TABLE births  ADD COLUMN IF NOT EXISTS mother_name TEXT;
-        ALTER TABLE births  ADD COLUMN IF NOT EXISTS mother_surname TEXT;
-        ALTER TABLE births  ADD COLUMN IF NOT EXISTS husbands_list TEXT;
-        ALTER TABLE births  ADD COLUMN IF NOT EXISTS wifes_list TEXT;
-        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS father_name TEXT;
-        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS father_surname TEXT;
-        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS mother_name TEXT;
-        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS mother_surname TEXT;
-        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS husbands_list TEXT;
-        ALTER TABLE deaths  ADD COLUMN IF NOT EXISTS wifes_list TEXT;
-        ALTER TABLE families DROP COLUMN IF EXISTS children_json;
-        ALTER TABLE families DROP COLUMN IF EXISTS children;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS children_list TEXT;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_parents TEXT;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_parents TEXT;
-        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS births_count   INTEGER DEFAULT 0;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS persons_count  INTEGER DEFAULT 0;
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS families_count INTEGER DEFAULT 0;
-        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS deaths_count   INTEGER DEFAULT 0;
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS links_count    INTEGER DEFAULT 0;
-        ALTER TABLE births   ADD COLUMN IF NOT EXISTS birth_year    SMALLINT;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS marriage_year SMALLINT;
-        ALTER TABLE deaths   ADD COLUMN IF NOT EXISTS death_year    SMALLINT;
+        ALTER TABLE contributors DROP COLUMN IF EXISTS births_count;
+        ALTER TABLE contributors DROP COLUMN IF EXISTS deaths_count;
+
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_year SMALLINT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_year    SMALLINT;
     """))
     db.commit()
 
-    # ------------------------------------------------------------------ #
-    # 3. Indexes — CREATE IF NOT EXISTS skips instantly when they exist;   #
-    #    only slow on the very first setup                                 #
-    # ------------------------------------------------------------------ #
     db.execute(text("""
-        CREATE INDEX IF NOT EXISTS idx_birth_name_trgm          ON births   USING gist (name gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_birth_surname_trgm        ON births   USING gist (surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm     ON families USING gist (husband_surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm     ON families USING gist (wife_surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_person_name_trgm        ON persons  USING gist (name gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_person_surname_trgm     ON persons  USING gist (surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm   ON families USING gist (husband_surname gist_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm   ON families USING gist (wife_surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_death_name_trgm           ON deaths   USING gist (name gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_death_surname_trgm        ON deaths   USING gist (surname gist_trgm_ops);
 
-        CREATE INDEX IF NOT EXISTS idx_birth_contrib_sur         ON births(contributor, surname);
-        CREATE INDEX IF NOT EXISTS idx_family_contrib_surs       ON families(contributor, husband_surname, wife_surname);
-        CREATE INDEX IF NOT EXISTS idx_death_contrib_sur         ON deaths(contributor, surname);
+        CREATE INDEX IF NOT EXISTS idx_person_contrib_sur      ON persons(contributor, surname);
+        CREATE INDEX IF NOT EXISTS idx_family_contrib_surs     ON families(contributor, husband_surname, wife_surname);
 
-        DROP INDEX IF EXISTS idx_birth_contrib_sur_name;
-        DROP INDEX IF EXISTS idx_death_contrib_sur_name;
-        DROP INDEX IF EXISTS idx_birth_contributor;
-        DROP INDEX IF EXISTS idx_family_contributor;
-        DROP INDEX IF EXISTS idx_death_contributor;
+        CREATE INDEX IF NOT EXISTS idx_person_birth_year       ON persons(birth_year);
+        CREATE INDEX IF NOT EXISTS idx_person_death_year       ON persons(death_year);
+        CREATE INDEX IF NOT EXISTS idx_family_year             ON families(marriage_year);
 
-        CREATE INDEX IF NOT EXISTS idx_birth_year                ON births(birth_year);
-        CREATE INDEX IF NOT EXISTS idx_family_year               ON families(marriage_year);
-        CREATE INDEX IF NOT EXISTS idx_death_year                ON deaths(death_year);
         CREATE INDEX IF NOT EXISTS idx_matches_b  ON matches(contributor_b);
         CREATE INDEX IF NOT EXISTS idx_matches_ab ON matches(contributor_a, contributor_b);
-        DROP INDEX IF EXISTS idx_matches_a;
+        CREATE INDEX IF NOT EXISTS idx_match_jobs_status ON match_jobs(status, queued_at);
     """))
     db.commit()
-
-    # ------------------------------------------------------------------ #
-    # 4. match_jobs migration — only runs when old single-contributor      #
-    #    schema is detected; skipped entirely on up-to-date databases      #
-    # ------------------------------------------------------------------ #
-    if _col_exists(db, "match_jobs", "contributor"):
-        print("  Migrating match_jobs to pair-based schema...")
-        db.execute(text("DROP TABLE match_jobs;"))
-        db.execute(text("""
-            CREATE TABLE match_jobs (
-                contributor_a TEXT NOT NULL,
-                contributor_b TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending',
-                queued_at TIMESTAMPTZ DEFAULT NOW(),
-                completed_at TIMESTAMPTZ,
-                PRIMARY KEY (contributor_a, contributor_b)
-            );
-            CREATE INDEX idx_match_jobs_status ON match_jobs(status, queued_at);
-        """))
-        db.commit()
-    else:
-        db.execute(text("""
-            CREATE TABLE IF NOT EXISTS match_jobs (
-                contributor_a TEXT NOT NULL,
-                contributor_b TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending',
-                queued_at TIMESTAMPTZ DEFAULT NOW(),
-                completed_at TIMESTAMPTZ,
-                PRIMARY KEY (contributor_a, contributor_b)
-            );
-            CREATE INDEX IF NOT EXISTS idx_match_jobs_status ON match_jobs(status, queued_at);
-        """))
-        db.commit()
-
-    # ------------------------------------------------------------------ #
-    # 5. matches column cleanup                                            #
-    # ------------------------------------------------------------------ #
-    if _col_exists(db, "matches", "owner"):
-        db.execute(text("ALTER TABLE matches DROP COLUMN owner;"))
-        db.execute(text("DROP INDEX IF EXISTS idx_matches_owner;"))
-        db.commit()
 
 
 def get_db_state(db, contributor_name):
-    """Returns pre-calculated stats stored in DB, or (None, 0, 0, 0, 0)."""
+    """Returns pre-calculated stats stored in DB, or (None, 0, 0, 0)."""
     row = db.execute(
         text(
-            "SELECT last_modified, births_count, families_count, deaths_count, links_count FROM contributors WHERE name = :name"
+            "SELECT last_modified, persons_count, families_count, links_count FROM contributors WHERE name = :name"
         ),
         {"name": contributor_name},
     ).fetchone()
     if not row:
-        return None, 0, 0, 0, 0
-    return row[0], row[1], row[2], row[3], row[4]
+        return None, 0, 0, 0
+    return row[0], row[1], row[2], row[3]
 
 
 def find_data_file(directory, filename):
@@ -354,78 +276,108 @@ def _extract_year(date_str):
     return int(m.group()) if m else None
 
 
+def _to_json_or_none(v):
+    if v is None:
+        return None
+    if isinstance(v, str):
+        return v
+    return json.dumps(v, ensure_ascii=False)
+
+
+def _flatten_person(p, contributor_id):
+    birth = p.get("birth") or {}
+    death = p.get("death") or {}
+    return {
+        "name": p.get("name") or "",
+        "surname": p.get("surname") or "",
+        "sex": p.get("sex") or "",
+        "date_of_birth": birth.get("date") or "",
+        "birth_year": _extract_year(birth.get("date")),
+        "place_of_birth": birth.get("place") or "",
+        "date_of_death": death.get("date") or "",
+        "death_year": _extract_year(death.get("date")),
+        "place_of_death": death.get("place") or "",
+        "parents_list": _to_json_or_none(p.get("parents_list")),
+        "partners_list": _to_json_or_none(p.get("partners_list")),
+        "links": _to_json_or_none(p.get("links")),
+        "contributor": contributor_id,
+    }
+
+
+def _flatten_family(f, contributor_id):
+    husband = f.get("husband") or {}
+    wife = f.get("wife") or {}
+    marriage = f.get("marriage") or {}
+    return {
+        "husband_name": husband.get("name") or "",
+        "husband_surname": husband.get("surname") or "",
+        "husband_year": _extract_year(husband.get("date_of_birth")),
+        "wife_name": wife.get("name") or "",
+        "wife_surname": wife.get("surname") or "",
+        "wife_year": _extract_year(wife.get("date_of_birth")),
+        "date_of_marriage": marriage.get("date") or "",
+        "marriage_year": _extract_year(marriage.get("date")),
+        "place_of_marriage": marriage.get("place") or "",
+        "children_list": _to_json_or_none(f.get("children_list")),
+        "husband_parents": _to_json_or_none(f.get("husband_parents")),
+        "wife_parents": _to_json_or_none(f.get("wife_parents")),
+        "links": _to_json_or_none(f.get("links")),
+        "contributor": contributor_id,
+    }
+
+
 def import_contributor(
     db,
     contributor_id,
     last_modified,
-    births_count,
+    persons_count,
     families_count,
-    deaths_count,
     links_count,
-    imp_births=True,
+    imp_persons=True,
     imp_families=True,
-    imp_deaths=True,
 ):
     """Delete existing records for contributor and reinsert from JSON files."""
-    # Update contributor timestamp and pre-calculated stats
     db.execute(
         text(
-            "INSERT INTO contributors (name, last_modified, births_count, families_count, deaths_count, links_count) "
-            "VALUES (:name, :last_modified, :births_count, :families_count, :deaths_count, :links_count) "
+            "INSERT INTO contributors (name, last_modified, persons_count, families_count, links_count) "
+            "VALUES (:name, :last_modified, :persons_count, :families_count, :links_count) "
             "ON CONFLICT (name) DO UPDATE SET "
-            "last_modified = :last_modified, births_count = :births_count, "
-            "families_count = :families_count, deaths_count = :deaths_count, links_count = :links_count;"
+            "last_modified = :last_modified, persons_count = :persons_count, "
+            "families_count = :families_count, links_count = :links_count;"
         ),
         {
             "name": contributor_id,
             "last_modified": last_modified,
-            "births_count": births_count,
+            "persons_count": persons_count,
             "families_count": families_count,
-            "deaths_count": deaths_count,
             "links_count": links_count,
         },
     )
 
-    # Load Births
-    if imp_births:
+    if imp_persons:
         db.execute(
-            text("DELETE FROM births WHERE contributor = :name"),
+            text("DELETE FROM persons WHERE contributor = :name"),
             {"name": contributor_id},
         )
-        births_file = find_data_file(DATA_DIR, f"{contributor_id}-births.json")
-        if os.path.exists(births_file):
-            with open(births_file, "r", encoding="utf-8") as f:
-                births_data = json.load(f)
-            if births_data:
-                print(f"  -> Inserting {len(births_data)} birth records...")
-                for birth in births_data:
-                    birth["contributor"] = contributor_id
-                    if isinstance(birth.get("links"), list):
-                        birth["links"] = json.dumps(birth["links"], ensure_ascii=False)
-                    birth.setdefault("links", None)
-                    birth.setdefault("father_name", None)
-                    birth.setdefault("father_surname", None)
-                    birth.setdefault("mother_name", None)
-                    birth.setdefault("mother_surname", None)
-                    birth.setdefault("husbands_list", None)
-                    birth.setdefault("wifes_list", None)
-                    if isinstance(birth.get("husbands_list"), list):
-                        birth["husbands_list"] = json.dumps(
-                            birth["husbands_list"], ensure_ascii=False
-                        )
-                    if isinstance(birth.get("wifes_list"), list):
-                        birth["wifes_list"] = json.dumps(
-                            birth["wifes_list"], ensure_ascii=False
-                        )
-                    birth["birth_year"] = _extract_year(birth.get("date_of_birth"))
+        persons_file = find_data_file(DATA_DIR, f"{contributor_id}-persons.json")
+        if os.path.exists(persons_file):
+            with open(persons_file, "r", encoding="utf-8") as f:
+                persons_data = json.load(f)
+            if persons_data:
+                print(f"  -> Inserting {len(persons_data)} person records...")
+                rows = [_flatten_person(p, contributor_id) for p in persons_data]
                 db.execute(
                     text("""
-                        INSERT INTO births (name, surname, date_of_birth, birth_year, place_of_birth,
-                        father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links)
-                        VALUES (:name, :surname, :date_of_birth, :birth_year, :place_of_birth,
-                        :father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)
+                        INSERT INTO persons (name, surname, sex,
+                            date_of_birth, birth_year, place_of_birth,
+                            date_of_death, death_year, place_of_death,
+                            parents_list, partners_list, contributor, links)
+                        VALUES (:name, :surname, :sex,
+                            :date_of_birth, :birth_year, :place_of_birth,
+                            :date_of_death, :death_year, :place_of_death,
+                            :parents_list, :partners_list, :contributor, :links)
                     """),
-                    births_data,
+                    rows,
                 )
         else:
             visible = [
@@ -434,10 +386,9 @@ def import_contributor(
                 if contributor_id.casefold() in f.casefold()
             ]
             print(
-                f"  -> WARNING: Could not find births file at {births_file}\n     (Docker sync issue? Container only sees: {visible})"
+                f"  -> WARNING: Could not find persons file at {persons_file}\n     (Docker sync issue? Container only sees: {visible})"
             )
 
-    # Load Families
     if imp_families:
         db.execute(
             text("DELETE FROM families WHERE contributor = :name"),
@@ -449,39 +400,21 @@ def import_contributor(
                 families_data = json.load(f)
             if families_data:
                 print(f"  -> Inserting {len(families_data)} family records...")
-                for family in families_data:
-                    family["contributor"] = contributor_id
-                    if isinstance(family.get("links"), list):
-                        family["links"] = json.dumps(
-                            family["links"], ensure_ascii=False
-                        )
-                    family.setdefault("links", None)
-                    family.setdefault("children_list", None)
-                    family.setdefault("husband_parents", None)
-                    family.setdefault("wife_parents", None)
-                    if isinstance(family.get("children_list"), list):
-                        family["children_list"] = json.dumps(
-                            family["children_list"], ensure_ascii=False
-                        )
-                    if isinstance(family.get("husband_parents"), list):
-                        family["husband_parents"] = json.dumps(
-                            family["husband_parents"], ensure_ascii=False
-                        )
-                    if isinstance(family.get("wife_parents"), list):
-                        family["wife_parents"] = json.dumps(
-                            family["wife_parents"], ensure_ascii=False
-                        )
-                    family["marriage_year"] = _extract_year(
-                        family.get("date_of_marriage")
-                    )
+                rows = [_flatten_family(fam, contributor_id) for fam in families_data]
                 db.execute(
                     text("""
-                        INSERT INTO families (husband_name, husband_surname, wife_name, wife_surname,
-                        children_list, husband_parents, wife_parents, date_of_marriage, marriage_year, place_of_marriage, contributor, links)
-                        VALUES (:husband_name, :husband_surname, :wife_name, :wife_surname,
-                        :children_list, :husband_parents, :wife_parents, :date_of_marriage, :marriage_year, :place_of_marriage, :contributor, :links)
+                        INSERT INTO families (husband_name, husband_surname, husband_year,
+                            wife_name, wife_surname, wife_year,
+                            date_of_marriage, marriage_year, place_of_marriage,
+                            children_list, husband_parents, wife_parents,
+                            contributor, links)
+                        VALUES (:husband_name, :husband_surname, :husband_year,
+                            :wife_name, :wife_surname, :wife_year,
+                            :date_of_marriage, :marriage_year, :place_of_marriage,
+                            :children_list, :husband_parents, :wife_parents,
+                            :contributor, :links)
                     """),
-                    families_data,
+                    rows,
                 )
         else:
             visible = [
@@ -493,64 +426,10 @@ def import_contributor(
                 f"  -> WARNING: Could not find families file at {families_file}\n     (Docker sync issue? Container only sees: {visible})"
             )
 
-    # Load Deaths
-    if imp_deaths:
-        db.execute(
-            text("DELETE FROM deaths WHERE contributor = :name"),
-            {"name": contributor_id},
-        )
-        deaths_file = find_data_file(DATA_DIR, f"{contributor_id}-deaths.json")
-        if os.path.exists(deaths_file):
-            with open(deaths_file, "r", encoding="utf-8") as f:
-                deaths_data = json.load(f)
-            if deaths_data:
-                print(f"  -> Inserting {len(deaths_data)} death records...")
-                for death in deaths_data:
-                    death["contributor"] = contributor_id
-                    if isinstance(death.get("links"), list):
-                        death["links"] = json.dumps(death["links"], ensure_ascii=False)
-                    death.setdefault("links", None)
-                    death.setdefault("father_name", None)
-                    death.setdefault("father_surname", None)
-                    death.setdefault("mother_name", None)
-                    death.setdefault("mother_surname", None)
-                    death.setdefault("husbands_list", None)
-                    death.setdefault("wifes_list", None)
-                    if isinstance(death.get("husbands_list"), list):
-                        death["husbands_list"] = json.dumps(
-                            death["husbands_list"], ensure_ascii=False
-                        )
-                    if isinstance(death.get("wifes_list"), list):
-                        death["wifes_list"] = json.dumps(
-                            death["wifes_list"], ensure_ascii=False
-                        )
-                    death["death_year"] = _extract_year(death.get("date_of_death"))
-                db.execute(
-                    text("""
-                        INSERT INTO deaths (name, surname, date_of_death, death_year, place_of_death,
-                        father_name, father_surname, mother_name, mother_surname, husbands_list, wifes_list, contributor, links)
-                        VALUES (:name, :surname, :date_of_death, :death_year, :place_of_death,
-                        :father_name, :father_surname, :mother_name, :mother_surname, :husbands_list, :wifes_list, :contributor, :links)
-                    """),
-                    deaths_data,
-                )
-        else:
-            visible = [
-                f
-                for f in os.listdir(DATA_DIR)
-                if contributor_id.casefold() in f.casefold()
-            ]
-            print(
-                f"  -> WARNING: Could not find deaths file at {deaths_file}\n     (Docker sync issue? Container only sees: {visible})"
-            )
-
     db.commit()
 
 
 def main():
-    """
-    Main function to import extracted JSON data into the database.
-    """
     parser = argparse.ArgumentParser(description="Import JSON data into the database.")
     parser.add_argument(
         "--mode",
@@ -565,19 +444,14 @@ def main():
         help="Drop and recreate all tables from scratch before importing.",
     )
     parser.add_argument(
+        "--force-persons",
+        action="store_true",
+        help="Force re-import of person records for all contributors.",
+    )
+    parser.add_argument(
         "--force-families",
         action="store_true",
         help="Force re-import of family records for all contributors.",
-    )
-    parser.add_argument(
-        "--force-births",
-        action="store_true",
-        help="Force re-import of birth records for all contributors.",
-    )
-    parser.add_argument(
-        "--force-deaths",
-        action="store_true",
-        help="Force re-import of death records for all contributors.",
     )
     parser.add_argument(
         "--workers",
@@ -609,7 +483,6 @@ def main():
     else:
         setup_update(db)
 
-    # --- Setup ---
     if not os.path.isdir(DATA_DIR):
         print(f"Error: Data directory '{DATA_DIR}' not found.")
         return
@@ -624,7 +497,6 @@ def main():
     with open(metadata_file, "r", encoding="utf-8") as f:
         metadata = json.load(f)
 
-    # --- Remove contributors no longer in metadata (e.g. deleted GED files) ---
     if not args.drop_tables:
         known = {m["contributor"] for m in metadata}
         stale = db.execute(text("SELECT name FROM contributors")).fetchall()
@@ -632,14 +504,11 @@ def main():
             if name not in known:
                 print(f"\nRemoving stale contributor: {name}")
                 db.execute(
-                    text("DELETE FROM births WHERE contributor = :name"), {"name": name}
+                    text("DELETE FROM persons WHERE contributor = :name"), {"name": name}
                 )
                 db.execute(
                     text("DELETE FROM families WHERE contributor = :name"),
                     {"name": name},
-                )
-                db.execute(
-                    text("DELETE FROM deaths WHERE contributor = :name"), {"name": name}
                 )
                 db.execute(
                     text("DELETE FROM contributors WHERE name = :name"), {"name": name}
@@ -651,46 +520,41 @@ def main():
     for index, meta in enumerate(metadata, start=1):
         contributor_id = meta["contributor"]
         last_modified = meta.get("last_modified", "")
-        meta_births_count = meta.get("births_count", 0)
+        meta_persons_count = meta.get("persons_count", 0)
         meta_families_count = meta.get("families_count", 0)
-        meta_deaths_count = meta.get("deaths_count", 0)
         meta_links_count = meta.get("links_count", 0)
 
         do_import = False
-        imp_births = imp_families = imp_deaths = False
+        imp_persons = imp_families = False
 
         if full_mode:
             do_import = True
-            imp_births = imp_families = imp_deaths = True
+            imp_persons = imp_families = True
             print(
                 f"\nProcessing contributor {index}/{total_contributors}: {contributor_id}"
             )
-        else:  # update mode
+        else:
             (
                 db_last_modified,
-                db_births_count,
+                db_persons_count,
                 db_families_count,
-                db_deaths_count,
                 db_links_count,
             ) = get_db_state(db, contributor_id)
 
             is_up_to_date = (
                 db_last_modified == last_modified
-                and db_births_count == meta_births_count
+                and db_persons_count == meta_persons_count
                 and db_families_count == meta_families_count
-                and db_deaths_count == meta_deaths_count
                 and db_links_count == meta_links_count
             )
 
             if is_up_to_date:
-                if args.force_births or args.force_families or args.force_deaths:
+                if args.force_persons or args.force_families:
                     do_import = True
-                    if args.force_births:
-                        imp_births = True
+                    if args.force_persons:
+                        imp_persons = True
                     if args.force_families:
                         imp_families = True
-                    if args.force_deaths:
-                        imp_deaths = True
                     print(
                         f"\nProcessing contributor {index}/{total_contributors}: {contributor_id} (forced update)"
                     )
@@ -708,7 +572,7 @@ def main():
                     db_last_modified != last_modified
                     or db_links_count != meta_links_count
                 ):
-                    imp_births = imp_families = imp_deaths = True
+                    imp_persons = imp_families = True
                     if db_last_modified != last_modified:
                         print(
                             f"  -> Mismatch in last_modified: DB='{db_last_modified}' vs Meta='{last_modified}'"
@@ -719,14 +583,14 @@ def main():
                         )
                     print("  -> Doing full re-import for this contributor.")
                 else:
-                    if db_births_count != meta_births_count or args.force_births:
-                        imp_births = True
-                        if db_births_count != meta_births_count:
+                    if db_persons_count != meta_persons_count or args.force_persons:
+                        imp_persons = True
+                        if db_persons_count != meta_persons_count:
                             print(
-                                f"  -> Mismatch in births_count: DB={db_births_count} vs Meta={meta_births_count}"
+                                f"  -> Mismatch in persons_count: DB={db_persons_count} vs Meta={meta_persons_count}"
                             )
                         else:
-                            print("  -> Forcing births update")
+                            print("  -> Forcing persons update")
                     if db_families_count != meta_families_count or args.force_families:
                         imp_families = True
                         if db_families_count != meta_families_count:
@@ -735,27 +599,17 @@ def main():
                             )
                         else:
                             print("  -> Forcing families update")
-                    if db_deaths_count != meta_deaths_count or args.force_deaths:
-                        imp_deaths = True
-                        if db_deaths_count != meta_deaths_count:
-                            print(
-                                f"  -> Mismatch in deaths_count: DB={db_deaths_count} vs Meta={meta_deaths_count}"
-                            )
-                        else:
-                            print("  -> Forcing deaths update")
 
         if do_import:
             import_contributor(
                 db,
                 contributor_id,
                 last_modified,
-                meta_births_count,
+                meta_persons_count,
                 meta_families_count,
-                meta_deaths_count,
                 meta_links_count,
-                imp_births,
+                imp_persons,
                 imp_families,
-                imp_deaths,
             )
             updated_contributors.append(contributor_id)
 
@@ -788,7 +642,6 @@ def main():
                 trigger_matches.queue_pairs(db, pairs)
                 print(f"Queued {len(pairs)} pairs for matching.")
 
-            # Close DB connection before yielding to compute_matches workers
             db.close()
             db = None
 

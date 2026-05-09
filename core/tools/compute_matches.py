@@ -68,13 +68,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @event.listens_for(engine, "connect")
 def _apply_session_params(dbapi_conn, _record):
-    """Apply session-wide tuning once when a pool connection is opened.
-
-    Previously these were SET LOCAL'd at the start of every match INSERT, which
-    added ~7 round-trips per pair on top of the 3 inserts.  Setting them at
-    connect time means each pooled connection carries the right values for its
-    entire lifetime, so the hot path is just the INSERT itself.
-    """
+    """Apply session-wide tuning once when a pool connection is opened."""
     cur = dbapi_conn.cursor()
     cur.execute(f"SET pg_trgm.similarity_threshold = {TRGM_THRESHOLD}")
     cur.execute(f"SET work_mem = '{WORK_MEM}'")
@@ -88,101 +82,87 @@ def _apply_session_params(dbapi_conn, _record):
 
 # ---------------------------------------------------------------------------
 # Each job compares exactly two contributors against each other.
+# A "person" row carries both birth and death info, so a single match insert
+# combines those signals.  Family matching stays separate.
 # Both A→B and B→A matches are stored in a single INSERT (UNION ALL) so the
-# API can query from either contributor's perspective.  The JOIN is bounded to
-# two small contributor-filtered datasets instead of one contributor vs millions
-# of rows, allowing PostgreSQL to choose much more efficient query plans.
+# API can query from either contributor's perspective.
 # ---------------------------------------------------------------------------
 
-_BIRTH_INSERT = text(r"""
+_PERSON_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
          confidence, match_fields)
     WITH cands AS (
         SELECT
-            b1.id AS a_id,
-            b2.id AS b_id,
+            p1.id AS a_id,
+            p2.id AS b_id,
             sm.s_sur,
-            CASE WHEN b1.name = b2.name THEN 1.0 ELSE similarity(b1.name, b2.name) END AS s_name,
-            CASE WHEN COALESCE(b1.place_of_birth,'') != ''
-                      AND COALESCE(b2.place_of_birth,'') != ''
-                 THEN CASE WHEN b1.place_of_birth = b2.place_of_birth THEN 1.0 ELSE similarity(b1.place_of_birth, b2.place_of_birth) END
-                 ELSE NULL END AS s_place,
-            CASE WHEN COALESCE(b1.father_name,'') != '' AND COALESCE(b2.father_name,'') != ''
-                 THEN CASE WHEN b1.father_name = b2.father_name THEN 1.0 ELSE similarity(b1.father_name, b2.father_name) END ELSE NULL END AS s_fname,
-            CASE WHEN COALESCE(b1.father_surname,'') != '' AND COALESCE(b2.father_surname,'') != ''
-                 THEN CASE WHEN b1.father_surname = b2.father_surname THEN 1.0 ELSE similarity(b1.father_surname, b2.father_surname) END ELSE NULL END AS s_fsur,
-            CASE WHEN COALESCE(b1.mother_name,'') != '' AND COALESCE(b2.mother_name,'') != ''
-                 THEN CASE WHEN b1.mother_name = b2.mother_name THEN 1.0 ELSE similarity(b1.mother_name, b2.mother_name) END ELSE NULL END AS s_mname,
-            CASE WHEN COALESCE(b1.mother_surname,'') != '' AND COALESCE(b2.mother_surname,'') != ''
-                 THEN CASE WHEN b1.mother_surname = b2.mother_surname THEN 1.0 ELSE similarity(b1.mother_surname, b2.mother_surname) END ELSE NULL END AS s_msur,
-            CASE WHEN COALESCE(b1.husbands_list,'') NOT IN ('', '[]') AND COALESCE(b2.husbands_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN b1.husbands_list = b2.husbands_list THEN 1.0 ELSE similarity(b1.husbands_list, b2.husbands_list) END ELSE NULL END AS s_hlist,
-            CASE WHEN COALESCE(b1.wifes_list,'') NOT IN ('', '[]') AND COALESCE(b2.wifes_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN b1.wifes_list = b2.wifes_list THEN 1.0 ELSE similarity(b1.wifes_list, b2.wifes_list) END ELSE NULL END AS s_wlist,
-            CASE WHEN b1.birth_year IS NOT NULL AND b2.birth_year IS NOT NULL
-                 THEN ABS(b1.birth_year - b2.birth_year)
-                 ELSE NULL END AS yr_diff
+            CASE WHEN p1.name = p2.name THEN 1.0 ELSE similarity(p1.name, p2.name) END AS s_name,
+            CASE WHEN COALESCE(p1.place_of_birth,'') != ''
+                      AND COALESCE(p2.place_of_birth,'') != ''
+                 THEN CASE WHEN p1.place_of_birth = p2.place_of_birth THEN 1.0 ELSE similarity(p1.place_of_birth, p2.place_of_birth) END
+                 ELSE NULL END AS s_bplace,
+            CASE WHEN COALESCE(p1.place_of_death,'') != ''
+                      AND COALESCE(p2.place_of_death,'') != ''
+                 THEN CASE WHEN p1.place_of_death = p2.place_of_death THEN 1.0 ELSE similarity(p1.place_of_death, p2.place_of_death) END
+                 ELSE NULL END AS s_dplace,
+            CASE WHEN COALESCE(p1.parents_list,'') NOT IN ('', '[]') AND COALESCE(p2.parents_list,'') NOT IN ('', '[]')
+                 THEN CASE WHEN p1.parents_list = p2.parents_list THEN 1.0 ELSE similarity(p1.parents_list, p2.parents_list) END ELSE NULL END AS s_parents,
+            CASE WHEN COALESCE(p1.partners_list,'') NOT IN ('', '[]') AND COALESCE(p2.partners_list,'') NOT IN ('', '[]')
+                 THEN CASE WHEN p1.partners_list = p2.partners_list THEN 1.0 ELSE similarity(p1.partners_list, p2.partners_list) END ELSE NULL END AS s_partners,
+            CASE WHEN p1.birth_year IS NOT NULL AND p2.birth_year IS NOT NULL
+                 THEN ABS(p1.birth_year - p2.birth_year)
+                 ELSE NULL END AS b_yr_diff,
+            CASE WHEN p1.death_year IS NOT NULL AND p2.death_year IS NOT NULL
+                 THEN ABS(p1.death_year - p2.death_year)
+                 ELSE NULL END AS d_yr_diff
         FROM sur_matches sm
-        JOIN births b1 ON b1.contributor = :contrib_a AND b1.surname = sm.sur1
-        JOIN births b2 ON b2.contributor = :contrib_b AND b2.surname = sm.sur2
-        WHERE (b1.birth_year IS NULL OR b2.birth_year IS NULL
-                 OR ABS(b1.birth_year - b2.birth_year) <= :yr_tol)
-          AND (b1.name = b2.name OR similarity(b1.name, b2.name) >= :trgm_thresh)
+        JOIN persons p1 ON p1.contributor = :contrib_a AND p1.surname = sm.sur1
+        JOIN persons p2 ON p2.contributor = :contrib_b AND p2.surname = sm.sur2
+        WHERE (
+                (p1.birth_year IS NULL OR p2.birth_year IS NULL
+                    OR ABS(p1.birth_year - p2.birth_year) <= :yr_tol)
+                OR
+                (p1.death_year IS NOT NULL AND p2.death_year IS NOT NULL
+                    AND ABS(p1.death_year - p2.death_year) <= :yr_tol)
+              )
+          AND (p1.name = p2.name OR similarity(p1.name, p2.name) >= :trgm_thresh)
     ),
     scored AS (
-        SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff, s_fname, s_fsur, s_mname, s_msur, s_hlist, s_wlist,
+        SELECT a_id, b_id, s_sur, s_name, s_bplace, s_dplace,
+               b_yr_diff, d_yr_diff, s_parents, s_partners,
             (
                 s_sur  * 35.0 +
                 s_name * 30.0 +
-                COALESCE(s_place, 0.5) * 15.0 +
-                COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 20.0 +
-                COALESCE(s_fname, 0.0) * 10.0 +
-                COALESCE(s_fsur,  0.0) * 10.0 +
-                COALESCE(s_mname, 0.0) * 10.0 +
-                COALESCE(s_msur,  0.0) * 10.0 +
-                COALESCE(s_hlist, 0.0) * 15.0 +
-                COALESCE(s_wlist, 0.0) * 15.0
+                COALESCE(s_bplace, 0.5) * 10.0 +
+                COALESCE(s_dplace, 0.5) * 10.0 +
+                COALESCE(GREATEST(0.0, 1.0 - b_yr_diff::float / :yr_tol), 0.5) * 15.0 +
+                COALESCE(GREATEST(0.0, 1.0 - d_yr_diff::float / :yr_tol), 0.5) * 10.0 +
+                COALESCE(s_parents,  0.0) * 20.0 +
+                COALESCE(s_partners, 0.0) * 15.0
             ) / (
                 100.0 +
-                CASE WHEN s_fname IS NOT NULL THEN 10.0 ELSE 0.0 END +
-                CASE WHEN s_fsur  IS NOT NULL THEN 10.0 ELSE 0.0 END +
-                CASE WHEN s_mname IS NOT NULL THEN 10.0 ELSE 0.0 END +
-                CASE WHEN s_msur  IS NOT NULL THEN 10.0 ELSE 0.0 END +
-                CASE WHEN s_hlist IS NOT NULL THEN 15.0 ELSE 0.0 END +
-                CASE WHEN s_wlist IS NOT NULL THEN 15.0 ELSE 0.0 END
+                CASE WHEN s_parents  IS NOT NULL THEN 20.0 ELSE 0.0 END +
+                CASE WHEN s_partners IS NOT NULL THEN 15.0 ELSE 0.0 END
             ) AS conf
         FROM cands
+    ),
+    filtered AS (
+        SELECT a_id, b_id, conf, jsonb_build_object(
+            'surname',     round(s_sur::numeric, 3),
+            'name',        round(s_name::numeric, 3),
+            'birth_place', CASE WHEN s_bplace  IS NOT NULL THEN round(s_bplace::numeric, 3) END,
+            'death_place', CASE WHEN s_dplace  IS NOT NULL THEN round(s_dplace::numeric, 3) END,
+            'birth_year_diff', b_yr_diff,
+            'death_year_diff', d_yr_diff,
+            'parents',     CASE WHEN s_parents  IS NOT NULL THEN round(s_parents::numeric, 3) END,
+            'partners',    CASE WHEN s_partners IS NOT NULL THEN round(s_partners::numeric, 3) END
+        )::text AS match_fields
+        FROM scored WHERE conf >= :conf_min
     )
-    SELECT :contrib_a, :contrib_b, 'birth', a_id, b_id, conf,
-        jsonb_build_object(
-            'surname',   round(s_sur::numeric, 3),
-            'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff', yr_diff,
-            'fname',     CASE WHEN s_fname IS NOT NULL THEN round(s_fname::numeric, 3) END,
-            'fsur',      CASE WHEN s_fsur  IS NOT NULL THEN round(s_fsur::numeric, 3) END,
-            'mname',     CASE WHEN s_mname IS NOT NULL THEN round(s_mname::numeric, 3) END,
-            'msur',      CASE WHEN s_msur  IS NOT NULL THEN round(s_msur::numeric, 3) END,
-            'hlist',     CASE WHEN s_hlist IS NOT NULL THEN round(s_hlist::numeric, 3) END,
-            'wlist',     CASE WHEN s_wlist IS NOT NULL THEN round(s_wlist::numeric, 3) END
-        )::text
-    FROM scored WHERE conf >= :conf_min
+    SELECT :contrib_a, :contrib_b, 'person', a_id, b_id, conf, match_fields FROM filtered
     UNION ALL
-    SELECT :contrib_b, :contrib_a, 'birth', b_id, a_id, conf,
-        jsonb_build_object(
-            'surname',   round(s_sur::numeric, 3),
-            'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff', yr_diff,
-            'fname',     CASE WHEN s_fname IS NOT NULL THEN round(s_fname::numeric, 3) END,
-            'fsur',      CASE WHEN s_fsur  IS NOT NULL THEN round(s_fsur::numeric, 3) END,
-            'mname',     CASE WHEN s_mname IS NOT NULL THEN round(s_mname::numeric, 3) END,
-            'msur',      CASE WHEN s_msur  IS NOT NULL THEN round(s_msur::numeric, 3) END,
-            'hlist',     CASE WHEN s_hlist IS NOT NULL THEN round(s_hlist::numeric, 3) END,
-            'wlist',     CASE WHEN s_wlist IS NOT NULL THEN round(s_wlist::numeric, 3) END
-        )::text
-    FROM scored WHERE conf >= :conf_min
+    SELECT :contrib_b, :contrib_a, 'person', b_id, a_id, conf, match_fields FROM filtered
 """)
 
 _FAMILY_INSERT = text(r"""
@@ -245,120 +225,24 @@ _FAMILY_INSERT = text(r"""
                 CASE WHEN s_cl IS NOT NULL THEN 15.0 ELSE 0.0 END
             ) AS conf
         FROM cands
-    )
-    SELECT :contrib_a, :contrib_b, 'family', a_id, b_id, conf,
-        jsonb_build_object(
-            'husband_surname', round(s_hsur::numeric, 3),
-            'wife_surname',    round(s_wsur::numeric, 3),
-            'husband_name',    CASE WHEN s_hname IS NOT NULL THEN round(s_hname::numeric, 3) END,
-            'wife_name',       CASE WHEN s_wname IS NOT NULL THEN round(s_wname::numeric, 3) END,
-            'place',           CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff',       yr_diff,
-            'husband_parents', CASE WHEN s_hp IS NOT NULL THEN round(s_hp::numeric, 3) END,
-            'wife_parents',    CASE WHEN s_wp IS NOT NULL THEN round(s_wp::numeric, 3) END,
-            'children',        CASE WHEN s_cl IS NOT NULL THEN round(s_cl::numeric, 3) END
-        )::text
-    FROM scored WHERE conf >= :conf_min
-    UNION ALL
-    SELECT :contrib_b, :contrib_a, 'family', b_id, a_id, conf,
-        jsonb_build_object(
-            'husband_surname', round(s_hsur::numeric, 3),
-            'wife_surname',    round(s_wsur::numeric, 3),
-            'husband_name',    CASE WHEN s_hname IS NOT NULL THEN round(s_hname::numeric, 3) END,
-            'wife_name',       CASE WHEN s_wname IS NOT NULL THEN round(s_wname::numeric, 3) END,
-            'place',           CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff',       yr_diff,
-            'husband_parents', CASE WHEN s_hp IS NOT NULL THEN round(s_hp::numeric, 3) END,
-            'wife_parents',    CASE WHEN s_wp IS NOT NULL THEN round(s_wp::numeric, 3) END,
-            'children',        CASE WHEN s_cl IS NOT NULL THEN round(s_cl::numeric, 3) END
-        )::text
-    FROM scored WHERE conf >= :conf_min
-""")
-
-_DEATH_INSERT = text(r"""
-    INSERT INTO matches
-        (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields)
-    WITH cands AS (
-        SELECT
-            d1.id AS a_id,
-            d2.id AS b_id,
-            sm.s_sur,
-            CASE WHEN d1.name = d2.name THEN 1.0 ELSE similarity(d1.name, d2.name) END AS s_name,
-            CASE WHEN COALESCE(d1.place_of_death,'') != ''
-                      AND COALESCE(d2.place_of_death,'') != ''
-                 THEN CASE WHEN d1.place_of_death = d2.place_of_death THEN 1.0 ELSE similarity(d1.place_of_death, d2.place_of_death) END
-                 ELSE NULL END AS s_place,
-            CASE WHEN COALESCE(d1.father_name,'') != '' AND COALESCE(d2.father_name,'') != ''
-                 THEN CASE WHEN d1.father_name = d2.father_name THEN 1.0 ELSE similarity(d1.father_name, d2.father_name) END
-                 WHEN COALESCE(d1.father_name,'') != '' OR COALESCE(d2.father_name,'') != '' THEN 0.5 ELSE NULL END AS s_fname,
-            CASE WHEN COALESCE(d1.father_surname,'') != '' AND COALESCE(d2.father_surname,'') != ''
-                 THEN CASE WHEN d1.father_surname = d2.father_surname THEN 1.0 ELSE similarity(d1.father_surname, d2.father_surname) END
-                 WHEN COALESCE(d1.father_surname,'') != '' OR COALESCE(d2.father_surname,'') != '' THEN 0.5 ELSE NULL END AS s_fsur,
-            CASE WHEN COALESCE(d1.mother_name,'') != '' AND COALESCE(d2.mother_name,'') != ''
-                 THEN CASE WHEN d1.mother_name = d2.mother_name THEN 1.0 ELSE similarity(d1.mother_name, d2.mother_name) END
-                 WHEN COALESCE(d1.mother_name,'') != '' OR COALESCE(d2.mother_name,'') != '' THEN 0.5 ELSE NULL END AS s_mname,
-            CASE WHEN COALESCE(d1.mother_surname,'') != '' AND COALESCE(d2.mother_surname,'') != ''
-                 THEN CASE WHEN d1.mother_surname = d2.mother_surname THEN 1.0 ELSE similarity(d1.mother_surname, d2.mother_surname) END
-                 WHEN COALESCE(d1.mother_surname,'') != '' OR COALESCE(d2.mother_surname,'') != '' THEN 0.5 ELSE NULL END AS s_msur,
-            CASE WHEN COALESCE(d1.husbands_list,'') NOT IN ('', '[]') AND COALESCE(d2.husbands_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN d1.husbands_list = d2.husbands_list THEN 1.0 ELSE similarity(d1.husbands_list, d2.husbands_list) END
-                 WHEN COALESCE(d1.husbands_list,'') NOT IN ('', '[]') OR COALESCE(d2.husbands_list,'') NOT IN ('', '[]') THEN 0.5 ELSE NULL END AS s_hlist,
-            CASE WHEN COALESCE(d1.wifes_list,'') NOT IN ('', '[]') AND COALESCE(d2.wifes_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN d1.wifes_list = d2.wifes_list THEN 1.0 ELSE similarity(d1.wifes_list, d2.wifes_list) END
-                 WHEN COALESCE(d1.wifes_list,'') NOT IN ('', '[]') OR COALESCE(d2.wifes_list,'') NOT IN ('', '[]') THEN 0.5 ELSE NULL END AS s_wlist,
-            CASE WHEN d1.death_year IS NOT NULL AND d2.death_year IS NOT NULL
-                 THEN ABS(d1.death_year - d2.death_year)
-                 ELSE NULL END AS yr_diff
-        FROM sur_matches sm
-        JOIN deaths d1 ON d1.contributor = :contrib_a AND d1.surname = sm.sur1
-        JOIN deaths d2 ON d2.contributor = :contrib_b AND d2.surname = sm.sur2
-        WHERE (d1.death_year IS NULL OR d2.death_year IS NULL
-                 OR ABS(d1.death_year - d2.death_year) <= :yr_tol)
-          AND (d1.name = d2.name OR similarity(d1.name, d2.name) >= :trgm_thresh)
-    ),
-    scored AS (
-        SELECT a_id, b_id, s_sur, s_name, s_place, yr_diff, s_fname, s_fsur, s_mname, s_msur, s_hlist, s_wlist,
-            (
-                s_sur  * 35.0 +
-                s_name * 30.0 +
-                COALESCE(s_place, 0.5) * 15.0 +
-                COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 20.0 +
-                COALESCE(s_fname, 0.0) * 10.0 +
-                COALESCE(s_fsur,  0.0) * 10.0 +
-                COALESCE(s_mname, 0.0) * 10.0 +
-                COALESCE(s_msur,  0.0) * 10.0 +
-                COALESCE(s_hlist, 0.0) * 15.0 +
-                COALESCE(s_wlist, 0.0) * 15.0
-            ) / (
-                100.0 +
-                CASE WHEN s_fname IS NOT NULL THEN 10.0 ELSE 0.0 END +
-                CASE WHEN s_fsur  IS NOT NULL THEN 10.0 ELSE 0.0 END +
-                CASE WHEN s_mname IS NOT NULL THEN 10.0 ELSE 0.0 END +
-                CASE WHEN s_msur  IS NOT NULL THEN 10.0 ELSE 0.0 END +
-                CASE WHEN s_hlist IS NOT NULL THEN 15.0 ELSE 0.0 END +
-                CASE WHEN s_wlist IS NOT NULL THEN 15.0 ELSE 0.0 END
-            ) AS conf
-        FROM cands
     ),
     filtered AS (
         SELECT a_id, b_id, conf, jsonb_build_object(
-            'surname',   round(s_sur::numeric, 3),
-            'name',      round(s_name::numeric, 3),
-            'place',     CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
-            'year_diff', yr_diff,
-            'fname',     CASE WHEN s_fname IS NOT NULL THEN round(s_fname::numeric, 3) END,
-            'fsur',      CASE WHEN s_fsur  IS NOT NULL THEN round(s_fsur::numeric, 3) END,
-            'mname',     CASE WHEN s_mname IS NOT NULL THEN round(s_mname::numeric, 3) END,
-            'msur',      CASE WHEN s_msur  IS NOT NULL THEN round(s_msur::numeric, 3) END,
-            'hlist',     CASE WHEN s_hlist IS NOT NULL THEN round(s_hlist::numeric, 3) END,
-            'wlist',     CASE WHEN s_wlist IS NOT NULL THEN round(s_wlist::numeric, 3) END
+            'husband_surname', round(s_hsur::numeric, 3),
+            'wife_surname',    round(s_wsur::numeric, 3),
+            'husband_name',    CASE WHEN s_hname IS NOT NULL THEN round(s_hname::numeric, 3) END,
+            'wife_name',       CASE WHEN s_wname IS NOT NULL THEN round(s_wname::numeric, 3) END,
+            'place',           CASE WHEN s_place IS NOT NULL THEN round(s_place::numeric, 3) END,
+            'year_diff',       yr_diff,
+            'husband_parents', CASE WHEN s_hp IS NOT NULL THEN round(s_hp::numeric, 3) END,
+            'wife_parents',    CASE WHEN s_wp IS NOT NULL THEN round(s_wp::numeric, 3) END,
+            'children',        CASE WHEN s_cl IS NOT NULL THEN round(s_cl::numeric, 3) END
         )::text AS match_fields
         FROM scored WHERE conf >= :conf_min
     )
-    SELECT :contrib_a, :contrib_b, 'death', a_id, b_id, conf, match_fields FROM filtered
+    SELECT :contrib_a, :contrib_b, 'family', a_id, b_id, conf, match_fields FROM filtered
     UNION ALL
-    SELECT :contrib_b, :contrib_a, 'death', b_id, a_id, conf, match_fields FROM filtered
+    SELECT :contrib_b, :contrib_a, 'family', b_id, a_id, conf, match_fields FROM filtered
 """)
 
 
@@ -392,11 +276,6 @@ def process_job(contrib_a, contrib_b):
     }
     pair_label = f"{contrib_a}↔{contrib_b}"
 
-    # Whole job runs in one transaction on one pooled connection: stale-match
-    # cleanup, the three record-type inserts, and the job-status update share
-    # transaction setup and the connection-level tuning settings.  Sequential
-    # within the txn, but the outer worker pool keeps multiple pairs running
-    # concurrently across separate connections.
     total = 0
     with engine.begin() as conn:
         deleted = conn.execute(
@@ -413,18 +292,16 @@ def process_job(contrib_a, contrib_b):
         conn.execute(
             text("""
             CREATE TEMP TABLE a_sur ON COMMIT DROP AS
-            SELECT surname AS sur FROM births WHERE contributor = :contrib_a AND surname IS NOT NULL
+            SELECT surname AS sur FROM persons WHERE contributor = :contrib_a AND surname IS NOT NULL
             UNION SELECT husband_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL
-            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
-            UNION SELECT surname FROM deaths WHERE contributor = :contrib_a AND surname IS NOT NULL;
+            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL;
 
             ALTER TABLE a_sur ADD PRIMARY KEY (sur);
 
             CREATE TEMP TABLE b_sur ON COMMIT DROP AS
-            SELECT surname AS sur FROM births WHERE contributor = :contrib_b AND surname IS NOT NULL
+            SELECT surname AS sur FROM persons WHERE contributor = :contrib_b AND surname IS NOT NULL
             UNION SELECT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
-            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
-            UNION SELECT surname FROM deaths WHERE contributor = :contrib_b AND surname IS NOT NULL;
+            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL;
 
             ALTER TABLE b_sur ADD PRIMARY KEY (sur);
 
@@ -446,9 +323,8 @@ def process_job(contrib_a, contrib_b):
         )
 
         for sql, label in (
-            (_BIRTH_INSERT, "birth"),
+            (_PERSON_INSERT, "person"),
             (_FAMILY_INSERT, "family"),
-            (_DEATH_INSERT, "death"),
         ):
             t0 = time.monotonic()
             n = conn.execute(sql, params).rowcount
@@ -508,16 +384,14 @@ def main(workers=4):
         return
 
     # Back-fill year columns for any rows that pre-date the schema migration.
-    # Runs once per table when NULL rows exist; skipped on subsequent calls.
-    # Done BEFORE ANALYZE so the planner sees the populated histogram.
     for table, year_col, date_col in (
-        ("births", "birth_year", "date_of_birth"),
+        ("persons", "birth_year", "date_of_birth"),
+        ("persons", "death_year", "date_of_death"),
         ("families", "marriage_year", "date_of_marriage"),
-        ("deaths", "death_year", "date_of_death"),
     ):
         with engine.connect() as conn:
             null_rows = conn.execute(
-                text(f"SELECT COUNT(*) FROM {table} WHERE {year_col} IS NULL")
+                text(f"SELECT COUNT(*) FROM {table} WHERE {year_col} IS NULL AND {date_col} ~ '\\d{{4}}'")
             ).scalar()
         if null_rows:
             log.info(f"Back-filling {year_col} for {null_rows:,} rows in {table}...")
@@ -530,18 +404,12 @@ def main(workers=4):
                         f"WHERE {year_col} IS NULL AND {date_col} ~ '\\d{{4}}'"
                     )
                 )
-            log.info(f"  {table} back-fill done in {time.monotonic()-t_bf:.0f}s")
+            log.info(f"  {table}.{year_col} back-fill done in {time.monotonic()-t_bf:.0f}s")
 
-    # Refresh planner statistics so the query planner has accurate row-count estimates.
-    # Critical after a bulk import — without this the planner may choose seq scans
-    # over index scans, or under-estimate parallelism benefit.
-    # Analyzing the year columns is especially important: the planner needs their
-    # histogram to decide whether a year-range B-tree scan beats the trigram GiST scan.
     log.info("Running ANALYZE for fresh planner statistics...")
     with engine.begin() as conn:
-        conn.execute(text("ANALYZE births"))
+        conn.execute(text("ANALYZE persons"))
         conn.execute(text("ANALYZE families"))
-        conn.execute(text("ANALYZE deaths"))
 
     log.info(
         f"Processing {pending_count} pending pair(s) with {workers} worker(s) "
