@@ -29,20 +29,23 @@ try:
 except ImportError:
     pass
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    try:
-        load_dotenv("../.env")
-    except Exception:
-        pass
+try:
+    load_dotenv("../.env")
+except Exception:
+    pass
+
+if os.getenv("POSTGRES_USER") and os.getenv("POSTGRES_DB"):
     import urllib.parse
 
     _db_host = os.getenv(
         "POSTGRES_HOST", "db" if os.path.exists("/.dockerenv") else "localhost"
     )
     DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
+else:
+    DATABASE_URL = os.getenv("DATABASE_URL")
 
-os.environ["DATABASE_URL"] = DATABASE_URL
+if DATABASE_URL:
+    os.environ["DATABASE_URL"] = DATABASE_URL
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
