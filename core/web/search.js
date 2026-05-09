@@ -149,13 +149,16 @@ export function setupGeneralSearch() {
     const hasLinkChecked = document.getElementById('general-has_link')?.checked || false;
 
     let html = `
-      <div class="input-wrapper">
-        <input type="text" id="general-name" placeholder="${t('col_name')}" value="${nameVal}" />
-        <button type="button" class="clear-btn" style="display:${nameVal ? 'block' : 'none'}">&times;</button>
-      </div>
-      <div class="input-wrapper">
-        <input type="text" id="general-surname" placeholder="${t('col_surname')}" value="${surnameVal}" />
-        <button type="button" class="clear-btn" style="display:${surnameVal ? 'block' : 'none'}">&times;</button>
+      <div class="field-group">
+        <div class="field-group-label">${t('label_person')}</div>
+        <div class="input-wrapper">
+          <input type="text" id="general-name" placeholder="${t('col_name')}" value="${nameVal}" />
+          <button type="button" class="clear-btn" style="display:${nameVal ? 'block' : 'none'}">&times;</button>
+        </div>
+        <div class="input-wrapper">
+          <input type="text" id="general-surname" placeholder="${t('col_surname')}" value="${surnameVal}" />
+          <button type="button" class="clear-btn" style="display:${surnameVal ? 'block' : 'none'}">&times;</button>
+        </div>
       </div>
       <div class="date-range">
         <div class="input-wrapper">
@@ -300,6 +303,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   // Group related fields (date+place, name+surname) under a small section label
   // so they read as one block.  Other columns flow normally.
   const FIELD_GROUPS = {
+    name:             { startLabelKey: 'label_person',   members: ['name', 'surname'] },
     husband_name:     { startLabelKey: 'label_husband',  members: ['husband_name', 'husband_surname'] },
     wife_name:        { startLabelKey: 'label_wife',     members: ['wife_name', 'wife_surname'] },
     date_of_birth:    { startLabelKey: 'label_birth',    members: ['date_of_birth', 'place_of_birth'] },
