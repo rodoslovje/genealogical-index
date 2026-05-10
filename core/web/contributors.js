@@ -757,7 +757,12 @@ async function renderMatchDetail(contributor, partner) {
 
     const headerCells = fields.map(({ h, f }) => {
       const cls = isDateField(f) ? ' class="col-right"' : '';
-      return `<th${cls}>${h}</th>`;
+      const tipKey = f === 'parents'
+        ? (key === 'family' ? 'tip_parents_family' : 'tip_parents_person')
+        : `tip_${f}`;
+      const tipText = t(tipKey);
+      const titleAttr = tipText && tipText !== tipKey ? ` title="${tipText.replace(/"/g, '&quot;')}"` : '';
+      return `<th${cls}${titleAttr}>${h}</th>`;
     }).join('');
     const groupRows = group.map((r, idx) => {
       const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
@@ -798,8 +803,8 @@ async function renderMatchDetail(contributor, partner) {
         <table class="matches-detail-table">
           <thead><tr>
             ${headerCells}
-            <th class="col-center">${t('col_contributor_ID')}</th>
-            <th class="col-center">${t('col_confidence')}</th>
+            <th class="col-center" title="${t('tip_contributor_ID').replace(/"/g, '&quot;')}">${t('col_contributor_ID')}</th>
+            <th class="col-center" title="${t('tip_confidence').replace(/"/g, '&quot;')}">${t('col_confidence')}</th>
           </tr></thead>
           <tbody>${groupRows}</tbody>
         </table>

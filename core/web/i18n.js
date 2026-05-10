@@ -83,7 +83,27 @@ const translations = {
     col_total_links: 'Links',
     col_url: 'URL',
 
-    // Tooltips
+    // Column header tooltips
+    tip_contributor: 'Genealogist who contributed this data to the index.',
+    tip_contributor_ID: 'Genealogist who contributed this data to the index.',
+    tip_contributor_ID_matches: 'Genealogist with potentially matching records.',
+    tip_total_persons: 'Number of person records.',
+    tip_total_families: 'Number of family records.',
+    tip_total: 'Total number of persons and families.',
+    tip_total_persons_matches: 'Number of matching person records.',
+    tip_total_families_matches: 'Number of matching family records.',
+    tip_total_matches: 'Total number of matching persons and families.',
+    tip_confidence: 'Estimated likelihood that the records refer to the same person or family.',
+    tip_matches: 'Number of other genealogists with potentially matching records.',
+    tip_total_links: 'Number of links to source documents (e.g. Matricula Online, Geneanet Cemeteries, FamilySearch.org…).',
+    tip_last_modified: 'Date this genealogist\'s data was last imported into the index.',
+    tip_links: 'Links to source documents (e.g. Matricula Online, Geneanet Cemeteries, FamilySearch.org…).',
+    tip_parents_person: 'Parents of this person, with search links to their family and to each parent.',
+    tip_partners: 'Partners (married or unmarried) of this person, with a search link to their family.',
+    tip_parents_family: 'Parents of husband and wife, with search links to their families and to each parent.',
+    tip_children: 'Children of this family, with a search link to each child.',
+
+    // Icon tooltips
     icon_familysearch: 'FamilySearch',
     icon_grave: 'Grave',
     icon_census: 'Census',
@@ -197,7 +217,27 @@ const translations = {
     col_total_links: 'Povezave',
     col_url: 'URL',
 
-    // Tooltips
+    // Column header tooltips
+    tip_contributor: 'Rodoslovec, ki je te podatke prispeval v indeks.',
+    tip_contributor_ID: 'Rodoslovec, ki je te podatke prispeval v indeks.',
+    tip_contributor_ID_matches: 'Rodoslovec z morebitnimi ujemajočimi se zapisi.',
+    tip_total_persons: 'Število zapisov o osebah.',
+    tip_total_families: 'Število zapisov o družinah.',
+    tip_total: 'Skupno število oseb in družin.',
+    tip_total_persons_matches: 'Število ujemajočih se zapisov o osebah.',
+    tip_total_families_matches: 'Število ujemajočih se zapisov o družinah.',
+    tip_total_matches: 'Skupno število ujemajočih se oseb in družin.',
+    tip_confidence: 'Ocenjena verjetnost, da se zapisa nanašata na isto osebo ali družino.',
+    tip_matches: 'Število rodoslovcev, ki imajo z izbranim rodoslovcem morebitna ujemanja.',
+    tip_total_links: 'Število povezav na izvorne dokumente (npr. Matricula Online, Geneanet pokopališča, FamilySearch.org…).',
+    tip_last_modified: 'Datum zadnjega uvoza podatkov tega rodoslovca v indeks.',
+    tip_links: 'Povezave na izvorne dokumente (npr. Matricula Online, Geneanet pokopališča, FamilySearch.org…).',
+    tip_parents_person: 'Starši te osebe s povezavami za iskanje njihove družine in posameznih oseb.',
+    tip_partners: 'Partnerji (poročeni ali neporočeni) te osebe s povezavo za iskanje njune družine.',
+    tip_parents_family: 'Starši moža in žene s povezavami za iskanje njihovih družin in posameznih oseb.',
+    tip_children: 'Otroci te družine s povezavo za iskanje vsakega otroka.',
+
+    // Icon tooltips
     icon_familysearch: 'FamilySearch',
     icon_grave: 'Grob',
     icon_census: 'Popis prebivalstva',
@@ -311,7 +351,27 @@ const translations = {
     col_total_links: 'Poveznice',
     col_url: 'URL',
 
-    // Tooltips
+    // Column header tooltips
+    tip_contributor: 'Rodoslovac koji je ove podatke ustupio indeksu.',
+    tip_contributor_ID: 'Rodoslovac koji je ove podatke ustupio indeksu.',
+    tip_contributor_ID_matches: 'Rodoslovac s potencijalno podudarnim zapisima.',
+    tip_total_persons: 'Broj zapisa o osobama.',
+    tip_total_families: 'Broj zapisa o obiteljima.',
+    tip_total: 'Ukupan broj osoba i obitelji.',
+    tip_total_persons_matches: 'Broj podudarnih zapisa o osobama.',
+    tip_total_families_matches: 'Broj podudarnih zapisa o obiteljima.',
+    tip_total_matches: 'Ukupan broj podudarnih osoba i obitelji.',
+    tip_confidence: 'Procijenjena vjerojatnost da se zapisi odnose na istu osobu ili obitelj.',
+    tip_matches: 'Broj rodoslovaca koji imaju potencijalno podudarne zapise s odabranim rodoslovcem.',
+    tip_total_links: 'Broj poveznica na izvorne dokumente (npr. Matricula Online, Geneanet groblja, FamilySearch.org…).',
+    tip_last_modified: 'Datum posljednjeg uvoza podataka ovog rodoslovca u indeks.',
+    tip_links: 'Poveznice na izvorne dokumente (npr. Matricula Online, Geneanet groblja, FamilySearch.org…).',
+    tip_parents_person: 'Roditelji ove osobe s poveznicama za pretragu njihove obitelji i pojedinih osoba.',
+    tip_partners: 'Partneri (vjenčani ili nevjenčani) ove osobe s poveznicom za pretragu njihove obitelji.',
+    tip_parents_family: 'Roditelji muža i žene s poveznicama za pretragu njihovih obitelji i pojedinih osoba.',
+    tip_children: 'Djeca ove obitelji s poveznicom za pretragu svakog djeteta.',
+
+    // Icon tooltips
     icon_familysearch: 'FamilySearch',
     icon_grave: 'Grob',
     icon_census: 'Popis stanovništva',
@@ -425,7 +485,27 @@ const translations = {
     col_total_links: 'Links',
     col_url: 'URL',
 
-    // Tooltips
+    // Column header tooltips
+    tip_contributor: 'Genealoge, der diese Daten zum Index beigesteuert hat.',
+    tip_contributor_ID: 'Genealoge, der diese Daten zum Index beigesteuert hat.',
+    tip_contributor_ID_matches: 'Genealoge mit potenziell übereinstimmenden Einträgen.',
+    tip_total_persons: 'Anzahl der Personeneinträge.',
+    tip_total_families: 'Anzahl der Familieneinträge.',
+    tip_total: 'Gesamtzahl der Personen und Familien.',
+    tip_total_persons_matches: 'Anzahl übereinstimmender Personeneinträge.',
+    tip_total_families_matches: 'Anzahl übereinstimmender Familieneinträge.',
+    tip_total_matches: 'Gesamtzahl übereinstimmender Personen und Familien.',
+    tip_confidence: 'Geschätzte Wahrscheinlichkeit, dass die Einträge dieselbe Person oder Familie betreffen.',
+    tip_matches: 'Anzahl anderer Genealogen mit potenziell übereinstimmenden Einträgen.',
+    tip_total_links: 'Anzahl der Verweise auf Quelldokumente (z. B. Matricula Online, Geneanet Friedhöfe, FamilySearch.org …).',
+    tip_last_modified: 'Datum des letzten Imports der Daten dieses Genealogen in den Index.',
+    tip_links: 'Verweise auf Quelldokumente (z. B. Matricula Online, Geneanet Friedhöfe, FamilySearch.org …).',
+    tip_parents_person: 'Eltern dieser Person mit Suchlinks zur Familie und zu jedem Elternteil.',
+    tip_partners: 'Partner (verheiratet oder unverheiratet) dieser Person mit Suchlink zu ihrer Familie.',
+    tip_parents_family: 'Eltern von Mann und Frau mit Suchlinks zu ihren Familien und zu jedem Elternteil.',
+    tip_children: 'Kinder dieser Familie mit einem Suchlink zu jedem Kind.',
+
+    // Icon tooltips
     icon_familysearch: 'FamilySearch',
     icon_grave: 'Grab',
     icon_census: 'Volkszählung',
@@ -539,7 +619,27 @@ const translations = {
     col_total_links: 'Hivatkozások',
     col_url: 'URL',
 
-    // Tooltips
+    // Column header tooltips
+    tip_contributor: 'A genealógus, aki ezeket az adatokat az indexhez hozzájárult.',
+    tip_contributor_ID: 'A genealógus, aki ezeket az adatokat az indexhez hozzájárult.',
+    tip_contributor_ID_matches: 'Genealógus, akinek potenciálisan egyező rekordjai vannak.',
+    tip_total_persons: 'Személyrekordok száma.',
+    tip_total_families: 'Családrekordok száma.',
+    tip_total: 'Személyek és családok teljes száma.',
+    tip_total_persons_matches: 'Egyező személyrekordok száma.',
+    tip_total_families_matches: 'Egyező családrekordok száma.',
+    tip_total_matches: 'Az egyező személyek és családok teljes száma.',
+    tip_confidence: 'Becsült valószínűség, hogy a rekordok ugyanarra a személyre vagy családra vonatkoznak.',
+    tip_matches: 'A más genealógusok száma, akiknek potenciálisan egyező rekordjaik vannak.',
+    tip_total_links: 'A forrásdokumentumokra mutató hivatkozások száma (pl. Matricula Online, Geneanet temetők, FamilySearch.org…).',
+    tip_last_modified: 'A genealógus adatainak az indexbe való utolsó importálásának dátuma.',
+    tip_links: 'Hivatkozások forrásdokumentumokra (pl. Matricula Online, Geneanet temetők, FamilySearch.org…).',
+    tip_parents_person: 'A személy szülei, családjukra és az egyes szülőkre mutató keresési hivatkozásokkal.',
+    tip_partners: 'A személy partnerei (házastársak vagy élettársak), családjukra mutató keresési hivatkozással.',
+    tip_parents_family: 'A férj és a feleség szülei, családjukra és az egyes szülőkre mutató keresési hivatkozásokkal.',
+    tip_children: 'A család gyermekei, mindegyikükre mutató keresési hivatkozással.',
+
+    // Icon tooltips
     icon_familysearch: 'FamilySearch',
     icon_grave: 'Sír',
     icon_census: 'Népszámlálás',
@@ -653,7 +753,27 @@ const translations = {
     col_total_links: 'Collegamenti',
     col_url: 'URL',
 
-    // Tooltips
+    // Column header tooltips
+    tip_contributor: 'Genealogista che ha fornito questi dati all\'indice.',
+    tip_contributor_ID: 'Genealogista che ha fornito questi dati all\'indice.',
+    tip_contributor_ID_matches: 'Genealogista con record potenzialmente corrispondenti.',
+    tip_total_persons: 'Numero di record di persone.',
+    tip_total_families: 'Numero di record di famiglie.',
+    tip_total: 'Numero totale di persone e famiglie.',
+    tip_total_persons_matches: 'Numero di record di persone corrispondenti.',
+    tip_total_families_matches: 'Numero di record di famiglie corrispondenti.',
+    tip_total_matches: 'Numero totale di persone e famiglie corrispondenti.',
+    tip_confidence: 'Probabilità stimata che i record si riferiscano alla stessa persona o famiglia.',
+    tip_matches: 'Numero di altri genealogisti con record potenzialmente corrispondenti.',
+    tip_total_links: 'Numero di collegamenti a documenti originali (ad es. Matricula Online, Geneanet cimiteri, FamilySearch.org…).',
+    tip_last_modified: 'Data dell\'ultima importazione dei dati di questo genealogista nell\'indice.',
+    tip_links: 'Collegamenti a documenti originali (ad es. Matricula Online, Geneanet cimiteri, FamilySearch.org…).',
+    tip_parents_person: 'Genitori di questa persona, con collegamenti di ricerca alla loro famiglia e a ciascun genitore.',
+    tip_partners: 'Partner (sposati o non sposati) di questa persona, con un collegamento di ricerca alla loro famiglia.',
+    tip_parents_family: 'Genitori del marito e della moglie, con collegamenti di ricerca alle loro famiglie e a ciascun genitore.',
+    tip_children: 'Figli di questa famiglia, con un collegamento di ricerca a ciascun figlio.',
+
+    // Icon tooltips
     icon_familysearch: 'FamilySearch',
     icon_grave: 'Tomba',
     icon_census: 'Censimento',

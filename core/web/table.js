@@ -455,13 +455,27 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   const { primary, secondary } = container._sortState;
   if (primary) sortData(data, primary, secondary);
 
+  const isFamilyTable = containerId.includes('famil');
+  const isMatchesSummary = containerId === 'matches-summary';
+  const MATCHES_CONTEXT_COLS = new Set(['contributor_ID', 'total_persons', 'total_families', 'total']);
+
   let html = '<table><thead><tr>';
   columns.forEach(col => {
     let indicator = '';
     if (primary?.column === col) indicator = primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
     else if (secondary?.column === col) indicator = secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
     const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
-    html += `<th data-col="${col}"${cls}>${t(`col_${col}`)}${indicator}</th>`;
+    let tipKey;
+    if (col === 'parents') {
+      tipKey = isFamilyTable ? 'tip_parents_family' : 'tip_parents_person';
+    } else if (isMatchesSummary && MATCHES_CONTEXT_COLS.has(col)) {
+      tipKey = `tip_${col}_matches`;
+    } else {
+      tipKey = `tip_${col}`;
+    }
+    const tipText = t(tipKey);
+    const titleAttr = tipText && tipText !== tipKey ? ` title="${tipText.replace(/"/g, '&quot;')}"` : '';
+    html += `<th data-col="${col}"${cls}${titleAttr}>${t(`col_${col}`)}${indicator}</th>`;
   });
   html += '</tr></thead><tbody>';
 
