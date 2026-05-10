@@ -356,16 +356,34 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
     return None
 
 
-def _text_filter(column, value, exact: bool):
-    if exact:
-        v = value.replace("%", r"\%").replace("_", r"\_")
-        return or_(
-            column.ilike(v),
-            column.ilike(f"{v} %"),
-            column.ilike(f"% {v}"),
-            column.ilike(f"% {v} %"),
-        )
-    return or_(column.op("%>")(cast(value, Text)), column.ilike(f"%{value}%"))
+def _text_filter(column, value, exact: bool, split_comma: bool = False):
+    if split_comma and "," in value:
+        parts = [p.strip() for p in value.split(",") if p.strip()]
+    else:
+        parts = [value]
+
+    conds = []
+    for part in parts:
+        if exact:
+            v = part.replace("%", r"\%").replace("_", r"\_")
+            conds.append(
+                or_(
+                    column.ilike(v),
+                    column.ilike(f"{v} %"),
+                    column.ilike(f"% {v}"),
+                    column.ilike(f"% {v} %"),
+                )
+            )
+        else:
+            conds.append(
+                or_(column.op("%>")(cast(part, Text)), column.ilike(f"%{part}%"))
+            )
+
+    if len(conds) == 1:
+        return conds[0]
+    elif len(conds) > 1:
+        return or_(*conds)
+    return None
 
 
 def _set_trgm(db: Session, exact: bool):
@@ -396,14 +414,22 @@ def search_all(
     if record_type in (None, "persons"):
         q = db.query(models.Person)
         if name:
-            q = q.filter(_text_filter(models.Person.name, name, exact))
+            q = q.filter(
+                _text_filter(models.Person.name, name, exact, split_comma=True)
+            )
         if surname:
-            q = q.filter(_text_filter(models.Person.surname, surname, exact))
+            q = q.filter(
+                _text_filter(models.Person.surname, surname, exact, split_comma=True)
+            )
         if place:
             q = q.filter(
                 or_(
-                    _text_filter(models.Person.place_of_birth, place, exact),
-                    _text_filter(models.Person.place_of_death, place, exact),
+                    _text_filter(
+                        models.Person.place_of_birth, place, exact, split_comma=True
+                    ),
+                    _text_filter(
+                        models.Person.place_of_death, place, exact, split_comma=True
+                    ),
                 )
             )
         # Date range filters apply to either birth or death.
@@ -429,20 +455,30 @@ def search_all(
         if name:
             families_q = families_q.filter(
                 or_(
-                    _text_filter(models.Family.husband_name, name, exact),
-                    _text_filter(models.Family.wife_name, name, exact),
+                    _text_filter(
+                        models.Family.husband_name, name, exact, split_comma=True
+                    ),
+                    _text_filter(
+                        models.Family.wife_name, name, exact, split_comma=True
+                    ),
                 )
             )
         if surname:
             families_q = families_q.filter(
                 or_(
-                    _text_filter(models.Family.husband_surname, surname, exact),
-                    _text_filter(models.Family.wife_surname, surname, exact),
+                    _text_filter(
+                        models.Family.husband_surname, surname, exact, split_comma=True
+                    ),
+                    _text_filter(
+                        models.Family.wife_surname, surname, exact, split_comma=True
+                    ),
                 )
             )
         if place:
             families_q = families_q.filter(
-                _text_filter(models.Family.place_of_marriage, place, exact)
+                _text_filter(
+                    models.Family.place_of_marriage, place, exact, split_comma=True
+                )
             )
         date_cond_f = _date_filter(
             models.Family.date_of_marriage, date_from, date_to, exact
@@ -483,16 +519,24 @@ def search_advanced_persons(
     query = db.query(models.Person)
 
     if name:
-        query = query.filter(_text_filter(models.Person.name, name, exact))
+        query = query.filter(
+            _text_filter(models.Person.name, name, exact, split_comma=True)
+        )
     if surname:
-        query = query.filter(_text_filter(models.Person.surname, surname, exact))
+        query = query.filter(
+            _text_filter(models.Person.surname, surname, exact, split_comma=True)
+        )
     if place_of_birth:
         query = query.filter(
-            _text_filter(models.Person.place_of_birth, place_of_birth, exact)
+            _text_filter(
+                models.Person.place_of_birth, place_of_birth, exact, split_comma=True
+            )
         )
     if place_of_death:
         query = query.filter(
-            _text_filter(models.Person.place_of_death, place_of_death, exact)
+            _text_filter(
+                models.Person.place_of_death, place_of_death, exact, split_comma=True
+            )
         )
     bcond = _date_filter(
         models.Person.date_of_birth, date_of_birth, date_of_birth_to, exact
@@ -540,11 +584,15 @@ def search_advanced_families(
 
     if husband_name:
         query = query.filter(
-            _text_filter(models.Family.husband_name, husband_name, exact)
+            _text_filter(
+                models.Family.husband_name, husband_name, exact, split_comma=True
+            )
         )
     if husband_surname:
         query = query.filter(
-            _text_filter(models.Family.husband_surname, husband_surname, exact)
+            _text_filter(
+                models.Family.husband_surname, husband_surname, exact, split_comma=True
+            )
         )
     hb_cond = _date_filter(
         models.Family.husband_birth, husband_birth, husband_birth_to, exact
@@ -552,10 +600,14 @@ def search_advanced_families(
     if hb_cond is not None:
         query = query.filter(hb_cond)
     if wife_name:
-        query = query.filter(_text_filter(models.Family.wife_name, wife_name, exact))
+        query = query.filter(
+            _text_filter(models.Family.wife_name, wife_name, exact, split_comma=True)
+        )
     if wife_surname:
         query = query.filter(
-            _text_filter(models.Family.wife_surname, wife_surname, exact)
+            _text_filter(
+                models.Family.wife_surname, wife_surname, exact, split_comma=True
+            )
         )
     wb_cond = _date_filter(models.Family.wife_birth, wife_birth, wife_birth_to, exact)
     if wb_cond is not None:
@@ -572,7 +624,12 @@ def search_advanced_families(
         query = query.filter(children_filter)
     if place_of_marriage:
         query = query.filter(
-            _text_filter(models.Family.place_of_marriage, place_of_marriage, exact)
+            _text_filter(
+                models.Family.place_of_marriage,
+                place_of_marriage,
+                exact,
+                split_comma=True,
+            )
         )
     date_cond = _date_filter(
         models.Family.date_of_marriage, date_of_marriage, date_of_marriage_to, exact

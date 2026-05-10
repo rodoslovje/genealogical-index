@@ -105,6 +105,9 @@ const translations = {
     tip_partners: 'Partners (married or unmarried) of this person, with a search link to their family.',
     tip_parents_family: 'Parents of husband and wife, with search links to their families and to each parent.',
     tip_children: 'Children of this family, with a search link to each child.',
+    tip_comma_separated_name: 'Multiple values can be separated by commas (e.g. &quot;Janez, Ivan&quot;).',
+    tip_comma_separated_surname: 'Multiple values can be separated by commas (e.g. &quot;Mali, Mally&quot;).',
+    tip_comma_separated_place: 'Multiple values can be separated by commas (e.g. &quot;Metlika, Podzemelj&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -242,6 +245,9 @@ const translations = {
     tip_partners: 'Partnerji (poročeni ali neporočeni) te osebe s povezavo za iskanje njune družine.',
     tip_parents_family: 'Starši moža in žene s povezavami za iskanje njihovih družin in posameznih oseb.',
     tip_children: 'Otroci te družine s povezavo za iskanje vsakega otroka.',
+    tip_comma_separated_name: 'Vnesete lahko več vrednosti, ločenih z vejico (npr. &quot;Janez, Ivan&quot;).',
+    tip_comma_separated_surname: 'Vnesete lahko več vrednosti, ločenih z vejico (npr. &quot;Mali, Mally&quot;).',
+    tip_comma_separated_place: 'Vnesete lahko več vrednosti, ločenih z vejico (npr. &quot;Metlika, Podzemelj&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -379,6 +385,9 @@ const translations = {
     tip_partners: 'Partneri (vjenčani ili nevjenčani) ove osobe s poveznicom za pretragu njihove obitelji.',
     tip_parents_family: 'Roditelji muža i žene s poveznicama za pretragu njihovih obitelji i pojedinih osoba.',
     tip_children: 'Djeca ove obitelji s poveznicom za pretragu svakog djeteta.',
+    tip_comma_separated_name: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Janez, Ivan&quot;).',
+    tip_comma_separated_surname: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Mali, Mally&quot;).',
+    tip_comma_separated_place: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Metlika, Podzemelj&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -516,6 +525,9 @@ const translations = {
     tip_partners: 'Partner (verheiratet oder unverheiratet) dieser Person mit Suchlink zu ihrer Familie.',
     tip_parents_family: 'Eltern von Mann und Frau mit Suchlinks zu ihren Familien und zu jedem Elternteil.',
     tip_children: 'Kinder dieser Familie mit einem Suchlink zu jedem Kind.',
+    tip_comma_separated_name: 'Mehrere Werte können durch Kommas getrennt werden (z. B. &quot;Janez, Ivan&quot;).',
+    tip_comma_separated_surname: 'Mehrere Werte können durch Kommas getrennt werden (z. B. &quot;Mali, Mally&quot;).',
+    tip_comma_separated_place: 'Mehrere Werte können durch Kommas getrennt werden (z. B. &quot;Metlika, Podzemelj&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -653,6 +665,9 @@ const translations = {
     tip_partners: 'A személy partnerei (házastársak vagy élettársak), családjukra mutató keresési hivatkozással.',
     tip_parents_family: 'A férj és a feleség szülei, családjukra és az egyes szülőkre mutató keresési hivatkozásokkal.',
     tip_children: 'A család gyermekei, mindegyikükre mutató keresési hivatkozással.',
+    tip_comma_separated_name: 'Több értéket is megadhat vesszővel elválasztva (pl. &quot;Janez, Ivan&quot;).',
+    tip_comma_separated_surname: 'Több értéket is megadhat vesszővel elválasztva (pl. &quot;Mali, Mally&quot;).',
+    tip_comma_separated_place: 'Több értéket is megadhat vesszővel elválasztva (pl. &quot;Metlika, Podzemelj&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -790,6 +805,9 @@ const translations = {
     tip_partners: 'Partner (sposati o non sposati) di questa persona, con un collegamento di ricerca alla loro famiglia.',
     tip_parents_family: 'Genitori del marito e della moglie, con collegamenti di ricerca alle loro famiglie e a ciascun genitore.',
     tip_children: 'Figli di questa famiglia, con un collegamento di ricerca a ciascun figlio.',
+    tip_comma_separated_name: 'È possibile inserire più valori separati da virgole (es. &quot;Janez, Ivan&quot;).',
+    tip_comma_separated_surname: 'È possibile inserire più valori separati da virgole (es. &quot;Mali, Mally&quot;).',
+    tip_comma_separated_place: 'È possibile inserire più valori separati da virgole (es. &quot;Metlika, Podzemelj&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',

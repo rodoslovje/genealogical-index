@@ -104,6 +104,11 @@ function normalizeSearchDate(val) {
   return str;
 }
 
+function normalizeNameList(val) {
+  if (!val) return val;
+  return val.split(',').map(s => s.trim()).filter(Boolean).join(',');
+}
+
 function pushOrReplaceURL(params) {
   const current = new URLSearchParams(window.location.search);
   current.delete('t');
@@ -152,11 +157,11 @@ export function setupGeneralSearch() {
       <div class="field-group">
         <div class="field-group-label">${t('label_person')}</div>
         <div class="input-wrapper">
-          <input type="text" id="general-name" placeholder="${t('col_name')}" value="${nameVal}" />
+          <input type="text" id="general-name" placeholder="${t('col_name')}" value="${nameVal}" title="${t('tip_comma_separated_name')}" />
           <button type="button" class="clear-btn" style="display:${nameVal ? 'block' : 'none'}">&times;</button>
         </div>
         <div class="input-wrapper">
-          <input type="text" id="general-surname" placeholder="${t('col_surname')}" value="${surnameVal}" />
+          <input type="text" id="general-surname" placeholder="${t('col_surname')}" value="${surnameVal}" title="${t('tip_comma_separated_surname')}" />
           <button type="button" class="clear-btn" style="display:${surnameVal ? 'block' : 'none'}">&times;</button>
         </div>
       </div>
@@ -171,7 +176,7 @@ export function setupGeneralSearch() {
         </div>
       </div>
       <div class="input-wrapper">
-        <input type="text" id="general-place" placeholder="${t('col_place')}" value="${placeVal}" />
+        <input type="text" id="general-place" placeholder="${t('col_place')}" value="${placeVal}" title="${t('tip_comma_separated_place')}" />
         <button type="button" class="clear-btn" style="display:${placeVal ? 'block' : 'none'}">&times;</button>
       </div>
       <div class="input-wrapper">
@@ -236,6 +241,7 @@ function performGeneralSearch() {
   fields.forEach(f => {
     let val = document.getElementById(`general-${f}`)?.value.trim();
     if (DATE_FIELDS.has(f)) val = normalizeSearchDate(val);
+    if (f === 'name' || f === 'surname' || f === 'place') val = normalizeNameList(val);
     if (val) params[f] = val;
   });
 
@@ -335,6 +341,14 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     const labelKey = grouped && GROUPED_PLACEHOLDER_KEYS[col] ? GROUPED_PLACEHOLDER_KEYS[col] : `col_${col}`;
     const label = t(labelKey);
     const val = document.getElementById(inputId)?.value || '';
+    let titleAttr = '';
+    if (col.includes('surname')) {
+      titleAttr = ` title="${t('tip_comma_separated_surname')}"`;
+    } else if (col.includes('name')) {
+      titleAttr = ` title="${t('tip_comma_separated_name')}"`;
+    } else if (col.includes('place')) {
+      titleAttr = ` title="${t('tip_comma_separated_place')}"`;
+    }
     if (DATE_RANGE_COLUMNS.has(col)) {
       const toId = `${prefix}${col}_to`;
       const toVal = document.getElementById(toId)?.value || '';
@@ -350,7 +364,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
               </div>`;
     }
     return `<div class="input-wrapper">
-              <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
+              <input type="text" id="${inputId}" placeholder="${label}" value="${val}"${titleAttr} />
               <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
             </div>`;
   }
@@ -408,6 +422,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(c => {
       let val = document.getElementById(`${prefix}${c}`)?.value.trim();
       if (DATE_FIELDS.has(c)) val = normalizeSearchDate(val);
+      if (c.includes('name') || c.includes('surname') || c.includes('place')) val = normalizeNameList(val);
       if (val) fieldParams[c] = val;
       if (DATE_RANGE_COLUMNS.has(c)) {
         let toVal = document.getElementById(`${prefix}${c}_to`)?.value.trim();
@@ -528,7 +543,8 @@ export function getTabURLParams(tabType) {
   if (tabType === 'general') {
     const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
     fields.forEach(f => {
-      const val = document.getElementById(`general-${f}`)?.value.trim();
+      let val = document.getElementById(`general-${f}`)?.value.trim();
+      if (f === 'name' || f === 'surname' || f === 'place') val = normalizeNameList(val);
       if (val) out[PARAM_MAP[f] || f] = val;
     });
     if (!document.getElementById('general-exact')?.checked) out.ex = '0';
@@ -537,7 +553,8 @@ export function getTabURLParams(tabType) {
     const columns = tabType === 'person' ? personColumns : familyColumns;
     const prefix = `adv-${tabType}-`;
     columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(col => {
-      const val = document.getElementById(`${prefix}${col}`)?.value.trim();
+      let val = document.getElementById(`${prefix}${col}`)?.value.trim();
+      if (col.includes('name') || col.includes('surname') || col.includes('place')) val = normalizeNameList(val);
       if (val) out[PARAM_MAP[col] || col] = val;
       if (DATE_RANGE_COLUMNS.has(col)) {
         const toVal = document.getElementById(`${prefix}${col}_to`)?.value.trim();
