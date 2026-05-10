@@ -568,12 +568,17 @@ async function renderMatchesPage(contributor, withPartner) {
 
     let statsHtml = '';
     if (contribData) {
-      statsHtml = `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 15px;">
-        <span>${t('col_total_persons')}: <strong>${contribData.total_persons.toLocaleString()}</strong></span>
-        <span>${t('col_total_families')}: <strong>${contribData.total_families.toLocaleString()}</strong></span>
-        <span>${t('col_total')}: <strong>${contribData.total.toLocaleString()}</strong></span>
-        <span>${t('col_total_links')}: <strong>${contribData.total_links.toLocaleString()}</strong></span>
-        <span>${t('col_last_update')}: <strong>${contribData.last_modified}</strong></span>
+      const tip = (key) => t(key).replace(/"/g, '&quot;');
+      const row = (tipKey, label, value) => {
+        const a = ` title="${tip(tipKey)}"`;
+        return `<span${a}>${label}:</span><strong${a}>${value}</strong>`;
+      };
+      statsHtml = `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: max-content max-content; column-gap: 16px; row-gap: 4px; justify-items: end;">
+        ${row('tip_total_persons', t('col_total_persons'), contribData.total_persons.toLocaleString())}
+        ${row('tip_total_families', t('col_total_families'), contribData.total_families.toLocaleString())}
+        ${row('tip_total', t('col_total'), contribData.total.toLocaleString())}
+        ${row('tip_total_links', t('col_total_links'), contribData.total_links.toLocaleString())}
+        ${row('tip_last_modified', t('col_last_update'), contribData.last_modified)}
       </div>`;
     }
 
