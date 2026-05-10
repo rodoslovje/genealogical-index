@@ -695,12 +695,12 @@ async function renderMatchDetail(contributor, partner) {
       fields: [
         { f: 'name',           h: t('col_name') },
         { f: 'surname',        h: t('col_surname') },
-        { f: 'parents',        h: t('col_parents') },
-        { f: 'partners',       h: t('col_partners') },
         { f: 'date_of_birth',  h: t('col_date_of_birth') },
         { f: 'place_of_birth', h: t('col_place_of_birth') },
         { f: 'date_of_death',  h: t('col_date_of_death') },
         { f: 'place_of_death', h: t('col_place_of_death') },
+        { f: 'partners',       h: t('col_partners') },
+        { f: 'parents',        h: t('col_parents') },
       ],
       searchUrl: rec => buildSearchUrl('person', [['n', rec.name], ['sn', rec.surname]]),
       linkedFields: new Set(['name', 'surname']),
@@ -710,12 +710,14 @@ async function renderMatchDetail(contributor, partner) {
       fields: [
         { f: 'husband_name',      h: t('col_husband_name') },
         { f: 'husband_surname',   h: t('col_husband_surname') },
+        { f: 'husband_birth',     h: t('col_husband_birth') },
         { f: 'wife_name',         h: t('col_wife_name') },
         { f: 'wife_surname',      h: t('col_wife_surname') },
-        { f: 'parents',           h: t('col_parents') },
-        { f: 'children',          h: t('col_children') },
+        { f: 'wife_birth',        h: t('col_wife_birth') },
         { f: 'date_of_marriage',  h: t('col_date_of_marriage') },
         { f: 'place_of_marriage', h: t('col_place_of_marriage') },
+        { f: 'children',          h: t('col_children') },
+        { f: 'parents',           h: t('col_parents') },
       ],
       searchUrl: (rec, field) => {
         if (field === 'husband_name' || field === 'husband_surname')
@@ -745,7 +747,7 @@ async function renderMatchDetail(contributor, partner) {
     const group = byType[key];
     if (!group.length) continue;
 
-    const isDateField = f => f === 'date_of_birth' || f === 'date_of_death' || f === 'date_of_marriage';
+    const isDateField = f => f === 'date_of_birth' || f === 'date_of_death' || f === 'date_of_marriage' || f === 'husband_birth' || f === 'wife_birth';
     const makeCell = (rec, f) => {
       if (f === 'parents' || f === 'children' || f === 'partners') {
         const inner = formatSpecialCell(f, rec);
