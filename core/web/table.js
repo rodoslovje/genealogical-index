@@ -3,7 +3,9 @@ import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
 
 function isPrivate(val) {
-  return val === 'private' || val === '<private>';
+  if (!val) return false;
+  const v = String(val).toLowerCase();
+  return v === 'private' || v === '<private>' || v === 'unknown';
 }
 
 /** Extract the 4-digit year from a person record's date_of_birth field, with `year` as fallback. */
@@ -273,7 +275,7 @@ function sortData(data, primary, secondary) {
 
 function makePersonLink(name, surname, display) {
   const safeDisplay = display ? String(display).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
-  if (isPrivate(name) || name === 'unknown') return safeDisplay;
+  if (isPrivate(name) || isPrivate(surname)) return safeDisplay;
   if (!name && !surname) return safeDisplay;
   const p = new URLSearchParams();
   p.set('t', 'person');
@@ -294,32 +296,40 @@ function renderParentPair(parentsJson, labelKey) {
     if (!father.name && !mother.name) return { html: '', count: 0 };
 
     const fName = father.name || '';
-    const fSur = isPrivate(fName) || fName === 'unknown' ? '' : father.surname || '';
+    const fSur = father.surname || '';
     const fYear = childYearOf(father);
     const mName = mother.name || '';
-    const mSur = isPrivate(mName) || mName === 'unknown' ? '' : mother.surname || '';
+    const mSur = mother.surname || '';
     const mYear = childYearOf(mother);
+
+    const fPriv = isPrivate(fName) || isPrivate(fSur);
+    const mPriv = isPrivate(mName) || isPrivate(mSur);
 
     const famParams = new URLSearchParams();
     famParams.set('t', 'family');
-    if (fName && fName !== 'unknown' && !isPrivate(fName)) famParams.set('hn', fName);
-    if (fSur) famParams.set('hsn', fSur);
-    if (mName && mName !== 'unknown' && !isPrivate(mName)) famParams.set('wn', mName);
-    if (mSur) famParams.set('wsn', mSur);
+    if (fName && !fPriv) famParams.set('hn', fName);
+    if (fSur && !fPriv) famParams.set('hsn', fSur);
+    if (mName && !mPriv) famParams.set('wn', mName);
+    if (mSur && !mPriv) famParams.set('wsn', mSur);
     famParams.set('ex', '1');
 
-    const fDisplay = [fName, fSur].filter(Boolean).join(' ') + (fYear ? ` *${fYear}` : '');
-    const mDisplay = [mName, mSur].filter(Boolean).join(' ') + (mYear ? ` *${mYear}` : '');
+    const fDisplay = (fPriv ? (fName || fSur) : [fName, fSur].filter(Boolean).join(' ')) + (fYear ? ` *${fYear}` : '');
+    const mDisplay = (mPriv ? (mName || mSur) : [mName, mSur].filter(Boolean).join(' ')) + (mYear ? ` *${mYear}` : '');
 
     let count = 0;
-    if (fDisplay) count++;
-    if (mDisplay) count++;
+    if (fName || fSur) count++;
+    if (mName || mSur) count++;
 
     const headerLabel = labelKey ? t(labelKey) : t('col_parents');
-    let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">
-      <a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight: 600;">${headerLabel}: 👪</a><br>`;
-    if (fDisplay) htmlStr += `${makePersonLink(fName, fSur, fDisplay)}<br>`;
-    if (mDisplay) htmlStr += `${makePersonLink(mName, mSur, mDisplay)}`;
+    let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">`;
+    const hasSearchFields = famParams.has('hn') || famParams.has('hsn') || famParams.has('wn') || famParams.has('wsn');
+    if (hasSearchFields) {
+      htmlStr += `<a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight: 600;">${headerLabel}: 👪</a><br>`;
+    } else {
+      htmlStr += `<span style="font-weight: 600;">${headerLabel}:</span><br>`;
+    }
+    if (fName || fSur) htmlStr += `${makePersonLink(fName, fSur, fDisplay)}<br>`;
+    if (mName || mSur) htmlStr += `${makePersonLink(mName, mSur, mDisplay)}`;
     htmlStr += `</div>`;
     return { html: htmlStr, count };
   } catch(e) {
@@ -336,19 +346,20 @@ export function formatSpecialCell(col, row) {
       const pList = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
       count = pList.length;
       formattedList = pList.map(c => {
-        if (isPrivate(c.name) || c.name === 'unknown') return String(c.name).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const cPriv = isPrivate(c.name) || isPrivate(c.surname);
+        let childDisplay = cPriv ? (c.name || c.surname || '') : c.name || '';
+        if (!cPriv && c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
+        const cy = childYearOf(c);
+        if (cy) childDisplay += ` *${cy}`;
+
+        if (cPriv) return String(childDisplay).replace(/</g, '&lt;').replace(/>/g, '&gt;').trim();
 
         const params = new URLSearchParams();
         params.set('t', 'person');
         if (c.name) params.set('n', c.name);
         if (c.surname) params.set('sn', c.surname);
-        const cy = childYearOf(c);
         if (cy) params.set('dob', cy);
         params.set('ex', '1');
-
-        let childDisplay = c.name || '';
-        if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
-        if (cy) childDisplay += ` *${cy}`;
 
         return `<a href="${toUnicodeHref(params)}" data-spa-nav>${String(childDisplay).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
       });
@@ -564,11 +575,12 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       } else if ((col === 'husband_name' || col === 'husband_surname') && row[col]) {
         const params = new URLSearchParams();
         params.set('t', 'person');
-        if (row.husband_name && !isPrivate(row.husband_name) && row.husband_name !== 'unknown') params.set('n', row.husband_name);
-        if (row.husband_surname) params.set('sn', row.husband_surname);
+        const isPriv = isPrivate(row.husband_name) || isPrivate(row.husband_surname);
+        if (row.husband_name && !isPriv) params.set('n', row.husband_name);
+        if (row.husband_surname && !isPriv) params.set('sn', row.husband_surname);
         params.set('ex', '1');
         const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        if (isPrivate(row.husband_name) && col === 'husband_name') {
+        if (isPriv) {
           html += `<td>${safeDisplay}</td>`;
         } else {
           html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
@@ -576,11 +588,12 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       } else if ((col === 'wife_name' || col === 'wife_surname') && row[col]) {
         const params = new URLSearchParams();
         params.set('t', 'person');
-        if (row.wife_name && !isPrivate(row.wife_name) && row.wife_name !== 'unknown') params.set('n', row.wife_name);
-        if (row.wife_surname) params.set('sn', row.wife_surname);
+        const isPriv = isPrivate(row.wife_name) || isPrivate(row.wife_surname);
+        if (row.wife_name && !isPriv) params.set('n', row.wife_name);
+        if (row.wife_surname && !isPriv) params.set('sn', row.wife_surname);
         params.set('ex', '1');
         const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        if (isPrivate(row.wife_name) && col === 'wife_name') {
+        if (isPriv) {
           html += `<td>${safeDisplay}</td>`;
         } else {
           html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
@@ -588,11 +601,12 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       } else if ((col === 'name' || col === 'surname') && row[col] && row.husband_name === undefined) {
         const params = new URLSearchParams();
         params.set('t', 'person');
-        if (row.name && !isPrivate(row.name) && row.name !== 'unknown') params.set('n', row.name);
-        if (row.surname) params.set('sn', row.surname);
+        const isPriv = isPrivate(row.name) || isPrivate(row.surname);
+        if (row.name && !isPriv) params.set('n', row.name);
+        if (row.surname && !isPriv) params.set('sn', row.surname);
         params.set('ex', '1');
         const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        if (isPrivate(row.name) && col === 'name') {
+        if (isPriv) {
           html += `<td>${safeDisplay}</td>`;
         } else {
           html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;

@@ -742,7 +742,8 @@ async function renderMatchDetail(contributor, partner) {
             { f: 'parents',        h: t('col_parents') },
           ],
           searchUrl: rec => {
-            if (rec.name === 'private' || rec.name === '<private>' || rec.name === 'unknown') return null;
+            const isPriv = v => { const s = String(v || '').toLowerCase(); return s === 'private' || s === '<private>' || s === 'unknown'; };
+            if (isPriv(rec.name) || isPriv(rec.surname)) return null;
             return buildSearchUrl('person', [['n', rec.name], ['sn', rec.surname]]);
           },
           linkedFields: new Set(['name', 'surname']),
@@ -762,12 +763,13 @@ async function renderMatchDetail(contributor, partner) {
             { f: 'parents',           h: t('col_parents') },
           ],
           searchUrl: (rec, field) => {
+            const isPriv = v => { const s = String(v || '').toLowerCase(); return s === 'private' || s === '<private>' || s === 'unknown'; };
             if (field === 'husband_name' || field === 'husband_surname') {
-              if (rec.husband_name === 'private' || rec.husband_name === '<private>' || rec.husband_name === 'unknown') return null;
+              if (isPriv(rec.husband_name) || isPriv(rec.husband_surname)) return null;
               return buildSearchUrl('family', [['hn', rec.husband_name], ['hsn', rec.husband_surname]]);
             }
             if (field === 'wife_name' || field === 'wife_surname') {
-              if (rec.wife_name === 'private' || rec.wife_name === '<private>' || rec.wife_name === 'unknown') return null;
+              if (isPriv(rec.wife_name) || isPriv(rec.wife_surname)) return null;
               return buildSearchUrl('family', [['wn', rec.wife_name], ['wsn', rec.wife_surname]]);
             }
             return null;
