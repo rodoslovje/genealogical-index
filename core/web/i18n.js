@@ -78,8 +78,7 @@ const translations = {
     col_total: 'Total',
     col_last_modified: 'Last Change',
     col_last_update: 'Last update',
-    col_link: 'Link',
-    col_links: 'Link',
+    col_links: 'Links',
     col_total_links: 'Links',
     col_url: 'URL',
 
@@ -214,8 +213,7 @@ const translations = {
     col_total: 'Skupaj',
     col_last_modified: 'Zadnja sprememba',
     col_last_update: 'Zadnja posodobitev',
-    col_link: 'Povezava',
-    col_links: 'Povezava',
+    col_links: 'Povezave',
     col_total_links: 'Povezave',
     col_url: 'URL',
 
@@ -350,8 +348,7 @@ const translations = {
     col_total: 'Ukupno',
     col_last_modified: 'Zadnja izmjena',
     col_last_update: 'Zadnje ažuriranje',
-    col_link: 'Poveznica',
-    col_links: 'Poveznica',
+    col_links: 'Poveznice',
     col_total_links: 'Poveznice',
     col_url: 'URL',
 
@@ -486,8 +483,7 @@ const translations = {
     col_total: 'Gesamt',
     col_last_modified: 'Letzte Änderung',
     col_last_update: 'Letztes Update',
-    col_link: 'Link',
-    col_links: 'Link',
+    col_links: 'Links',
     col_total_links: 'Links',
     col_url: 'URL',
 
@@ -622,8 +618,7 @@ const translations = {
     col_total: 'Összesen',
     col_last_modified: 'Utolsó módosítás',
     col_last_update: 'Utolsó frissítés',
-    col_link: 'Hivatkozás',
-    col_links: 'Hivatkozás',
+    col_links: 'Hivatkozások',
     col_total_links: 'Hivatkozások',
     col_url: 'URL',
 
@@ -758,8 +753,7 @@ const translations = {
     col_total: 'Totale',
     col_last_modified: 'Ultima modifica',
     col_last_update: 'Ultimo aggiornamento',
-    col_link: 'Collegamento',
-    col_links: 'Collegamento',
+    col_links: 'Collegamenti',
     col_total_links: 'Collegamenti',
     col_url: 'URL',
 
