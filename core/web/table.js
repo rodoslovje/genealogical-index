@@ -1,4 +1,5 @@
-import { t, getCurrentLang } from './i18n.js';
+import { t } from './i18n.js';
+import { formatLinks } from './links.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
 
@@ -496,46 +497,8 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
     html += '<tr>';
     columns.forEach(col => {
       if (col === 'links') {
-        let linksList = [];
-        if (row.links) {
-          if (Array.isArray(row.links)) {
-            linksList = row.links;
-          } else {
-            try { linksList = JSON.parse(row.links); } catch(e) { linksList = [row.links]; }
-          }
-        }
-        if (linksList.length) {
-          const icons = linksList.map(url => {
-            let icon = '📜';
-            let titleText = t('icon_matricula');
-
-            if (url.includes('familysearch.org')) {
-              icon = '🌳';
-              titleText = t('icon_familysearch');
-            } else if (url.includes('geneanet.org') || url.includes('findagrave.com') || url.includes('billiongraves.com')) {
-              icon = '🪦';
-              titleText = t('icon_grave');
-            } else if (url.includes('sistory.si/ww')) {
-              icon = '🎖︎';
-              titleText = t('icon_military');
-            } else if (url.includes('sistory.si') && url.includes('popisi')) {
-              icon = '📋';
-              titleText = t('icon_census');
-            } else if (url.includes('dlib.si')) {
-              icon = '📰';
-              titleText = t('icon_dlib');
-            }
-
-            try {
-              const domain = new URL(url).hostname.replace(/^www\./, '');
-              titleText = `${titleText} - ${domain}`;
-            } catch (e) {}
-
-            const href = url.includes('matricula-online.eu')
-              ? url.replace(/\/(en|sl)\//, `/${getCurrentLang()}/`)
-              : url;
-            return `<a href="${href}" target="_blank" rel="noopener" title="${titleText}">${icon}</a>`;
-          }).join(' ');
+        const icons = formatLinks(row.links);
+        if (icons) {
           html += `<td class="link-cell">${icons}</td>`;
         } else {
           html += '<td></td>';

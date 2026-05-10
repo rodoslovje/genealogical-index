@@ -57,11 +57,11 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                p1.id AS a_id, p1.name AS a_name, p1.surname AS a_surname, p1.sex AS a_sex,
                p1.date_of_birth AS a_dob, p1.place_of_birth AS a_pob,
                p1.date_of_death AS a_dod, p1.place_of_death AS a_pod,
-               p1.parents_list AS a_parents, p1.partners_list AS a_partners,
+               p1.parents_list AS a_parents, p1.partners_list AS a_partners, p1.links AS a_links,
                p2.id AS b_id, p2.name AS b_name, p2.surname AS b_surname, p2.sex AS b_sex,
                p2.date_of_birth AS b_dob, p2.place_of_birth AS b_pob,
                p2.date_of_death AS b_dod, p2.place_of_death AS b_pod,
-               p2.parents_list AS b_parents, p2.partners_list AS b_partners
+               p2.parents_list AS b_parents, p2.partners_list AS b_partners, p2.links AS b_links
         FROM matches m
         JOIN persons p1 ON m.record_a_id = p1.id
         JOIN persons p2 ON m.record_b_id = p2.id
@@ -87,6 +87,7 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                     "place_of_death": r.a_pod,
                     "parents_list": r.a_parents,
                     "partners_list": r.a_partners,
+                    "links": r.a_links,
                 },
                 "record_b": {
                     "id": r.b_id,
@@ -99,6 +100,7 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                     "place_of_death": r.b_pod,
                     "parents_list": r.b_parents,
                     "partners_list": r.b_partners,
+                    "links": r.b_links,
                 },
             }
         )
@@ -110,13 +112,13 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                f1.husband_birth AS a_hbirth,
                f1.wife_name AS a_wname, f1.wife_surname AS a_wsur,
                f1.wife_birth AS a_wbirth,
-               f1.date_of_marriage AS a_date, f1.place_of_marriage AS a_place,
+               f1.date_of_marriage AS a_date, f1.place_of_marriage AS a_place, f1.links AS a_links,
                f1.husband_parents AS a_hp, f1.wife_parents AS a_wp, f1.children_list AS a_cl,
                f2.id AS b_id, f2.husband_name AS b_hname, f2.husband_surname AS b_hsur,
                f2.husband_birth AS b_hbirth,
                f2.wife_name AS b_wname, f2.wife_surname AS b_wsur,
                f2.wife_birth AS b_wbirth,
-               f2.date_of_marriage AS b_date, f2.place_of_marriage AS b_place,
+               f2.date_of_marriage AS b_date, f2.place_of_marriage AS b_place, f2.links AS b_links,
                f2.husband_parents AS b_hp, f2.wife_parents AS b_wp, f2.children_list AS b_cl
         FROM matches m
         JOIN families f1 ON m.record_a_id = f1.id
@@ -145,6 +147,7 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                     "husband_parents": r.a_hp,
                     "wife_parents": r.a_wp,
                     "children_list": r.a_cl,
+                    "links": r.a_links,
                 },
                 "record_b": {
                     "id": r.b_id,
@@ -159,6 +162,7 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                     "husband_parents": r.b_hp,
                     "wife_parents": r.b_wp,
                     "children_list": r.b_cl,
+                    "links": r.b_links,
                 },
             }
         )

@@ -1,5 +1,6 @@
 import { t } from './i18n.js';
 import { renderTable, formatSpecialCell, exportToCSV, parseDateForSort } from './table.js';
+import { formatLinks } from './links.js';
 import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
@@ -693,6 +694,11 @@ async function renderMatchDetail(contributor, partner) {
       function getMatchValue(r, col) {
         if (col === 'confidence') return r.confidence || 0;
         const val = r.record_a[col];
+        if (col === 'links') {
+          if (!val) return 0;
+          if (Array.isArray(val)) return val.length;
+          try { return JSON.parse(val).length; } catch { return 0; }
+        }
         const isDateField = col === 'date_of_birth' || col === 'date_of_death' || col === 'date_of_marriage' || col === 'husband_birth' || col === 'wife_birth';
         if (isDateField) return parseDateForSort(val);
         return String(val || '').toLowerCase();
@@ -738,6 +744,7 @@ async function renderMatchDetail(contributor, partner) {
             { f: 'place_of_birth', h: t('col_place_of_birth') },
             { f: 'date_of_death',  h: t('col_date_of_death') },
             { f: 'place_of_death', h: t('col_place_of_death') },
+            { f: 'links',          h: t('col_links') },
             { f: 'partners',       h: t('col_partners') },
             { f: 'parents',        h: t('col_parents') },
           ],
@@ -759,6 +766,7 @@ async function renderMatchDetail(contributor, partner) {
             { f: 'wife_birth',        h: t('col_wife_birth') },
             { f: 'date_of_marriage',  h: t('col_date_of_marriage') },
             { f: 'place_of_marriage', h: t('col_place_of_marriage') },
+            { f: 'links',             h: t('col_links') },
             { f: 'children',          h: t('col_children') },
             { f: 'parents',           h: t('col_parents') },
           ],
@@ -803,6 +811,10 @@ async function renderMatchDetail(contributor, partner) {
             const inner = formatSpecialCell(f, rec);
             return `<td>${inner || ''}</td>`;
           }
+          if (f === 'links') {
+            const icons = formatLinks(rec.links);
+            return `<td class="link-cell">${icons || ''}</td>`;
+          }
           const val = rec[f] || '';
           const safeVal = String(val).replace(/</g, '&lt;').replace(/>/g, '&gt;');
           const cls = isDateField(f) ? ' class="col-right"' : '';
@@ -815,6 +827,7 @@ async function renderMatchDetail(contributor, partner) {
 
         const headerCells = fields.map(({ h, f }) => {
           let cls = isDateField(f) ? 'sortable col-right' : 'sortable';
+          if (f === 'links') cls += ' col-center';
           let indicator = '';
           if (state.primary.column === f) indicator = state.primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
           else if (state.secondary?.column === f) indicator = state.secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
