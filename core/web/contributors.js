@@ -568,20 +568,30 @@ async function renderMatchesPage(contributor, withPartner) {
     await ensureData();
     const contribData = cachedData.find(d => d.contributor_ID === contributor);
 
-    if (withPartner) {
-      document.title = `${withPartner} × ${contributor} | ${t('site_title')}`;
-      await renderMatchDetail(contributor, withPartner, contribData, container);
+    if (!contribData) {
+      const safeContributor = String(contributor).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      document.title = `${t('no_results')} | ${t('site_title')}`;
+      container.innerHTML = `<div class="matches-page-header">
+        <h2 class="matches-page-title">${safeContributor}</h2>
+      </div>
+      <p>${t('no_results')}</p>`;
       return;
     }
 
-    let partners;
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches`);
-      partners = await res.json();
-      currentMatchesData = partners;
-      currentMatchesContributor = contributor;
-    } catch {
-      container.innerHTML = `<p>${t('search_failed')}</p>`;
+    if (withPartner) {
+      const partnerData = cachedData.find(d => d.contributor_ID === withPartner);
+      if (!partnerData) {
+        const safeContributor = String(contributor).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safePartner = String(withPartner).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        document.title = `${t('no_results')} | ${t('site_title')}`;
+        container.innerHTML = `<div class="matches-page-header">
+          <h2 class="matches-page-title">${safePartner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${safeContributor}</a></h2>
+        </div>
+        <p>${t('no_results')}</p>`;
+        return;
+      }
+      document.title = `${withPartner} × ${contributor} | ${t('site_title')}`;
+      await renderMatchDetail(contributor, withPartner, contribData, container);
       return;
     }
 
@@ -619,6 +629,18 @@ async function renderMatchesPage(contributor, withPartner) {
       <p>${t('contributor_surnames_intro')} <strong>${contributor}</strong> ${t('contributor_surnames_outro')}</p>
       <div class="surname-cloud" id="contributor-surname-cloud" data-i18n-title="chart_surnames_title"></div>
     </div>`;
+
+    let partners;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches`);
+      if (!res.ok) throw new Error('API failed');
+      partners = await res.json();
+      currentMatchesData = partners;
+      currentMatchesContributor = contributor;
+    } catch {
+      container.innerHTML = heading + `<p>${t('search_failed')}</p>`;
+      return;
+    }
 
     if (!partners.length) {
       container.innerHTML = heading +
@@ -674,20 +696,48 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
   const detailEl = container;
   if (!detailEl) return;
 
+  const urlMap = getContributorUrlMap();
+  const contribUrl = urlMap[contributor];
+  const partnerUrl = urlMap[partner];
+
+  let urlsHtml = '';
+  if (contribUrl || partnerUrl) {
+    urlsHtml = `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444; display: flex; flex-wrap: wrap; gap: 16px 40px;">`;
+    if (partnerUrl) {
+      urlsHtml += `<div>${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(partnerUrl)}</a></div></div>`;
+    }
+    if (contribUrl) {
+      urlsHtml += `<div>${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${contribUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(contribUrl)}</a></div></div>`;
+    }
+    urlsHtml += `</div>`;
+  }
+
+  const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav>${contributor}</a></strong>`;
+  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a></strong>`;
+  const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
+
+  const baseHtml = `
+    <div class="matches-page-header">
+      <h2 class="matches-page-title">${partner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${contributor}</a></h2>
+    </div>
+    <p>${introText}</p>
+    ${urlsHtml}`;
+
   try {
     let records;
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}`
       );
+      if (!res.ok) throw new Error('API failed');
       records = await res.json();
     } catch {
-      detailEl.innerHTML = `<p>${t('search_failed')}</p>`;
+      detailEl.innerHTML = baseHtml + `<p>${t('search_failed')}</p>`;
       return;
     }
 
-    if (!records.length) {
-      detailEl.innerHTML = `<p>${t('matches_none')}</p>`;
+    if (!records || !records.length) {
+      detailEl.innerHTML = baseHtml + `<p>${t('matches_none')}</p>`;
       return;
     }
 
@@ -794,32 +844,7 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
         },
       ];
 
-      const urlMap = getContributorUrlMap();
-      const contribUrl = urlMap[contributor];
-      const partnerUrl = urlMap[partner];
-
-      let urlsHtml = '';
-      if (contribUrl || partnerUrl) {
-        urlsHtml = `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444; display: flex; flex-wrap: wrap; gap: 16px 40px;">`;
-        if (partnerUrl) {
-          urlsHtml += `<div>${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(partnerUrl)}</a></div></div>`;
-        }
-        if (contribUrl) {
-          urlsHtml += `<div>${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${contribUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(contribUrl)}</a></div></div>`;
-        }
-        urlsHtml += `</div>`;
-      }
-
-      const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav>${contributor}</a></strong>`;
-      const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a></strong>`;
-      const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
-
-      let html = `
-        <div class="matches-page-header">
-          <h2 class="matches-page-title">${partner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${contributor}</a></h2>
-        </div>
-        <p>${introText}</p>
-        ${urlsHtml}`;
+      let html = baseHtml;
 
       for (const { key, label, fields, searchUrl, linkedFields } of typeConfig) {
         const group = byType[key];
