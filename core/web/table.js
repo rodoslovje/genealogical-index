@@ -1,23 +1,9 @@
 import { t } from './i18n.js';
 import { formatLinks } from './links.js';
+import { isPrivate, cmp, getExpandCollapseIcon } from './utils.js';
+import { childYearOf, parseDateForSort } from './dates.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
-
-function isPrivate(val) {
-  if (!val) return false;
-  const v = String(val).toLowerCase();
-  return v === 'private' || v === '<private>' || v === 'unknown';
-}
-
-/** Extract the 4-digit year from a person record's date_of_birth field, with `year` as fallback. */
-function childYearOf(p) {
-  if (!p) return '';
-  if (p.date_of_birth) {
-    const m = String(p.date_of_birth).match(/\d{4}/);
-    if (m) return m[0];
-  }
-  return p.year || '';
-}
 
 export function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
@@ -154,33 +140,6 @@ export function exportToCSV(data, columns, filename) {
   document.body.removeChild(link);
 }
 
-export function parseDateForSort(dateStr) {
-  if (!dateStr) return 0;
-  let str = String(dateStr).toLowerCase();
-
-  // Strip common genealogical modifiers
-  str = str.replace(/(abt\.?|about|bef\.?|before|aft\.?|after|cal|est\.?)\s*/g, '').trim();
-
-  const months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
-  let year = 0, month = 0, day = 0;
-
-  const yearMatch = str.match(/\b(\d{4})\b/);
-  if (yearMatch) year = parseInt(yearMatch[1], 10);
-
-  const monthMatch = str.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/);
-  if (monthMatch) month = months[monthMatch[1]];
-
-  const parts = str.split(/[\s\-.\/]+/);
-  for (const part of parts) {
-    if (/^\d{1,2}$/.test(part) && parseInt(part, 10) <= 31) {
-      day = parseInt(part, 10);
-      break;
-    }
-  }
-
-  return year * 10000 + month * 100 + day;
-}
-
 const CENTERED_COLUMNS = new Set([
   'contributor', 'contributor_ID',
   'total_persons', 'total_families', 'total', 'total_links',
@@ -251,14 +210,6 @@ function getValue(row, col) {
   if (isGedcomDate) return parseDateForSort(row[col]);
   if (isNumeric) return Number(row[col] || 0);
   return String(row[col] || '').toLowerCase();
-}
-
-const collator = new Intl.Collator('sl', { sensitivity: 'base' });
-
-
-function cmp(a, b) {
-  if (typeof a === 'number' && typeof b === 'number') return a - b;
-  return collator.compare(String(a ?? ''), String(b ?? ''));
 }
 
 function sortData(data, primary, secondary) {
@@ -598,14 +549,9 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       expandBtn = document.createElement('button');
       expandBtn.className = 'export-btn expand-toggle-btn';
       const setExpandLabel = (allOpen) => {
-        const icon = allOpen
-          // Two arrows pointing inward (collapse)
-          ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`
-          // Two arrows pointing outward (expand)
-          : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
-        const text = allOpen ? t('collapse_all') : t('expand_all');
-        expandBtn.innerHTML = `${icon}${text}`;
-        expandBtn.title = text;
+        const labelText = t(allOpen ? 'collapse_all' : 'expand_all');
+        expandBtn.innerHTML = `${getExpandCollapseIcon(allOpen)}${labelText}`;
+        expandBtn.title = labelText;
         expandBtn.dataset.allOpen = allOpen ? '1' : '0';
       };
       // Initial state reflects current details (typically all collapsed).

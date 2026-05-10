@@ -1,6 +1,8 @@
 import { t } from './i18n.js';
-import { renderTable, formatSpecialCell, exportToCSV, parseDateForSort } from './table.js';
+import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
 import { formatLinks } from './links.js';
+import { parseDateForSort } from './dates.js';
+import { isPrivate, cmp, getExpandCollapseIcon } from './utils.js';
 import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
@@ -749,8 +751,7 @@ async function renderMatchDetail(contributor, partner) {
             { f: 'parents',        h: t('col_parents') },
           ],
           searchUrl: rec => {
-            const isPriv = v => { const s = String(v || '').toLowerCase(); return s === 'private' || s === '<private>' || s === 'unknown'; };
-            if (isPriv(rec.name) || isPriv(rec.surname)) return null;
+            if (isPrivate(rec.name) || isPrivate(rec.surname)) return null;
             return buildSearchUrl('person', [['n', rec.name], ['sn', rec.surname]]);
           },
           linkedFields: new Set(['name', 'surname']),
@@ -771,13 +772,12 @@ async function renderMatchDetail(contributor, partner) {
             { f: 'parents',           h: t('col_parents') },
           ],
           searchUrl: (rec, field) => {
-            const isPriv = v => { const s = String(v || '').toLowerCase(); return s === 'private' || s === '<private>' || s === 'unknown'; };
             if (field === 'husband_name' || field === 'husband_surname') {
-              if (isPriv(rec.husband_name) || isPriv(rec.husband_surname)) return null;
+              if (isPrivate(rec.husband_name) || isPrivate(rec.husband_surname)) return null;
               return buildSearchUrl('family', [['hn', rec.husband_name], ['hsn', rec.husband_surname]]);
             }
             if (field === 'wife_name' || field === 'wife_surname') {
-              if (isPriv(rec.wife_name) || isPriv(rec.wife_surname)) return null;
+              if (isPrivate(rec.wife_name) || isPrivate(rec.wife_surname)) return null;
               return buildSearchUrl('family', [['wn', rec.wife_name], ['wsn', rec.wife_surname]]);
             }
             return null;
@@ -933,10 +933,7 @@ async function renderMatchDetail(contributor, partner) {
           section.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
           btn.dataset.allOpen = targetOpen ? '1' : '0';
           const text = targetOpen ? t('collapse_all') : t('expand_all');
-          const icon = targetOpen
-            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`
-            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
-          btn.innerHTML = `${icon}${text}`;
+          btn.innerHTML = `${getExpandCollapseIcon(targetOpen)}${text}`;
           btn.title = text;
         });
       });
