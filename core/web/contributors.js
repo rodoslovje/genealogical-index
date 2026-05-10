@@ -2,7 +2,7 @@ import { t } from './i18n.js';
 import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
 import { formatLinks } from './links.js';
 import { parseDateForSort } from './dates.js';
-import { isPrivate, cmp, getExpandCollapseIcon } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, shortenUrlLabel } from './utils.js';
 import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
@@ -18,6 +18,9 @@ let timelineChartInstance = null;
 
 let matchCountsData = null;
 let matchCountsPromise = null;
+
+let currentMatchesData = null;
+let currentMatchesContributor = null;
 
 function ensureData() {
   if (cachedData) return Promise.resolve(cachedData);
@@ -183,7 +186,23 @@ export async function renderContributors() {
     if (input && !input.dataset.bound) {
       input.dataset.bound = '1';
       input.addEventListener('input', () => {
-        if (cachedData) {
+        const q = getContributorFilter();
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeContributor = urlParams.get('contributor');
+        const withPartner = urlParams.get('with');
+
+        if (activeContributor && !withPartner && currentMatchesData && currentMatchesContributor === activeContributor) {
+          const filtered = q ? currentMatchesData.filter(p => p.contributor.toLowerCase().includes(q)) : currentMatchesData;
+          const tableData = filtered.map(p => ({
+            contributor_ID: p.contributor,
+            _match_href: toUnicodeHref({ t: 'contributors', contributor: activeContributor, with: p.contributor }),
+            total_persons:  p.persons_count  || 0,
+            total_families: p.families_count || 0,
+            total:          p.total_count,
+            confidence:     Math.round((p.max_confidence || 0) * 100),
+          }));
+          renderTable(tableData, 'matches-summary', ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'], 'total', false);
+        } else if (!activeContributor && cachedData) {
           const filtered = enrichWithMatchCounts(filterContributorData(cachedData));
           const filteredTableData = filtered.map(d => ({
             ...d,
@@ -532,12 +551,7 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
 }
 
 async function renderMatchesPage(contributor, withPartner) {
-  // Close sidebar — not useful on the matches subpage
-  document.getElementById('sidebar')?.classList.remove('open');
-
-  if (!withPartner) {
-    window.scrollTo(0, 0);
-  }
+  window.scrollTo(0, 0);
 
   const totalsBar = document.getElementById('totals-bar');
   if (totalsBar) totalsBar.style.display = 'none';
@@ -554,10 +568,18 @@ async function renderMatchesPage(contributor, withPartner) {
     await ensureData();
     const contribData = cachedData.find(d => d.contributor_ID === contributor);
 
+    if (withPartner) {
+      document.title = `${withPartner} × ${contributor} | ${t('site_title')}`;
+      await renderMatchDetail(contributor, withPartner, contribData, container);
+      return;
+    }
+
     let partners;
     try {
       const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches`);
       partners = await res.json();
+      currentMatchesData = partners;
+      currentMatchesContributor = contributor;
     } catch {
       container.innerHTML = `<p>${t('search_failed')}</p>`;
       return;
@@ -567,7 +589,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
     const urlMap = getContributorUrlMap();
     const url = urlMap[contributor];
-    const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${url}</a></div></div>` : '';
+    const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a></div></div>` : '';
 
     let statsHtml = '';
     if (contribData) {
@@ -606,8 +628,11 @@ async function renderMatchesPage(contributor, withPartner) {
       return;
     }
 
-    // Map to renderTable row format
-    const tableData = partners.map(p => ({
+    // Map to renderTable row format, applying any active filter
+    const q = getContributorFilter();
+    const filteredPartners = q ? partners.filter(p => p.contributor.toLowerCase().includes(q)) : partners;
+
+    const tableData = filteredPartners.map(p => ({
       contributor_ID: p.contributor,
       _match_href: toUnicodeHref({ t: 'contributors', contributor: contributor, with: p.contributor }),
       total_persons:  p.persons_count  || 0,
@@ -624,8 +649,7 @@ async function renderMatchesPage(contributor, withPartner) {
         </button>
       </div>` +
       `<p>${t('matches_found_intro')} <strong>${contributor}</strong>.<br>${t('matches_found_outro')}</p>` +
-      '<div id="matches-summary" class="table-responsive"></div>' +
-      '<div id="matches-detail"></div>';
+      '<div id="matches-summary" class="table-responsive"></div>';
 
     loadSurnameCloud([contributor], 'contributor-surname-cloud');
 
@@ -641,30 +665,14 @@ async function renderMatchesPage(contributor, withPartner) {
       });
     }
 
-    // Highlight the active partner row
-    if (withPartner) {
-      document.querySelectorAll('#matches-summary tbody tr').forEach(tr => {
-        const link = tr.querySelector('a[data-spa-nav]');
-        if (link && new URL(link.href, location.href).searchParams.get('with') === withPartner) {
-          tr.classList.add('matches-active-row');
-        }
-      });
-      await renderMatchDetail(contributor, withPartner);
-    }
   } finally {
     if (overlay) overlay.style.display = 'none';
   }
 }
 
-async function renderMatchDetail(contributor, partner) {
-  const detailEl = document.getElementById('matches-detail');
+async function renderMatchDetail(contributor, partner, contribData, container) {
+  const detailEl = container;
   if (!detailEl) return;
-
-  const overlay = document.getElementById('search-overlay');
-  if (overlay) {
-    overlay.style.display = 'flex';
-    await new Promise(r => setTimeout(r, 10)); // Yield to allow browser to paint the overlay
-  }
 
   try {
     let records;
@@ -787,17 +795,31 @@ async function renderMatchDetail(contributor, partner) {
       ];
 
       const urlMap = getContributorUrlMap();
+      const contribUrl = urlMap[contributor];
       const partnerUrl = urlMap[partner];
-      const partnerUrlHtml = partnerUrl ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${partnerUrl}</a></div></div>` : '';
 
-      const primaryHtml = `<strong>${contributor}</strong>`;
+      let urlsHtml = '';
+      if (contribUrl || partnerUrl) {
+        urlsHtml = `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444; display: flex; flex-wrap: wrap; gap: 16px 40px;">`;
+        if (partnerUrl) {
+          urlsHtml += `<div>${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(partnerUrl)}</a></div></div>`;
+        }
+        if (contribUrl) {
+          urlsHtml += `<div>${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${contribUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(contribUrl)}</a></div></div>`;
+        }
+        urlsHtml += `</div>`;
+      }
+
+      const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav>${contributor}</a></strong>`;
       const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a></strong>`;
       const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
 
-      let html = `<div class="matches-detail-section">
-        <h3 class="section-heading" style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${contributor} × ${partner}</h3>
+      let html = `
+        <div class="matches-page-header">
+          <h2 class="matches-page-title">${partner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${contributor}</a></h2>
+        </div>
         <p>${introText}</p>
-        ${partnerUrlHtml}`;
+        ${urlsHtml}`;
 
       for (const { key, label, fields, searchUrl, linkedFields } of typeConfig) {
         const group = byType[key];
@@ -848,10 +870,11 @@ async function renderMatchDetail(contributor, partner) {
           const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
           const bCells = fields.map(({ f }) => makeCell(r.record_b, f)).join('');
           const conf = Math.round((r.confidence || 0) * 100);
+          const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav>${contributor}</a>`;
           const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a>`;
           return `<tr class="match-pair-row ${pairCls}">
                     ${aCells}
-                    <td class="match-pair-label match-pair-label-a col-center">${contributor}</td>
+                    <td class="match-pair-label match-pair-label-a col-center">${contributorLink}</td>
                     <td rowspan="2" class="match-conf col-center">${conf}%</td>
                   </tr>
                   <tr class="match-pair-row ${pairCls}">
@@ -941,13 +964,8 @@ async function renderMatchDetail(contributor, partner) {
 
     renderTables();
 
-  setTimeout(() => {
-    const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')) || 61;
-    const y = detailEl.getBoundingClientRect().top + window.scrollY - navHeight - 24;
-    window.scrollTo({ top: y, behavior: 'smooth' });
-  }, 50);
   } finally {
-    if (overlay) overlay.style.display = 'none';
+    // no-op, overlay is already handled cleanly by renderMatchesPage
   }
 }
 

@@ -148,8 +148,9 @@ window.addEventListener('resize', updateSidebarTop);
 hamburgerBtn.addEventListener('click', (e) => {
   e.stopPropagation();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('t') === 'contributors' && urlParams.get('contributor')) {
+  // On desktop, the sidebar on the detailed match page is completely empty, so prevent it from opening
+  const isDetailedMatch = new URLSearchParams(window.location.search).get('with');
+  if (isDetailedMatch && window.innerWidth > 768) {
     return;
   }
 
@@ -264,10 +265,15 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     const sidebarSection = sidebarSectionMap[targetTab];
     if (sidebarSection) {
       const section = document.getElementById(sidebarSection);
-      section.classList.add('active');
-      const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
-      const target = inputs.find(i => i.value.trim()) || inputs[0];
-      if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
+      const isDetailedMatch = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('with');
+      if (isDetailedMatch) {
+        section.classList.remove('active');
+      } else {
+        section.classList.add('active');
+        const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
+        const target = inputs.find(i => i.value.trim()) || inputs[0];
+        if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
+      }
     }
 
     document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));
