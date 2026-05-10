@@ -272,14 +272,15 @@ function sortData(data, primary, secondary) {
 }
 
 function makePersonLink(name, surname, display) {
-  if (isPrivate(name) || name === 'unknown') return display;
-  if (!name && !surname) return display;
+  const safeDisplay = display ? String(display).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+  if (isPrivate(name) || name === 'unknown') return safeDisplay;
+  if (!name && !surname) return safeDisplay;
   const p = new URLSearchParams();
   p.set('t', 'person');
   if (name) p.set('n', name);
   if (surname) p.set('sn', surname);
   p.set('ex', '1');
-  return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${display}</a>`;
+  return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${safeDisplay}</a>`;
 }
 
 function renderParentPair(parentsJson, labelKey) {
@@ -335,7 +336,7 @@ export function formatSpecialCell(col, row) {
       const pList = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
       count = pList.length;
       formattedList = pList.map(c => {
-        if (isPrivate(c.name) || c.name === 'unknown') return c.name;
+        if (isPrivate(c.name) || c.name === 'unknown') return String(c.name).replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         const params = new URLSearchParams();
         params.set('t', 'person');
@@ -349,7 +350,7 @@ export function formatSpecialCell(col, row) {
         if (c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
         if (cy) childDisplay += ` *${cy}`;
 
-        return `<a href="${toUnicodeHref(params)}" data-spa-nav>${childDisplay}</a>`;
+        return `<a href="${toUnicodeHref(params)}" data-spa-nav>${String(childDisplay).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
       });
     } catch (e) {
       console.error("Failed to parse JSON for children", e);
@@ -414,7 +415,8 @@ export function formatSpecialCell(col, row) {
         if (py) partnerDisplay += ` *${py}`;
         if (isPrivate(p.name) || p.name === 'unknown') partnerDisplay = p.name;
         const label = isHusband ? t('label_husband') : (p.sex === 'f' ? t('label_wife') : '');
-        formattedList.push(`<a href="${toUnicodeHref(famParams)}" data-spa-nav${label ? ` title="${label}"` : ''}>${partnerDisplay}</a>`);
+        const safeDisplay = String(partnerDisplay).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        formattedList.push(`<a href="${toUnicodeHref(famParams)}" data-spa-nav${label ? ` title="${label}"` : ''}>${safeDisplay}</a>`);
       });
     } catch (e) {
       console.error("Failed to parse JSON for partners", e);
@@ -558,33 +560,48 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (col === 'total_links' && Number(row[col] || 0) === 0) val = '';
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
-        html += `<td class="col-right">${row[col] || ''}</td>`;
+        html += `<td class="col-right">${String(row[col] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`;
       } else if ((col === 'husband_name' || col === 'husband_surname') && row[col]) {
         const params = new URLSearchParams();
         params.set('t', 'person');
-        if (row.husband_name) params.set('n', row.husband_name);
+        if (row.husband_name && !isPrivate(row.husband_name) && row.husband_name !== 'unknown') params.set('n', row.husband_name);
         if (row.husband_surname) params.set('sn', row.husband_surname);
         params.set('ex', '1');
-        html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
+        const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (isPrivate(row.husband_name) && col === 'husband_name') {
+          html += `<td>${safeDisplay}</td>`;
+        } else {
+          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
+        }
       } else if ((col === 'wife_name' || col === 'wife_surname') && row[col]) {
         const params = new URLSearchParams();
         params.set('t', 'person');
-        if (row.wife_name) params.set('n', row.wife_name);
+        if (row.wife_name && !isPrivate(row.wife_name) && row.wife_name !== 'unknown') params.set('n', row.wife_name);
         if (row.wife_surname) params.set('sn', row.wife_surname);
         params.set('ex', '1');
-        html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
+        const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (isPrivate(row.wife_name) && col === 'wife_name') {
+          html += `<td>${safeDisplay}</td>`;
+        } else {
+          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
+        }
       } else if ((col === 'name' || col === 'surname') && row[col] && row.husband_name === undefined) {
         const params = new URLSearchParams();
         params.set('t', 'person');
-        if (row.name) params.set('n', row.name);
+        if (row.name && !isPrivate(row.name) && row.name !== 'unknown') params.set('n', row.name);
         if (row.surname) params.set('sn', row.surname);
         params.set('ex', '1');
-        html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${row[col]}</a></td>`;
+        const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (isPrivate(row.name) && col === 'name') {
+          html += `<td>${safeDisplay}</td>`;
+        } else {
+          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
+        }
       } else if (col === 'children' || col === 'parents' || col === 'partners') {
         const inner = formatSpecialCell(col, row);
         html += `<td>${inner || ''}</td>`;
       } else {
-        html += `<td>${row[col] || ''}</td>`;
+        html += `<td>${String(row[col] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`;
       }
     });
     html += '</tr>';

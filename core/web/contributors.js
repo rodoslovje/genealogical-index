@@ -702,7 +702,10 @@ async function renderMatchDetail(contributor, partner) {
         { f: 'partners',       h: t('col_partners') },
         { f: 'parents',        h: t('col_parents') },
       ],
-      searchUrl: rec => buildSearchUrl('person', [['n', rec.name], ['sn', rec.surname]]),
+      searchUrl: rec => {
+        if (rec.name === 'private' || rec.name === '<private>' || rec.name === 'unknown') return null;
+        return buildSearchUrl('person', [['n', rec.name], ['sn', rec.surname]]);
+      },
       linkedFields: new Set(['name', 'surname']),
     },
     {
@@ -720,10 +723,14 @@ async function renderMatchDetail(contributor, partner) {
         { f: 'parents',           h: t('col_parents') },
       ],
       searchUrl: (rec, field) => {
-        if (field === 'husband_name' || field === 'husband_surname')
+        if (field === 'husband_name' || field === 'husband_surname') {
+          if (rec.husband_name === 'private' || rec.husband_name === '<private>' || rec.husband_name === 'unknown') return null;
           return buildSearchUrl('family', [['hn', rec.husband_name], ['hsn', rec.husband_surname]]);
-        if (field === 'wife_name' || field === 'wife_surname')
+        }
+        if (field === 'wife_name' || field === 'wife_surname') {
+          if (rec.wife_name === 'private' || rec.wife_name === '<private>' || rec.wife_name === 'unknown') return null;
           return buildSearchUrl('family', [['wn', rec.wife_name], ['wsn', rec.wife_surname]]);
+        }
         return null;
       },
       linkedFields: new Set(['husband_name', 'husband_surname', 'wife_name', 'wife_surname']),
@@ -754,12 +761,13 @@ async function renderMatchDetail(contributor, partner) {
         return `<td>${inner || ''}</td>`;
       }
       const val = rec[f] || '';
+      const safeVal = String(val).replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const cls = isDateField(f) ? ' class="col-right"' : '';
       if (val && linkedFields.has(f)) {
         const href = searchUrl(rec, f);
-        if (href) return `<td${cls}><a href="${href}" data-spa-nav class="name-link">${val}</a></td>`;
+        if (href) return `<td${cls}><a href="${href}" data-spa-nav class="name-link">${safeVal}</a></td>`;
       }
-      return `<td${cls}>${val}</td>`;
+      return `<td${cls}>${safeVal}</td>`;
     };
 
     const headerCells = fields.map(({ h, f }) => {
