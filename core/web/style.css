@@ -668,7 +668,11 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 }
 .match-pair-even { background: #fafafa; }
 .match-pair-odd  { background: #ffffff; }
-.match-pair-row:nth-child(odd) td:not([rowspan]) { border-bottom: none; }
+.match-pair-row:nth-child(odd) td:not([rowspan]) {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+.match-pair-row:nth-child(even) td { padding-top: 4px; }
 .match-pair-label {
   color: #666;
   white-space: nowrap;
