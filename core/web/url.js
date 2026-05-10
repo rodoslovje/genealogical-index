@@ -24,6 +24,10 @@ export const PARAM_MAP = {
   place:            'p',
   date_from:        'df',
   date_to:          'dt',
+  husband_birth:    'hb',
+  husband_birth_to: 'hbt',
+  wife_birth:       'wb',
+  wife_birth_to:    'wbt',
 };
 
 /** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point at the unified person tab. */

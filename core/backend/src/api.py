@@ -67,7 +67,7 @@ def read_top_surnames(
 ):
     contributor_list = None
     if contributors:
-        contributor_list = [c.strip() for c in contributors.split(',') if c.strip()]
+        contributor_list = [c.strip() for c in contributors.split(",") if c.strip()]
     elif contributor:
         contributor_list = [contributor]
     return crud.get_top_surnames(db, contributors=contributor_list, limit=limit)
@@ -141,8 +141,12 @@ def search_advanced_persons(
 def search_advanced_families(
     husband_name: Optional[str] = None,
     husband_surname: Optional[str] = None,
+    husband_birth: Optional[str] = None,
+    husband_birth_to: Optional[str] = None,
     wife_name: Optional[str] = None,
     wife_surname: Optional[str] = None,
+    wife_birth: Optional[str] = None,
+    wife_birth_to: Optional[str] = None,
     children: Optional[str] = None,
     date_of_marriage: Optional[str] = None,
     date_of_marriage_to: Optional[str] = None,
@@ -155,12 +159,16 @@ def search_advanced_families(
 ):
     return crud.search_advanced_families(
         db,
-        husband_name,
-        husband_surname,
-        wife_name,
-        wife_surname,
-        children,
-        date_of_marriage,
+        husband_name=husband_name,
+        husband_surname=husband_surname,
+        husband_birth=husband_birth,
+        husband_birth_to=husband_birth_to,
+        wife_name=wife_name,
+        wife_surname=wife_surname,
+        wife_birth=wife_birth,
+        wife_birth_to=wife_birth_to,
+        children=children,
+        date_of_marriage=date_of_marriage,
         date_of_marriage_to=date_of_marriage_to,
         place_of_marriage=place_of_marriage,
         contributor=contributor,

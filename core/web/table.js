@@ -185,7 +185,7 @@ const CENTERED_COLUMNS = new Set([
 ]);
 
 const RIGHT_COLUMNS = new Set([
-  'date_of_birth', 'date_of_marriage', 'date_of_death',
+  'date_of_birth', 'date_of_marriage', 'date_of_death', 'husband_birth', 'wife_birth',
 ]);
 
 function getValue(row, col) {
@@ -243,7 +243,7 @@ function getValue(row, col) {
     try { return JSON.parse(row.links).length; } catch { return 0; }
   }
   if (col === 'matches') return Number(row.matches_count || 0);
-  const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death';
+  const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death' || col === 'husband_birth' || col === 'wife_birth';
   const isNumeric = ['total_persons', 'total_families', 'total', 'total_links', 'confidence', 'matches'].includes(col);
   if (isGedcomDate) return parseDateForSort(row[col]);
   if (isNumeric) return Number(row[col] || 0);

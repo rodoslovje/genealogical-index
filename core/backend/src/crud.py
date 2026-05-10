@@ -32,8 +32,10 @@ _match_counts_cache = {"data": None, "time": 0}
 
 def get_match_counts(db: Session):
     now = time.time()
-    if (_match_counts_cache["data"] is not None
-            and now - _match_counts_cache["time"] < MATCH_COUNTS_TTL):
+    if (
+        _match_counts_cache["data"] is not None
+        and now - _match_counts_cache["time"] < MATCH_COUNTS_TTL
+    ):
         return _match_counts_cache["data"]
     rows = db.execute(text("""
         SELECT contributor_a AS contributor, COUNT(DISTINCT contributor_b) AS partners_count
@@ -408,13 +410,9 @@ def search_all(
         elif date_cond_b is not None:
             q = q.filter(date_cond_b)
         if contributor:
-            q = q.filter(
-                _text_filter(models.Person.contributor, contributor, exact)
-            )
+            q = q.filter(_text_filter(models.Person.contributor, contributor, exact))
         if has_link:
-            q = q.filter(
-                models.Person.links.isnot(None), models.Person.links != ""
-            )
+            q = q.filter(models.Person.links.isnot(None), models.Person.links != "")
         persons = q.offset(skip).limit(limit).all()
 
     families = []
@@ -503,9 +501,7 @@ def search_advanced_persons(
             _text_filter(models.Person.contributor, contributor, exact)
         )
     if has_link:
-        query = query.filter(
-            models.Person.links.isnot(None), models.Person.links != ""
-        )
+        query = query.filter(models.Person.links.isnot(None), models.Person.links != "")
 
     return query.offset(skip).limit(limit).all()
 
@@ -514,8 +510,12 @@ def search_advanced_families(
     db: Session,
     husband_name: str = None,
     husband_surname: str = None,
+    husband_birth: str = None,
+    husband_birth_to: str = None,
     wife_name: str = None,
     wife_surname: str = None,
+    wife_birth: str = None,
+    wife_birth_to: str = None,
     children: str = None,
     date_of_marriage: str = None,
     date_of_marriage_to: str = None,
@@ -538,12 +538,20 @@ def search_advanced_families(
         query = query.filter(
             _text_filter(models.Family.husband_surname, husband_surname, exact)
         )
+    hb_cond = _date_filter(
+        models.Family.husband_birth, husband_birth, husband_birth_to, exact
+    )
+    if hb_cond is not None:
+        query = query.filter(hb_cond)
     if wife_name:
         query = query.filter(_text_filter(models.Family.wife_name, wife_name, exact))
     if wife_surname:
         query = query.filter(
             _text_filter(models.Family.wife_surname, wife_surname, exact)
         )
+    wb_cond = _date_filter(models.Family.wife_birth, wife_birth, wife_birth_to, exact)
+    if wb_cond is not None:
+        query = query.filter(wb_cond)
     if children:
         v = children.replace("%", r"\%").replace("_", r"\_")
         if exact:

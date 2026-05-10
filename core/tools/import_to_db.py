@@ -56,8 +56,8 @@ def setup_full(db):
         );
         CREATE TABLE families (
             id SERIAL PRIMARY KEY,
-            husband_name TEXT, husband_surname TEXT, husband_year SMALLINT,
-            wife_name TEXT, wife_surname TEXT, wife_year SMALLINT,
+            husband_name TEXT, husband_surname TEXT, husband_birth TEXT,
+            wife_name TEXT, wife_surname TEXT, wife_birth TEXT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
             children_list TEXT, husband_parents TEXT, wife_parents TEXT,
             contributor TEXT, links TEXT
@@ -122,9 +122,7 @@ def _col_exists(db, table, column):
 def _table_exists(db, table):
     return (
         db.execute(
-            text(
-                "SELECT 1 FROM information_schema.tables WHERE table_name=:t"
-            ),
+            text("SELECT 1 FROM information_schema.tables WHERE table_name=:t"),
             {"t": table},
         ).fetchone()
         is not None
@@ -141,7 +139,9 @@ def setup_update(db):
     # Detect legacy schema and drop it — the data shape change is fundamental,
     # so we discard births/deaths/old matches and re-import everything.
     if _table_exists(db, "births") or _table_exists(db, "deaths"):
-        print("  Legacy schema detected — dropping old births/deaths tables and matches.")
+        print(
+            "  Legacy schema detected — dropping old births/deaths tables and matches."
+        )
         db.execute(text("""
             DROP TABLE IF EXISTS births CASCADE;
             DROP TABLE IF EXISTS deaths CASCADE;
@@ -165,8 +165,8 @@ def setup_update(db):
         );
         CREATE TABLE IF NOT EXISTS families (
             id SERIAL PRIMARY KEY,
-            husband_name TEXT, husband_surname TEXT, husband_year SMALLINT,
-            wife_name TEXT, wife_surname TEXT, wife_year SMALLINT,
+            husband_name TEXT, husband_surname TEXT, husband_birth TEXT,
+            wife_name TEXT, wife_surname TEXT, wife_birth TEXT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
             children_list TEXT, husband_parents TEXT, wife_parents TEXT,
             contributor TEXT, links TEXT
@@ -201,8 +201,10 @@ def setup_update(db):
         ALTER TABLE contributors DROP COLUMN IF EXISTS births_count;
         ALTER TABLE contributors DROP COLUMN IF EXISTS deaths_count;
 
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_year SMALLINT;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_year    SMALLINT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_birth TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_birth    TEXT;
+        ALTER TABLE families DROP COLUMN IF EXISTS husband_year;
+        ALTER TABLE families DROP COLUMN IF EXISTS wife_year;
     """))
     db.commit()
 
@@ -311,10 +313,10 @@ def _flatten_family(f, contributor_id):
     return {
         "husband_name": husband.get("name") or "",
         "husband_surname": husband.get("surname") or "",
-        "husband_year": _extract_year(husband.get("date_of_birth")),
+        "husband_birth": husband.get("date_of_birth") or "",
         "wife_name": wife.get("name") or "",
         "wife_surname": wife.get("surname") or "",
-        "wife_year": _extract_year(wife.get("date_of_birth")),
+        "wife_birth": wife.get("date_of_birth") or "",
         "date_of_marriage": marriage.get("date") or "",
         "marriage_year": _extract_year(marriage.get("date")),
         "place_of_marriage": marriage.get("place") or "",
@@ -403,13 +405,13 @@ def import_contributor(
                 rows = [_flatten_family(fam, contributor_id) for fam in families_data]
                 db.execute(
                     text("""
-                        INSERT INTO families (husband_name, husband_surname, husband_year,
-                            wife_name, wife_surname, wife_year,
+                        INSERT INTO families (husband_name, husband_surname, husband_birth,
+                            wife_name, wife_surname, wife_birth,
                             date_of_marriage, marriage_year, place_of_marriage,
                             children_list, husband_parents, wife_parents,
                             contributor, links)
-                        VALUES (:husband_name, :husband_surname, :husband_year,
-                            :wife_name, :wife_surname, :wife_year,
+                        VALUES (:husband_name, :husband_surname, :husband_birth,
+                            :wife_name, :wife_surname, :wife_birth,
                             :date_of_marriage, :marriage_year, :place_of_marriage,
                             :children_list, :husband_parents, :wife_parents,
                             :contributor, :links)
@@ -504,7 +506,8 @@ def main():
             if name not in known:
                 print(f"\nRemoving stale contributor: {name}")
                 db.execute(
-                    text("DELETE FROM persons WHERE contributor = :name"), {"name": name}
+                    text("DELETE FROM persons WHERE contributor = :name"),
+                    {"name": name},
                 )
                 db.execute(
                     text("DELETE FROM families WHERE contributor = :name"),

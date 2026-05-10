@@ -228,7 +228,7 @@ export function setupGeneralSearch() {
   });
 }
 
-const DATE_FIELDS = new Set(['date_from', 'date_to', 'date_of_birth', 'date_of_birth_to', 'date_of_marriage', 'date_of_marriage_to', 'date_of_death', 'date_of_death_to']);
+const DATE_FIELDS = new Set(['date_from', 'date_to', 'date_of_birth', 'date_of_birth_to', 'date_of_marriage', 'date_of_marriage_to', 'date_of_death', 'date_of_death_to', 'husband_birth', 'husband_birth_to', 'wife_birth', 'wife_birth_to']);
 
 function performGeneralSearch() {
   const params = {};
@@ -304,8 +304,8 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   // so they read as one block.  Other columns flow normally.
   const FIELD_GROUPS = {
     name:             { startLabelKey: 'label_person',   members: ['name', 'surname'] },
-    husband_name:     { startLabelKey: 'label_husband',  members: ['husband_name', 'husband_surname'] },
-    wife_name:        { startLabelKey: 'label_wife',     members: ['wife_name', 'wife_surname'] },
+    husband_name:     { startLabelKey: 'label_husband',  members: ['husband_name', 'husband_surname', 'husband_birth'] },
+    wife_name:        { startLabelKey: 'label_wife',     members: ['wife_name', 'wife_surname', 'wife_birth'] },
     date_of_birth:    { startLabelKey: 'label_birth',    members: ['date_of_birth', 'place_of_birth'] },
     date_of_death:    { startLabelKey: 'label_death',    members: ['date_of_death', 'place_of_death'] },
     date_of_marriage: { startLabelKey: 'label_marriage', members: ['date_of_marriage', 'place_of_marriage'] },
@@ -318,8 +318,10 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   const GROUPED_PLACEHOLDER_KEYS = {
     husband_name: 'col_name',
     husband_surname: 'col_surname',
+    husband_birth: 'col_date_of_birth',
     wife_name: 'col_name',
     wife_surname: 'col_surname',
+    wife_birth: 'col_date_of_birth',
     date_of_birth: 'col_date',
     place_of_birth: 'col_place',
     date_of_death: 'col_date',
