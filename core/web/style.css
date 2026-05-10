@@ -661,32 +661,14 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   margin: 0 0 12px 0;
   color: var(--primary);
 }
-.matches-detail-table {
-  border-collapse: collapse;
-  font-size: 0.82rem;
-  width: 100%;
-}
-.matches-detail-table th,
-.matches-detail-table td {
-  padding: 3px 10px;
-  border: 1px solid var(--border);
-  text-align: left;
-}
-.matches-detail-table th { background: var(--bg); font-weight: 600; }
-.matches-detail-table th.col-center,
-.matches-detail-table td.col-center { text-align: center; }
-.matches-detail-table th.col-right,
-.matches-detail-table td.col-right { text-align: right; }
 .match-conf {
   text-align: center;
   vertical-align: middle;
   white-space: nowrap;
 }
-.match-pair-even { background: #eaf4fb; }
-.match-pair-odd  { background: #f5f7f9; }
-.match-pair-row td { border-top: none; }
-.match-pair-even:first-of-type td,
-tr.match-pair-odd + tr.match-pair-even td { border-top: 2px solid #c8d8e8; }
+.match-pair-even { background: #fafafa; }
+.match-pair-odd  { background: #ffffff; }
+.match-pair-row:nth-child(odd) td:not([rowspan]) { border-bottom: none; }
 .match-pair-label {
   color: #666;
   white-space: nowrap;

@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
+import { renderTable, formatSpecialCell, exportToCSV, parseDateForSort } from './table.js';
 import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
@@ -680,187 +680,254 @@ async function renderMatchDetail(contributor, partner) {
       return;
     }
 
-  const byType = { person: [], family: [] };
-  records.forEach(r => byType[r.record_type]?.push(r));
-
-  const buildSearchUrl = (tab, pairs) => {
-    const p = new URLSearchParams({ t: tab, ex: '1' });
-    pairs.forEach(([key, val]) => { if (val) p.set(key, val); });
-    return toUnicodeHref(p);
-  };
-
-  const typeConfig = [
-    {
-      key: 'person', label: t('matches_persons'),
-      fields: [
-        { f: 'name',           h: t('col_name') },
-        { f: 'surname',        h: t('col_surname') },
-        { f: 'date_of_birth',  h: t('col_date_of_birth') },
-        { f: 'place_of_birth', h: t('col_place_of_birth') },
-        { f: 'date_of_death',  h: t('col_date_of_death') },
-        { f: 'place_of_death', h: t('col_place_of_death') },
-        { f: 'partners',       h: t('col_partners') },
-        { f: 'parents',        h: t('col_parents') },
-      ],
-      searchUrl: rec => {
-        if (rec.name === 'private' || rec.name === '<private>' || rec.name === 'unknown') return null;
-        return buildSearchUrl('person', [['n', rec.name], ['sn', rec.surname]]);
-      },
-      linkedFields: new Set(['name', 'surname']),
-    },
-    {
-      key: 'family', label: t('matches_families'),
-      fields: [
-        { f: 'husband_name',      h: t('col_husband_name') },
-        { f: 'husband_surname',   h: t('col_husband_surname') },
-        { f: 'husband_birth',     h: t('col_husband_birth') },
-        { f: 'wife_name',         h: t('col_wife_name') },
-        { f: 'wife_surname',      h: t('col_wife_surname') },
-        { f: 'wife_birth',        h: t('col_wife_birth') },
-        { f: 'date_of_marriage',  h: t('col_date_of_marriage') },
-        { f: 'place_of_marriage', h: t('col_place_of_marriage') },
-        { f: 'children',          h: t('col_children') },
-        { f: 'parents',           h: t('col_parents') },
-      ],
-      searchUrl: (rec, field) => {
-        if (field === 'husband_name' || field === 'husband_surname') {
-          if (rec.husband_name === 'private' || rec.husband_name === '<private>' || rec.husband_name === 'unknown') return null;
-          return buildSearchUrl('family', [['hn', rec.husband_name], ['hsn', rec.husband_surname]]);
-        }
-        if (field === 'wife_name' || field === 'wife_surname') {
-          if (rec.wife_name === 'private' || rec.wife_name === '<private>' || rec.wife_name === 'unknown') return null;
-          return buildSearchUrl('family', [['wn', rec.wife_name], ['wsn', rec.wife_surname]]);
-        }
-        return null;
-      },
-      linkedFields: new Set(['husband_name', 'husband_surname', 'wife_name', 'wife_surname']),
-    },
-  ];
-
-  const urlMap = getContributorUrlMap();
-  const partnerUrl = urlMap[partner];
-  const partnerUrlHtml = partnerUrl ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${partnerUrl}</a></div></div>` : '';
-
-  const primaryHtml = `<strong>${contributor}</strong>`;
-  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a></strong>`;
-  const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
-
-  let html = `<div class="matches-detail-section">
-    <h3 class="section-heading" style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${contributor} × ${partner}</h3>
-    <p>${introText}</p>
-    ${partnerUrlHtml}`;
-
-  for (const { key, label, fields, searchUrl, linkedFields } of typeConfig) {
-    const group = byType[key];
-    if (!group.length) continue;
-
-    const isDateField = f => f === 'date_of_birth' || f === 'date_of_death' || f === 'date_of_marriage' || f === 'husband_birth' || f === 'wife_birth';
-    const makeCell = (rec, f) => {
-      if (f === 'parents' || f === 'children' || f === 'partners') {
-        const inner = formatSpecialCell(f, rec);
-        return `<td>${inner || ''}</td>`;
-      }
-      const val = rec[f] || '';
-      const safeVal = String(val).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const cls = isDateField(f) ? ' class="col-right"' : '';
-      if (val && linkedFields.has(f)) {
-        const href = searchUrl(rec, f);
-        if (href) return `<td${cls}><a href="${href}" data-spa-nav class="name-link">${safeVal}</a></td>`;
-      }
-      return `<td${cls}>${safeVal}</td>`;
+    const sortState = {
+      person: { primary: { column: 'confidence', ascending: false }, secondary: null },
+      family: { primary: { column: 'confidence', ascending: false }, secondary: null }
     };
 
-    const headerCells = fields.map(({ h, f }) => {
-      const cls = isDateField(f) ? ' class="col-right"' : '';
-      const tipKey = f === 'parents'
-        ? (key === 'family' ? 'tip_parents_family' : 'tip_parents_person')
-        : `tip_${f}`;
-      const tipText = t(tipKey);
-      const titleAttr = tipText && tipText !== tipKey ? ` title="${tipText.replace(/"/g, '&quot;')}"` : '';
-      return `<th${cls}${titleAttr}>${h}</th>`;
-    }).join('');
-    const groupRows = group.map((r, idx) => {
-      const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
-      const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
-      const bCells = fields.map(({ f }) => makeCell(r.record_b, f)).join('');
-      const conf = Math.round((r.confidence || 0) * 100);
-      const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a>`;
-      return `<tr class="match-pair-row ${pairCls}">
-                ${aCells}
-                <td class="match-pair-label match-pair-label-a col-center">${contributor}</td>
-                <td rowspan="2" class="match-conf col-center">${conf}%</td>
-              </tr>
-              <tr class="match-pair-row ${pairCls}">
-                ${bCells}
-                <td class="match-pair-label match-pair-label-b col-center">${partnerLink}</td>
-              </tr>`;
-    }).join('');
+    function renderTables() {
+      const byType = { person: [], family: [] };
+      records.forEach(r => byType[r.record_type]?.push(r));
 
-    // Only show the expand-all toggle when this group's table actually contains
-    // expandable cells (parents/partners/children).
-    const hasExpandable = fields.some(f => f.f === 'parents' || f.f === 'partners' || f.f === 'children');
-    const expandBtnHtml = hasExpandable
-      ? `<button class="export-btn expand-toggle-btn expand-matches-btn" data-type="${key}" data-all-open="0" title="${t('expand_all')}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>${t('expand_all')}
-        </button>`
-      : '';
-    html += `<div class="matches-section" data-type="${key}">
-      <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 1.5rem; margin-bottom: 10px;">
-        <h4 style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
-        <div class="matches-section-actions" style="display: flex; gap: 10px;">
-          ${expandBtnHtml}
-          <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
-          </button>
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table class="matches-detail-table">
-          <thead><tr>
-            ${headerCells}
-            <th class="col-center" title="${t('tip_contributor_ID').replace(/"/g, '&quot;')}">${t('col_contributor_ID')}</th>
-            <th class="col-center" title="${t('tip_confidence').replace(/"/g, '&quot;')}">${t('col_confidence')}</th>
-          </tr></thead>
-          <tbody>${groupRows}</tbody>
-        </table>
-      </div>
-    </div>`;
-  }
+      const collator = new Intl.Collator('sl', { sensitivity: 'base' });
+      function getMatchValue(r, col) {
+        if (col === 'confidence') return r.confidence || 0;
+        const val = r.record_a[col];
+        const isDateField = col === 'date_of_birth' || col === 'date_of_death' || col === 'date_of_marriage' || col === 'husband_birth' || col === 'wife_birth';
+        if (isDateField) return parseDateForSort(val);
+        return String(val || '').toLowerCase();
+      }
+      function cmp(a, b) {
+        if (typeof a === 'number' && typeof b === 'number') return a - b;
+        return collator.compare(String(a ?? ''), String(b ?? ''));
+      }
 
-  html += '</div>';
-  detailEl.innerHTML = html;
+      for (const key of ['person', 'family']) {
+        const state = sortState[key];
+        if (state && state.primary && byType[key].length > 0) {
+          byType[key].sort((a, b) => {
+            const dir = state.primary.ascending ? 1 : -1;
+            const res = cmp(getMatchValue(a, state.primary.column), getMatchValue(b, state.primary.column));
+            if (res !== 0) return res * dir;
+            if (state.secondary) {
+               const sdir = state.secondary.ascending ? 1 : -1;
+               const sres = cmp(getMatchValue(a, state.secondary.column), getMatchValue(b, state.secondary.column));
+               if (sres !== 0) return sres * sdir;
+            }
+            if (state.primary.column !== 'confidence' && (!state.secondary || state.secondary.column !== 'confidence')) {
+               return cmp(getMatchValue(a, 'confidence'), getMatchValue(b, 'confidence')) * -1;
+            }
+            return 0;
+          });
+        }
+      }
 
-  detailEl.querySelectorAll('.export-matches-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const prefix = siteConfig.filePrefix || 'sgi';
-      const typeKey = btn.dataset.type;
-      const typeData = byType[typeKey];
-      const config = typeConfig.find(c => c.key === typeKey);
-      const flatData = [];
-      typeData.forEach(r => {
-        flatData.push({ ...r.record_a, contributor_ID: contributor, confidence: Math.round((r.confidence || 0) * 100) });
-        flatData.push({ ...r.record_b, contributor_ID: partner, confidence: Math.round((r.confidence || 0) * 100) });
+      const buildSearchUrl = (tab, pairs) => {
+        const p = new URLSearchParams({ t: tab, ex: '1' });
+        pairs.forEach(([key, val]) => { if (val) p.set(key, val); });
+        return toUnicodeHref(p);
+      };
+
+      const typeConfig = [
+        {
+          key: 'person', label: t('matches_persons'),
+          fields: [
+            { f: 'name',           h: t('col_name') },
+            { f: 'surname',        h: t('col_surname') },
+            { f: 'date_of_birth',  h: t('col_date_of_birth') },
+            { f: 'place_of_birth', h: t('col_place_of_birth') },
+            { f: 'date_of_death',  h: t('col_date_of_death') },
+            { f: 'place_of_death', h: t('col_place_of_death') },
+            { f: 'partners',       h: t('col_partners') },
+            { f: 'parents',        h: t('col_parents') },
+          ],
+          searchUrl: rec => {
+            if (rec.name === 'private' || rec.name === '<private>' || rec.name === 'unknown') return null;
+            return buildSearchUrl('person', [['n', rec.name], ['sn', rec.surname]]);
+          },
+          linkedFields: new Set(['name', 'surname']),
+        },
+        {
+          key: 'family', label: t('matches_families'),
+          fields: [
+            { f: 'husband_name',      h: t('col_husband_name') },
+            { f: 'husband_surname',   h: t('col_husband_surname') },
+            { f: 'husband_birth',     h: t('col_husband_birth') },
+            { f: 'wife_name',         h: t('col_wife_name') },
+            { f: 'wife_surname',      h: t('col_wife_surname') },
+            { f: 'wife_birth',        h: t('col_wife_birth') },
+            { f: 'date_of_marriage',  h: t('col_date_of_marriage') },
+            { f: 'place_of_marriage', h: t('col_place_of_marriage') },
+            { f: 'children',          h: t('col_children') },
+            { f: 'parents',           h: t('col_parents') },
+          ],
+          searchUrl: (rec, field) => {
+            if (field === 'husband_name' || field === 'husband_surname') {
+              if (rec.husband_name === 'private' || rec.husband_name === '<private>' || rec.husband_name === 'unknown') return null;
+              return buildSearchUrl('family', [['hn', rec.husband_name], ['hsn', rec.husband_surname]]);
+            }
+            if (field === 'wife_name' || field === 'wife_surname') {
+              if (rec.wife_name === 'private' || rec.wife_name === '<private>' || rec.wife_name === 'unknown') return null;
+              return buildSearchUrl('family', [['wn', rec.wife_name], ['wsn', rec.wife_surname]]);
+            }
+            return null;
+          },
+          linkedFields: new Set(['husband_name', 'husband_surname', 'wife_name', 'wife_surname']),
+        },
+      ];
+
+      const urlMap = getContributorUrlMap();
+      const partnerUrl = urlMap[partner];
+      const partnerUrlHtml = partnerUrl ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${partnerUrl}</a></div></div>` : '';
+
+      const primaryHtml = `<strong>${contributor}</strong>`;
+      const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a></strong>`;
+      const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
+
+      let html = `<div class="matches-detail-section">
+        <h3 class="section-heading" style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${contributor} × ${partner}</h3>
+        <p>${introText}</p>
+        ${partnerUrlHtml}`;
+
+      for (const { key, label, fields, searchUrl, linkedFields } of typeConfig) {
+        const group = byType[key];
+        if (!group.length) continue;
+
+        const state = sortState[key];
+
+        const isDateField = f => f === 'date_of_birth' || f === 'date_of_death' || f === 'date_of_marriage' || f === 'husband_birth' || f === 'wife_birth';
+        const makeCell = (rec, f) => {
+          if (f === 'parents' || f === 'children' || f === 'partners') {
+            const inner = formatSpecialCell(f, rec);
+            return `<td>${inner || ''}</td>`;
+          }
+          const val = rec[f] || '';
+          const safeVal = String(val).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const cls = isDateField(f) ? ' class="col-right"' : '';
+          if (val && linkedFields.has(f)) {
+            const href = searchUrl(rec, f);
+            if (href) return `<td${cls}><a href="${href}" data-spa-nav class="name-link">${safeVal}</a></td>`;
+          }
+          return `<td${cls}>${safeVal}</td>`;
+        };
+
+        const headerCells = fields.map(({ h, f }) => {
+          let cls = isDateField(f) ? 'sortable col-right' : 'sortable';
+          let indicator = '';
+          if (state.primary.column === f) indicator = state.primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
+          else if (state.secondary?.column === f) indicator = state.secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
+          const tipKey = f === 'parents'
+            ? (key === 'family' ? 'tip_parents_family' : 'tip_parents_person')
+            : `tip_${f}`;
+          const tipText = t(tipKey);
+          const titleAttr = tipText && tipText !== tipKey ? ` title="${tipText.replace(/"/g, '&quot;')}"` : '';
+          return `<th data-col="${f}" data-type="${key}" class="${cls}"${titleAttr}>${h}${indicator}</th>`;
+        }).join('');
+
+        let confIndicator = '';
+        if (state.primary.column === 'confidence') confIndicator = state.primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
+        else if (state.secondary?.column === 'confidence') confIndicator = state.secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
+
+        const groupRows = group.map((r, idx) => {
+          const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
+          const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
+          const bCells = fields.map(({ f }) => makeCell(r.record_b, f)).join('');
+          const conf = Math.round((r.confidence || 0) * 100);
+          const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a>`;
+          return `<tr class="match-pair-row ${pairCls}">
+                    ${aCells}
+                    <td class="match-pair-label match-pair-label-a col-center">${contributor}</td>
+                    <td rowspan="2" class="match-conf col-center">${conf}%</td>
+                  </tr>
+                  <tr class="match-pair-row ${pairCls}">
+                    ${bCells}
+                    <td class="match-pair-label match-pair-label-b col-center">${partnerLink}</td>
+                  </tr>`;
+        }).join('');
+
+        // Only show the expand-all toggle when this group's table actually contains
+        // expandable cells (parents/partners/children).
+        const hasExpandable = fields.some(f => f.f === 'parents' || f.f === 'partners' || f.f === 'children');
+        const expandBtnHtml = hasExpandable
+          ? `<button class="export-btn expand-toggle-btn expand-matches-btn" data-type="${key}" data-all-open="0" title="${t('expand_all')}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>${t('expand_all')}
+            </button>`
+          : '';
+        html += `<div class="matches-section" data-type="${key}">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 1.5rem; margin-bottom: 10px;">
+            <h4 style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
+            <div class="matches-section-actions" style="display: flex; gap: 10px;">
+              ${expandBtnHtml}
+              <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="matches-detail-table">
+              <thead><tr>
+                ${headerCells}
+                <th class="col-center" title="${t('tip_contributor_ID').replace(/"/g, '&quot;')}">${t('col_contributor_ID')}</th>
+                <th data-col="confidence" data-type="${key}" class="sortable col-center" title="${t('tip_confidence').replace(/"/g, '&quot;')}">${t('col_confidence')}${confIndicator}</th>
+              </tr></thead>
+              <tbody>${groupRows}</tbody>
+            </table>
+          </div>
+        </div>`;
+      }
+
+      html += '</div>';
+      detailEl.innerHTML = html;
+
+      detailEl.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+          const col = th.dataset.col;
+          const type = th.dataset.type;
+          const state = sortState[type];
+          if (state.primary?.column === col) {
+            state.primary.ascending = !state.primary.ascending;
+          } else {
+            state.secondary = state.primary;
+            state.primary = { column: col, ascending: true };
+          }
+          renderTables();
+        });
       });
-      const cols = [...config.fields.map(f => f.f), 'contributor_ID', 'confidence'];
-      exportToCSV(flatData, cols, `${prefix}-matches-${typeKey}-${contributor}-${partner}.csv`);
-    });
-  });
 
-  detailEl.querySelectorAll('.expand-matches-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const section = btn.closest('.matches-section');
-      if (!section) return;
-      const targetOpen = btn.dataset.allOpen !== '1';
-      section.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
-      btn.dataset.allOpen = targetOpen ? '1' : '0';
-      const text = targetOpen ? t('collapse_all') : t('expand_all');
-      const icon = targetOpen
-        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`
-        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
-      btn.innerHTML = `${icon}${text}`;
-      btn.title = text;
-    });
-  });
+      detailEl.querySelectorAll('.export-matches-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const prefix = siteConfig.filePrefix || 'sgi';
+          const typeKey = btn.dataset.type;
+          const typeData = byType[typeKey];
+          const config = typeConfig.find(c => c.key === typeKey);
+          const flatData = [];
+          typeData.forEach(r => {
+            flatData.push({ ...r.record_a, contributor_ID: contributor, confidence: Math.round((r.confidence || 0) * 100) });
+            flatData.push({ ...r.record_b, contributor_ID: partner, confidence: Math.round((r.confidence || 0) * 100) });
+          });
+          const cols = [...config.fields.map(f => f.f), 'contributor_ID', 'confidence'];
+          exportToCSV(flatData, cols, `${prefix}-matches-${typeKey}-${contributor}-${partner}.csv`);
+        });
+      });
+
+      detailEl.querySelectorAll('.expand-matches-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const section = btn.closest('.matches-section');
+          if (!section) return;
+          const targetOpen = btn.dataset.allOpen !== '1';
+          section.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
+          btn.dataset.allOpen = targetOpen ? '1' : '0';
+          const text = targetOpen ? t('collapse_all') : t('expand_all');
+          const icon = targetOpen
+            ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`
+            : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+          btn.innerHTML = `${icon}${text}`;
+          btn.title = text;
+        });
+      });
+    }
+
+    renderTables();
 
   setTimeout(() => {
     const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')) || 61;
