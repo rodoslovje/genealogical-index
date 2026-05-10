@@ -8,8 +8,8 @@ export const personColumns = ['name', 'surname', 'date_of_birth',
   'place_of_birth', 'date_of_death', 'place_of_death', 'links',
   'partners', 'parents', 'contributor'];
 export const familyColumns = ['husband_name', 'husband_surname', 'wife_name', 'wife_surname',
-  'parents', 'date_of_marriage', 'place_of_marriage', 'children',
-  'links', 'contributor'];
+  'date_of_marriage', 'place_of_marriage', 'links', 'children',
+  'parents', 'contributor'];
 
 // Columns excluded from the search form (display-only in results table)
 export const DISPLAY_ONLY_COLUMNS = new Set(['links', 'parents', 'partners']);
