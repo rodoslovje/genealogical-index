@@ -30,6 +30,15 @@ _surnames_cache = {}  # keyed by contributor name (or "" for all)
 _match_counts_cache = {"data": None, "time": 0}
 
 
+def clear_all_caches():
+    """Clear all in-memory caches."""
+    global _timeline_cache, _surnames_cache, _match_counts_cache
+    _timeline_cache = {"data": None, "time": 0}
+    _surnames_cache.clear()
+    _match_counts_cache = {"data": None, "time": 0}
+    return {"status": "ok", "message": "All caches cleared."}
+
+
 def get_match_counts(db: Session):
     now = time.time()
     if (

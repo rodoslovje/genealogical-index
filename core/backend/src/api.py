@@ -33,6 +33,15 @@ def get_db():
         db.close()
 
 
+@app.post("/api/cache/clear")
+def clear_cache():
+    """
+    Manually clear the server's in-memory caches for timeline, top surnames,
+    and match counts. Useful after a data import.
+    """
+    return crud.clear_all_caches()
+
+
 @app.get("/api/contributors/", response_model=List[schemas.Contributor])
 def read_contributors(db: Session = Depends(get_db)):
     return crud.get_contributors(db)
