@@ -4,7 +4,8 @@ import json
 import re
 import unicodedata
 from sqlalchemy import create_engine, text
-import requests
+import urllib.request
+import urllib.error
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
@@ -639,14 +640,13 @@ def main():
         try:
             # The script is run inside the 'api' container, so it can reach the API on localhost:8000
             api_url = "http://localhost:8000/api/cache/clear"
-            response = requests.post(api_url, timeout=5)
-            if response.status_code == 200:
-                print("  -> Successfully cleared API cache.")
-            else:
-                print(
-                    f"  -> Failed to clear API cache. Status: {response.status_code}, Response: {response.text}"
-                )
-        except requests.exceptions.RequestException as e:
+            req = urllib.request.Request(api_url, method="POST")
+            with urllib.request.urlopen(req, timeout=5) as response:
+                if response.status == 200:
+                    print("  -> Successfully cleared API cache.")
+                else:
+                    print(f"  -> Failed to clear API cache. Status: {response.status}")
+        except urllib.error.URLError as e:
             print(
                 f"  -> Could not connect to API to clear cache. Is the API server running? Error: {e}"
             )
