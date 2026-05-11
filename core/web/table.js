@@ -401,6 +401,12 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   const headerEl = container.previousElementSibling;
   const isHeaderValid = headerEl && (headerEl.tagName === 'H2' || headerEl.classList.contains('totals-bar'));
 
+  // Reset collapse state on a new render to ensure content isn't accidentally hidden
+  container.style.display = '';
+  if (isHeaderValid && headerEl.classList.contains('collapsed')) {
+    headerEl.classList.remove('collapsed');
+  }
+
   if (data.length === 0) {
     container.innerHTML = `<p>${t('no_results')}</p>`;
     if (isHeaderValid) {
@@ -538,6 +544,16 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   container.innerHTML = html;
 
   if (isHeaderValid) {
+    if (headerEl.tagName === 'H2' && !headerEl.classList.contains('collapsible-header')) {
+      headerEl.classList.add('collapsible-header');
+      headerEl.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        const isCollapsed = container.style.display === 'none';
+        container.style.display = isCollapsed ? '' : 'none';
+        headerEl.classList.toggle('collapsed', !isCollapsed);
+      });
+    }
+
     headerEl.querySelectorAll('.export-btn, .expand-toggle-btn').forEach(b => b.remove());
 
     // Expand/collapse-all toggle — only show when the rendered table actually

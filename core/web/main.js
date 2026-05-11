@@ -10,6 +10,22 @@ const globalStyles = document.createElement('style');
 globalStyles.textContent = `
   a, a:visited { color: #3498db; text-decoration: none; }
   a:hover { text-decoration: underline; }
+  .collapsible-header { cursor: pointer; user-select: none; position: relative; }
+  .collapsible-header::before {
+    content: '';
+    display: inline-block;
+    width: 0; height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid currentColor;
+    margin-right: 8px;
+    transform: rotate(90deg);
+    transition: transform 0.2s ease-in-out;
+    vertical-align: middle;
+  }
+  .collapsible-header.collapsed::before {
+    transform: rotate(0deg);
+  }
 `;
 document.head.appendChild(globalStyles);
 

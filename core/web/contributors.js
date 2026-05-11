@@ -492,6 +492,8 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
         }
       }
 
+        const heading = headerDiv.querySelector('h3, .section-heading');
+
       if (headerDiv) {
         headerDiv.style.display = 'flex';
         headerDiv.style.justifyContent = 'space-between';
@@ -499,6 +501,25 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
         headerDiv.style.borderBottom = '1px solid var(--border)';
         headerDiv.style.paddingBottom = '5px';
         headerDiv.style.marginBottom = '10px';
+
+          if (heading && !heading.classList.contains('collapsible-header')) {
+            heading.classList.add('collapsible-header');
+            heading.addEventListener('click', () => {
+              const isCollapsed = heading.classList.contains('collapsed');
+              Array.from(section.children).forEach(child => {
+                if (child !== headerDiv) {
+                  child.style.display = isCollapsed ? '' : 'none';
+                }
+              });
+              heading.classList.toggle('collapsed', !isCollapsed);
+            });
+          }
+
+          // Preserve visibility state on re-render
+          const isCollapsed = heading && heading.classList.contains('collapsed');
+          Array.from(section.children).forEach(child => {
+            if (child !== headerDiv) child.style.display = isCollapsed ? 'none' : '';
+          });
 
         headerDiv.querySelectorAll('.export-btn').forEach(b => b.remove());
 
@@ -664,16 +685,32 @@ async function renderMatchesPage(contributor, withPartner) {
     }));
 
     container.innerHTML = heading +
-      `<div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 2rem; margin-bottom: 10px;">
-        <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('col_matches')}</h3>
-        <button class="export-btn export-matches-summary-btn" title="${t('download_csv')}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
-        </button>
-      </div>` +
-      `<p>${t('matches_found_intro')} <strong>${contributor}</strong>.<br>${t('matches_found_outro')}</p>` +
-      '<div id="matches-summary" class="table-responsive"></div>';
+      `<div class="matches-summary-section">
+        <div class="matches-summary-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 2rem; margin-bottom: 10px;">
+          <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('col_matches')}</h3>
+          <button class="export-btn export-matches-summary-btn" title="${t('download_csv')}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
+          </button>
+        </div>
+        <div class="matches-summary-content">
+          <p>${t('matches_found_intro')} <strong>${contributor}</strong>.<br>${t('matches_found_outro')}</p>
+          <div id="matches-summary" class="table-responsive"></div>
+        </div>
+      </div>`;
 
     loadSurnameCloud([contributor], 'contributor-surname-cloud');
+
+    const summaryHeader = container.querySelector('.matches-summary-header h3');
+    const summaryContent = container.querySelector('.matches-summary-content');
+    if (summaryHeader && summaryContent) {
+      summaryHeader.classList.add('collapsible-header');
+      summaryHeader.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        const isCollapsed = summaryHeader.classList.contains('collapsed');
+        summaryContent.style.display = isCollapsed ? '' : 'none';
+        summaryHeader.classList.toggle('collapsed', !isCollapsed);
+      });
+    }
 
     const summaryCols = ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'];
 
@@ -745,6 +782,8 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
       person: { primary: { column: 'confidence', ascending: false }, secondary: null },
       family: { primary: { column: 'confidence', ascending: false }, secondary: null }
     };
+
+    const collapseState = { person: false, family: false };
 
     function renderTables() {
       const byType = { person: [], family: [] };
@@ -916,9 +955,14 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>${t('expand_all')}
             </button>`
           : '';
+
+            const isCollapsed = collapseState[key];
+            const collapsedClass = isCollapsed ? ' collapsible-header collapsed' : ' collapsible-header';
+            const contentDisplay = isCollapsed ? ' style="display: none;"' : '';
+
         html += `<div class="matches-section" data-type="${key}">
           <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 1.5rem; margin-bottom: 10px;">
-            <h4 style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
+                <h4 class="${collapsedClass}" style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
             <div class="matches-section-actions" style="display: flex; gap: 10px;">
               ${expandBtnHtml}
               <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">
@@ -926,7 +970,7 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
               </button>
             </div>
           </div>
-          <div class="table-responsive">
+              <div class="matches-section-content table-responsive"${contentDisplay}>
             <table class="matches-detail-table">
               <thead><tr>
                 ${headerCells}
@@ -941,6 +985,21 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
 
       html += '</div>';
       detailEl.innerHTML = html;
+
+      detailEl.querySelectorAll('.matches-section').forEach(section => {
+        const typeKey = section.dataset.type;
+        const header = section.querySelector('h4');
+        const content = section.querySelector('.matches-section-content');
+        if (header && content) {
+          header.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('a')) return;
+            const isCollapsed = header.classList.contains('collapsed');
+            content.style.display = isCollapsed ? '' : 'none';
+            header.classList.toggle('collapsed', !isCollapsed);
+            collapseState[typeKey] = !isCollapsed;
+          });
+        }
+      });
 
       detailEl.querySelectorAll('th.sortable').forEach(th => {
         th.addEventListener('click', () => {
