@@ -514,6 +514,20 @@ def main():
                     {"name": name},
                 )
                 db.execute(
+                    text(
+                        "DELETE FROM matches "
+                        "WHERE contributor_a = :name OR contributor_b = :name"
+                    ),
+                    {"name": name},
+                )
+                db.execute(
+                    text(
+                        "DELETE FROM match_jobs "
+                        "WHERE contributor_a = :name OR contributor_b = :name"
+                    ),
+                    {"name": name},
+                )
+                db.execute(
                     text("DELETE FROM contributors WHERE name = :name"), {"name": name}
                 )
         db.commit()
