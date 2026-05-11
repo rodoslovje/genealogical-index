@@ -446,12 +446,17 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
     data.sort((a, b) => a.surname.localeCompare(b.surname, 'sl'));
     const range = maxCount - minCount || 1;
 
+    // When the cloud is built from a proper subset of contributors (filtered
+    // list or single-contributor view), forward that subset to the search.
+    const totalCount = cachedData ? cachedData.length : 0;
+    const isFiltered = list.length > 0 && (totalCount === 0 || list.length < totalCount);
+    const contribParam = isFiltered ? list.join(',') : '';
+
     cloud.innerHTML = data.map(({ surname, count }) => {
       const ratio = (count - minCount) / range;
       const size = (0.75 + ratio * 1.75).toFixed(2);
       const opacity = (0.55 + ratio * 0.45).toFixed(2);
-      const singleContrib = list.length === 1 ? list[0] : '';
-      return `<span class="cloud-word" style="font-size:${size}rem;opacity:${opacity}" title="${count}" data-surname="${surname}" data-contributor="${singleContrib}">${surname}</span>`;
+      return `<span class="cloud-word" style="font-size:${size}rem;opacity:${opacity}" title="${count}" data-surname="${surname}" data-contributor="${contribParam}">${surname}</span>`;
     }).join('');
 
     cloud.querySelectorAll('.cloud-word').forEach(el => {
