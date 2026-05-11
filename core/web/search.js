@@ -88,7 +88,7 @@ export function setupGeneralSearch() {
         <button type="button" class="clear-btn" style="display:${placeVal ? 'block' : 'none'}">&times;</button>
       </div>
       <div class="input-wrapper">
-        <input type="text" id="general-contributor" placeholder="${t('col_contributor')}" value="${contributorVal}" />
+        <input type="text" id="general-contributor" placeholder="${t('col_contributor')}" value="${contributorVal}" title="${t('tip_comma_separated_contributor')}" />
         <button type="button" class="clear-btn" style="display:${contributorVal ? 'block' : 'none'}">&times;</button>
       </div>
       <label class="exact-toggle">
@@ -149,7 +149,7 @@ function performGeneralSearch() {
   fields.forEach(f => {
     let val = document.getElementById(`general-${f}`)?.value.trim();
     if (DATE_FIELDS.has(f)) val = normalizeSearchDate(val);
-    if (f === 'name' || f === 'surname' || f === 'place') val = normalizeNameList(val);
+    if (f === 'name' || f === 'surname' || f === 'place' || f === 'contributor') val = normalizeNameList(val);
     if (val) params[f] = val;
   });
 
@@ -256,6 +256,8 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       titleAttr = ` title="${t('tip_comma_separated_name')}"`;
     } else if (col.includes('place')) {
       titleAttr = ` title="${t('tip_comma_separated_place')}"`;
+    } else if (col === 'contributor') {
+      titleAttr = ` title="${t('tip_comma_separated_contributor')}"`;
     }
     if (DATE_RANGE_COLUMNS.has(col)) {
       const toId = `${prefix}${col}_to`;
@@ -330,7 +332,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(c => {
       let val = document.getElementById(`${prefix}${c}`)?.value.trim();
       if (DATE_FIELDS.has(c)) val = normalizeSearchDate(val);
-      if (c.includes('name') || c.includes('surname') || c.includes('place')) val = normalizeNameList(val);
+      if (c.includes('name') || c.includes('surname') || c.includes('place') || c === 'contributor') val = normalizeNameList(val);
       if (val) fieldParams[c] = val;
       if (DATE_RANGE_COLUMNS.has(c)) {
         let toVal = document.getElementById(`${prefix}${c}_to`)?.value.trim();
@@ -452,7 +454,7 @@ export function getTabURLParams(tabType) {
     const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
     fields.forEach(f => {
       let val = document.getElementById(`general-${f}`)?.value.trim();
-      if (f === 'name' || f === 'surname' || f === 'place') val = normalizeNameList(val);
+      if (f === 'name' || f === 'surname' || f === 'place' || f === 'contributor') val = normalizeNameList(val);
       if (val) out[PARAM_MAP[f] || f] = val;
     });
     if (!document.getElementById('general-exact')?.checked) out.ex = '0';
@@ -462,7 +464,7 @@ export function getTabURLParams(tabType) {
     const prefix = `adv-${tabType}-`;
     columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(col => {
       let val = document.getElementById(`${prefix}${col}`)?.value.trim();
-      if (col.includes('name') || col.includes('surname') || col.includes('place')) val = normalizeNameList(val);
+      if (col.includes('name') || col.includes('surname') || col.includes('place') || col === 'contributor') val = normalizeNameList(val);
       if (val) out[PARAM_MAP[col] || col] = val;
       if (DATE_RANGE_COLUMNS.has(col)) {
         const toVal = document.getElementById(`${prefix}${col}_to`)?.value.trim();

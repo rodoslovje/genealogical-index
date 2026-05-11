@@ -108,6 +108,7 @@ const translations = {
     tip_comma_separated_name: 'Multiple values can be separated by commas (e.g. &quot;Janez, Ivan&quot;).',
     tip_comma_separated_surname: 'Multiple values can be separated by commas (e.g. &quot;Mali, Mally&quot;).',
     tip_comma_separated_place: 'Multiple values can be separated by commas (e.g. &quot;Metlika, Podzemelj&quot;).',
+    tip_comma_separated_contributor: 'Multiple values can be separated by commas (e.g. &quot;Mali, Toplišek&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -248,6 +249,7 @@ const translations = {
     tip_comma_separated_name: 'Vnesete lahko več vrednosti, ločenih z vejico (npr. &quot;Janez, Ivan&quot;).',
     tip_comma_separated_surname: 'Vnesete lahko več vrednosti, ločenih z vejico (npr. &quot;Mali, Mally&quot;).',
     tip_comma_separated_place: 'Vnesete lahko več vrednosti, ločenih z vejico (npr. &quot;Metlika, Podzemelj&quot;).',
+    tip_comma_separated_contributor: 'Vnesete lahko več vrednosti, ločenih z vejico (npr. &quot;Mali, Toplišek&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -388,6 +390,7 @@ const translations = {
     tip_comma_separated_name: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Janez, Ivan&quot;).',
     tip_comma_separated_surname: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Mali, Mally&quot;).',
     tip_comma_separated_place: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Metlika, Podzemelj&quot;).',
+    tip_comma_separated_contributor: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Mali, Toplišek&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -528,6 +531,7 @@ const translations = {
     tip_comma_separated_name: 'Mehrere Werte können durch Kommas getrennt werden (z. B. &quot;Janez, Ivan&quot;).',
     tip_comma_separated_surname: 'Mehrere Werte können durch Kommas getrennt werden (z. B. &quot;Mali, Mally&quot;).',
     tip_comma_separated_place: 'Mehrere Werte können durch Kommas getrennt werden (z. B. &quot;Metlika, Podzemelj&quot;).',
+    tip_comma_separated_contributor: 'Mehrere Werte können durch Kommas getrennt werden (z. B. &quot;Mali, Toplišek&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -668,6 +672,7 @@ const translations = {
     tip_comma_separated_name: 'Több értéket is megadhat vesszővel elválasztva (pl. &quot;Janez, Ivan&quot;).',
     tip_comma_separated_surname: 'Több értéket is megadhat vesszővel elválasztva (pl. &quot;Mali, Mally&quot;).',
     tip_comma_separated_place: 'Több értéket is megadhat vesszővel elválasztva (pl. &quot;Metlika, Podzemelj&quot;).',
+    tip_comma_separated_contributor: 'Több értéket is megadhat vesszővel elválasztva (pl. &quot;Mali, Toplišek&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',
@@ -808,6 +813,7 @@ const translations = {
     tip_comma_separated_name: 'È possibile inserire più valori separati da virgole (es. &quot;Janez, Ivan&quot;).',
     tip_comma_separated_surname: 'È possibile inserire più valori separati da virgole (es. &quot;Mali, Mally&quot;).',
     tip_comma_separated_place: 'È possibile inserire più valori separati da virgole (es. &quot;Metlika, Podzemelj&quot;).',
+    tip_comma_separated_contributor: 'È possibile inserire più valori separati da virgole (es. &quot;Mali, Toplišek&quot;).',
 
     // Icon tooltips
     icon_familysearch: 'FamilySearch',

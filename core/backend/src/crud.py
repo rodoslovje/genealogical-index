@@ -448,7 +448,11 @@ def search_all(
         elif date_cond_b is not None:
             q = q.filter(date_cond_b)
         if contributor:
-            q = q.filter(_text_filter(models.Person.contributor, contributor, exact))
+            q = q.filter(
+                _text_filter(
+                    models.Person.contributor, contributor, exact, split_comma=True
+                )
+            )
         if has_link:
             q = q.filter(models.Person.links.isnot(None), models.Person.links != "")
         persons = q.offset(skip).limit(limit).all()
@@ -491,7 +495,9 @@ def search_all(
             families_q = families_q.filter(date_cond_f)
         if contributor:
             families_q = families_q.filter(
-                _text_filter(models.Family.contributor, contributor, exact)
+                _text_filter(
+                    models.Family.contributor, contributor, exact, split_comma=True
+                )
             )
         if has_link:
             families_q = families_q.filter(
@@ -554,7 +560,9 @@ def search_advanced_persons(
         query = query.filter(dcond)
     if contributor:
         query = query.filter(
-            _text_filter(models.Person.contributor, contributor, exact)
+            _text_filter(
+                models.Person.contributor, contributor, exact, split_comma=True
+            )
         )
     if has_link:
         query = query.filter(models.Person.links.isnot(None), models.Person.links != "")
@@ -642,7 +650,9 @@ def search_advanced_families(
         query = query.filter(date_cond)
     if contributor:
         query = query.filter(
-            _text_filter(models.Family.contributor, contributor, exact)
+            _text_filter(
+                models.Family.contributor, contributor, exact, split_comma=True
+            )
         )
     if has_link:
         query = query.filter(models.Family.links.isnot(None), models.Family.links != "")
