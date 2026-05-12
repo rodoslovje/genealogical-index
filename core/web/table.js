@@ -310,7 +310,8 @@ export function formatSpecialCell(col, row) {
         params.set('t', 'person');
         if (c.name) params.set('n', c.name);
         if (c.surname) params.set('sn', c.surname);
-        if (cy) params.set('dob', cy);
+        const dob = c.date_of_birth || cy;
+        if (dob) params.set('dob', dob);
         params.set('ex', '1');
 
         return `<a href="${toUnicodeHref(params)}" data-spa-nav>${String(childDisplay).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
@@ -335,7 +336,7 @@ export function formatSpecialCell(col, row) {
         p.set('t', 'ancestors');
         if (row.name) p.set('n', row.name);
         if (row.surname) p.set('sn', row.surname);
-        const dob = childYearOf(row);
+        const dob = row.date_of_birth || childYearOf(row);
         if (dob) p.set('dob', dob);
         if (row.contributor) p.set('c', row.contributor);
         const treeUrl = toUnicodeHref(p);

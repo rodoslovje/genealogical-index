@@ -145,7 +145,7 @@ document.addEventListener('click', (e) => {
   const link = e.target.closest('a[href="?t=contributors"]');
   if (link && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.button !== 1) {
     e.preventDefault();
-    document.querySelector('.tab-btn[data-target="tab-contributors"]')?.click();
+    activateTab('tab-contributors');
   }
 });
 
@@ -209,99 +209,104 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     const targetTab = btn.dataset.target;
-
-    const tabTypeMap = {
-      'tab-general':      'general',
-      'tab-person':       'person',
-      'tab-family':       'family',
-      'tab-contributors': 'contributors',
-      'tab-ancestors':    'ancestors',
-    };
-    const urlT = tabTypeMap[targetTab];
-    if (urlT && !isInitializing) {
-      const params = urlT === 'contributors' ? { t: urlT } : getTabURLParams(urlT);
-      const url = new URL(window.location);
-      url.search = '';
-      for (const [k, v] of Object.entries(params)) {
-        if (v) url.searchParams.set(k, v);
-      }
-      const newUrlStr = url.pathname + (url.searchParams.toString() ? '?' + toUnicodeSearch(url.searchParams) : '');
-      const currentT = new URLSearchParams(window.location.search).get('t') || 'general';
-      if (currentT !== urlT) {
-        history.pushState(null, '', newUrlStr);
-      } else {
-        history.replaceState(null, '', newUrlStr);
-      }
-    }
-
-    if (targetTab === 'tab-contributors') {
-      document.body.classList.add('contributors-view');
-      renderContributors();
-      renderTotalsBar();
-    } else {
-      document.body.classList.remove('contributors-view');
-    }
-
-    if (targetTab === 'tab-ancestors') renderAncestorsPage();
-
-    const resultsMap = {
-      'tab-general': 'general-results',
-      'tab-person':  'person-results',
-      'tab-family':  'family-results',
-      'tab-ancestors':'ancestors-results',
-    };
-    ['tab-general', 'tab-person', 'tab-family', 'tab-ancestors'].forEach(tab => {
-      if (tab !== targetTab) document.getElementById(resultsMap[tab])?.style.setProperty('display', 'none');
-    });
-    const introMap = {
-      'tab-general': 'intro-general',
-      'tab-person':  'intro-person',
-      'tab-family':  'intro-family',
-      'tab-ancestors': null,
-    };
-    if (tabsWithResults.has(targetTab)) {
-      document.getElementById(resultsMap[targetTab]).style.display = 'block';
-      hideIntro(introMap[targetTab]);
-    } else {
-      showIntros(introMap[targetTab]);
-    }
-
-    const isMatchesPage = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('contributor');
-
-    if (SEARCH_TABS.includes(targetTab) && !isMatchesPage) {
-      sidebar.classList.add('open');
-    } else if (window.innerWidth > 768 || isMatchesPage || targetTab === 'tab-ancestors') {
-      sidebar.classList.remove('open');
-    }
-
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
-
-    const sidebarSectionMap = {
-      'tab-general':      'general-search-sidebar',
-      'tab-person':       'person-search-sidebar',
-      'tab-family':       'family-search-sidebar',
-      'tab-contributors': 'contributors-search-sidebar',
-    };
-    const sidebarSection = sidebarSectionMap[targetTab];
-    if (sidebarSection) {
-      const section = document.getElementById(sidebarSection);
-      const isDetailedMatch = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('with');
-      if (isDetailedMatch) {
-        section.classList.remove('active');
-      } else {
-        section.classList.add('active');
-        const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
-        const target = inputs.find(i => i.value.trim()) || inputs[0];
-        if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
-      }
-    }
-
-    document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));
-    document.getElementById(targetTab).classList.add('active');
+    activateTab(targetTab);
   });
 });
+
+export function activateTab(targetTab) {
+  const tabTypeMap = {
+    'tab-general':      'general',
+    'tab-person':       'person',
+    'tab-family':       'family',
+    'tab-contributors': 'contributors',
+    'tab-ancestors':    'ancestors',
+  };
+  const urlT = tabTypeMap[targetTab];
+  if (urlT && !isInitializing) {
+    const params = urlT === 'contributors' || urlT === 'ancestors' ? { t: urlT } : getTabURLParams(urlT);
+    const url = new URL(window.location);
+    url.search = '';
+    for (const [k, v] of Object.entries(params)) {
+      if (v) url.searchParams.set(k, v);
+    }
+    const newUrlStr = url.pathname + (url.searchParams.toString() ? '?' + toUnicodeSearch(url.searchParams) : '');
+    const currentT = new URLSearchParams(window.location.search).get('t') || 'general';
+    if (currentT !== urlT) {
+      history.pushState(null, '', newUrlStr);
+    } else {
+      history.replaceState(null, '', newUrlStr);
+    }
+  }
+
+  if (targetTab === 'tab-contributors') {
+    document.body.classList.add('contributors-view');
+    renderContributors();
+    renderTotalsBar();
+  } else {
+    document.body.classList.remove('contributors-view');
+  }
+
+  if (targetTab === 'tab-ancestors') renderAncestorsPage();
+
+  const resultsMap = {
+    'tab-general': 'general-results',
+    'tab-person':  'person-results',
+    'tab-family':  'family-results',
+    'tab-ancestors':'ancestors-results',
+  };
+  ['tab-general', 'tab-person', 'tab-family', 'tab-ancestors'].forEach(tab => {
+    if (tab !== targetTab) document.getElementById(resultsMap[tab])?.style.setProperty('display', 'none');
+  });
+  const introMap = {
+    'tab-general': 'intro-general',
+    'tab-person':  'intro-person',
+    'tab-family':  'intro-family',
+    'tab-ancestors': null,
+  };
+  if (tabsWithResults.has(targetTab) || targetTab === 'tab-ancestors') {
+    const resEl = document.getElementById(resultsMap[targetTab]);
+    if (resEl) resEl.style.display = 'block';
+    if (introMap[targetTab]) hideIntro(introMap[targetTab]);
+  } else {
+    showIntros(introMap[targetTab]);
+  }
+
+  const isMatchesPage = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('contributor');
+
+  if (SEARCH_TABS.includes(targetTab) && !isMatchesPage) {
+    sidebar.classList.add('open');
+  } else if (window.innerWidth > 768 || isMatchesPage || targetTab === 'tab-ancestors') {
+    sidebar.classList.remove('open');
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
+
+  const sidebarSectionMap = {
+    'tab-general':      'general-search-sidebar',
+    'tab-person':       'person-search-sidebar',
+    'tab-family':       'family-search-sidebar',
+    'tab-contributors': 'contributors-search-sidebar',
+  };
+  const sidebarSection = sidebarSectionMap[targetTab];
+  if (sidebarSection) {
+    const section = document.getElementById(sidebarSection);
+    const isDetailedMatch = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('with');
+    if (isDetailedMatch) {
+      section.classList.remove('active');
+    } else {
+      section.classList.add('active');
+      const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
+      const target = inputs.find(i => i.value.trim()) || inputs[0];
+      if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
+    }
+  }
+
+  document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));
+  const tabEl = document.getElementById(targetTab);
+  if (tabEl) tabEl.classList.add('active');
+}
 
 // --- Init ---
 
@@ -343,7 +348,7 @@ async function init() {
     else if (urlT === 'family') urlTab = 'family';
     else if (urlT === 'ancestors') urlTab = 'ancestors';
     isInitializing = true;
-    document.querySelector(`.tab-btn[data-target="tab-${urlTab}"]`)?.click();
+    activateTab(`tab-${urlTab}`);
     isInitializing = false;
 
     restoreFromURL();
@@ -351,6 +356,9 @@ async function init() {
     onLanguageChange(() => {
       renderIntros();
       refreshContributorsIfVisible();
+      if (document.getElementById('tab-ancestors').classList.contains('active')) {
+        renderAncestorsPage();
+      }
     });
   } catch (err) {
     loading.style.display = 'block';
@@ -370,7 +378,7 @@ function navigateToURL(urlSearch) {
   const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors', ancestors: 'tab-ancestors' };
   const targetTab = tabMap[urlT] || 'tab-general';
   isInitializing = true;
-  document.querySelector(`.tab-btn[data-target="${targetTab}"]`)?.click();
+  activateTab(targetTab);
   isInitializing = false;
   clearAllSearchForms();
   restoreFromURL();

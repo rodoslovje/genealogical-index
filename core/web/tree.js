@@ -144,8 +144,7 @@ function renderD3Tree(data, container, personName, contributorName) {
     if (data.name) p.set('n', data.name);
     if (data.surname) p.set('sn', data.surname);
     if (data.date_of_birth) {
-       const m = String(data.date_of_birth).match(/\d{4}/);
-       if (m) p.set('dob', m[0]);
+       p.set('dob', data.date_of_birth);
     }
     p.set('ex', '1');
     const rootUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch(p);
@@ -261,8 +260,7 @@ function renderD3Tree(data, container, personName, contributorName) {
           if (d.data.name) params.set('n', d.data.name);
           if (d.data.surname) params.set('sn', d.data.surname);
           if (d.data.date_of_birth) {
-             const m = String(d.data.date_of_birth).match(/\d{4}/);
-             if (m) params.set('dob', m[0]);
+             params.set('dob', d.data.date_of_birth);
           }
           params.set('ex', '1');
           return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);

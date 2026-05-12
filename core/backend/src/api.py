@@ -206,9 +206,14 @@ def get_ancestors_by_params(
     if not c:
         return None
 
-    person = crud.find_parent_record(
-        db, {"name": n, "surname": sn, "date_of_birth": dob}, c
-    )
+    parent_info = {"name": n, "surname": sn}
+    if dob:
+        if len(dob.strip()) == 4 and dob.strip().isdigit():
+            parent_info["year"] = dob
+        else:
+            parent_info["date_of_birth"] = dob
+
+    person = crud.find_parent_record(db, parent_info, c)
 
     if not person:
         return None
