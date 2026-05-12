@@ -154,6 +154,8 @@ const translations = {
     tree_loading: 'Loading tree...',
     tree_error: 'Error loading tree.',
     tree_no_d3: 'Error: D3.js library not loaded.',
+    tree_descendants_of: 'Descendants of',
+    tree_descendants_title: 'Descendants',
     tree_source: 'Source',
   },
   sl: {
@@ -307,6 +309,8 @@ const translations = {
     tree_loading: 'Nalaganje drevesa...',
     tree_error: 'Napaka pri nalaganju drevesa.',
     tree_no_d3: 'Napaka: Knjižnica D3.js ni naložena.',
+    tree_descendants_of: 'Potomci osebe',
+    tree_descendants_title: 'Potomci',
     tree_source: 'Vir',
   },
   hr: {
@@ -460,6 +464,8 @@ const translations = {
     tree_loading: 'Učitavanje stabla...',
     tree_error: 'Greška pri učitavanju stabla.',
     tree_no_d3: 'Greška: D3.js biblioteka nije učitana.',
+    tree_descendants_of: 'Potomci osobe',
+    tree_descendants_title: 'Potomci',
     tree_source: 'Izvor',
   },
   de: {
@@ -613,6 +619,8 @@ const translations = {
     tree_loading: 'Stammbaum wird geladen...',
     tree_error: 'Fehler beim Laden des Stammbaums.',
     tree_no_d3: 'Fehler: D3.js-Bibliothek nicht geladen.',
+    tree_descendants_of: 'Nachkommen von',
+    tree_descendants_title: 'Nachkommen',
     tree_source: 'Quelle',
   },
   hu: {
@@ -766,6 +774,8 @@ const translations = {
     tree_loading: 'Családfa betöltése...',
     tree_error: 'Hiba a családfa betöltésekor.',
     tree_no_d3: 'Hiba: D3.js könyvtár nincs betöltve.',
+    tree_descendants_of: 'Leszármazottai:',
+    tree_descendants_title: 'Leszármazottak',
     tree_source: 'Forrás',
   },
   it: {
@@ -919,6 +929,8 @@ const translations = {
     tree_loading: 'Caricamento dell\'albero...',
     tree_error: 'Errore durante il caricamento dell\'albero.',
     tree_no_d3: 'Errore: libreria D3.js non caricata.',
+    tree_descendants_of: 'Discendenti di',
+    tree_descendants_title: 'Discendenti',
     tree_source: 'Fonte',
   },
 };

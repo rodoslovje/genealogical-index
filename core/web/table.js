@@ -334,9 +334,20 @@ export function formatSpecialCell(col, row) {
       console.error("Failed to parse JSON for children", e);
     }
 
+    let treeBtn = '';
+    if (row.id && count > 0) {
+        const p = new URLSearchParams();
+        p.set('t', 'descendants');
+        if (row.husband_name && !isPrivate(row.husband_name)) { p.set('n', row.husband_name); if (row.husband_surname) p.set('sn', row.husband_surname); if (row.husband_birth) p.set('dob', row.husband_birth); }
+        else if (row.wife_name && !isPrivate(row.wife_name)) { p.set('n', row.wife_name); if (row.wife_surname) p.set('sn', row.wife_surname); if (row.wife_birth) p.set('dob', row.wife_birth); }
+        if (row.contributor) p.set('c', row.contributor);
+        const treeUrl = toUnicodeHref(p);
+        treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_descendants_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌿</a>`;
+    }
+
     if (count === 0) return '';
     return `<details class="expandable-cell">
-            <summary>${count}</summary>
+            <summary>${count}${treeBtn}</summary>
             <div class="expanded-content">${formattedList.join('<br>')}</div>
           </details>`;
   }
@@ -391,6 +402,18 @@ export function formatSpecialCell(col, row) {
     let formattedList = [];
     let count = 0;
     try {
+      let treeBtn = '';
+      if (row.id) {
+          const p = new URLSearchParams();
+          p.set('t', 'descendants');
+          if (row.name) p.set('n', row.name);
+          if (row.surname) p.set('sn', row.surname);
+          const dob = row.date_of_birth || childYearOf(row);
+          if (dob) p.set('dob', dob);
+          if (row.contributor) p.set('c', row.contributor);
+          const treeUrl = toUnicodeHref(p);
+          treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_descendants_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌿</a>`;
+      }
       const pList = typeof row.partners_list === 'string' ? JSON.parse(row.partners_list) : row.partners_list;
       pList.forEach(p => {
         count++;
@@ -423,7 +446,7 @@ export function formatSpecialCell(col, row) {
     }
     if (count > 0) {
       return `<details class="expandable-cell">
-            <summary>${count}</summary>
+            <summary>${count}${treeBtn}</summary>
             <div class="expanded-content">${formattedList.join('<br>')}</div>
           </details>`;
     }

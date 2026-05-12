@@ -96,6 +96,23 @@
             </div>
           </section>
 
+          <section id="tab-descendants" class="tab-content">
+            <div id="descendants-results" class="results-container">
+              <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">
+                <h2 id="descendant-page-title" style="margin: 0; padding: 0; border: none;"></h2>
+                <button id="btn-descendant-download-svg" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>SVG</button>
+              </div>
+              <div id="descendant-tree-wrapper" style="position: relative; flex-grow: 1; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; background-color: #fafafa; min-height: 60vh;">
+                <div id="descendant-tree-source" style="position: absolute; bottom: 15px; left: 15px; display: none; z-index: 10; font-size: 14px; color: #555; background: rgba(255, 255, 255, 0.8); padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+                <div id="descendant-tree-controls" style="position: absolute; bottom: 15px; right: 15px; display: none; flex-direction: column; gap: 8px; z-index: 10;">
+                  <button id="btn-descendant-zoom-in" class="export-btn" style="padding: 4px 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);"></button>
+                  <button id="btn-descendant-zoom-out" class="export-btn" style="padding: 4px 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);"></button>
+                </div>
+                <div id="descendant-tree-container" style="width: 100%; height: 100%;"></div>
+              </div>
+            </div>
+          </section>
+
           <section id="tab-contributors" class="tab-content">
             <div id="totals-bar" class="totals-bar" style="display:none;">
               <span data-i18n-title="tip_total_contributors"><span data-i18n="tab_contributors">Genealogists</span>: <strong id="total-contributors">…</strong></span>

@@ -820,3 +820,162 @@ def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
         return node
 
     return build_tree(root_person, 0)
+
+
+def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
+    root_person = db.query(models.Person).filter(models.Person.id == person_id).first()
+    if not root_person:
+        return None
+
+    visited_persons = set()
+
+    def build_tree(person_obj, current_generation):
+        if current_generation > max_generations:
+            return None
+
+        is_record = hasattr(person_obj, "id") and person_obj.id is not None
+
+        if is_record:
+            if person_obj.id in visited_persons:
+                return None
+            visited_persons.add(person_obj.id)
+
+            node = {
+                "id": person_obj.id,
+                "name": person_obj.name,
+                "surname": person_obj.surname,
+                "sex": person_obj.sex,
+                "date_of_birth": person_obj.date_of_birth,
+                "place_of_birth": person_obj.place_of_birth,
+                "children": [],
+                "is_family": False,
+            }
+            contributor = person_obj.contributor
+        else:
+            node = {
+                "id": None,
+                "name": person_obj.get("name"),
+                "surname": person_obj.get("surname"),
+                "sex": person_obj.get("sex"),
+                "date_of_birth": person_obj.get("date_of_birth")
+                or person_obj.get("year")
+                or (
+                    person_obj.get("birth", {}).get("date")
+                    if isinstance(person_obj.get("birth"), dict)
+                    else None
+                ),
+                "place_of_birth": None,
+                "children": [],
+                "is_family": False,
+            }
+            contributor = root_person.contributor
+
+        if contributor:
+            fams = []
+            if node["name"] or node["surname"]:
+                if node.get("sex") == "m":
+                    fam_q = db.query(models.Family).filter(
+                        models.Family.contributor == contributor
+                    )
+                    if node["name"]:
+                        fam_q = fam_q.filter(models.Family.husband_name == node["name"])
+                    if node["surname"]:
+                        fam_q = fam_q.filter(
+                            models.Family.husband_surname == node["surname"]
+                        )
+                    fams = fam_q.all()
+                elif node.get("sex") == "f":
+                    fam_q = db.query(models.Family).filter(
+                        models.Family.contributor == contributor
+                    )
+                    if node["name"]:
+                        fam_q = fam_q.filter(models.Family.wife_name == node["name"])
+                    if node["surname"]:
+                        fam_q = fam_q.filter(
+                            models.Family.wife_surname == node["surname"]
+                        )
+                    fams = fam_q.all()
+                else:
+                    fam_q1 = db.query(models.Family).filter(
+                        models.Family.contributor == contributor
+                    )
+                    if node["name"]:
+                        fam_q1 = fam_q1.filter(
+                            models.Family.husband_name == node["name"]
+                        )
+                    if node["surname"]:
+                        fam_q1 = fam_q1.filter(
+                            models.Family.husband_surname == node["surname"]
+                        )
+
+                    fam_q2 = db.query(models.Family).filter(
+                        models.Family.contributor == contributor
+                    )
+                    if node["name"]:
+                        fam_q2 = fam_q2.filter(models.Family.wife_name == node["name"])
+                    if node["surname"]:
+                        fam_q2 = fam_q2.filter(
+                            models.Family.wife_surname == node["surname"]
+                        )
+
+                    fams = fam_q1.all() + fam_q2.all()
+
+            for fam in fams:
+                is_husband = False
+                if node.get("sex") == "m":
+                    is_husband = True
+                elif node.get("sex") == "f":
+                    is_husband = False
+                else:
+                    if fam.husband_name == node.get(
+                        "name"
+                    ) and fam.husband_surname == node.get("surname"):
+                        is_husband = True
+
+                if is_husband:
+                    partner = {
+                        "name": fam.wife_name,
+                        "surname": fam.wife_surname,
+                        "date_of_birth": fam.wife_birth,
+                    }
+                else:
+                    partner = {
+                        "name": fam.husband_name,
+                        "surname": fam.husband_surname,
+                        "date_of_birth": fam.husband_birth,
+                    }
+
+                fam_node = {
+                    "is_family": True,
+                    "partner": partner,
+                    "marriage": {
+                        "date": fam.date_of_marriage,
+                        "place": fam.place_of_marriage,
+                    },
+                    "children": [],
+                }
+
+                if fam.children_list:
+                    try:
+                        children = json.loads(fam.children_list)
+                        for c_info in children:
+                            if not c_info:
+                                continue
+                            child_record = find_parent_record(db, c_info, contributor)
+                            if child_record:
+                                child_node = build_tree(
+                                    child_record, current_generation + 1
+                                )
+                            else:
+                                child_node = build_tree(c_info, current_generation + 1)
+
+                            if child_node:
+                                fam_node["children"].append(child_node)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                node["children"].append(fam_node)
+
+        return node
+
+    return build_tree(root_person, 0)

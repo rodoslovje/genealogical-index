@@ -4,7 +4,7 @@ import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
 import { toUnicodeSearch, LEGACY_TAB_MAP } from './url.js';
-import { renderAncestorsPage } from './tree.js';
+import { renderAncestorsPage, renderDescendantsPage } from './tree.js';
 
 // --- Global Link Styles ---
 const globalStyles = document.createElement('style');
@@ -220,10 +220,11 @@ export function activateTab(targetTab) {
     'tab-family':       'family',
     'tab-contributors': 'contributors',
     'tab-ancestors':    'ancestors',
+    'tab-descendants':  'descendants',
   };
   const urlT = tabTypeMap[targetTab];
   if (urlT && !isInitializing) {
-    const params = urlT === 'contributors' || urlT === 'ancestors' ? { t: urlT } : getTabURLParams(urlT);
+    const params = urlT === 'contributors' || urlT === 'ancestors' || urlT === 'descendants' ? { t: urlT } : getTabURLParams(urlT);
     const url = new URL(window.location);
     url.search = '';
     for (const [k, v] of Object.entries(params)) {
@@ -247,14 +248,16 @@ export function activateTab(targetTab) {
   }
 
   if (targetTab === 'tab-ancestors') renderAncestorsPage();
+  if (targetTab === 'tab-descendants') renderDescendantsPage();
 
   const resultsMap = {
     'tab-general': 'general-results',
     'tab-person':  'person-results',
     'tab-family':  'family-results',
     'tab-ancestors':'ancestors-results',
+    'tab-descendants':'descendants-results',
   };
-  ['tab-general', 'tab-person', 'tab-family', 'tab-ancestors'].forEach(tab => {
+  ['tab-general', 'tab-person', 'tab-family', 'tab-ancestors', 'tab-descendants'].forEach(tab => {
     if (tab !== targetTab) document.getElementById(resultsMap[tab])?.style.setProperty('display', 'none');
   });
   const introMap = {
@@ -262,8 +265,9 @@ export function activateTab(targetTab) {
     'tab-person':  'intro-person',
     'tab-family':  'intro-family',
     'tab-ancestors': null,
+    'tab-descendants': null,
   };
-  if (tabsWithResults.has(targetTab) || targetTab === 'tab-ancestors') {
+  if (tabsWithResults.has(targetTab) || targetTab === 'tab-ancestors' || targetTab === 'tab-descendants') {
     const resEl = document.getElementById(resultsMap[targetTab]);
     if (resEl) resEl.style.display = 'block';
     if (introMap[targetTab]) hideIntro(introMap[targetTab]);
@@ -273,9 +277,9 @@ export function activateTab(targetTab) {
 
   const isMatchesPage = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('contributor');
 
-  if (SEARCH_TABS.includes(targetTab) && !isMatchesPage) {
+  if (SEARCH_TABS.includes(targetTab) && !isMatchesPage && targetTab !== 'tab-ancestors' && targetTab !== 'tab-descendants') {
     sidebar.classList.add('open');
-  } else if (window.innerWidth > 768 || isMatchesPage || targetTab === 'tab-ancestors') {
+  } else if (window.innerWidth > 768 || isMatchesPage || targetTab === 'tab-ancestors' || targetTab === 'tab-descendants') {
     sidebar.classList.remove('open');
   }
 
@@ -347,6 +351,7 @@ async function init() {
     else if (urlT === 'person') urlTab = 'person';
     else if (urlT === 'family') urlTab = 'family';
     else if (urlT === 'ancestors') urlTab = 'ancestors';
+    else if (urlT === 'descendants') urlTab = 'descendants';
     isInitializing = true;
     activateTab(`tab-${urlTab}`);
     isInitializing = false;
@@ -358,6 +363,9 @@ async function init() {
       refreshContributorsIfVisible();
       if (document.getElementById('tab-ancestors').classList.contains('active')) {
         renderAncestorsPage();
+      }
+      if (document.getElementById('tab-descendants').classList.contains('active')) {
+        renderDescendantsPage();
       }
     });
   } catch (err) {
@@ -375,7 +383,7 @@ function navigateToURL(urlSearch) {
   normalizeLegacyURL();
   const urlParams = new URLSearchParams(window.location.search);
   const urlT = urlParams.get('t') || 'general';
-  const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors', ancestors: 'tab-ancestors' };
+  const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors', ancestors: 'tab-ancestors', descendants: 'tab-descendants' };
   const targetTab = tabMap[urlT] || 'tab-general';
   isInitializing = true;
   activateTab(targetTab);
