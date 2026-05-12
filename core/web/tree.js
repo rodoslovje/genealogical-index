@@ -1,6 +1,8 @@
 import { API_BASE_URL } from './config.js';
 import { toUnicodeSearch, toUnicodeHref } from './url.js';
 import { t } from './i18n.js';
+import { isPrivate } from './utils.js';
+import { parseDateForSort } from './dates.js';
 
 export function renderDescendantsPage() {
   const params = new URLSearchParams(window.location.search);
@@ -334,32 +336,54 @@ function renderD3Tree(data, container, personName, contributorName) {
     .join('g')
       .attr('transform', d => `translate(${d.children[0].y},${d.x})`);
 
-  const marriageLink = marriageNode.append('a')
+  const marriageLink = marriageNode.append(d => {
+      const husband = d.children[0].data;
+      const wife = d.children[1].data;
+      const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
+      const wPriv = isPrivate(wife.name) || isPrivate(wife.surname);
+      return document.createElementNS('http://www.w3.org/2000/svg', (hPriv || wPriv) ? 'g' : 'a');
+  })
     .attr('href', d => {
         const husband = d.children[0].data;
         const wife = d.children[1].data;
         const marriage = d.data.parents_marriage;
+        const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
+        const wPriv = isPrivate(wife.name) || isPrivate(wife.surname);
+
+        if (hPriv || wPriv) return null;
 
         const params = new URLSearchParams();
         params.set('t', 'family');
-        if (husband.name) params.set('hn', husband.name);
-        if (husband.surname) params.set('hsn', husband.surname);
-        if (husband.date_of_birth) params.set('hb', husband.date_of_birth);
-        if (wife.name) params.set('wn', wife.name);
-        if (wife.surname) params.set('wsn', wife.surname);
-        if (wife.date_of_birth) params.set('wb', wife.date_of_birth);
+        if (husband.name && !hPriv) params.set('hn', husband.name);
+        if (husband.surname && !hPriv) params.set('hsn', husband.surname);
+        if (husband.date_of_birth && !hPriv) params.set('hb', husband.date_of_birth);
+        if (wife.name && !wPriv) params.set('wn', wife.name);
+        if (wife.surname && !wPriv) params.set('wsn', wife.surname);
+        if (wife.date_of_birth && !wPriv) params.set('wb', wife.date_of_birth);
         if (marriage.date) params.set('dom', marriage.date);
         if (contributorName) params.set('c', contributorName);
         params.set('ex', '1');
 
         return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
     })
-    .attr('target', '_blank');
+    .attr('data-spa-nav', d => {
+        const husband = d.children[0].data;
+        const wife = d.children[1].data;
+        const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
+        const wPriv = isPrivate(wife.name) || isPrivate(wife.surname);
+        return (hPriv || wPriv) ? null : '';
+    });
 
   const marriageText = marriageLink.append('text')
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
-      .attr('fill', '#3498db');
+      .attr('fill', d => {
+          const husband = d.children[0].data;
+          const wife = d.children[1].data;
+          const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
+          const wPriv = isPrivate(wife.name) || isPrivate(wife.surname);
+          return (hPriv || wPriv) ? '#555' : '#3498db';
+      });
 
   marriageText.each(function(d) {
       const el = d3.select(this);
@@ -387,8 +411,9 @@ function renderD3Tree(data, container, personName, contributorName) {
       .attr('fill', d => d.data.sex === 'm' ? '#3498db' : (d.data.sex === 'f' ? '#e83e8c' : '#999'))
       .attr('r', 5);
 
-  const linkNode = node.append('a')
+  const linkNode = node.append(d => document.createElementNS('http://www.w3.org/2000/svg', (isPrivate(d.data.name) || isPrivate(d.data.surname)) ? 'g' : 'a'))
       .attr('href', d => {
+          if (isPrivate(d.data.name) || isPrivate(d.data.surname)) return null;
           const params = new URLSearchParams();
           params.set('t', 'person');
           if (d.data.name) params.set('n', d.data.name);
@@ -399,14 +424,14 @@ function renderD3Tree(data, container, personName, contributorName) {
           params.set('ex', '1');
           return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
       })
-      .attr('target', '_blank');
+      .attr('data-spa-nav', d => (isPrivate(d.data.name) || isPrivate(d.data.surname)) ? null : '');
 
   linkNode.append('text')
       .attr('dy', '-0.8em')
       .attr('x', 0)
       .attr('text-anchor', 'middle')
-      .attr('font-weight', 'bold')
-      .attr('fill', '#3498db')
+      .attr('font-weight', d => (isPrivate(d.data.name) || isPrivate(d.data.surname)) ? 'normal' : 'bold')
+      .attr('fill', d => (isPrivate(d.data.name) || isPrivate(d.data.surname)) ? '#555' : '#3498db')
       .text(d => [d.data.name, d.data.surname].filter(Boolean).join(' '))
     .clone(true).lower()
       .attr('stroke', 'white');
@@ -449,10 +474,28 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
 
   root.sort((a, b) => {
     if (a.data.is_family && b.data.is_family) {
-       const aDate = a.data.marriage?.date || '';
-       const bDate = b.data.marriage?.date || '';
-       return d3.ascending(aDate, bDate);
+       const aDate = parseDateForSort(a.data.marriage?.date);
+       const bDate = parseDateForSort(b.data.marriage?.date);
+       if (aDate !== bDate) {
+         if (aDate === 0) return 1;
+         if (bDate === 0) return -1;
+         return aDate - bDate;
+       }
+       return 0;
     }
+
+    const aPriv = isPrivate(a.data.name) || isPrivate(a.data.surname);
+    const bPriv = isPrivate(b.data.name) || isPrivate(b.data.surname);
+    if (aPriv !== bPriv) return aPriv ? 1 : -1;
+
+    const aDob = parseDateForSort(a.data.date_of_birth);
+    const bDob = parseDateForSort(b.data.date_of_birth);
+    if (aDob !== bDob) {
+       if (aDob === 0) return 1;
+       if (bDob === 0) return -1;
+       return aDob - bDob;
+    }
+
     const aName = a.data.name || '';
     const bName = b.data.name || '';
     return d3.ascending(aName, bName);
@@ -681,16 +724,23 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
       .attr('r', 5);
 
   node.filter(d => d.data.is_family)
-      .append('rect')
-      .attr('x', -3)
-      .attr('y', -3)
-      .attr('width', 6)
-      .attr('height', 6)
-      .attr('fill', '#f1c40f');
+      .append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('font-size', '16px')
+      .attr('fill', d => {
+          const sex = d.data.partner?.sex;
+          return sex === 'm' ? '#3498db' : (sex === 'f' ? '#e83e8c' : '#999');
+      })
+      .text('⚭')
+    .clone(true).lower()
+      .attr('stroke', 'white')
+      .attr('stroke-width', 3);
 
   const personNode = node.filter(d => !d.data.is_family);
-  const linkNode = personNode.append('a')
+  const linkNode = personNode.append(d => document.createElementNS('http://www.w3.org/2000/svg', (isPrivate(d.data.name) || isPrivate(d.data.surname)) ? 'g' : 'a'))
       .attr('href', d => {
+          if (isPrivate(d.data.name) || isPrivate(d.data.surname)) return null;
           const params = new URLSearchParams();
           params.set('t', 'person');
           if (d.data.name) params.set('n', d.data.name);
@@ -699,14 +749,14 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
           params.set('ex', '1');
           return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
       })
-      .attr('target', '_blank');
+      .attr('data-spa-nav', d => (isPrivate(d.data.name) || isPrivate(d.data.surname)) ? null : '');
 
   linkNode.append('text')
       .attr('dy', '-0.8em')
       .attr('x', 0)
       .attr('text-anchor', 'middle')
-      .attr('font-weight', 'bold')
-      .attr('fill', '#3498db')
+      .attr('font-weight', d => (isPrivate(d.data.name) || isPrivate(d.data.surname)) ? 'normal' : 'bold')
+      .attr('fill', d => (isPrivate(d.data.name) || isPrivate(d.data.surname)) ? '#555' : '#3498db')
       .text(d => [d.data.name, d.data.surname].filter(Boolean).join(' '))
     .clone(true).lower()
       .attr('stroke', 'white');
@@ -728,27 +778,37 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
   infoText.clone(true).lower().attr('stroke', 'white');
 
   const familyNode = node.filter(d => d.data.is_family);
-  const familyLink = familyNode.append('a')
+  const familyLink = familyNode.append(d => {
+      const person = d.parent.data;
+      const partner = d.data.partner;
+      const pPriv = isPrivate(person.name) || isPrivate(person.surname);
+      const partPriv = isPrivate(partner.name) || isPrivate(partner.surname);
+      return document.createElementNS('http://www.w3.org/2000/svg', (pPriv || partPriv) ? 'g' : 'a');
+  })
       .attr('href', d => {
           const params = new URLSearchParams();
           params.set('t', 'family');
           const person = d.parent.data;
           const partner = d.data.partner;
+          const pPriv = isPrivate(person.name) || isPrivate(person.surname);
+          const partPriv = isPrivate(partner.name) || isPrivate(partner.surname);
+
+          if (pPriv || partPriv) return null;
 
           if (person.sex === 'm' || (person.sex !== 'f' && !partner.sex)) {
-             if (person.name) params.set('hn', person.name);
-             if (person.surname) params.set('hsn', person.surname);
-             if (person.date_of_birth) params.set('hb', person.date_of_birth);
-             if (partner.name) params.set('wn', partner.name);
-             if (partner.surname) params.set('wsn', partner.surname);
-             if (partner.date_of_birth) params.set('wb', partner.date_of_birth);
+             if (person.name && !pPriv) params.set('hn', person.name);
+             if (person.surname && !pPriv) params.set('hsn', person.surname);
+             if (person.date_of_birth && !pPriv) params.set('hb', person.date_of_birth);
+             if (partner.name && !partPriv) params.set('wn', partner.name);
+             if (partner.surname && !partPriv) params.set('wsn', partner.surname);
+             if (partner.date_of_birth && !partPriv) params.set('wb', partner.date_of_birth);
           } else {
-             if (partner.name) params.set('hn', partner.name);
-             if (partner.surname) params.set('hsn', partner.surname);
-             if (partner.date_of_birth) params.set('hb', partner.date_of_birth);
-             if (person.name) params.set('wn', person.name);
-             if (person.surname) params.set('wsn', person.surname);
-             if (person.date_of_birth) params.set('wb', person.date_of_birth);
+             if (partner.name && !partPriv) params.set('hn', partner.name);
+             if (partner.surname && !partPriv) params.set('hsn', partner.surname);
+             if (partner.date_of_birth && !partPriv) params.set('hb', partner.date_of_birth);
+             if (person.name && !pPriv) params.set('wn', person.name);
+             if (person.surname && !pPriv) params.set('wsn', person.surname);
+             if (person.date_of_birth && !pPriv) params.set('wb', person.date_of_birth);
           }
           if (d.data.marriage) {
              if (d.data.marriage.date) params.set('dom', d.data.marriage.date);
@@ -758,14 +818,26 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
           params.set('ex', '1');
           return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
       })
-      .attr('target', '_blank');
+      .attr('data-spa-nav', d => {
+          const person = d.parent.data;
+          const partner = d.data.partner;
+          const pPriv = isPrivate(person.name) || isPrivate(person.surname);
+          const partPriv = isPrivate(partner.name) || isPrivate(partner.surname);
+          return (pPriv || partPriv) ? null : '';
+      });
 
   const familyText = familyLink.append('text')
       .attr('dy', '0.3em')
-      .attr('x', 10)
+      .attr('x', 14)
       .attr('text-anchor', 'start')
       .attr('font-size', '12px')
-      .attr('fill', '#3498db');
+      .attr('fill', d => {
+          const person = d.parent.data;
+          const partner = d.data.partner;
+          const pPriv = isPrivate(person.name) || isPrivate(person.surname);
+          const partPriv = isPrivate(partner.name) || isPrivate(partner.surname);
+          return (pPriv || partPriv) ? '#555' : '#3498db';
+      });
 
   familyText.each(function(d) {
       const el = d3.select(this);
@@ -775,13 +847,18 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
       const b = m.date ? m.date : '';
       const pl = m.place ? m.place.split(',')[0].trim() : '';
 
+      let firstLine = true;
       if (partnerName) {
-         el.append('tspan').attr('x', 10).attr('font-weight', 'bold').text(`⚭ ${partnerName}`);
-      } else {
-         el.append('tspan').attr('x', 10).attr('font-weight', 'bold').text(`⚭`);
+         const isPriv = isPrivate(p.name) || isPrivate(p.surname);
+         el.append('tspan').attr('x', 14).attr('font-weight', isPriv ? 'normal' : 'bold').text(partnerName);
+         firstLine = false;
       }
-      if (b || pl) {
-         el.append('tspan').attr('x', 10).attr('dy', '1.2em').text([b, pl].filter(Boolean).join(' '));
+      if (b) {
+         el.append('tspan').attr('x', 14).attr('dy', firstLine ? '0' : '1.2em').text(b);
+         firstLine = false;
+      }
+      if (pl) {
+         el.append('tspan').attr('x', 14).attr('dy', firstLine ? '0' : '1.2em').text(pl);
       }
   });
   familyText.clone(true).lower().attr('stroke', 'white');
