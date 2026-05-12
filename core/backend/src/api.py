@@ -96,7 +96,7 @@ def search_general(
     type: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    if not any([name, surname, date_from, date_to, place, contributor]):
+    if not any([name, surname, date_from, date_to, place, contributor, has_link]):
         return {"persons": [], "families": []}
     return crud.search_all(
         db,

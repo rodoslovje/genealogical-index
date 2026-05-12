@@ -153,12 +153,11 @@ function performGeneralSearch() {
     if (val) params[f] = val;
   });
 
-  if (!Object.keys(params).length) return;
+  const hasLink = document.getElementById('general-has_link')?.checked || false;
+  if (!Object.keys(params).length && !hasLink) return;
 
   const exact = document.getElementById('general-exact')?.checked ?? true;
   if (exact) params.exact = 'true';
-
-  const hasLink = document.getElementById('general-has_link')?.checked || false;
   if (hasLink) params.has_link = 'true';
 
   const shortParams = {};
@@ -344,14 +343,14 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     hideIntro(introId);
     document.getElementById(resultsId).style.display = 'block';
 
-    if (!Object.keys(fieldParams).length) {
+    const hasLink = document.getElementById(hasLinkId)?.checked || false;
+    if (!Object.keys(fieldParams).length && !hasLink) {
       document.getElementById(tableId).innerHTML = `<p>${t('enter_criterion')}</p>`;
       document.getElementById(countId).textContent = '0';
       return;
     }
 
     const exact = document.getElementById(exactId)?.checked ?? true;
-    const hasLink = document.getElementById(hasLinkId)?.checked || false;
     const shortParams = { t: urlType, ...(!exact ? { ex: '0' } : {}), ...(hasLink ? { hl: '1' } : {}) };
     for (const [field, val] of Object.entries(fieldParams)) {
       shortParams[PARAM_MAP[field] || field] = val;

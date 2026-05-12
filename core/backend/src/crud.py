@@ -510,7 +510,9 @@ def search_all(
             )
         if has_link:
             families_q = families_q.filter(
-                models.Family.links.isnot(None), models.Family.links != ""
+                models.Family.links.isnot(None),
+                models.Family.links != "",
+                models.Family.links != "[]",
             )
         families = families_q.offset(skip).limit(limit).all()
 
@@ -574,7 +576,11 @@ def search_advanced_persons(
             )
         )
     if has_link:
-        query = query.filter(models.Person.links.isnot(None), models.Person.links != "")
+        query = query.filter(
+            models.Person.links.isnot(None),
+            models.Person.links != "",
+            models.Person.links != "[]",
+        )
 
     return query.offset(skip).limit(limit).all()
 
@@ -676,7 +682,11 @@ def search_advanced_families(
             )
         )
     if has_link:
-        query = query.filter(models.Family.links.isnot(None), models.Family.links != "")
+        query = query.filter(
+            models.Family.links.isnot(None),
+            models.Family.links != "",
+            models.Family.links != "[]",
+        )
 
     return query.offset(skip).limit(limit).all()
 
