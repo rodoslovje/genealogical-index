@@ -10,7 +10,7 @@ export function renderDescendantsPage() {
   const c = params.get('c') || '';
   const personName = [n, sn].filter(Boolean).join(' ');
 
-  document.getElementById('descendant-page-title').textContent = `${t('tree_descendants_of')} ${personName}`;
+  document.getElementById('descendant-page-title').textContent = `${personName} - ${t('tree_descendants_title')}`;
 
   const container = document.getElementById('descendant-tree-container');
   const controls = document.getElementById('descendant-tree-controls');
@@ -65,7 +65,7 @@ export function renderAncestorsPage() {
   const c = params.get('c') || '';
   const personName = [n, sn].filter(Boolean).join(' ');
 
-  document.getElementById('ancestor-page-title').textContent = `${t('tree_ancestors_of')} ${personName}`;
+  document.getElementById('ancestor-page-title').textContent = `${personName} - ${t('tree_ancestors_title')}`;
 
   const container = document.getElementById('ancestor-tree-container');
   const controls = document.getElementById('ancestor-tree-controls');
@@ -245,7 +245,7 @@ function renderD3Tree(data, container, personName, contributorName) {
         .attr('font-size', '18px')
         .attr('font-weight', 'bold')
         .attr('fill', '#3498db')
-        .text(`${t('tree_ancestors_of')} ${personName}`);
+        .text(`${personName} - ${t('tree_ancestors_title')}`);
 
     const indexUrl = window.location.origin + window.location.pathname;
     const siteTitle = t('site_title');
@@ -267,7 +267,7 @@ function renderD3Tree(data, container, personName, contributorName) {
             .attr('y', exportY + exportHeight - padding)
             .attr('font-size', '14px')
             .attr('fill', '#555')
-            .text(`${t('tree_source')}: `);
+            .text(`${t('tree_source')}:`);
 
         const labelWidth = sourceLabel.node().getComputedTextLength();
 
@@ -276,7 +276,7 @@ function renderD3Tree(data, container, personName, contributorName) {
             .attr('href', contribUrl)
             .attr('target', '_blank')
             .append('text')
-            .attr('x', exportX + padding + labelWidth)
+            .attr('x', exportX + padding + labelWidth + 6)
             .attr('y', exportY + exportHeight - padding)
             .attr('font-size', '14px')
             .attr('fill', '#3498db')
@@ -460,6 +460,23 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
 
   tree(root);
 
+  // Adjust coordinates to bring families closer to parents, and fix generations
+  root.each(d => {
+    let gen = 0;
+    let curr = d;
+    while (curr.parent) {
+      if (!curr.data.is_family) gen++;
+      curr = curr.parent;
+    }
+
+    if (d.data.is_family) {
+      d.y = (gen * dy) + 50;
+      d.x = d.x + 35;
+    } else {
+      d.y = gen * dy;
+    }
+  });
+
   let x0 = Infinity;
   let x1 = -x0;
   let y1 = 0;
@@ -570,7 +587,7 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
         .attr('font-size', '18px')
         .attr('font-weight', 'bold')
         .attr('fill', '#3498db')
-        .text(`${t('tree_descendants_of')} ${personName}`);
+        .text(`${personName} - ${t('tree_descendants_title')}`);
 
     const indexUrl = window.location.origin + window.location.pathname;
     overlay.append('a')
@@ -590,7 +607,7 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
             .attr('y', exportY + exportHeight - padding)
             .attr('font-size', '14px')
             .attr('fill', '#555')
-            .text(`${t('tree_source')}: `);
+            .text(`${t('tree_source')}:`);
 
         const labelWidth = sourceLabel.node().getComputedTextLength();
         const contribUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', contributor: contributorName });
@@ -598,7 +615,7 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
             .attr('href', contribUrl)
             .attr('target', '_blank')
             .append('text')
-            .attr('x', exportX + padding + labelWidth)
+            .attr('x', exportX + padding + labelWidth + 6)
             .attr('y', exportY + exportHeight - padding)
             .attr('font-size', '14px')
             .attr('fill', '#3498db')
@@ -721,13 +738,21 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
           if (person.sex === 'm' || (person.sex !== 'f' && !partner.sex)) {
              if (person.name) params.set('hn', person.name);
              if (person.surname) params.set('hsn', person.surname);
+             if (person.date_of_birth) params.set('hb', person.date_of_birth);
              if (partner.name) params.set('wn', partner.name);
              if (partner.surname) params.set('wsn', partner.surname);
+             if (partner.date_of_birth) params.set('wb', partner.date_of_birth);
           } else {
              if (partner.name) params.set('hn', partner.name);
              if (partner.surname) params.set('hsn', partner.surname);
+             if (partner.date_of_birth) params.set('hb', partner.date_of_birth);
              if (person.name) params.set('wn', person.name);
              if (person.surname) params.set('wsn', person.surname);
+             if (person.date_of_birth) params.set('wb', person.date_of_birth);
+          }
+          if (d.data.marriage) {
+             if (d.data.marriage.date) params.set('dom', d.data.marriage.date);
+             if (d.data.marriage.place) params.set('pom', d.data.marriage.place);
           }
           if (contributorName) params.set('c', contributorName);
           params.set('ex', '1');
@@ -736,27 +761,27 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
       .attr('target', '_blank');
 
   const familyText = familyLink.append('text')
-      .attr('dy', '-0.8em')
-      .attr('x', 0)
-      .attr('text-anchor', 'middle')
+      .attr('dy', '0.3em')
+      .attr('x', 10)
+      .attr('text-anchor', 'start')
       .attr('font-size', '12px')
-      .attr('fill', '#2c3e50');
+      .attr('fill', '#3498db');
 
   familyText.each(function(d) {
       const el = d3.select(this);
       const p = d.data.partner;
-      const m = d.data.marriage;
+      const m = d.data.marriage || {};
       const partnerName = [p.name, p.surname].filter(Boolean).join(' ');
       const b = m.date ? m.date : '';
       const pl = m.place ? m.place.split(',')[0].trim() : '';
 
       if (partnerName) {
-         el.append('tspan').attr('x', 0).text(`⚭ ${partnerName}`);
+         el.append('tspan').attr('x', 10).attr('font-weight', 'bold').text(`⚭ ${partnerName}`);
       } else {
-         el.append('tspan').attr('x', 0).text(`⚭`);
+         el.append('tspan').attr('x', 10).attr('font-weight', 'bold').text(`⚭`);
       }
       if (b || pl) {
-         el.append('tspan').attr('x', 0).attr('dy', '1.2em').text([b, pl].filter(Boolean).join(' '));
+         el.append('tspan').attr('x', 10).attr('dy', '1.2em').text([b, pl].filter(Boolean).join(' '));
       }
   });
   familyText.clone(true).lower().attr('stroke', 'white');

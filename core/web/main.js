@@ -165,6 +165,11 @@ window.addEventListener('resize', updateSidebarTop);
 hamburgerBtn.addEventListener('click', (e) => {
   e.stopPropagation();
 
+  if (document.getElementById('tab-ancestors').classList.contains('active') ||
+      document.getElementById('tab-descendants').classList.contains('active')) {
+    return;
+  }
+
   // On desktop, the sidebar on the detailed match page is completely empty, so prevent it from opening
   const isDetailedMatch = new URLSearchParams(window.location.search).get('with');
   if (isDetailedMatch && window.innerWidth > 768) {
