@@ -58,7 +58,7 @@ export function renderAncestorsPage() {
 }
 
 function renderD3Tree(data, container, personName, contributorName) {
-  const dx = 85;
+  const dx = 120;
   const dy = 250;
 
   const root = d3.hierarchy(data, d => d.parents);
