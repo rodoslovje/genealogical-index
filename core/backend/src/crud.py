@@ -880,8 +880,8 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
             }
             contributor = root_person.contributor
 
-        if contributor:
-            fams = []
+        if contributor and is_record:
+            fams_raw = []
             if node["name"] or node["surname"]:
                 # Combine husband/wife search into a single query with OR.
                 # This allows the DB to potentially use a bitmap index scan over the two new indexes,
@@ -920,9 +920,27 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
                         query_filter = and_(*wife_conds)
 
                 if query_filter is not None:
-                    fams = db.query(models.Family).filter(query_filter).all()
+                    fams_raw = db.query(models.Family).filter(query_filter).all()
 
-            for fam in fams:
+            # Filter fams_raw to only those truly belonging to this person
+            known_partners = []
+            has_partners = False
+            if person_obj.partners_list:
+                try:
+                    p_list = json.loads(person_obj.partners_list)
+                    has_partners = True
+                    for p in p_list:
+                        if p:
+                            known_partners.append(
+                                {
+                                    "name": p.get("name") or "",
+                                    "surname": p.get("surname") or "",
+                                }
+                            )
+                except Exception:
+                    pass
+
+            for fam in fams_raw:
                 is_husband = False
                 if node.get("sex") == "m":
                     is_husband = True
@@ -941,6 +959,35 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
                         h_match = False
 
                     is_husband = h_match
+
+                # Check birth date constraint if both are present
+                fam_birth = fam.husband_birth if is_husband else fam.wife_birth
+                if node.get("date_of_birth") and fam_birth:
+                    if node.get("date_of_birth") != fam_birth:
+                        continue
+
+                # Check partner constraint
+                if has_partners:
+                    part_name = fam.wife_name if is_husband else fam.husband_name
+                    part_sur = fam.wife_surname if is_husband else fam.husband_surname
+                    part_name = part_name or ""
+                    part_sur = part_sur or ""
+
+                    matched = False
+                    for kp in known_partners:
+                        n_match = True
+                        s_match = True
+                        if kp["name"] and kp["name"] != part_name:
+                            n_match = False
+                        if kp["surname"] and kp["surname"] != part_sur:
+                            s_match = False
+
+                        if n_match and s_match:
+                            matched = True
+                            break
+
+                    if not matched:
+                        continue
 
                 if not node.get("sex"):
                     node["sex"] = "m" if is_husband else "f"

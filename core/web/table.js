@@ -401,8 +401,8 @@ export function formatSpecialCell(col, row) {
   if (col === 'partners' && row.partners_list) {
     let formattedList = [];
     let count = 0;
+    let treeBtn = '';
     try {
-      let treeBtn = '';
       if (row.id) {
           const p = new URLSearchParams();
           p.set('t', 'descendants');
