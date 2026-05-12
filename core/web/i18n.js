@@ -143,6 +143,18 @@ const translations = {
     other_indexes: 'Genealogical indexes:',
     country_slo: 'Slovenia',
     country_cro: 'Croatia',
+
+    // Tree
+    tree_zoom_in: 'Zoom In',
+    tree_zoom_out: 'Zoom Out',
+    tree_reset: 'Reset',
+    tree_download_svg: 'Download SVG',
+    tree_ancestors_of: 'Ancestors of',
+    tree_ancestors_title: 'Ancestors',
+    tree_loading: 'Loading tree...',
+    tree_error: 'Error loading tree.',
+    tree_no_d3: 'Error: D3.js library not loaded.',
+    tree_source: 'Source',
   },
   sl: {
     // Navigation tabs
@@ -284,6 +296,18 @@ const translations = {
     other_indexes: 'Rodoslovni indeksi:',
     country_slo: 'Slovenija',
     country_cro: 'Hrvaška',
+
+    // Tree
+    tree_zoom_in: 'Povečaj',
+    tree_zoom_out: 'Pomanjšaj',
+    tree_reset: 'Ponastavi',
+    tree_download_svg: 'Prenesi SVG',
+    tree_ancestors_of: 'Predniki osebe',
+    tree_ancestors_title: 'Predniki',
+    tree_loading: 'Nalaganje drevesa...',
+    tree_error: 'Napaka pri nalaganju drevesa.',
+    tree_no_d3: 'Napaka: Knjižnica D3.js ni naložena.',
+    tree_source: 'Vir',
   },
   hr: {
     // Navigation tabs
@@ -425,6 +449,18 @@ const translations = {
     other_indexes: 'Rodoslovni indeksi:',
     country_slo: 'Slovenija',
     country_cro: 'Hrvatska',
+
+    // Tree
+    tree_zoom_in: 'Povećaj',
+    tree_zoom_out: 'Smanji',
+    tree_reset: 'Poništi',
+    tree_download_svg: 'Preuzmi SVG',
+    tree_ancestors_of: 'Preci osobe',
+    tree_ancestors_title: 'Preci',
+    tree_loading: 'Učitavanje stabla...',
+    tree_error: 'Greška pri učitavanju stabla.',
+    tree_no_d3: 'Greška: D3.js biblioteka nije učitana.',
+    tree_source: 'Izvor',
   },
   de: {
     // Navigation tabs
@@ -566,6 +602,18 @@ const translations = {
     other_indexes: 'Genealogische Indizes:',
     country_slo: 'Slowenien',
     country_cro: 'Kroatien',
+
+    // Tree
+    tree_zoom_in: 'Vergrößern',
+    tree_zoom_out: 'Verkleinern',
+    tree_reset: 'Zurücksetzen',
+    tree_download_svg: 'SVG herunterladen',
+    tree_ancestors_of: 'Vorfahren von',
+    tree_ancestors_title: 'Vorfahren',
+    tree_loading: 'Stammbaum wird geladen...',
+    tree_error: 'Fehler beim Laden des Stammbaums.',
+    tree_no_d3: 'Fehler: D3.js-Bibliothek nicht geladen.',
+    tree_source: 'Quelle',
   },
   hu: {
     // Navigation tabs
@@ -707,6 +755,18 @@ const translations = {
     other_indexes: 'Genealógiai indexek:',
     country_slo: 'Szlovénia',
     country_cro: 'Horvátország',
+
+    // Tree
+    tree_zoom_in: 'Nagyítás',
+    tree_zoom_out: 'Kicsinyítés',
+    tree_reset: 'Visszaállítás',
+    tree_download_svg: 'SVG letöltése',
+    tree_ancestors_of: 'Ősei:',
+    tree_ancestors_title: 'Ősök',
+    tree_loading: 'Családfa betöltése...',
+    tree_error: 'Hiba a családfa betöltésekor.',
+    tree_no_d3: 'Hiba: D3.js könyvtár nincs betöltve.',
+    tree_source: 'Forrás',
   },
   it: {
     // Navigation tabs
@@ -848,6 +908,18 @@ const translations = {
     other_indexes: 'Indici genealogici:',
     country_slo: 'Slovenia',
     country_cro: 'Croazia',
+
+    // Tree
+    tree_zoom_in: 'Ingrandisci',
+    tree_zoom_out: 'Rimpicciolisci',
+    tree_reset: 'Reimposta',
+    tree_download_svg: 'Scarica SVG',
+    tree_ancestors_of: 'Antenati di',
+    tree_ancestors_title: 'Antenati',
+    tree_loading: 'Caricamento dell\'albero...',
+    tree_error: 'Errore durante il caricamento dell\'albero.',
+    tree_no_d3: 'Errore: libreria D3.js non caricata.',
+    tree_source: 'Fonte',
   },
 };
 
