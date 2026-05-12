@@ -192,3 +192,25 @@ def search_advanced_families(
         limit=limit,
         exact=exact,
     )
+
+
+@app.get("/api/ancestors")
+def get_ancestors_by_params(
+    n: Optional[str] = None,
+    sn: Optional[str] = None,
+    dob: Optional[str] = None,
+    c: Optional[str] = None,
+    max_generations: int = 5,
+    db: Session = Depends(get_db),
+):
+    if not c:
+        return None
+
+    person = crud.find_parent_record(
+        db, {"name": n, "surname": sn, "date_of_birth": dob}, c
+    )
+
+    if not person:
+        return None
+
+    return crud.get_ancestors_tree(db, person.id, max_generations)

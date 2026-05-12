@@ -4,7 +4,6 @@ import { isPrivate, cmp, getExpandCollapseIcon } from './utils.js';
 import { childYearOf, parseDateForSort } from './dates.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
-import { showAncestorTree } from './tree.js';
 
 export function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
@@ -332,9 +331,15 @@ export function formatSpecialCell(col, row) {
     if (count > 0) {
       let treeBtn = '';
       if (row.id) {
-         const fullName = [row.name, row.surname].filter(Boolean).join(' ').replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-           const safeContrib = String(row.contributor || '').replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-           treeBtn = `<button class="tree-btn" data-id="${row.id}" data-name="${fullName}" data-contributor="${safeContrib}" title="${t('tree_ancestors_title')}" style="padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer;">🌳</button>`;
+        const p = new URLSearchParams();
+        p.set('t', 'ancestors');
+        if (row.name) p.set('n', row.name);
+        if (row.surname) p.set('sn', row.surname);
+        const dob = childYearOf(row);
+        if (dob) p.set('dob', dob);
+        if (row.contributor) p.set('c', row.contributor);
+        const treeUrl = toUnicodeHref(p);
+        treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_ancestors_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌳</a>`;
       }
       return `<details class="expandable-cell">
             <summary>${count}${treeBtn}</summary>
@@ -619,17 +624,6 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         state.primary = { column: col, ascending: true };
       }
       renderTable(data, containerId, columns, null, true, null, contributorUrlMap);
-    });
-  });
-
-  container.querySelectorAll('.tree-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const id = btn.dataset.id;
-      const name = btn.dataset.name;
-      const contributor = btn.dataset.contributor;
-      showAncestorTree(id, name, contributor);
     });
   });
 }

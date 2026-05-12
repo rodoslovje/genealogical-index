@@ -598,7 +598,7 @@ async function renderMatchesPage(contributor, withPartner) {
       const safeContributor = String(contributor).replace(/</g, '&lt;').replace(/>/g, '&gt;');
       document.title = `${t('no_results')} | ${t('site_title')}`;
       container.innerHTML = `<div class="matches-page-header">
-        <h2 class="matches-page-title">${safeContributor}</h2>
+        <h2 class="matches-page-title">${t('col_contributor')}: ${safeContributor}</h2>
       </div>
       <p>${t('no_results')}</p>`;
       return;
@@ -621,7 +621,7 @@ async function renderMatchesPage(contributor, withPartner) {
       return;
     }
 
-    document.title = `${contributor} | ${t('site_title')}`;
+    document.title = `${t('col_contributor')}: ${contributor} | ${t('site_title')}`;
 
     const urlMap = getContributorUrlMap();
     const url = urlMap[contributor];
@@ -644,7 +644,7 @@ async function renderMatchesPage(contributor, withPartner) {
     }
 
     const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${contributor}</h2>
+      <h2 class="matches-page-title">${t('col_contributor')}: ${contributor}</h2>
     </div>
     ${statsHtml}
     ${urlHtml}

@@ -79,6 +79,19 @@
             </div>
           </section>
 
+          <section id="tab-ancestors" class="tab-content">
+            <div id="ancestors-results" class="results-container">
+              <h2 id="ancestor-page-title" style="margin-top: 0; border-bottom: none;"></h2>
+              <div id="ancestor-tree-controls" style="margin-bottom: 10px; display: none; gap: 8px;">
+                <button id="btn-zoom-in" class="export-btn" style="padding: 4px 10px;"></button>
+                <button id="btn-zoom-out" class="export-btn" style="padding: 4px 10px;"></button>
+                <button id="btn-zoom-reset" class="export-btn" style="padding: 4px 10px;"></button>
+                <button id="btn-download-svg" class="export-btn" style="padding: 4px 10px; margin-left: auto;" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>SVG</button>
+              </div>
+              <div id="ancestor-tree-container" style="flex-grow: 1; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; margin-top: 10px; background-color: #fafafa; min-height: 60vh;"></div>
+            </div>
+          </section>
+
           <section id="tab-contributors" class="tab-content">
             <div id="totals-bar" class="totals-bar" style="display:none;">
               <span data-i18n-title="tip_total_contributors"><span data-i18n="tab_contributors">Genealogists</span>: <strong id="total-contributors">…</strong></span>

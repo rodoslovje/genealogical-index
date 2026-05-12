@@ -2,44 +2,34 @@ import { API_BASE_URL } from './config.js';
 import { toUnicodeSearch } from './url.js';
 import { t } from './i18n.js';
 
-export function showAncestorTree(personId, personName, contributorName) {
-  let modal = document.getElementById('ancestor-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'ancestor-modal';
-    modal.className = 'modal';
-    modal.innerHTML = `
-      <div class="modal-content ancestor-modal-content">
-        <span class="close-modal">&times;</span>
-        <h2 id="ancestor-modal-title" style="margin-top: 0;"></h2>
-        <div id="ancestor-tree-controls" style="margin-bottom: 10px; display: none; gap: 8px;">
-          <button id="btn-zoom-in" class="export-btn" style="padding: 4px 10px;">➕ ${t('tree_zoom_in')}</button>
-          <button id="btn-zoom-out" class="export-btn" style="padding: 4px 10px;">➖ ${t('tree_zoom_out')}</button>
-          <button id="btn-zoom-reset" class="export-btn" style="padding: 4px 10px;">🔄 ${t('tree_reset')}</button>
-          <button id="btn-download-svg" class="export-btn" style="padding: 4px 10px; margin-left: auto;" title="${t('tree_download_svg')}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>SVG</button>
-        </div>
-        <div id="ancestor-tree-container"></div>
-      </div>
-    `;
-    document.body.appendChild(modal);
+export function renderAncestorsPage() {
+  const params = new URLSearchParams(window.location.search);
+  const n = params.get('n') || '';
+  const sn = params.get('sn') || '';
+  const dob = params.get('dob') || '';
+  const c = params.get('c') || '';
+  const personName = [n, sn].filter(Boolean).join(' ');
 
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-      modal.style.display = 'none';
-    });
+  document.getElementById('ancestor-page-title').textContent = `${t('tree_ancestors_of')} ${personName}`;
 
-    window.addEventListener('click', (e) => {
-      if (e.target === modal) modal.style.display = 'none';
-    });
-  }
-
-  document.getElementById('ancestor-modal-title').textContent = `${t('tree_ancestors_of')} ${personName}`;
   const container = document.getElementById('ancestor-tree-container');
   const controls = document.getElementById('ancestor-tree-controls');
+
+  document.getElementById('btn-zoom-in').innerHTML = `➕ ${t('tree_zoom_in')}`;
+  document.getElementById('btn-zoom-out').innerHTML = `➖ ${t('tree_zoom_out')}`;
+  document.getElementById('btn-zoom-reset').innerHTML = `🔄 ${t('tree_reset')}`;
+  document.getElementById('btn-download-svg').title = t('tree_download_svg');
+
   controls.style.display = 'none';
   container.innerHTML = `<p style="padding: 20px;">${t('tree_loading')}</p>`;
-  modal.style.display = 'block';
 
-  fetch(`${API_BASE_URL}/api/persons/${personId}/ancestors`)
+  const apiParams = new URLSearchParams();
+  if (n) apiParams.set('n', n);
+  if (sn) apiParams.set('sn', sn);
+  if (dob) apiParams.set('dob', dob);
+  if (c) apiParams.set('c', c);
+
+  fetch(`${API_BASE_URL}/api/ancestors?${apiParams}`)
     .then(r => r.json())
     .then(data => {
       container.innerHTML = '';
@@ -52,7 +42,7 @@ export function showAncestorTree(personId, personName, contributorName) {
         return;
       }
       controls.style.display = 'flex';
-      renderD3Tree(data, container, personName, contributorName);
+      renderD3Tree(data, container, personName, c);
     })
     .catch(err => {
       console.error(err);
@@ -106,17 +96,17 @@ function renderD3Tree(data, container, personName, contributorName) {
 
   svg.call(zoom);
 
-  d3.select('#btn-zoom-in').on('click', () => {
+  d3.select('#btn-zoom-in').on('click', null).on('click', () => {
     svg.transition().duration(300).call(zoom.scaleBy, 1.3);
   });
-  d3.select('#btn-zoom-out').on('click', () => {
+  d3.select('#btn-zoom-out').on('click', null).on('click', () => {
     svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.3);
   });
-  d3.select('#btn-zoom-reset').on('click', () => {
+  d3.select('#btn-zoom-reset').on('click', null).on('click', () => {
     svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
   });
 
-  d3.select('#btn-download-svg').on('click', () => {
+  d3.select('#btn-download-svg').on('click', null).on('click', () => {
     const originalTransform = g.attr('transform');
     g.attr('transform', null);
 
@@ -178,25 +168,42 @@ function renderD3Tree(data, container, personName, contributorName) {
         .attr('href', indexUrl)
         .attr('target', '_blank')
         .append('text')
-        .attr('x', exportX + padding)
-        .attr('y', exportY + exportHeight - padding)
+        .attr('x', exportX + exportWidth - padding)
+        .attr('y', exportY + padding + 15)
+        .attr('text-anchor', 'end')
         .attr('font-size', '14px')
         .attr('fill', '#3498db')
         .text(siteTitle);
 
     if (contributorName) {
+        const sourceLabel = overlay.append('text')
+            .attr('x', exportX + padding)
+            .attr('y', exportY + exportHeight - padding)
+            .attr('font-size', '14px')
+            .attr('fill', '#555')
+            .text(`${t('tree_source')}: `);
+
+        const labelWidth = sourceLabel.node().getComputedTextLength();
+
         const contribUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', contributor: contributorName });
         overlay.append('a')
             .attr('href', contribUrl)
             .attr('target', '_blank')
             .append('text')
-            .attr('x', exportX + exportWidth - padding)
+            .attr('x', exportX + padding + labelWidth)
             .attr('y', exportY + exportHeight - padding)
-            .attr('text-anchor', 'end')
             .attr('font-size', '14px')
             .attr('fill', '#3498db')
-            .text(`${t('tree_source')}: ${t('col_contributor')} ${contributorName}`);
+            .text(`${t('col_contributor')} ${contributorName}`);
     }
+
+    overlay.append('text')
+        .attr('x', exportX + exportWidth - padding)
+        .attr('y', exportY + exportHeight - padding)
+        .attr('text-anchor', 'end')
+        .attr('font-size', '14px')
+        .attr('fill', '#555')
+        .text(new Date().toLocaleString(document.documentElement.lang || 'en'));
 
     const svgNode = svg.node();
     const serializer = new XMLSerializer();

@@ -4,6 +4,7 @@ import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
 import { toUnicodeSearch, LEGACY_TAB_MAP } from './url.js';
+import { renderAncestorsPage } from './tree.js';
 
 // --- Global Link Styles ---
 const globalStyles = document.createElement('style');
@@ -214,6 +215,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       'tab-person':       'person',
       'tab-family':       'family',
       'tab-contributors': 'contributors',
+      'tab-ancestors':    'ancestors',
     };
     const urlT = tabTypeMap[targetTab];
     if (urlT && !isInitializing) {
@@ -240,18 +242,22 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       document.body.classList.remove('contributors-view');
     }
 
+    if (targetTab === 'tab-ancestors') renderAncestorsPage();
+
     const resultsMap = {
       'tab-general': 'general-results',
       'tab-person':  'person-results',
       'tab-family':  'family-results',
+      'tab-ancestors':'ancestors-results',
     };
-    ['tab-general', 'tab-person', 'tab-family'].forEach(tab => {
+    ['tab-general', 'tab-person', 'tab-family', 'tab-ancestors'].forEach(tab => {
       if (tab !== targetTab) document.getElementById(resultsMap[tab])?.style.setProperty('display', 'none');
     });
     const introMap = {
       'tab-general': 'intro-general',
       'tab-person':  'intro-person',
       'tab-family':  'intro-family',
+      'tab-ancestors': null,
     };
     if (tabsWithResults.has(targetTab)) {
       document.getElementById(resultsMap[targetTab]).style.display = 'block';
@@ -264,7 +270,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
     if (SEARCH_TABS.includes(targetTab) && !isMatchesPage) {
       sidebar.classList.add('open');
-    } else if (window.innerWidth > 768 || isMatchesPage) {
+    } else if (window.innerWidth > 768 || isMatchesPage || targetTab === 'tab-ancestors') {
       sidebar.classList.remove('open');
     }
 
@@ -335,6 +341,7 @@ async function init() {
     if (urlT === 'contributors') urlTab = 'contributors';
     else if (urlT === 'person') urlTab = 'person';
     else if (urlT === 'family') urlTab = 'family';
+    else if (urlT === 'ancestors') urlTab = 'ancestors';
     isInitializing = true;
     document.querySelector(`.tab-btn[data-target="tab-${urlTab}"]`)?.click();
     isInitializing = false;
@@ -360,7 +367,7 @@ function navigateToURL(urlSearch) {
   normalizeLegacyURL();
   const urlParams = new URLSearchParams(window.location.search);
   const urlT = urlParams.get('t') || 'general';
-  const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors' };
+  const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors', ancestors: 'tab-ancestors' };
   const targetTab = tabMap[urlT] || 'tab-general';
   isInitializing = true;
   document.querySelector(`.tab-btn[data-target="${targetTab}"]`)?.click();
