@@ -146,6 +146,13 @@ def search_advanced_persons(
     )
 
 
+@app.get("/api/persons/{person_id}/ancestors")
+def get_person_ancestors(
+    person_id: int, max_generations: int = 5, db: Session = Depends(get_db)
+):
+    return crud.get_ancestors_tree(db, person_id, max_generations)
+
+
 @app.get("/api/search/advanced/families", response_model=List[schemas.Family])
 def search_advanced_families(
     husband_name: Optional[str] = None,

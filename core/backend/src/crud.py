@@ -667,3 +667,106 @@ def search_advanced_families(
         query = query.filter(models.Family.links.isnot(None), models.Family.links != "")
 
     return query.offset(skip).limit(limit).all()
+
+
+def find_parent_record(db: Session, parent_info: dict, contributor: str):
+    name = parent_info.get("name")
+    surname = parent_info.get("surname")
+
+    date_of_birth = parent_info.get("date_of_birth")
+    if (
+        not date_of_birth
+        and "birth" in parent_info
+        and isinstance(parent_info["birth"], dict)
+    ):
+        date_of_birth = parent_info["birth"].get("date")
+
+    birth_year = _extract_year(str(date_of_birth)) if date_of_birth else None
+    if not birth_year and parent_info.get("year"):
+        try:
+            birth_year = int(parent_info.get("year"))
+        except ValueError:
+            pass
+
+    if not name and not surname:
+        return None
+
+    query = db.query(models.Person).filter(models.Person.contributor == contributor)
+    if surname:
+        query = query.filter(models.Person.surname == surname)
+    if name:
+        query = query.filter(models.Person.name == name)
+    if date_of_birth:
+        query = query.filter(models.Person.date_of_birth == date_of_birth)
+    elif birth_year:
+        query = query.filter(models.Person.birth_year == birth_year)
+
+    return query.first()
+
+
+def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
+    root_person = db.query(models.Person).filter(models.Person.id == person_id).first()
+    if not root_person:
+        return None
+
+    visited = set()
+
+    def build_tree(person_obj, current_generation):
+        if current_generation > max_generations:
+            return None
+
+        is_record = hasattr(person_obj, "id") and person_obj.id is not None
+
+        if is_record:
+            if person_obj.id in visited:
+                return None
+            visited.add(person_obj.id)
+
+            node = {
+                "id": person_obj.id,
+                "name": person_obj.name,
+                "surname": person_obj.surname,
+                "date_of_birth": person_obj.date_of_birth,
+                "place_of_birth": person_obj.place_of_birth,
+                "parents": [],
+            }
+            parents_json = person_obj.parents_list
+        else:
+            node = {
+                "id": None,
+                "name": person_obj.get("name"),
+                "surname": person_obj.get("surname"),
+                "date_of_birth": person_obj.get("date_of_birth")
+                or person_obj.get("year")
+                or (
+                    person_obj.get("birth", {}).get("date")
+                    if isinstance(person_obj.get("birth"), dict)
+                    else None
+                ),
+                "place_of_birth": None,
+                "parents": [],
+            }
+            parents_json = None
+
+        if parents_json and is_record:
+            try:
+                parents = json.loads(parents_json)
+                for p_info in parents:
+                    if not p_info:
+                        continue
+                    parent_record = find_parent_record(
+                        db, p_info, root_person.contributor
+                    )
+                    if parent_record:
+                        parent_node = build_tree(parent_record, current_generation + 1)
+                    else:
+                        parent_node = build_tree(p_info, current_generation + 1)
+
+                    if parent_node:
+                        node["parents"].append(parent_node)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        return node
+
+    return build_tree(root_person, 0)

@@ -4,6 +4,7 @@ import { isPrivate, cmp, getExpandCollapseIcon } from './utils.js';
 import { childYearOf, parseDateForSort } from './dates.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
+import { showAncestorTree } from './tree.js';
 
 export function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
@@ -529,7 +530,12 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (isPriv) {
           html += `<td>${safeDisplay}</td>`;
         } else {
-          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
+          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>`;
+          if (col === 'name' && row.id) {
+             const fullName = [row.name, row.surname].filter(Boolean).join(' ').replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+             html += `<button class="tree-btn" data-id="${row.id}" data-name="${fullName}" title="Ancestors" style="padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer;">🌳</button>`;
+          }
+          html += `</td>`;
         }
       } else if (col === 'children' || col === 'parents' || col === 'partners') {
         const inner = formatSpecialCell(col, row);
@@ -612,6 +618,15 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         state.primary = { column: col, ascending: true };
       }
       renderTable(data, containerId, columns, null, true, null, contributorUrlMap);
+    });
+  });
+
+  container.querySelectorAll('.tree-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+      showAncestorTree(id, name);
     });
   });
 }

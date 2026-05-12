@@ -79,6 +79,7 @@ def setup_full(db):
         -- B-tree indexes on year columns — used to pre-filter candidates by year range
         -- before the trigram similarity join, significantly reducing the candidate set.
         CREATE INDEX idx_person_birth_year ON persons(birth_year);
+        CREATE INDEX idx_person_ancestor_search ON persons(contributor, surname, name, birth_year);
         CREATE INDEX idx_person_death_year ON persons(death_year);
         CREATE INDEX idx_family_year       ON families(marriage_year);
 
@@ -220,6 +221,7 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_person_contrib_sur      ON persons(contributor, surname);
         CREATE INDEX IF NOT EXISTS idx_family_contrib_surs     ON families(contributor, husband_surname, wife_surname);
 
+        CREATE INDEX IF NOT EXISTS idx_person_ancestor_search  ON persons(contributor, surname, name, birth_year);
         CREATE INDEX IF NOT EXISTS idx_person_birth_year       ON persons(birth_year);
         CREATE INDEX IF NOT EXISTS idx_person_death_year       ON persons(death_year);
         CREATE INDEX IF NOT EXISTS idx_family_year             ON families(marriage_year);
