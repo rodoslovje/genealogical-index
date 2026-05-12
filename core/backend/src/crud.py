@@ -619,7 +619,13 @@ def search_advanced_families(
         models.Family.husband_birth, husband_birth, husband_birth_to, exact
     )
     if hb_cond is not None:
-        query = query.filter(hb_cond)
+        query = query.filter(
+            or_(
+                hb_cond,
+                models.Family.husband_birth.is_(None),
+                models.Family.husband_birth == "",
+            )
+        )
     if wife_name:
         query = query.filter(
             _text_filter(models.Family.wife_name, wife_name, exact, split_comma=True)
@@ -632,7 +638,13 @@ def search_advanced_families(
         )
     wb_cond = _date_filter(models.Family.wife_birth, wife_birth, wife_birth_to, exact)
     if wb_cond is not None:
-        query = query.filter(wb_cond)
+        query = query.filter(
+            or_(
+                wb_cond,
+                models.Family.wife_birth.is_(None),
+                models.Family.wife_birth == "",
+            )
+        )
     if children:
         v = children.replace("%", r"\%").replace("_", r"\_")
         if exact:

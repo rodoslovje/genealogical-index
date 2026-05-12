@@ -273,29 +273,38 @@ function renderD3Tree(data, container, personName, contributorName) {
           .x(d => d.y)
           .y(d => d.x));
 
-  const marriageLinks = g.append('g')
-      .attr('fill', 'none')
-      .attr('stroke', '#ccc')
-      .attr('stroke-width', 1.5)
-      .attr('stroke-dasharray', '3 3')
-    .selectAll('line')
-    .data(root.descendants().filter(d => d.children && d.children.length === 2 && d.data.parents_marriage))
-    .join('line')
-      .attr('x1', d => d.children[0].y)
-      .attr('y1', d => d.children[0].x)
-      .attr('x2', d => d.children[1].y)
-      .attr('y2', d => d.children[1].x);
-
   const marriageNode = g.append('g')
     .selectAll('g')
     .data(root.descendants().filter(d => d.children && d.children.length === 2 && d.data.parents_marriage))
     .join('g')
       .attr('transform', d => `translate(${d.children[0].y},${d.x})`);
 
-  const marriageText = marriageNode.append('text')
+  const marriageLink = marriageNode.append('a')
+    .attr('href', d => {
+        const husband = d.children[0].data;
+        const wife = d.children[1].data;
+        const marriage = d.data.parents_marriage;
+
+        const params = new URLSearchParams();
+        params.set('t', 'family');
+        if (husband.name) params.set('hn', husband.name);
+        if (husband.surname) params.set('hsn', husband.surname);
+        if (husband.date_of_birth) params.set('hb', husband.date_of_birth);
+        if (wife.name) params.set('wn', wife.name);
+        if (wife.surname) params.set('wsn', wife.surname);
+        if (wife.date_of_birth) params.set('wb', wife.date_of_birth);
+        if (marriage.date) params.set('dom', marriage.date);
+        if (contributorName) params.set('c', contributorName);
+        params.set('ex', '1');
+
+        return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
+    })
+    .attr('target', '_blank');
+
+  const marriageText = marriageLink.append('text')
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
-      .attr('fill', '#777');
+      .attr('fill', '#3498db');
 
   marriageText.each(function(d) {
       const el = d3.select(this);
@@ -310,11 +319,6 @@ function renderD3Tree(data, container, personName, contributorName) {
           el.append('tspan').attr('x', 0).attr('dy', '0.3em').text(`⚭ ${b} ${p}`.trim());
       }
   });
-
-  marriageText.clone(true).lower()
-      .attr('stroke', '#fafafa')
-      .attr('stroke-width', 4)
-      .attr('stroke-linejoin', 'round');
 
   const node = g.append('g')
       .attr('stroke-linejoin', 'round')
