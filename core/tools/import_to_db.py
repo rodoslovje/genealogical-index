@@ -83,6 +83,10 @@ def setup_full(db):
         CREATE INDEX idx_person_death_year ON persons(death_year);
         CREATE INDEX idx_family_year       ON families(marriage_year);
 
+        -- Indexes for finding families for descendants tree
+        CREATE INDEX idx_family_descendant_h_search ON families(contributor, husband_surname, husband_name);
+        CREATE INDEX idx_family_descendant_w_search ON families(contributor, wife_surname, wife_name);
+
         CREATE TABLE match_jobs (
             contributor_a TEXT NOT NULL,
             contributor_b TEXT NOT NULL,
@@ -225,6 +229,10 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_person_birth_year       ON persons(birth_year);
         CREATE INDEX IF NOT EXISTS idx_person_death_year       ON persons(death_year);
         CREATE INDEX IF NOT EXISTS idx_family_year             ON families(marriage_year);
+
+        -- Indexes for finding families for descendants tree
+        CREATE INDEX IF NOT EXISTS idx_family_descendant_h_search ON families(contributor, husband_surname, husband_name);
+        CREATE INDEX IF NOT EXISTS idx_family_descendant_w_search ON families(contributor, wife_surname, wife_name);
 
         CREATE INDEX IF NOT EXISTS idx_matches_b  ON matches(contributor_b);
         CREATE INDEX IF NOT EXISTS idx_matches_ab ON matches(contributor_a, contributor_b);

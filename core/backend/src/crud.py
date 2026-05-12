@@ -873,52 +873,44 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
         if contributor:
             fams = []
             if node["name"] or node["surname"]:
-                if node.get("sex") == "m":
-                    fam_q = db.query(models.Family).filter(
-                        models.Family.contributor == contributor
+                # Combine husband/wife search into a single query with OR.
+                # This allows the DB to potentially use a bitmap index scan over the two new indexes,
+                # which is more efficient than two separate queries from the application.
+                husband_conds = [models.Family.contributor == contributor]
+                if node["name"]:
+                    husband_conds.append(models.Family.husband_name == node["name"])
+                if node["surname"]:
+                    husband_conds.append(
+                        models.Family.husband_surname == node["surname"]
                     )
-                    if node["name"]:
-                        fam_q = fam_q.filter(models.Family.husband_name == node["name"])
-                    if node["surname"]:
-                        fam_q = fam_q.filter(
-                            models.Family.husband_surname == node["surname"]
-                        )
-                    fams = fam_q.all()
-                elif node.get("sex") == "f":
-                    fam_q = db.query(models.Family).filter(
-                        models.Family.contributor == contributor
-                    )
-                    if node["name"]:
-                        fam_q = fam_q.filter(models.Family.wife_name == node["name"])
-                    if node["surname"]:
-                        fam_q = fam_q.filter(
-                            models.Family.wife_surname == node["surname"]
-                        )
-                    fams = fam_q.all()
-                else:
-                    fam_q1 = db.query(models.Family).filter(
-                        models.Family.contributor == contributor
-                    )
-                    if node["name"]:
-                        fam_q1 = fam_q1.filter(
-                            models.Family.husband_name == node["name"]
-                        )
-                    if node["surname"]:
-                        fam_q1 = fam_q1.filter(
-                            models.Family.husband_surname == node["surname"]
-                        )
 
-                    fam_q2 = db.query(models.Family).filter(
-                        models.Family.contributor == contributor
-                    )
-                    if node["name"]:
-                        fam_q2 = fam_q2.filter(models.Family.wife_name == node["name"])
-                    if node["surname"]:
-                        fam_q2 = fam_q2.filter(
-                            models.Family.wife_surname == node["surname"]
-                        )
+                wife_conds = [models.Family.contributor == contributor]
+                if node["name"]:
+                    wife_conds.append(models.Family.wife_name == node["name"])
+                if node["surname"]:
+                    wife_conds.append(models.Family.wife_surname == node["surname"])
 
-                    fams = fam_q1.all() + fam_q2.all()
+                sex = node.get("sex")
+                query_filter = None
+                # Only build a query if we have more than just the contributor to filter on
+                if sex == "m":
+                    if len(husband_conds) > 1:
+                        query_filter = and_(*husband_conds)
+                elif sex == "f":
+                    if len(wife_conds) > 1:
+                        query_filter = and_(*wife_conds)
+                else:  # sex is unknown or not specified
+                    can_be_husband = len(husband_conds) > 1
+                    can_be_wife = len(wife_conds) > 1
+                    if can_be_husband and can_be_wife:
+                        query_filter = or_(and_(*husband_conds), and_(*wife_conds))
+                    elif can_be_husband:
+                        query_filter = and_(*husband_conds)
+                    elif can_be_wife:
+                        query_filter = and_(*wife_conds)
+
+                if query_filter is not None:
+                    fams = db.query(models.Family).filter(query_filter).all()
 
             for fam in fams:
                 is_husband = False
@@ -927,22 +919,35 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
                 elif node.get("sex") == "f":
                     is_husband = False
                 else:
-                    if fam.husband_name == node.get(
-                        "name"
-                    ) and fam.husband_surname == node.get("surname"):
-                        is_husband = True
+                    n_name = node.get("name") or ""
+                    n_sur = node.get("surname") or ""
+                    h_name = fam.husband_name or ""
+                    h_sur = fam.husband_surname or ""
+
+                    h_match = True
+                    if n_name and n_name != h_name:
+                        h_match = False
+                    if n_sur and n_sur != h_sur:
+                        h_match = False
+
+                    is_husband = h_match
+
+                if not node.get("sex"):
+                    node["sex"] = "m" if is_husband else "f"
 
                 if is_husband:
                     partner = {
                         "name": fam.wife_name,
                         "surname": fam.wife_surname,
                         "date_of_birth": fam.wife_birth,
+                        "sex": "f",
                     }
                 else:
                     partner = {
                         "name": fam.husband_name,
                         "surname": fam.husband_surname,
                         "date_of_birth": fam.husband_birth,
+                        "sex": "m",
                     }
 
                 fam_node = {

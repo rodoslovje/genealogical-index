@@ -153,6 +153,40 @@ def get_person_ancestors(
     return crud.get_ancestors_tree(db, person_id, max_generations)
 
 
+@app.get("/api/persons/{person_id}/descendants")
+def get_person_descendants(
+    person_id: int, max_generations: int = 5, db: Session = Depends(get_db)
+):
+    return crud.get_descendants_tree(db, person_id, max_generations)
+
+
+@app.get("/api/descendants")
+def get_descendants_by_params(
+    n: Optional[str] = None,
+    sn: Optional[str] = None,
+    dob: Optional[str] = None,
+    c: Optional[str] = None,
+    max_generations: int = 5,
+    db: Session = Depends(get_db),
+):
+    if not c:
+        return None
+
+    parent_info = {"name": n, "surname": sn}
+    if dob:
+        if len(dob.strip()) == 4 and dob.strip().isdigit():
+            parent_info["year"] = dob
+        else:
+            parent_info["date_of_birth"] = dob
+
+    person = crud.find_parent_record(db, parent_info, c)
+
+    if not person:
+        return None
+
+    return crud.get_descendants_tree(db, person.id, max_generations)
+
+
 @app.get("/api/search/advanced/families", response_model=List[schemas.Family])
 def search_advanced_families(
     husband_name: Optional[str] = None,
@@ -219,37 +253,3 @@ def get_ancestors_by_params(
         return None
 
     return crud.get_ancestors_tree(db, person.id, max_generations)
-
-
-@app.get("/api/persons/{person_id}/descendants")
-def get_person_descendants(
-    person_id: int, max_generations: int = 5, db: Session = Depends(get_db)
-):
-    return crud.get_descendants_tree(db, person_id, max_generations)
-
-
-@app.get("/api/descendants")
-def get_descendants_by_params(
-    n: Optional[str] = None,
-    sn: Optional[str] = None,
-    dob: Optional[str] = None,
-    c: Optional[str] = None,
-    max_generations: int = 5,
-    db: Session = Depends(get_db),
-):
-    if not c:
-        return None
-
-    parent_info = {"name": n, "surname": sn}
-    if dob:
-        if len(dob.strip()) == 4 and dob.strip().isdigit():
-            parent_info["year"] = dob
-        else:
-            parent_info["date_of_birth"] = dob
-
-    person = crud.find_parent_record(db, parent_info, c)
-
-    if not person:
-        return None
-
-    return crud.get_descendants_tree(db, person.id, max_generations)

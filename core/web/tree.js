@@ -112,328 +112,6 @@ export function renderAncestorsPage() {
     });
 }
 
-function renderD3DescendantsTree(data, container, personName, contributorName) {
-  const dx = 120;
-  const dy = 250;
-
-  const root = d3.hierarchy(data, d => d.children);
-  const tree = d3.tree().nodeSize([dx, dy]);
-
-  root.sort((a, b) => {
-    if (a.data.is_family && b.data.is_family) {
-       const aDate = a.data.marriage?.date || '';
-       const bDate = b.data.marriage?.date || '';
-       return d3.ascending(aDate, bDate);
-    }
-    const aName = a.data.name || '';
-    const bName = b.data.name || '';
-    return d3.ascending(aName, bName);
-  });
-
-  tree(root);
-
-  let x0 = Infinity;
-  let x1 = -x0;
-  let y1 = 0;
-  root.each(d => {
-    if (d.x > x1) x1 = d.x;
-    if (d.x < x0) x0 = d.x;
-    if (d.y > y1) y1 = d.y;
-  });
-
-  const minX = -dy / 3;
-  const minY = x0 - dx;
-  const maxX = y1 + 250;
-  const maxY = x1 + dx;
-
-  const treeWidth = maxX - minX;
-  const treeHeight = maxY - minY;
-
-  const availableHeight = window.innerHeight - 165;
-  const wrapper = document.getElementById('descendant-tree-wrapper');
-  if (wrapper) {
-    wrapper.style.height = `${Math.max(availableHeight, 400)}px`;
-  } else {
-    container.style.height = `${Math.max(availableHeight, 400)}px`;
-  }
-
-  const width = container.clientWidth || 900;
-  const height = container.clientHeight || 500;
-
-  const svg = d3.select(container).append('svg')
-      .attr('width', width)
-      .attr('height', height)
-      .attr('viewBox', [0, 0, width, height])
-      .attr('style', 'width: 100%; height: 100%; font: 14px sans-serif; cursor: grab;');
-
-  const g = svg.append('g');
-
-  const minScale = Math.min(1, width / treeWidth, height / treeHeight);
-
-  const zoom = d3.zoom()
-      .scaleExtent([minScale, 4])
-      .translateExtent([[minX, minY], [maxX, maxY]])
-      .on('zoom', (e) => {
-        g.attr('transform', e.transform);
-      });
-
-  svg.call(zoom);
-
-  const initialScale = minScale;
-  const tx = (width - treeWidth * initialScale) / 2 - minX * initialScale;
-  const ty = (height - treeHeight * initialScale) / 2 - minY * initialScale;
-  const initialTransform = d3.zoomIdentity.translate(tx, ty).scale(initialScale);
-  svg.call(zoom.transform, initialTransform);
-
-  d3.select('#btn-descendant-zoom-in').on('click', null).on('click', () => {
-    svg.transition().duration(300).call(zoom.scaleBy, 1.3);
-  });
-  d3.select('#btn-descendant-zoom-out').on('click', null).on('click', () => {
-    svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.3);
-  });
-
-  d3.select('#btn-descendant-download-svg').on('click', null).on('click', () => {
-    const originalTransform = g.attr('transform');
-    g.attr('transform', null);
-
-    const bbox = g.node().getBBox();
-    const padding = 20;
-    const headerHeight = 50;
-    const footerHeight = 40;
-
-    const exportX = bbox.x - padding;
-    const exportY = bbox.y - padding - headerHeight;
-    const exportWidth = bbox.width + padding * 2;
-    const exportHeight = bbox.height + padding * 2 + headerHeight + footerHeight;
-
-    const vb = svg.property('viewBox').baseVal;
-    const originalViewBox = `${vb.x} ${vb.y} ${vb.width} ${vb.height}`;
-    const originalWidth = svg.attr('width');
-    const originalHeight = svg.attr('height');
-
-    svg.attr('viewBox', `${exportX} ${exportY} ${exportWidth} ${exportHeight}`);
-    svg.attr('width', exportWidth);
-    svg.attr('height', exportHeight);
-
-    const bg = svg.insert('rect', ':first-child')
-        .attr('class', 'export-only')
-        .attr('x', exportX)
-        .attr('y', exportY)
-        .attr('width', exportWidth)
-        .attr('height', exportHeight)
-        .attr('fill', 'white');
-
-    const overlay = svg.append('g').attr('class', 'export-only');
-
-    const p = new URLSearchParams();
-    p.set('t', 'person');
-    if (data.name) p.set('n', data.name);
-    if (data.surname) p.set('sn', data.surname);
-    if (data.date_of_birth) p.set('dob', data.date_of_birth);
-    p.set('ex', '1');
-    const rootUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch(p);
-
-    overlay.append('a')
-        .attr('href', rootUrl)
-        .attr('target', '_blank')
-        .append('text')
-        .attr('x', exportX + padding)
-        .attr('y', exportY + padding + 15)
-        .attr('font-size', '18px')
-        .attr('font-weight', 'bold')
-        .attr('fill', '#3498db')
-        .text(`${t('tree_descendants_of')} ${personName}`);
-
-    const indexUrl = window.location.origin + window.location.pathname;
-    overlay.append('a')
-        .attr('href', indexUrl)
-        .attr('target', '_blank')
-        .append('text')
-        .attr('x', exportX + exportWidth - padding)
-        .attr('y', exportY + padding + 15)
-        .attr('text-anchor', 'end')
-        .attr('font-size', '14px')
-        .attr('fill', '#3498db')
-        .text(t('site_title'));
-
-    if (contributorName) {
-        const sourceLabel = overlay.append('text')
-            .attr('x', exportX + padding)
-            .attr('y', exportY + exportHeight - padding)
-            .attr('font-size', '14px')
-            .attr('fill', '#555')
-            .text(`${t('tree_source')}: `);
-
-        const labelWidth = sourceLabel.node().getComputedTextLength();
-        const contribUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', contributor: contributorName });
-        overlay.append('a')
-            .attr('href', contribUrl)
-            .attr('target', '_blank')
-            .append('text')
-            .attr('x', exportX + padding + labelWidth)
-            .attr('y', exportY + exportHeight - padding)
-            .attr('font-size', '14px')
-            .attr('fill', '#3498db')
-            .text(`${t('col_contributor')} ${contributorName}`);
-    }
-
-    overlay.append('text')
-        .attr('x', exportX + exportWidth - padding)
-        .attr('y', exportY + exportHeight - padding)
-        .attr('text-anchor', 'end')
-        .attr('font-size', '14px')
-        .attr('fill', '#555')
-        .text(new Date().toLocaleString(document.documentElement.lang || 'en'));
-
-    const svgNode = svg.node();
-    const serializer = new XMLSerializer();
-    let source = serializer.serializeToString(svgNode);
-    if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
-        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-    }
-    source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
-
-    svg.selectAll('.export-only').remove();
-    svg.attr('viewBox', originalViewBox);
-    svg.attr('width', originalWidth);
-    svg.attr('height', originalHeight);
-    g.attr('transform', originalTransform);
-
-    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    const safeName = (personName || 'descendants').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    link.download = `descendants_${safeName}.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  });
-
-  const link = g.append('g')
-      .attr('fill', 'none')
-      .attr('stroke', '#ccc')
-      .attr('stroke-width', 2)
-    .selectAll('path')
-    .data(root.links())
-    .join('path')
-      .attr('d', d3.linkHorizontal()
-          .x(d => d.y)
-          .y(d => d.x));
-
-  const node = g.append('g')
-      .attr('stroke-linejoin', 'round')
-      .attr('stroke-width', 3)
-    .selectAll('g')
-    .data(root.descendants())
-    .join('g')
-      .attr('transform', d => `translate(${d.y},${d.x})`);
-
-  node.filter(d => !d.data.is_family)
-      .append('circle')
-      .attr('fill', d => d.data.sex === 'm' ? '#3498db' : (d.data.sex === 'f' ? '#e83e8c' : '#999'))
-      .attr('r', 5);
-
-  node.filter(d => d.data.is_family)
-      .append('rect')
-      .attr('x', -3)
-      .attr('y', -3)
-      .attr('width', 6)
-      .attr('height', 6)
-      .attr('fill', '#f1c40f');
-
-  const personNode = node.filter(d => !d.data.is_family);
-  const linkNode = personNode.append('a')
-      .attr('href', d => {
-          const params = new URLSearchParams();
-          params.set('t', 'person');
-          if (d.data.name) params.set('n', d.data.name);
-          if (d.data.surname) params.set('sn', d.data.surname);
-          if (d.data.date_of_birth) params.set('dob', d.data.date_of_birth);
-          params.set('ex', '1');
-          return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
-      })
-      .attr('target', '_blank');
-
-  linkNode.append('text')
-      .attr('dy', '-0.8em')
-      .attr('x', 0)
-      .attr('text-anchor', 'middle')
-      .attr('font-weight', 'bold')
-      .attr('fill', '#3498db')
-      .text(d => [d.data.name, d.data.surname].filter(Boolean).join(' '))
-    .clone(true).lower()
-      .attr('stroke', 'white');
-
-  const infoText = personNode.append('text')
-      .attr('dy', '1.4em')
-      .attr('x', 0)
-      .attr('text-anchor', 'middle')
-      .attr('fill', '#555')
-      .attr('font-size', '12px');
-
-  infoText.each(function(d) {
-      const el = d3.select(this);
-      const b = d.data.date_of_birth ? d.data.date_of_birth : '';
-      const p = d.data.place_of_birth ? d.data.place_of_birth.split(',')[0].trim() : '';
-      if (b) el.append('tspan').attr('x', 0).text(b);
-      if (p) el.append('tspan').attr('x', 0).attr('dy', b ? '1.2em' : '0').text(p);
-  });
-  infoText.clone(true).lower().attr('stroke', 'white');
-
-  const familyNode = node.filter(d => d.data.is_family);
-  const familyLink = familyNode.append('a')
-      .attr('href', d => {
-          const params = new URLSearchParams();
-          params.set('t', 'family');
-          const person = d.parent.data;
-          const partner = d.data.partner;
-          
-          if (person.sex === 'm' || (person.sex !== 'f' && !partner.sex)) {
-             if (person.name) params.set('hn', person.name);
-             if (person.surname) params.set('hsn', person.surname);
-             if (partner.name) params.set('wn', partner.name);
-             if (partner.surname) params.set('wsn', partner.surname);
-          } else {
-             if (partner.name) params.set('hn', partner.name);
-             if (partner.surname) params.set('hsn', partner.surname);
-             if (person.name) params.set('wn', person.name);
-             if (person.surname) params.set('wsn', person.surname);
-          }
-          if (contributorName) params.set('c', contributorName);
-          params.set('ex', '1');
-          return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
-      })
-      .attr('target', '_blank');
-      
-  const familyText = familyLink.append('text')
-      .attr('dy', '-0.8em')
-      .attr('x', 0)
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '12px')
-      .attr('fill', '#2c3e50');
-      
-  familyText.each(function(d) {
-      const el = d3.select(this);
-      const p = d.data.partner;
-      const m = d.data.marriage;
-      const partnerName = [p.name, p.surname].filter(Boolean).join(' ');
-      const b = m.date ? m.date : '';
-      const pl = m.place ? m.place.split(',')[0].trim() : '';
-      
-      if (partnerName) {
-         el.append('tspan').attr('x', 0).text(`⚭ ${partnerName}`);
-      } else {
-         el.append('tspan').attr('x', 0).text(`⚭`);
-      }
-      if (b || pl) {
-         el.append('tspan').attr('x', 0).attr('dy', '1.2em').text([b, pl].filter(Boolean).join(' '));
-      }
-  });
-  familyText.clone(true).lower().attr('stroke', 'white');
-}
-
 function renderD3Tree(data, container, personName, contributorName) {
   const dx = 120;
   const dy = 250;
@@ -760,4 +438,326 @@ function renderD3Tree(data, container, personName, contributorName) {
 
   infoText.clone(true).lower()
       .attr('stroke', 'white');
+}
+
+function renderD3DescendantsTree(data, container, personName, contributorName) {
+  const dx = 120;
+  const dy = 250;
+
+  const root = d3.hierarchy(data, d => d.children);
+  const tree = d3.tree().nodeSize([dx, dy]);
+
+  root.sort((a, b) => {
+    if (a.data.is_family && b.data.is_family) {
+       const aDate = a.data.marriage?.date || '';
+       const bDate = b.data.marriage?.date || '';
+       return d3.ascending(aDate, bDate);
+    }
+    const aName = a.data.name || '';
+    const bName = b.data.name || '';
+    return d3.ascending(aName, bName);
+  });
+
+  tree(root);
+
+  let x0 = Infinity;
+  let x1 = -x0;
+  let y1 = 0;
+  root.each(d => {
+    if (d.x > x1) x1 = d.x;
+    if (d.x < x0) x0 = d.x;
+    if (d.y > y1) y1 = d.y;
+  });
+
+  const minX = -dy / 3;
+  const minY = x0 - dx;
+  const maxX = y1 + 250;
+  const maxY = x1 + dx;
+
+  const treeWidth = maxX - minX;
+  const treeHeight = maxY - minY;
+
+  const availableHeight = window.innerHeight - 165;
+  const wrapper = document.getElementById('descendant-tree-wrapper');
+  if (wrapper) {
+    wrapper.style.height = `${Math.max(availableHeight, 400)}px`;
+  } else {
+    container.style.height = `${Math.max(availableHeight, 400)}px`;
+  }
+
+  const width = container.clientWidth || 900;
+  const height = container.clientHeight || 500;
+
+  const svg = d3.select(container).append('svg')
+      .attr('width', width)
+      .attr('height', height)
+      .attr('viewBox', [0, 0, width, height])
+      .attr('style', 'width: 100%; height: 100%; font: 14px sans-serif; cursor: grab;');
+
+  const g = svg.append('g');
+
+  const minScale = Math.min(1, width / treeWidth, height / treeHeight);
+
+  const zoom = d3.zoom()
+      .scaleExtent([minScale, 4])
+      .translateExtent([[minX, minY], [maxX, maxY]])
+      .on('zoom', (e) => {
+        g.attr('transform', e.transform);
+      });
+
+  svg.call(zoom);
+
+  const initialScale = minScale;
+  const tx = (width - treeWidth * initialScale) / 2 - minX * initialScale;
+  const ty = (height - treeHeight * initialScale) / 2 - minY * initialScale;
+  const initialTransform = d3.zoomIdentity.translate(tx, ty).scale(initialScale);
+  svg.call(zoom.transform, initialTransform);
+
+  d3.select('#btn-descendant-zoom-in').on('click', null).on('click', () => {
+    svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+  });
+  d3.select('#btn-descendant-zoom-out').on('click', null).on('click', () => {
+    svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.3);
+  });
+
+  d3.select('#btn-descendant-download-svg').on('click', null).on('click', () => {
+    const originalTransform = g.attr('transform');
+    g.attr('transform', null);
+
+    const bbox = g.node().getBBox();
+    const padding = 20;
+    const headerHeight = 50;
+    const footerHeight = 40;
+
+    const exportX = bbox.x - padding;
+    const exportY = bbox.y - padding - headerHeight;
+    const exportWidth = bbox.width + padding * 2;
+    const exportHeight = bbox.height + padding * 2 + headerHeight + footerHeight;
+
+    const vb = svg.property('viewBox').baseVal;
+    const originalViewBox = `${vb.x} ${vb.y} ${vb.width} ${vb.height}`;
+    const originalWidth = svg.attr('width');
+    const originalHeight = svg.attr('height');
+
+    svg.attr('viewBox', `${exportX} ${exportY} ${exportWidth} ${exportHeight}`);
+    svg.attr('width', exportWidth);
+    svg.attr('height', exportHeight);
+
+    const bg = svg.insert('rect', ':first-child')
+        .attr('class', 'export-only')
+        .attr('x', exportX)
+        .attr('y', exportY)
+        .attr('width', exportWidth)
+        .attr('height', exportHeight)
+        .attr('fill', 'white');
+
+    const overlay = svg.append('g').attr('class', 'export-only');
+
+    const p = new URLSearchParams();
+    p.set('t', 'person');
+    if (data.name) p.set('n', data.name);
+    if (data.surname) p.set('sn', data.surname);
+    if (data.date_of_birth) p.set('dob', data.date_of_birth);
+    p.set('ex', '1');
+    const rootUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch(p);
+
+    overlay.append('a')
+        .attr('href', rootUrl)
+        .attr('target', '_blank')
+        .append('text')
+        .attr('x', exportX + padding)
+        .attr('y', exportY + padding + 15)
+        .attr('font-size', '18px')
+        .attr('font-weight', 'bold')
+        .attr('fill', '#3498db')
+        .text(`${t('tree_descendants_of')} ${personName}`);
+
+    const indexUrl = window.location.origin + window.location.pathname;
+    overlay.append('a')
+        .attr('href', indexUrl)
+        .attr('target', '_blank')
+        .append('text')
+        .attr('x', exportX + exportWidth - padding)
+        .attr('y', exportY + padding + 15)
+        .attr('text-anchor', 'end')
+        .attr('font-size', '14px')
+        .attr('fill', '#3498db')
+        .text(t('site_title'));
+
+    if (contributorName) {
+        const sourceLabel = overlay.append('text')
+            .attr('x', exportX + padding)
+            .attr('y', exportY + exportHeight - padding)
+            .attr('font-size', '14px')
+            .attr('fill', '#555')
+            .text(`${t('tree_source')}: `);
+
+        const labelWidth = sourceLabel.node().getComputedTextLength();
+        const contribUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', contributor: contributorName });
+        overlay.append('a')
+            .attr('href', contribUrl)
+            .attr('target', '_blank')
+            .append('text')
+            .attr('x', exportX + padding + labelWidth)
+            .attr('y', exportY + exportHeight - padding)
+            .attr('font-size', '14px')
+            .attr('fill', '#3498db')
+            .text(`${t('col_contributor')} ${contributorName}`);
+    }
+
+    overlay.append('text')
+        .attr('x', exportX + exportWidth - padding)
+        .attr('y', exportY + exportHeight - padding)
+        .attr('text-anchor', 'end')
+        .attr('font-size', '14px')
+        .attr('fill', '#555')
+        .text(new Date().toLocaleString(document.documentElement.lang || 'en'));
+
+    const svgNode = svg.node();
+    const serializer = new XMLSerializer();
+    let source = serializer.serializeToString(svgNode);
+    if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+    svg.selectAll('.export-only').remove();
+    svg.attr('viewBox', originalViewBox);
+    svg.attr('width', originalWidth);
+    svg.attr('height', originalHeight);
+    g.attr('transform', originalTransform);
+
+    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = (personName || 'descendants').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.download = `descendants_${safeName}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
+
+  const link = g.append('g')
+      .attr('fill', 'none')
+      .attr('stroke', '#ccc')
+      .attr('stroke-width', 2)
+    .selectAll('path')
+    .data(root.links())
+    .join('path')
+      .attr('d', d3.linkHorizontal()
+          .x(d => d.y)
+          .y(d => d.x));
+
+  const node = g.append('g')
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-width', 3)
+    .selectAll('g')
+    .data(root.descendants())
+    .join('g')
+      .attr('transform', d => `translate(${d.y},${d.x})`);
+
+  node.filter(d => !d.data.is_family)
+      .append('circle')
+      .attr('fill', d => d.data.sex === 'm' ? '#3498db' : (d.data.sex === 'f' ? '#e83e8c' : '#999'))
+      .attr('r', 5);
+
+  node.filter(d => d.data.is_family)
+      .append('rect')
+      .attr('x', -3)
+      .attr('y', -3)
+      .attr('width', 6)
+      .attr('height', 6)
+      .attr('fill', '#f1c40f');
+
+  const personNode = node.filter(d => !d.data.is_family);
+  const linkNode = personNode.append('a')
+      .attr('href', d => {
+          const params = new URLSearchParams();
+          params.set('t', 'person');
+          if (d.data.name) params.set('n', d.data.name);
+          if (d.data.surname) params.set('sn', d.data.surname);
+          if (d.data.date_of_birth) params.set('dob', d.data.date_of_birth);
+          params.set('ex', '1');
+          return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
+      })
+      .attr('target', '_blank');
+
+  linkNode.append('text')
+      .attr('dy', '-0.8em')
+      .attr('x', 0)
+      .attr('text-anchor', 'middle')
+      .attr('font-weight', 'bold')
+      .attr('fill', '#3498db')
+      .text(d => [d.data.name, d.data.surname].filter(Boolean).join(' '))
+    .clone(true).lower()
+      .attr('stroke', 'white');
+
+  const infoText = personNode.append('text')
+      .attr('dy', '1.4em')
+      .attr('x', 0)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#555')
+      .attr('font-size', '12px');
+
+  infoText.each(function(d) {
+      const el = d3.select(this);
+      const b = d.data.date_of_birth ? d.data.date_of_birth : '';
+      const p = d.data.place_of_birth ? d.data.place_of_birth.split(',')[0].trim() : '';
+      if (b) el.append('tspan').attr('x', 0).text(b);
+      if (p) el.append('tspan').attr('x', 0).attr('dy', b ? '1.2em' : '0').text(p);
+  });
+  infoText.clone(true).lower().attr('stroke', 'white');
+
+  const familyNode = node.filter(d => d.data.is_family);
+  const familyLink = familyNode.append('a')
+      .attr('href', d => {
+          const params = new URLSearchParams();
+          params.set('t', 'family');
+          const person = d.parent.data;
+          const partner = d.data.partner;
+
+          if (person.sex === 'm' || (person.sex !== 'f' && !partner.sex)) {
+             if (person.name) params.set('hn', person.name);
+             if (person.surname) params.set('hsn', person.surname);
+             if (partner.name) params.set('wn', partner.name);
+             if (partner.surname) params.set('wsn', partner.surname);
+          } else {
+             if (partner.name) params.set('hn', partner.name);
+             if (partner.surname) params.set('hsn', partner.surname);
+             if (person.name) params.set('wn', person.name);
+             if (person.surname) params.set('wsn', person.surname);
+          }
+          if (contributorName) params.set('c', contributorName);
+          params.set('ex', '1');
+          return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
+      })
+      .attr('target', '_blank');
+
+  const familyText = familyLink.append('text')
+      .attr('dy', '-0.8em')
+      .attr('x', 0)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '12px')
+      .attr('fill', '#2c3e50');
+
+  familyText.each(function(d) {
+      const el = d3.select(this);
+      const p = d.data.partner;
+      const m = d.data.marriage;
+      const partnerName = [p.name, p.surname].filter(Boolean).join(' ');
+      const b = m.date ? m.date : '';
+      const pl = m.place ? m.place.split(',')[0].trim() : '';
+
+      if (partnerName) {
+         el.append('tspan').attr('x', 0).text(`⚭ ${partnerName}`);
+      } else {
+         el.append('tspan').attr('x', 0).text(`⚭`);
+      }
+      if (b || pl) {
+         el.append('tspan').attr('x', 0).attr('dy', '1.2em').text([b, pl].filter(Boolean).join(' '));
+      }
+  });
+  familyText.clone(true).lower().attr('stroke', 'white');
 }
