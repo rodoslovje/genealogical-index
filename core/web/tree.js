@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './config.js';
-import { toUnicodeSearch } from './url.js';
+import { toUnicodeSearch, toUnicodeHref } from './url.js';
 import { t } from './i18n.js';
 
 export function renderAncestorsPage() {
@@ -14,13 +14,16 @@ export function renderAncestorsPage() {
 
   const container = document.getElementById('ancestor-tree-container');
   const controls = document.getElementById('ancestor-tree-controls');
+  const sourceEl = document.getElementById('ancestor-tree-source');
 
-  document.getElementById('btn-zoom-in').innerHTML = `➕ ${t('tree_zoom_in')}`;
-  document.getElementById('btn-zoom-out').innerHTML = `➖ ${t('tree_zoom_out')}`;
-  document.getElementById('btn-zoom-reset').innerHTML = `🔄 ${t('tree_reset')}`;
+  document.getElementById('btn-zoom-in').innerHTML = `➕`;
+  document.getElementById('btn-zoom-in').title = t('tree_zoom_in');
+  document.getElementById('btn-zoom-out').innerHTML = `➖`;
+  document.getElementById('btn-zoom-out').title = t('tree_zoom_out');
   document.getElementById('btn-download-svg').title = t('tree_download_svg');
 
   controls.style.display = 'none';
+  if (sourceEl) sourceEl.style.display = 'none';
   container.innerHTML = `<p style="padding: 20px;">${t('tree_loading')}</p>`;
 
   const apiParams = new URLSearchParams();
@@ -42,6 +45,10 @@ export function renderAncestorsPage() {
         return;
       }
       controls.style.display = 'flex';
+      if (sourceEl && c) {
+        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', contributor: c })}" data-spa-nav>${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
+        sourceEl.style.display = 'block';
+      }
       renderD3Tree(data, container, personName, c);
     })
     .catch(err => {
@@ -51,7 +58,7 @@ export function renderAncestorsPage() {
 }
 
 function renderD3Tree(data, container, personName, contributorName) {
-  const dx = 55;
+  const dx = 85;
   const dy = 250;
 
   const root = d3.hierarchy(data, d => d.parents);
@@ -72,38 +79,63 @@ function renderD3Tree(data, container, personName, contributorName) {
 
   let x0 = Infinity;
   let x1 = -x0;
+  let y1 = 0;
   root.each(d => {
     if (d.x > x1) x1 = d.x;
     if (d.x < x0) x0 = d.x;
+    if (d.y > y1) y1 = d.y;
   });
 
-  const width = Math.max(900, container.clientWidth);
-  const height = x1 - x0 + dx * 2;
+  const minX = -dy / 3;
+  const minY = x0 - dx;
+  const maxX = y1 + 250;
+  const maxY = x1 + dx;
+
+  const treeWidth = maxX - minX;
+  const treeHeight = maxY - minY;
+
+  // Calculate height to fill the available screen space (viewport minus exact headers/footer/margins)
+  const availableHeight = window.innerHeight - 165;
+  const wrapper = document.getElementById('ancestor-tree-wrapper');
+  if (wrapper) {
+    wrapper.style.height = `${Math.max(availableHeight, 400)}px`;
+  } else {
+    container.style.height = `${Math.max(availableHeight, 400)}px`;
+  }
+
+  const width = container.clientWidth || 900;
+  const height = container.clientHeight || 500;
 
   const svg = d3.select(container).append('svg')
       .attr('width', width)
       .attr('height', height)
-      .attr('viewBox', [-dy / 3, x0 - dx, width, height])
-      .attr('style', 'max-width: 100%; height: auto; font: 14px sans-serif; cursor: grab;');
+      .attr('viewBox', [0, 0, width, height])
+      .attr('style', 'width: 100%; height: 100%; font: 14px sans-serif; cursor: grab;');
 
   const g = svg.append('g');
 
+  const minScale = Math.min(1, width / treeWidth, height / treeHeight);
+
   const zoom = d3.zoom()
-      .scaleExtent([0.1, 4])
+      .scaleExtent([minScale, 4])
+      .translateExtent([[minX, minY], [maxX, maxY]])
       .on('zoom', (e) => {
         g.attr('transform', e.transform);
       });
 
   svg.call(zoom);
 
+  const initialScale = minScale;
+  const tx = (width - treeWidth * initialScale) / 2 - minX * initialScale;
+  const ty = (height - treeHeight * initialScale) / 2 - minY * initialScale;
+  const initialTransform = d3.zoomIdentity.translate(tx, ty).scale(initialScale);
+  svg.call(zoom.transform, initialTransform);
+
   d3.select('#btn-zoom-in').on('click', null).on('click', () => {
     svg.transition().duration(300).call(zoom.scaleBy, 1.3);
   });
   d3.select('#btn-zoom-out').on('click', null).on('click', () => {
     svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.3);
-  });
-  d3.select('#btn-zoom-reset').on('click', null).on('click', () => {
-    svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
   });
 
   d3.select('#btn-download-svg').on('click', null).on('click', () => {
@@ -241,6 +273,49 @@ function renderD3Tree(data, container, personName, contributorName) {
           .x(d => d.y)
           .y(d => d.x));
 
+  const marriageLinks = g.append('g')
+      .attr('fill', 'none')
+      .attr('stroke', '#ccc')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '3 3')
+    .selectAll('line')
+    .data(root.descendants().filter(d => d.children && d.children.length === 2 && d.data.parents_marriage))
+    .join('line')
+      .attr('x1', d => d.children[0].y)
+      .attr('y1', d => d.children[0].x)
+      .attr('x2', d => d.children[1].y)
+      .attr('y2', d => d.children[1].x);
+
+  const marriageNode = g.append('g')
+    .selectAll('g')
+    .data(root.descendants().filter(d => d.children && d.children.length === 2 && d.data.parents_marriage))
+    .join('g')
+      .attr('transform', d => `translate(${d.children[0].y},${d.x})`);
+
+  const marriageText = marriageNode.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '11px')
+      .attr('fill', '#777');
+
+  marriageText.each(function(d) {
+      const el = d3.select(this);
+      const m = d.data.parents_marriage;
+      const b = m.date ? m.date : '';
+      const p = m.place ? m.place.split(',')[0].trim() : '';
+
+      if (b && p) {
+          el.append('tspan').attr('x', 0).attr('dy', '-0.2em').text(`⚭ ${b}`);
+          el.append('tspan').attr('x', 0).attr('dy', '1.2em').text(p);
+      } else {
+          el.append('tspan').attr('x', 0).attr('dy', '0.3em').text(`⚭ ${b} ${p}`.trim());
+      }
+  });
+
+  marriageText.clone(true).lower()
+      .attr('stroke', '#fafafa')
+      .attr('stroke-width', 4)
+      .attr('stroke-linejoin', 'round');
+
   const node = g.append('g')
       .attr('stroke-linejoin', 'round')
       .attr('stroke-width', 3)
@@ -278,7 +353,7 @@ function renderD3Tree(data, container, personName, contributorName) {
       .attr('stroke', 'white');
 
   const infoText = node.append('text')
-      .attr('dy', '1.2em')
+      .attr('dy', '1.4em')
       .attr('x', 0)
       .attr('text-anchor', 'middle')
       .attr('fill', '#555')
@@ -286,7 +361,7 @@ function renderD3Tree(data, container, personName, contributorName) {
 
   infoText.each(function(d) {
       const el = d3.select(this);
-      const b = d.data.date_of_birth ? `*${d.data.date_of_birth}` : '';
+      const b = d.data.date_of_birth ? d.data.date_of_birth : '';
       const p = d.data.place_of_birth ? d.data.place_of_birth.split(',')[0].trim() : '';
 
       if (b) {

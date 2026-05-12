@@ -766,6 +766,42 @@ def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
 
                     if parent_node:
                         node["parents"].append(parent_node)
+
+                if len(node["parents"]) == 2:
+                    p1 = node["parents"][0]
+                    p2 = node["parents"][1]
+
+                    if p1.get("sex") == "m" or p2.get("sex") == "f":
+                        h_node, w_node = p1, p2
+                    elif p1.get("sex") == "f" or p2.get("sex") == "m":
+                        h_node, w_node = p2, p1
+                    else:
+                        h_node, w_node = p1, p2
+
+                    q = db.query(models.Family).filter(
+                        models.Family.contributor == root_person.contributor
+                    )
+                    filter_count = 0
+                    if h_node.get("surname"):
+                        q = q.filter(models.Family.husband_surname == h_node["surname"])
+                        filter_count += 1
+                    if h_node.get("name"):
+                        q = q.filter(models.Family.husband_name == h_node["name"])
+                        filter_count += 1
+                    if w_node.get("surname"):
+                        q = q.filter(models.Family.wife_surname == w_node["surname"])
+                        filter_count += 1
+                    if w_node.get("name"):
+                        q = q.filter(models.Family.wife_name == w_node["name"])
+                        filter_count += 1
+
+                    if filter_count >= 2:
+                        fam = q.first()
+                        if fam and (fam.date_of_marriage or fam.place_of_marriage):
+                            node["parents_marriage"] = {
+                                "date": fam.date_of_marriage,
+                                "place": fam.place_of_marriage,
+                            }
             except (json.JSONDecodeError, TypeError):
                 pass
 

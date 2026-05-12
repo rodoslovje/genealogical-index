@@ -237,7 +237,7 @@ function makePersonLink(name, surname, display) {
   return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${safeDisplay}</a>`;
 }
 
-function renderParentPair(parentsJson, labelKey) {
+function renderParentPair(parentsJson, labelKey, rootPerson = null) {
   if (!parentsJson) return { html: '', count: 0 };
   try {
     const pList = typeof parentsJson === 'string' ? JSON.parse(parentsJson) : parentsJson;
@@ -275,10 +275,24 @@ function renderParentPair(parentsJson, labelKey) {
     const headerLabel = labelKey ? t(labelKey) : t('col_parents');
     let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">`;
     const hasSearchFields = famParams.has('hn') || famParams.has('hsn') || famParams.has('wn') || famParams.has('wsn');
+
+    let treeBtn = '';
+    if (rootPerson && (rootPerson.name || rootPerson.surname)) {
+      const p = new URLSearchParams();
+      p.set('t', 'ancestors');
+      if (rootPerson.name) p.set('n', rootPerson.name);
+      if (rootPerson.surname) p.set('sn', rootPerson.surname);
+      const dob = rootPerson.date_of_birth || childYearOf(rootPerson);
+      if (dob) p.set('dob', dob);
+      if (rootPerson.contributor) p.set('c', rootPerson.contributor);
+      const treeUrl = toUnicodeHref(p);
+      treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_ancestors_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌳</a>`;
+    }
+
     if (hasSearchFields) {
-      htmlStr += `<a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight: 600;">${headerLabel}: 👪</a><br>`;
+      htmlStr += `<a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight: 600;">${headerLabel}:</a>${treeBtn}<br>`;
     } else {
-      htmlStr += `<span style="font-weight: 600;">${headerLabel}:</span><br>`;
+      htmlStr += `<span style="font-weight: 600;">${headerLabel}:</span>${treeBtn}<br>`;
     }
     if (fName || fSur) htmlStr += `${makePersonLink(fName, fSur, fDisplay)}<br>`;
     if (mName || mSur) htmlStr += `${makePersonLink(mName, mSur, mDisplay)}`;
@@ -351,8 +365,18 @@ export function formatSpecialCell(col, row) {
   }
 
   if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
-    const husband = renderParentPair(row.husband_parents, 'label_husband');
-    const wife = renderParentPair(row.wife_parents, 'label_wife');
+    const husband = renderParentPair(row.husband_parents, 'label_husband', {
+      name: row.husband_name,
+      surname: row.husband_surname,
+      date_of_birth: row.husband_birth,
+      contributor: row.contributor
+    });
+    const wife = renderParentPair(row.wife_parents, 'label_wife', {
+      name: row.wife_name,
+      surname: row.wife_surname,
+      date_of_birth: row.wife_birth,
+      contributor: row.contributor
+    });
     const count = husband.count + wife.count;
     if (count > 0) {
       return `<details class="expandable-cell">
