@@ -726,6 +726,7 @@ def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
                 "id": person_obj.id,
                 "name": person_obj.name,
                 "surname": person_obj.surname,
+                "sex": person_obj.sex,
                 "date_of_birth": person_obj.date_of_birth,
                 "place_of_birth": person_obj.place_of_birth,
                 "parents": [],
@@ -736,6 +737,7 @@ def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
                 "id": None,
                 "name": person_obj.get("name"),
                 "surname": person_obj.get("surname"),
+                "sex": person_obj.get("sex"),
                 "date_of_birth": person_obj.get("date_of_birth")
                 or person_obj.get("year")
                 or (

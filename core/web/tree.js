@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './config.js';
+import { toUnicodeSearch } from './url.js';
 
 export function showAncestorTree(personId, personName) {
   let modal = document.getElementById('ancestor-modal');
@@ -10,6 +11,12 @@ export function showAncestorTree(personId, personName) {
       <div class="modal-content ancestor-modal-content">
         <span class="close-modal">&times;</span>
         <h2 id="ancestor-modal-title" style="margin-top: 0;"></h2>
+        <div id="ancestor-tree-controls" style="margin-bottom: 10px; display: none; gap: 8px;">
+          <button id="btn-zoom-in" class="export-btn" style="padding: 4px 10px;">➕ Zoom In</button>
+          <button id="btn-zoom-out" class="export-btn" style="padding: 4px 10px;">➖ Zoom Out</button>
+          <button id="btn-zoom-reset" class="export-btn" style="padding: 4px 10px;">🔄 Reset</button>
+          <button id="btn-download-svg" class="export-btn" style="padding: 4px 10px; margin-left: auto;" title="Download SVG"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>SVG</button>
+        </div>
         <div id="ancestor-tree-container"></div>
       </div>
     `;
@@ -26,6 +33,8 @@ export function showAncestorTree(personId, personName) {
 
   document.getElementById('ancestor-modal-title').textContent = `Ancestors of ${personName}`;
   const container = document.getElementById('ancestor-tree-container');
+  const controls = document.getElementById('ancestor-tree-controls');
+  controls.style.display = 'none';
   container.innerHTML = '<p style="padding: 20px;">Loading...</p>';
   modal.style.display = 'block';
 
@@ -41,7 +50,8 @@ export function showAncestorTree(personId, personName) {
         container.innerHTML = '<p style="padding: 20px;">Error: D3.js library not loaded.</p>';
         return;
       }
-      renderD3Tree(data, container);
+      controls.style.display = 'flex';
+      renderD3Tree(data, container, personName);
     })
     .catch(err => {
       console.error(err);
@@ -49,8 +59,8 @@ export function showAncestorTree(personId, personName) {
     });
 }
 
-function renderD3Tree(data, container) {
-  const dx = 40;
+function renderD3Tree(data, container, personName) {
+  const dx = 55;
   const dy = 250;
 
   const root = d3.hierarchy(data, d => d.parents);
@@ -78,9 +88,48 @@ function renderD3Tree(data, container) {
       .attr('width', width)
       .attr('height', height)
       .attr('viewBox', [-dy / 3, x0 - dx, width, height])
-      .attr('style', 'max-width: 100%; height: auto; font: 14px sans-serif;');
+      .attr('style', 'max-width: 100%; height: auto; font: 14px sans-serif; cursor: grab;');
 
   const g = svg.append('g');
+
+  const zoom = d3.zoom()
+      .scaleExtent([0.1, 4])
+      .on('zoom', (e) => {
+        g.attr('transform', e.transform);
+      });
+
+  svg.call(zoom);
+
+  d3.select('#btn-zoom-in').on('click', () => {
+    svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+  });
+  d3.select('#btn-zoom-out').on('click', () => {
+    svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.3);
+  });
+  d3.select('#btn-zoom-reset').on('click', () => {
+    svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+  });
+
+  d3.select('#btn-download-svg').on('click', () => {
+    const svgNode = svg.node();
+    const serializer = new XMLSerializer();
+    let source = serializer.serializeToString(svgNode);
+    if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = (personName || 'ancestors').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.download = `ancestors_${safeName}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
 
   const link = g.append('g')
       .attr('fill', 'none')
@@ -102,29 +151,59 @@ function renderD3Tree(data, container) {
       .attr('transform', d => `translate(${d.y},${d.x})`);
 
   node.append('circle')
-      .attr('fill', d => d.children ? '#3498db' : '#999')
+      .attr('fill', d => d.data.sex === 'm' ? '#3498db' : (d.data.sex === 'f' ? '#e83e8c' : '#999'))
       .attr('r', 5);
 
-  node.append('text')
-      .attr('dy', '-0.3em')
-      .attr('x', d => d.children ? -8 : 8)
-      .attr('text-anchor', d => d.children ? 'end' : 'start')
+  const linkNode = node.append('a')
+      .attr('href', d => {
+          const params = new URLSearchParams();
+          params.set('t', 'person');
+          if (d.data.name) params.set('n', d.data.name);
+          if (d.data.surname) params.set('sn', d.data.surname);
+          if (d.data.date_of_birth) {
+             const m = String(d.data.date_of_birth).match(/\d{4}/);
+             if (m) params.set('dob', m[0]);
+          }
+          params.set('ex', '1');
+          return '?' + toUnicodeSearch(params);
+      })
+      .attr('target', '_blank');
+
+  linkNode.append('text')
+      .attr('dy', '-0.8em')
+      .attr('x', 0)
+      .attr('text-anchor', 'middle')
       .attr('font-weight', 'bold')
+      .attr('fill', '#3498db')
       .text(d => [d.data.name, d.data.surname].filter(Boolean).join(' '))
     .clone(true).lower()
       .attr('stroke', 'white');
 
-  node.append('text')
+  const infoText = node.append('text')
       .attr('dy', '1.2em')
-      .attr('x', d => d.children ? -8 : 8)
-      .attr('text-anchor', d => d.children ? 'end' : 'start')
+      .attr('x', 0)
+      .attr('text-anchor', 'middle')
       .attr('fill', '#555')
-      .attr('font-size', '12px')
-      .text(d => {
-          let b = d.data.date_of_birth ? `*${d.data.date_of_birth}` : '';
-          let p = d.data.place_of_birth ? ` ${d.data.place_of_birth}` : '';
-          return (b + p).trim();
-      })
-    .clone(true).lower()
+      .attr('font-size', '12px');
+
+  infoText.each(function(d) {
+      const el = d3.select(this);
+      const b = d.data.date_of_birth ? `*${d.data.date_of_birth}` : '';
+      const p = d.data.place_of_birth ? d.data.place_of_birth.split(',')[0].trim() : '';
+
+      if (b) {
+          el.append('tspan')
+            .attr('x', 0)
+            .text(b);
+      }
+      if (p) {
+          el.append('tspan')
+            .attr('x', 0)
+            .attr('dy', b ? '1.2em' : '0')
+            .text(p);
+      }
+  });
+
+  infoText.clone(true).lower()
       .attr('stroke', 'white');
 }
