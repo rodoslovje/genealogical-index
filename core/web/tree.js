@@ -17,6 +17,12 @@ export function renderDescendantsPage() {
   const container = document.getElementById('descendant-tree-container');
   const controls = document.getElementById('descendant-tree-controls');
   const sourceEl = document.getElementById('descendant-tree-source');
+  const wrapper = document.getElementById('descendant-tree-wrapper');
+
+  if (wrapper) {
+    const availableHeight = window.innerHeight - 165;
+    wrapper.style.height = `${Math.max(availableHeight, 400)}px`;
+  }
 
   document.getElementById('btn-descendant-zoom-in').innerHTML = `➕`;
   document.getElementById('btn-descendant-zoom-in').title = t('tree_zoom_in');
@@ -72,6 +78,12 @@ export function renderAncestorsPage() {
   const container = document.getElementById('ancestor-tree-container');
   const controls = document.getElementById('ancestor-tree-controls');
   const sourceEl = document.getElementById('ancestor-tree-source');
+  const wrapper = document.getElementById('ancestor-tree-wrapper');
+
+  if (wrapper) {
+    const availableHeight = window.innerHeight - 165;
+    wrapper.style.height = `${Math.max(availableHeight, 400)}px`;
+  }
 
   document.getElementById('btn-zoom-in').innerHTML = `➕`;
   document.getElementById('btn-zoom-in').title = t('tree_zoom_in');

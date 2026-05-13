@@ -598,7 +598,7 @@ async function renderMatchesPage(contributor, withPartner) {
       const safeContributor = String(contributor).replace(/</g, '&lt;').replace(/>/g, '&gt;');
       document.title = `${t('no_results')} | ${t('site_title')}`;
       container.innerHTML = `<div class="matches-page-header">
-        <h2 class="matches-page-title">${t('col_contributor')}: ${safeContributor}</h2>
+        <h2 class="matches-page-title">${safeContributor} - ${t('col_contributor').toLowerCase()}</h2>
       </div>
       <p>${t('no_results')}</p>`;
       return;
@@ -611,17 +611,17 @@ async function renderMatchesPage(contributor, withPartner) {
         const safePartner = String(withPartner).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
-          <h2 class="matches-page-title">${safePartner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${safeContributor}</a></h2>
+          <h2 class="matches-page-title">${safePartner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${safeContributor}</a> - ${t('col_matches').toLowerCase()}</h2>
         </div>
         <p>${t('no_results')}</p>`;
         return;
       }
-      document.title = `${withPartner} × ${contributor} | ${t('site_title')}`;
+      document.title = `${withPartner} × ${contributor} - ${t('col_matches').toLowerCase()} | ${t('site_title')}`;
       await renderMatchDetail(contributor, withPartner, contribData, container);
       return;
     }
 
-    document.title = `${t('col_contributor')}: ${contributor} | ${t('site_title')}`;
+    document.title = `${contributor} - ${t('col_contributor').toLowerCase()} | ${t('site_title')}`;
 
     const urlMap = getContributorUrlMap();
     const url = urlMap[contributor];
@@ -644,7 +644,7 @@ async function renderMatchesPage(contributor, withPartner) {
     }
 
     const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${t('col_contributor')}: ${contributor}</h2>
+      <h2 class="matches-page-title">${contributor} - ${t('col_contributor').toLowerCase()}</h2>
     </div>
     ${statsHtml}
     ${urlHtml}
@@ -760,7 +760,7 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
 
   const baseHtml = `
     <div class="matches-page-header">
-      <h2 class="matches-page-title">${partner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${contributor}</a></h2>
+      <h2 class="matches-page-title">${partner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${contributor}</a> - ${t('col_matches').toLowerCase()}</h2>
     </div>
     <p>${introText}</p>
     ${urlsHtml}`;
