@@ -935,6 +935,8 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
         else if (state.secondary?.column === 'confidence') confIndicator = state.secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
 
         const groupRows = group.map((r, idx) => {
+          r.record_a.contributor = contributor;
+          r.record_b.contributor = partner;
           const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
           const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
           const bCells = fields.map(({ f }) => makeCell(r.record_b, f)).join('');
