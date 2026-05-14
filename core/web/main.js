@@ -408,7 +408,8 @@ document.addEventListener('click', (e) => {
   // Let browser handle Ctrl/Cmd/middle-click natively (opens new tab)
   if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
   e.preventDefault();
-  const url = new URL(link.href, window.location.href);
+  const href = typeof link.href === 'string' ? link.href : link.getAttribute('href');
+  const url = new URL(href, window.location.href);
   const newUrlStr = url.pathname + (url.searchParams.toString() ? '?' + toUnicodeSearch(url.searchParams) : '');
   history.pushState(null, '', newUrlStr);
   navigateToURL(url.search);

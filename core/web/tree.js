@@ -248,9 +248,8 @@ function renderD3Tree(data, container, personName, contributorName) {
     p.set('t', 'person');
     if (data.name) p.set('n', data.name);
     if (data.surname) p.set('sn', data.surname);
-    if (data.date_of_birth) {
-       p.set('dob', data.date_of_birth);
-    }
+    if (data.date_of_birth) p.set('dob', data.date_of_birth);
+    if (contributorName) p.set('c', contributorName);
     p.set('ex', '1');
     const rootUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch(p);
 
@@ -434,9 +433,8 @@ function renderD3Tree(data, container, personName, contributorName) {
           params.set('t', 'person');
           if (d.data.name) params.set('n', d.data.name);
           if (d.data.surname) params.set('sn', d.data.surname);
-          if (d.data.date_of_birth) {
-             params.set('dob', d.data.date_of_birth);
-          }
+          if (d.data.date_of_birth) params.set('dob', d.data.date_of_birth);
+          if (contributorName) params.set('c', contributorName);
           params.set('ex', '1');
           return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
       })
@@ -634,6 +632,7 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
     if (data.name) p.set('n', data.name);
     if (data.surname) p.set('sn', data.surname);
     if (data.date_of_birth) p.set('dob', data.date_of_birth);
+    if (contributorName) p.set('c', contributorName);
     p.set('ex', '1');
     const rootUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch(p);
 
@@ -762,6 +761,7 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
           if (d.data.name) params.set('n', d.data.name);
           if (d.data.surname) params.set('sn', d.data.surname);
           if (d.data.date_of_birth) params.set('dob', d.data.date_of_birth);
+          if (contributorName) params.set('c', contributorName);
           params.set('ex', '1');
           return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
       })
