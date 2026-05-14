@@ -252,8 +252,13 @@ export function activateTab(targetTab) {
     document.body.classList.remove('contributors-view');
   }
 
-  if (targetTab === 'tab-ancestors') renderAncestorsPage();
-  if (targetTab === 'tab-descendants') renderDescendantsPage();
+  if (targetTab === 'tab-ancestors') {
+    renderAncestorsPage();
+  } else if (targetTab === 'tab-descendants') {
+    renderDescendantsPage();
+  } else if (targetTab !== 'tab-contributors') {
+    document.title = t('site_title');
+  }
 
   const resultsMap = {
     'tab-general': 'general-results',

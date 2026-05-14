@@ -12,7 +12,9 @@ export function renderDescendantsPage() {
   const c = params.get('c') || '';
   const personName = [n, sn].filter(Boolean).join(' ');
 
-  document.getElementById('descendant-page-title').textContent = `${personName} - ${t('tree_descendants_title')}`;
+  const pageTitle = personName ? `${personName} - ${t('tree_descendants_title')}` : t('tree_descendants_title');
+  document.getElementById('descendant-page-title').textContent = pageTitle;
+  document.title = `${pageTitle} | ${t('site_title')}`;
 
   const container = document.getElementById('descendant-tree-container');
   const controls = document.getElementById('descendant-tree-controls');
@@ -73,7 +75,9 @@ export function renderAncestorsPage() {
   const c = params.get('c') || '';
   const personName = [n, sn].filter(Boolean).join(' ');
 
-  document.getElementById('ancestor-page-title').textContent = `${personName} - ${t('tree_ancestors_title')}`;
+  const pageTitle = personName ? `${personName} - ${t('tree_ancestors_title')}` : t('tree_ancestors_title');
+  document.getElementById('ancestor-page-title').textContent = pageTitle;
+  document.title = `${pageTitle} | ${t('site_title')}`;
 
   const container = document.getElementById('ancestor-tree-container');
   const controls = document.getElementById('ancestor-tree-controls');
