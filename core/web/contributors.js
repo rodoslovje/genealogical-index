@@ -8,6 +8,24 @@ import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
 
 const contributorColumns = ['contributor_ID', 'total_persons', 'total_families', 'total', 'total_links', 'last_modified', 'matches'];
+const MATRICULA_SUFFIX = '-matricula';
+const baseContributorName = (name) => name && name.endsWith(MATRICULA_SUFFIX)
+  ? name.slice(0, -MATRICULA_SUFFIX.length)
+  : name;
+
+// Expands aggregated contributor rows back to underlying DB contributor IDs
+// (e.g. ["Kovačič", "Kovačič-matricula"]) so surname-cloud / search queries
+// include matricula records.
+function expandContributorNames(rows) {
+  const names = [];
+  rows.forEach(r => {
+    if (r._tree)      names.push(r._tree.contributor_ID);
+    if (r._matricula) names.push(r._matricula.contributor_ID);
+    if (!r._tree && !r._matricula) names.push(r.contributor_ID);
+  });
+  return names;
+}
+
 let cachedData = null;
 let fetchPromise = null;
 let chartInstance = null;
@@ -22,12 +40,27 @@ let matchCountsPromise = null;
 let currentMatchesData = null;
 let currentMatchesContributor = null;
 
+function _toPart(p) {
+  if (!p) return null;
+  return {
+    contributor_ID: p.name,
+    total_persons: p.persons_count || 0,
+    total_families: p.families_count || 0,
+    total: (p.persons_count || 0) + (p.families_count || 0),
+    total_links: p.links_count || 0,
+    last_modified: p.last_modified ? p.last_modified.slice(0, 10) : '',
+    _url: p.url || '',
+  };
+}
+
 function ensureData() {
   if (cachedData) return Promise.resolve(cachedData);
   if (!fetchPromise) {
     fetchPromise = fetch(`${API_BASE_URL}/api/contributors/`)
       .then(r => r.json())
       .then(metadata => {
+        // Backend returns one entry per base contributor with summed totals
+        // and an optional tree/matricula breakdown.
         cachedData = metadata.map(m => ({
           contributor_ID: m.name,
           total_persons: m.persons_count || 0,
@@ -36,6 +69,8 @@ function ensureData() {
           total_links: m.links_count || 0,
           last_modified: m.last_modified ? m.last_modified.slice(0, 10) : '',
           _url: m.url || '',
+          _tree: _toPart(m.tree),
+          _matricula: _toPart(m.matricula),
         }));
         return cachedData;
       });
@@ -80,9 +115,15 @@ export function prefetchContributors() {
 
 export function getContributorUrlMap() {
   if (!cachedData) return {};
-  return Object.fromEntries(
-    cachedData.filter(d => d._url).map(d => [d.contributor_ID, d._url])
-  );
+  const map = {};
+  cachedData.forEach(d => {
+    if (d._url) map[d.contributor_ID] = d._url;
+    // Also map raw -matricula IDs so links from partners that still use the
+    // suffixed name resolve to the correct URL.
+    if (d._tree?._url)      map[d._tree.contributor_ID]      = d._tree._url;
+    if (d._matricula?._url) map[d._matricula.contributor_ID] = d._matricula._url;
+  });
+  return map;
 }
 
 function setEl(id, value) {
@@ -180,7 +221,7 @@ export async function renderContributors() {
       _contributor_href: toUnicodeHref({ t: 'contributors', contributor: d.contributor_ID })
     }));
     renderTable(tableData, 'table-contributors', contributorColumns, 'total', false);
-    loadSurnameCloud(initialFiltered.map(d => d.contributor_ID), 'surname-cloud');
+    loadSurnameCloud(expandContributorNames(initialFiltered), 'surname-cloud');
 
     const input = document.getElementById('contributors-query');
     if (input && !input.dataset.bound) {
@@ -190,12 +231,13 @@ export async function renderContributors() {
         const urlParams = new URLSearchParams(window.location.search);
         const activeContributor = urlParams.get('contributor');
         const withPartner = urlParams.get('with');
+        const activeBase = activeContributor ? baseContributorName(activeContributor) : null;
 
-        if (activeContributor && !withPartner && currentMatchesData && currentMatchesContributor === activeContributor) {
+        if (activeContributor && !withPartner && currentMatchesData && currentMatchesContributor === activeBase) {
           const filtered = q ? currentMatchesData.filter(p => p.contributor.toLowerCase().includes(q)) : currentMatchesData;
           const tableData = filtered.map(p => ({
             contributor_ID: p.contributor,
-            _match_href: toUnicodeHref({ t: 'contributors', contributor: activeContributor, with: p.contributor }),
+            _match_href: toUnicodeHref({ t: 'contributors', contributor: activeBase, with: p.contributor }),
             total_persons:  p.persons_count  || 0,
             total_families: p.families_count || 0,
             total:          p.total_count,
@@ -209,7 +251,7 @@ export async function renderContributors() {
             _contributor_href: toUnicodeHref({ t: 'contributors', contributor: d.contributor_ID })
           }));
           renderTable(filteredTableData, 'table-contributors', contributorColumns, 'total', false);
-          loadSurnameCloud(filtered.map(d => d.contributor_ID), 'surname-cloud');
+          loadSurnameCloud(expandContributorNames(filtered), 'surname-cloud');
         }
       });
     }
@@ -576,6 +618,53 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
   }
 }
 
+function renderContributorStats(contribData) {
+  if (!contribData) return '';
+  const tip = (key) => t(key).replace(/"/g, '&quot;');
+  const fmt = (n) => Number(n || 0).toLocaleString();
+  const tree = contribData._tree;
+  const mat  = contribData._matricula;
+
+  // Single-column grid when only one source exists (or no breakdown is interesting).
+  if (!tree || !mat) {
+    const row = (tipKey, label, value) => {
+      const a = ` title="${tip(tipKey)}"`;
+      return `<span${a}>${label}:</span><strong${a}>${value}</strong>`;
+    };
+    return `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: max-content max-content; column-gap: 16px; row-gap: 4px; justify-items: end;">
+      ${row('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons))}
+      ${row('tip_total_families', t('col_total_families'), fmt(contribData.total_families))}
+      ${row('tip_total',          t('col_total'),          fmt(contribData.total))}
+      ${row('tip_total_links',    t('col_total_links'),    fmt(contribData.total_links))}
+      ${row('tip_last_modified',  t('col_last_update'),    contribData.last_modified || '')}
+    </div>`;
+  }
+
+  // 3-value grid: Sum / Tree / Matricula.
+  const metricRow = (tipKey, label, sum, treeVal, matVal) => {
+    const a = ` title="${tip(tipKey)}"`;
+    return `<span${a}>${label}:</span>` +
+      `<strong${a}>${sum}</strong>` +
+      `<strong${a}>${treeVal}</strong>` +
+      `<strong${a}>${matVal}</strong>`;
+  };
+  const lastTree = tree.last_modified || '';
+  const lastMat  = mat.last_modified  || '';
+  const lastSum  = contribData.last_modified || '';
+
+  return `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: max-content max-content max-content max-content; column-gap: 16px; row-gap: 4px; justify-items: end;">
+    <span></span>
+    <strong>${t('col_sum')}</strong>
+    <strong>${t('col_tree')}</strong>
+    <strong>${t('col_matricula')}</strong>
+    ${metricRow('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons),  fmt(tree.total_persons),  fmt(mat.total_persons))}
+    ${metricRow('tip_total_families', t('col_total_families'), fmt(contribData.total_families), fmt(tree.total_families), fmt(mat.total_families))}
+    ${metricRow('tip_total',          t('col_total'),          fmt(contribData.total),          fmt(tree.total),          fmt(mat.total))}
+    ${metricRow('tip_total_links',    t('col_total_links'),    fmt(contribData.total_links),    fmt(tree.total_links),    fmt(mat.total_links))}
+    ${metricRow('tip_last_modified',  t('col_last_update'),    lastSum,                          lastTree,                  lastMat)}
+  </div>`;
+}
+
 async function renderMatchesPage(contributor, withPartner) {
   window.scrollTo(0, 0);
 
@@ -592,7 +681,10 @@ async function renderMatchesPage(contributor, withPartner) {
 
   try {
     await ensureData();
-    const contribData = cachedData.find(d => d.contributor_ID === contributor);
+    // Normalize: clicking through partner links may still use a -matricula
+    // suffix; aggregate rows are keyed by the base name.
+    const baseContributor = baseContributorName(contributor);
+    const contribData = cachedData.find(d => d.contributor_ID === baseContributor);
 
     if (!contribData) {
       const safeContributor = String(contributor).replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -604,67 +696,87 @@ async function renderMatchesPage(contributor, withPartner) {
       return;
     }
 
+    const displayName = baseContributor;
+    const hasTree = !!contribData._tree;
+    const hasMatricula = !!contribData._matricula;
+    const showMatchesSection = hasTree; // matches only exist for Genealogist data
+
     if (withPartner) {
-      const partnerData = cachedData.find(d => d.contributor_ID === withPartner);
+      const basePartner = baseContributorName(withPartner);
+      const partnerData = cachedData.find(d => d.contributor_ID === basePartner);
       if (!partnerData) {
-        const safeContributor = String(contributor).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeContributor = String(displayName).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const safePartner = String(withPartner).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
-          <h2 class="matches-page-title">${safePartner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${safeContributor}</a> - ${t('col_matches')}</h2>
+          <h2 class="matches-page-title">${safePartner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${safeContributor}</a> - ${t('col_matches')}</h2>
         </div>
         <p>${t('no_results')}</p>`;
         return;
       }
-      document.title = `${withPartner} × ${contributor} - ${t('col_matches')} | ${t('site_title')}`;
+      document.title = `${withPartner} × ${displayName} - ${t('col_matches')} | ${t('site_title')}`;
       await renderMatchDetail(contributor, withPartner, contribData, container);
       return;
     }
 
-    document.title = `${contributor} - ${t('col_contributor')} | ${t('site_title')}`;
+    document.title = `${displayName} - ${t('col_contributor')} | ${t('site_title')}`;
 
     const urlMap = getContributorUrlMap();
-    const url = urlMap[contributor];
-    const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a></div></div>` : '';
+    const url = urlMap[displayName] || (contribData._tree?._url) || (contribData._matricula?._url);
+    const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${displayName}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a></div></div>` : '';
 
-    let statsHtml = '';
-    if (contribData) {
-      const tip = (key) => t(key).replace(/"/g, '&quot;');
-      const row = (tipKey, label, value) => {
-        const a = ` title="${tip(tipKey)}"`;
-        return `<span${a}>${label}:</span><strong${a}>${value}</strong>`;
-      };
-      statsHtml = `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: max-content max-content; column-gap: 16px; row-gap: 4px; justify-items: end;">
-        ${row('tip_total_persons', t('col_total_persons'), contribData.total_persons.toLocaleString())}
-        ${row('tip_total_families', t('col_total_families'), contribData.total_families.toLocaleString())}
-        ${row('tip_total', t('col_total'), contribData.total.toLocaleString())}
-        ${row('tip_total_links', t('col_total_links'), contribData.total_links.toLocaleString())}
-        ${row('tip_last_modified', t('col_last_update'), contribData.last_modified)}
+    const statsHtml = renderContributorStats(contribData);
+
+    let cloudSectionsHtml = '';
+    if (hasTree) {
+      cloudSectionsHtml += `<div class="surname-cloud-section" style="margin-bottom: 24px;">
+        <div class="surname-cloud-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">
+          <h3 class="section-heading" data-i18n="section_surnames" style="margin: 0; padding: 0; border: none;">${t('section_surnames')}</h3>
+        </div>
+        <p>${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}</p>
+        <div class="surname-cloud" id="contributor-surname-cloud" data-i18n-title="chart_surnames_title"></div>
+      </div>`;
+    }
+    if (hasMatricula) {
+      cloudSectionsHtml += `<div class="surname-cloud-section" style="margin-bottom: 24px;">
+        <div class="surname-cloud-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">
+          <h3 class="section-heading" data-i18n="section_surnames_matricula" style="margin: 0; padding: 0; border: none;">${t('section_surnames_matricula')}</h3>
+        </div>
+        <p>${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_matricula_outro')}</p>
+        <div class="surname-cloud" id="contributor-matricula-surname-cloud" data-i18n-title="chart_surnames_title"></div>
       </div>`;
     }
 
     const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${contributor} - ${t('col_contributor')}</h2>
+      <h2 class="matches-page-title">${displayName} - ${t('col_contributor')}</h2>
     </div>
     ${statsHtml}
     ${urlHtml}
-    <div class="surname-cloud-section" style="margin-bottom: 24px;">
-      <div class="surname-cloud-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">
-        <h3 class="section-heading" data-i18n="section_surnames" style="margin: 0; padding: 0; border: none;">${t('section_surnames')}</h3>
-      </div>
-      <p>${t('contributor_surnames_intro')} <strong>${contributor}</strong> ${t('contributor_surnames_outro')}</p>
-      <div class="surname-cloud" id="contributor-surname-cloud" data-i18n-title="chart_surnames_title"></div>
-    </div>`;
+    ${cloudSectionsHtml}`;
+
+    const loadDetailClouds = () => {
+      if (hasTree)      loadSurnameCloud([contribData._tree.contributor_ID],      'contributor-surname-cloud');
+      if (hasMatricula) loadSurnameCloud([contribData._matricula.contributor_ID], 'contributor-matricula-surname-cloud');
+    };
+
+    if (!showMatchesSection) {
+      container.innerHTML = heading;
+      loadDetailClouds();
+      return;
+    }
 
     let partners;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches`);
+      // Matches are only computed for Genealogist (tree) data — fetch by the tree name.
+      const treeName = contribData._tree.contributor_ID;
+      const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(treeName)}/matches`);
       if (!res.ok) throw new Error('API failed');
       partners = await res.json();
       currentMatchesData = partners;
-      currentMatchesContributor = contributor;
+      currentMatchesContributor = displayName;
     } catch {
       container.innerHTML = heading + `<p>${t('search_failed')}</p>`;
+      loadDetailClouds();
       return;
     }
 
@@ -672,7 +784,7 @@ async function renderMatchesPage(contributor, withPartner) {
       container.innerHTML = heading +
         `<h3 class="section-heading" style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${t('col_matches')}</h3>` +
         `<p>${t('matches_none')}</p>`;
-      loadSurnameCloud([contributor], 'contributor-surname-cloud');
+      loadDetailClouds();
       return;
     }
 
@@ -682,7 +794,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
     const tableData = filteredPartners.map(p => ({
       contributor_ID: p.contributor,
-      _match_href: toUnicodeHref({ t: 'contributors', contributor: contributor, with: p.contributor }),
+      _match_href: toUnicodeHref({ t: 'contributors', contributor: displayName, with: p.contributor }),
       total_persons:  p.persons_count  || 0,
       total_families: p.families_count || 0,
       total:          p.total_count,
@@ -698,12 +810,12 @@ async function renderMatchesPage(contributor, withPartner) {
           </button>
         </div>
         <div class="matches-summary-content">
-          <p>${t('matches_found_intro')} <strong>${contributor}</strong>.<br>${t('matches_found_outro')}</p>
+          <p>${t('matches_found_intro')} <strong>${displayName}</strong>.<br>${t('matches_found_outro')}</p>
           <div id="matches-summary" class="table-responsive"></div>
         </div>
       </div>`;
 
-    loadSurnameCloud([contributor], 'contributor-surname-cloud');
+    loadDetailClouds();
 
     const summaryHeader = container.querySelector('.matches-summary-header h3');
     const summaryContent = container.querySelector('.matches-summary-content');
@@ -725,7 +837,7 @@ async function renderMatchesPage(contributor, withPartner) {
     if (summaryBtn) {
       summaryBtn.addEventListener('click', () => {
         const prefix = siteConfig.filePrefix || 'sgi';
-        exportToCSV(tableData, summaryCols, `${prefix}-matches-${contributor}.csv`);
+        exportToCSV(tableData, summaryCols, `${prefix}-matches-${displayName}.csv`);
       });
     }
 

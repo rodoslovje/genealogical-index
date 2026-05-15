@@ -199,13 +199,69 @@ def get_contributor_matches(db: Session, contributor: str):
     return [dict(r._mapping) for r in rows]
 
 
+MATRICULA_SUFFIX = "-matricula"
+
+
+def _base_contributor_name(name: str) -> str:
+    if name and name.endswith(MATRICULA_SUFFIX):
+        return name[: -len(MATRICULA_SUFFIX)]
+    return name
+
+
 def get_contributors(db: Session):
-    """Fetch pre-calculated stats, enriched with optional contributor links."""
+    """Fetch pre-calculated stats, merging Matricula index entries into their
+    base contributor (e.g. ``Kovačič-matricula`` is folded into ``Kovačič``)
+    while still exposing the per-source breakdown via ``tree`` / ``matricula``.
+    """
     rows = db.query(models.Contributor).all()
     links = _load_contributor_links()
+
+    grouped: dict[str, dict] = {}
     for row in rows:
-        row.url = links.get(row.name)
-    return rows
+        is_matricula = row.name.endswith(MATRICULA_SUFFIX)
+        base = _base_contributor_name(row.name)
+        part = {
+            "name": row.name,
+            "last_modified": row.last_modified or "",
+            "persons_count": row.persons_count or 0,
+            "families_count": row.families_count or 0,
+            "links_count": row.links_count or 0,
+            "url": links.get(row.name),
+        }
+        bucket = grouped.setdefault(base, {"tree": None, "matricula": None})
+        bucket["matricula" if is_matricula else "tree"] = part
+
+    merged = []
+    for base, parts in grouped.items():
+        tree = parts["tree"]
+        mat = parts["matricula"]
+        persons = (tree["persons_count"] if tree else 0) + (
+            mat["persons_count"] if mat else 0
+        )
+        families = (tree["families_count"] if tree else 0) + (
+            mat["families_count"] if mat else 0
+        )
+        link_total = (tree["links_count"] if tree else 0) + (
+            mat["links_count"] if mat else 0
+        )
+        last_modified = max(
+            (p["last_modified"] for p in (tree, mat) if p and p["last_modified"]),
+            default="",
+        )
+        merged.append(
+            {
+                "name": base,
+                "last_modified": last_modified,
+                "persons_count": persons,
+                "families_count": families,
+                "links_count": link_total,
+                "url": (tree["url"] if tree else None)
+                or (mat["url"] if mat else None),
+                "tree": tree,
+                "matricula": mat,
+            }
+        )
+    return merged
 
 
 def get_timeline_distribution(db: Session):

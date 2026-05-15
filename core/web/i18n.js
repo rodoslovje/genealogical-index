@@ -83,6 +83,9 @@ const translations = {
     col_links: 'Links',
     col_total_links: 'Links',
     col_url: 'URL',
+    col_sum: 'Sum',
+    col_tree: 'Tree',
+    col_matricula: 'Matricula',
 
     // Column header tooltips
     tip_contributor: 'Genealogist who contributed this data to the index.',
@@ -130,6 +133,8 @@ const translations = {
     matches_detail_intro: 'All matches between {1} and {0} are shown below.',
     contributor_surnames_intro: 'Genealogist',
     contributor_surnames_outro: 'has the following top surnames in their tree:',
+    contributor_surnames_matricula_outro: 'has the following top surnames in their Matricula Index:',
+    section_surnames_matricula: 'Top Surnames - Matricula Index',
     more_info_about: 'More information about',
     back_to_genealogists: 'Genealogists',
     matches_persons: 'Persons',
@@ -238,6 +243,9 @@ const translations = {
     col_links: 'Povezave',
     col_total_links: 'Povezave',
     col_url: 'URL',
+    col_sum: 'Skupno',
+    col_tree: 'Drevo',
+    col_matricula: 'Matricula',
 
     // Column header tooltips
     tip_contributor: 'Rodoslovec, ki je te podatke prispeval v indeks.',
@@ -285,6 +293,8 @@ const translations = {
     matches_detail_intro: 'Prikazana so vsa ujemanja med rodoslovcema {1} in {0}.',
     contributor_surnames_intro: 'Rodoslovec',
     contributor_surnames_outro: 'ima v svojem drevesu naslednje najpogostejše priimke:',
+    contributor_surnames_matricula_outro: 'ima v indeksu Matricula naslednje najpogostejše priimke:',
+    section_surnames_matricula: 'Najpogostejši priimki - Matricula indeks',
     more_info_about: 'Več informacij o',
     back_to_genealogists: 'Rodoslovci',
     matches_persons: 'Osebe',
@@ -393,6 +403,9 @@ const translations = {
     col_links: 'Poveznice',
     col_total_links: 'Poveznice',
     col_url: 'URL',
+    col_sum: 'Zbroj',
+    col_tree: 'Stablo',
+    col_matricula: 'Matricula',
 
     // Column header tooltips
     tip_contributor: 'Rodoslovac koji je ove podatke ustupio indeksu.',
@@ -440,6 +453,8 @@ const translations = {
     matches_detail_intro: 'Prikazana su sva podudaranja između rodoslovaca {1} i {0}.',
     contributor_surnames_intro: 'Rodoslovac',
     contributor_surnames_outro: 'ima u svom stablu sljedeća najčešća prezimena:',
+    contributor_surnames_matricula_outro: 'ima u indeksu Matricula sljedeća najčešća prezimena:',
+    section_surnames_matricula: 'Najčešća prezimena - Matricula indeks',
     more_info_about: 'Više informacija o',
     back_to_genealogists: 'Rodoslovci',
     matches_persons: 'Osobe',
@@ -548,6 +563,9 @@ const translations = {
     col_links: 'Links',
     col_total_links: 'Links',
     col_url: 'URL',
+    col_sum: 'Summe',
+    col_tree: 'Stammbaum',
+    col_matricula: 'Matricula',
 
     // Column header tooltips
     tip_contributor: 'Genealoge, der diese Daten zum Index beigesteuert hat.',
@@ -595,6 +613,8 @@ const translations = {
     matches_detail_intro: 'Alle Übereinstimmungen zwischen {1} und {0} werden unten angezeigt.',
     contributor_surnames_intro: 'Der Genealoge',
     contributor_surnames_outro: 'hat die folgenden häufigsten Nachnamen in seinem Stammbaum:',
+    contributor_surnames_matricula_outro: 'hat die folgenden häufigsten Nachnamen in seinem Matricula-Index:',
+    section_surnames_matricula: 'Häufigste Nachnamen - Matricula-Index',
     more_info_about: 'Weitere Informationen über',
     back_to_genealogists: 'Genealogen',
     matches_persons: 'Personen',
@@ -703,6 +723,9 @@ const translations = {
     col_links: 'Hivatkozások',
     col_total_links: 'Hivatkozások',
     col_url: 'URL',
+    col_sum: 'Összeg',
+    col_tree: 'Családfa',
+    col_matricula: 'Matricula',
 
     // Column header tooltips
     tip_contributor: 'A genealógus, aki ezeket az adatokat az indexhez hozzájárult.',
@@ -750,6 +773,8 @@ const translations = {
     matches_detail_intro: 'A {1} és {0} közötti összes egyezés alább látható.',
     contributor_surnames_intro: 'A genealógus',
     contributor_surnames_outro: 'a következő leggyakoribb vezetéknevekkel rendelkezik a családfájában:',
+    contributor_surnames_matricula_outro: 'a következő leggyakoribb vezetéknevekkel rendelkezik a Matricula indexében:',
+    section_surnames_matricula: 'Leggyakoribb vezetéknevek - Matricula index',
     more_info_about: 'További információk róla:',
     back_to_genealogists: 'Genealógusok',
     matches_persons: 'Személyek',
@@ -858,6 +883,9 @@ const translations = {
     col_links: 'Collegamenti',
     col_total_links: 'Collegamenti',
     col_url: 'URL',
+    col_sum: 'Somma',
+    col_tree: 'Albero',
+    col_matricula: 'Matricula',
 
     // Column header tooltips
     tip_contributor: 'Genealogista che ha fornito questi dati all\'indice.',
@@ -905,6 +933,8 @@ const translations = {
     matches_detail_intro: 'Tutte le corrispondenze tra {1} e {0} sono mostrate di seguito.',
     contributor_surnames_intro: 'Il genealogista',
     contributor_surnames_outro: 'ha i seguenti cognomi più frequenti nel suo albero:',
+    contributor_surnames_matricula_outro: 'ha i seguenti cognomi più frequenti nel suo indice Matricula:',
+    section_surnames_matricula: 'Cognomi più frequenti - Indice Matricula',
     more_info_about: 'Maggiori informazioni su',
     back_to_genealogists: 'Genealogisti',
     matches_persons: 'Persone',

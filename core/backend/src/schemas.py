@@ -58,6 +58,15 @@ class TimelineStat(BaseModel):
     deaths: int = 0
 
 
+class ContributorPart(BaseModel):
+    name: str
+    last_modified: str
+    persons_count: int
+    families_count: int
+    links_count: int
+    url: Optional[str] = None
+
+
 class Contributor(BaseModel):
     name: str
     last_modified: str
@@ -65,6 +74,8 @@ class Contributor(BaseModel):
     families_count: int
     links_count: int
     url: Optional[str] = None
+    tree: Optional[ContributorPart] = None
+    matricula: Optional[ContributorPart] = None
 
     class Config:
         from_attributes = True
