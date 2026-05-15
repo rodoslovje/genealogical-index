@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml } from './utils.js';
 import { childYearOf, parseDateForSort } from './dates.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
@@ -555,7 +555,11 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (col === 'total_links' && Number(row[col] || 0) === 0) val = '';
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
-        html += `<td class="col-right">${String(row[col] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`;
+        const raw = String(row[col] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const extra = col === 'date_of_birth'
+          ? baptismIconHtml(row.date_of_baptism, row.place_of_baptism, t('icon_baptism'))
+          : '';
+        html += `<td class="col-right">${raw}${extra}</td>`;
       } else if ((col === 'husband_name' || col === 'husband_surname') && row[col]) {
         const params = new URLSearchParams();
         params.set('t', 'person');
@@ -564,10 +568,13 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.husband_surname && !isPriv) params.set('sn', row.husband_surname);
         params.set('ex', '1');
         const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const altIcon = col === 'husband_surname'
+          ? altSurnameIconHtml(row.husband_alt_surname, t('icon_alt_surname'))
+          : '';
         if (isPriv) {
-          html += `<td>${safeDisplay}</td>`;
+          html += `<td>${safeDisplay}${altIcon}</td>`;
         } else {
-          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
+          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
         }
       } else if ((col === 'wife_name' || col === 'wife_surname') && row[col]) {
         const params = new URLSearchParams();
@@ -577,10 +584,13 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.wife_surname && !isPriv) params.set('sn', row.wife_surname);
         params.set('ex', '1');
         const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const altIcon = col === 'wife_surname'
+          ? altSurnameIconHtml(row.wife_alt_surname, t('icon_alt_surname'))
+          : '';
         if (isPriv) {
-          html += `<td>${safeDisplay}</td>`;
+          html += `<td>${safeDisplay}${altIcon}</td>`;
         } else {
-          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
+          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
         }
       } else if ((col === 'name' || col === 'surname') && row[col] && row.husband_name === undefined) {
         const params = new URLSearchParams();
@@ -590,16 +600,24 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (row.surname && !isPriv) params.set('sn', row.surname);
         params.set('ex', '1');
         const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const altIcon = col === 'surname'
+          ? altSurnameIconHtml(row.alt_surname, t('icon_alt_surname'))
+          : '';
         if (isPriv) {
-          html += `<td>${safeDisplay}</td>`;
+          html += `<td>${safeDisplay}${altIcon}</td>`;
         } else {
-          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a></td>`;
+          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
         }
       } else if (col === 'children' || col === 'parents' || col === 'partners') {
         const inner = formatSpecialCell(col, row);
         html += `<td>${inner || ''}</td>`;
       } else {
-        html += `<td>${String(row[col] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`;
+        const raw = String(row[col] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        let extra = '';
+        if (col === 'place_of_birth' || col === 'place_of_marriage') {
+          extra = notesIconHtml(row.notes, t('icon_notes'));
+        }
+        html += `<td>${raw}${extra}</td>`;
       }
     });
     html += '</tr>';

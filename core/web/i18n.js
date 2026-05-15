@@ -121,6 +121,9 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Matricula Index',
     icon_dlib: 'Digital Library of Slovenia',
+    icon_alt_surname: 'Alternate surname',
+    icon_baptism: 'Baptism',
+    icon_notes: 'Notes',
 
     // Matches
     col_matches: 'Matches',
@@ -282,6 +285,9 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Matricula indeks',
     icon_dlib: 'Digitalna knjižnica Slovenije',
+    icon_alt_surname: 'Drugi priimek',
+    icon_baptism: 'Krst',
+    icon_notes: 'Opombe',
 
     // Matches
     col_matches: 'Ujemanja',
@@ -443,6 +449,9 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Matricula indeks',
     icon_dlib: 'Digitalna knjižnica Slovenije',
+    icon_alt_surname: 'Drugo prezime',
+    icon_baptism: 'Krštenje',
+    icon_notes: 'Bilješke',
 
     // Matches
     col_matches: 'Podudaranja',
@@ -604,6 +613,9 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Matricula-Index',
     icon_dlib: 'Digitale Bibliothek Sloweniens',
+    icon_alt_surname: 'Alternativer Nachname',
+    icon_baptism: 'Taufe',
+    icon_notes: 'Notizen',
 
     // Matches
     col_matches: 'Übereinstimmungen',
@@ -765,6 +777,9 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Matricula index',
     icon_dlib: 'Szlovénia Digitális Könyvtára',
+    icon_alt_surname: 'Alternatív vezetéknév',
+    icon_baptism: 'Keresztség',
+    icon_notes: 'Megjegyzések',
 
     // Matches
     col_matches: 'Egyezések',
@@ -926,6 +941,9 @@ const translations = {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Indice Matricula',
     icon_dlib: 'Biblioteca digitale della Slovenia',
+    icon_alt_surname: 'Cognome alternativo',
+    icon_baptism: 'Battesimo',
+    icon_notes: 'Note',
 
     // Matches
     col_matches: 'Corrispondenze',

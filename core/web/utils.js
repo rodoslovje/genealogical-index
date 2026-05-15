@@ -41,6 +41,34 @@ export function matriculaIndicatorHtml(name, tooltip) {
   return ` <span class="matricula-indicator" title="${safeTooltip}" aria-label="${safeTooltip}">${MATRICULA_INDICATOR}</span>`;
 }
 
+// --- inline row icons for optional fields shown in result cells ---
+const ALT_SURNAME_ICON = '🏷';
+const BAPTISM_ICON     = '✝';
+const NOTES_ICON       = '🗒';
+
+function _inlineIcon(glyph, label, value) {
+  const tooltip = label ? `${label}: ${value}` : String(value);
+  const safe = tooltip.replace(/"/g, '&quot;');
+  return ` <span class="row-icon" title="${safe}" aria-label="${safe}">${glyph}</span>`;
+}
+
+export function altSurnameIconHtml(altSurname, label) {
+  if (!altSurname || !String(altSurname).trim()) return '';
+  return _inlineIcon(ALT_SURNAME_ICON, label, altSurname);
+}
+
+export function baptismIconHtml(date, place, label) {
+  const d = String(date || '').trim();
+  const p = String(place || '').trim();
+  if (!d && !p) return '';
+  return _inlineIcon(BAPTISM_ICON, label, [d, p].filter(Boolean).join(', '));
+}
+
+export function notesIconHtml(notes, label) {
+  if (!notes || !String(notes).trim()) return '';
+  return _inlineIcon(NOTES_ICON, label, notes);
+}
+
 export function shortenUrlLabel(urlStr) {
   try {
     const u = new URL(urlStr);

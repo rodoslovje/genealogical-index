@@ -328,12 +328,47 @@ def _extract_year(date_str):
     return int(m.group()) if m else None
 
 
+_nul_stripped_count = 0
+
+
+def _strip_nul(v):
+    """Recursively strip NUL bytes (PostgreSQL TEXT can't store them).
+    Counts strips into _nul_stripped_count for end-of-contributor reporting.
+    """
+    global _nul_stripped_count
+    if v is None:
+        return None
+    if isinstance(v, str):
+        if "\x00" in v:
+            _nul_stripped_count += 1
+            return v.replace("\x00", "")
+        return v
+    if isinstance(v, list):
+        return [_strip_nul(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _strip_nul(x) for k, x in v.items()}
+    return v
+
+
 def _to_json_or_none(v):
     if v is None:
         return None
     if isinstance(v, str):
-        return v
-    return json.dumps(v, ensure_ascii=False)
+        return v.replace("\x00", "") if "\x00" in v else v
+    cleaned = _strip_nul(v)
+    return json.dumps(cleaned, ensure_ascii=False)
+
+
+def _s(v):
+    """Coerce to string, strip NULs."""
+    if v is None:
+        return ""
+    s = str(v)
+    if "\x00" in s:
+        global _nul_stripped_count
+        _nul_stripped_count += 1
+        return s.replace("\x00", "")
+    return s
 
 
 def _flatten_person(p, contributor_id):
@@ -341,22 +376,22 @@ def _flatten_person(p, contributor_id):
     baptism = p.get("baptism") or {}
     death = p.get("death") or {}
     return {
-        "ext_id": p.get("id") or "",
-        "name": p.get("name") or "",
-        "surname": p.get("surname") or "",
-        "alt_surname": p.get("alt_surname") or "",
-        "sex": p.get("sex") or "",
-        "date_of_birth": birth.get("date") or "",
+        "ext_id": _s(p.get("id")),
+        "name": _s(p.get("name")),
+        "surname": _s(p.get("surname")),
+        "alt_surname": _s(p.get("alt_surname")),
+        "sex": _s(p.get("sex")),
+        "date_of_birth": _s(birth.get("date")),
         "birth_year": _extract_year(birth.get("date")),
-        "place_of_birth": birth.get("place") or "",
-        "date_of_baptism": baptism.get("date") or "",
-        "place_of_baptism": baptism.get("place") or "",
-        "date_of_death": death.get("date") or "",
+        "place_of_birth": _s(birth.get("place")),
+        "date_of_baptism": _s(baptism.get("date")),
+        "place_of_baptism": _s(baptism.get("place")),
+        "date_of_death": _s(death.get("date")),
         "death_year": _extract_year(death.get("date")),
-        "place_of_death": death.get("place") or "",
+        "place_of_death": _s(death.get("place")),
         "parents_list": _to_json_or_none(p.get("parents_list")),
         "partners_list": _to_json_or_none(p.get("partners_list")),
-        "notes": p.get("notes") or "",
+        "notes": _s(p.get("notes")),
         "links": _to_json_or_none(p.get("links")),
         "contributor": contributor_id,
     }
@@ -367,23 +402,23 @@ def _flatten_family(f, contributor_id):
     wife = f.get("wife") or {}
     marriage = f.get("marriage") or {}
     return {
-        "husband_ext_id": husband.get("id") or "",
-        "husband_name": husband.get("name") or "",
-        "husband_surname": husband.get("surname") or "",
-        "husband_alt_surname": husband.get("alt_surname") or "",
-        "husband_birth": husband.get("date_of_birth") or "",
-        "wife_ext_id": wife.get("id") or "",
-        "wife_name": wife.get("name") or "",
-        "wife_surname": wife.get("surname") or "",
-        "wife_alt_surname": wife.get("alt_surname") or "",
-        "wife_birth": wife.get("date_of_birth") or "",
-        "date_of_marriage": marriage.get("date") or "",
+        "husband_ext_id": _s(husband.get("id")),
+        "husband_name": _s(husband.get("name")),
+        "husband_surname": _s(husband.get("surname")),
+        "husband_alt_surname": _s(husband.get("alt_surname")),
+        "husband_birth": _s(husband.get("date_of_birth")),
+        "wife_ext_id": _s(wife.get("id")),
+        "wife_name": _s(wife.get("name")),
+        "wife_surname": _s(wife.get("surname")),
+        "wife_alt_surname": _s(wife.get("alt_surname")),
+        "wife_birth": _s(wife.get("date_of_birth")),
+        "date_of_marriage": _s(marriage.get("date")),
         "marriage_year": _extract_year(marriage.get("date")),
-        "place_of_marriage": marriage.get("place") or "",
+        "place_of_marriage": _s(marriage.get("place")),
         "children_list": _to_json_or_none(f.get("children_list")),
         "husband_parents": _to_json_or_none(f.get("husband_parents")),
         "wife_parents": _to_json_or_none(f.get("wife_parents")),
-        "notes": marriage.get("notes") or f.get("notes") or "",
+        "notes": _s(marriage.get("notes") or f.get("notes")),
         "links": _to_json_or_none(f.get("links")),
         "contributor": contributor_id,
     }
@@ -400,6 +435,8 @@ def import_contributor(
     imp_families=True,
 ):
     """Delete existing records for contributor and reinsert from JSON files."""
+    global _nul_stripped_count
+    _nul_stripped_count = 0
     db.execute(
         text(
             "INSERT INTO contributors (name, last_modified, persons_count, families_count, links_count) "
@@ -498,6 +535,11 @@ def import_contributor(
             )
 
     db.commit()
+    if _nul_stripped_count:
+        print(
+            f"  -> WARNING: stripped NUL byte from {_nul_stripped_count} "
+            f"string value(s) for {contributor_id}"
+        )
 
 
 def main():

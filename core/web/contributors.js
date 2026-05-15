@@ -2,7 +2,7 @@ import { t } from './i18n.js';
 import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
 import { formatLinks } from './links.js';
 import { parseDateForSort } from './dates.js';
-import { isPrivate, cmp, getExpandCollapseIcon, shortenUrlLabel, baseContributorName, matriculaIndicatorHtml } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml } from './utils.js';
 import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
@@ -1016,6 +1016,15 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
         const state = sortState[key];
 
         const isDateField = f => f === 'date_of_birth' || f === 'date_of_death' || f === 'date_of_marriage' || f === 'husband_birth' || f === 'wife_birth';
+        const extraIcon = (rec, f) => {
+          if (f === 'surname')         return altSurnameIconHtml(rec.alt_surname, t('icon_alt_surname'));
+          if (f === 'husband_surname') return altSurnameIconHtml(rec.husband_alt_surname, t('icon_alt_surname'));
+          if (f === 'wife_surname')    return altSurnameIconHtml(rec.wife_alt_surname, t('icon_alt_surname'));
+          if (f === 'date_of_birth')   return baptismIconHtml(rec.date_of_baptism, rec.place_of_baptism, t('icon_baptism'));
+          if (f === 'place_of_birth' || f === 'place_of_marriage') return notesIconHtml(rec.notes, t('icon_notes'));
+          return '';
+        };
+
         const makeCell = (rec, f) => {
           if (f === 'parents' || f === 'children' || f === 'partners') {
             const inner = formatSpecialCell(f, rec);
@@ -1028,11 +1037,12 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
           const val = rec[f] || '';
           const safeVal = String(val).replace(/</g, '&lt;').replace(/>/g, '&gt;');
           const cls = isDateField(f) ? ' class="col-right"' : '';
+          const extra = extraIcon(rec, f);
           if (val && linkedFields.has(f)) {
             const href = searchUrl(rec, f);
-            if (href) return `<td${cls}><a href="${href}" data-spa-nav class="name-link">${safeVal}</a></td>`;
+            if (href) return `<td${cls}><a href="${href}" data-spa-nav class="name-link">${safeVal}</a>${extra}</td>`;
           }
-          return `<td${cls}>${safeVal}</td>`;
+          return `<td${cls}>${safeVal}${extra}</td>`;
         };
 
         const headerCells = fields.map(({ h, f }) => {
