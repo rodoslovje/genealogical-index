@@ -462,9 +462,9 @@ function buildSelectOptions(contributorData) {
     sorted.map(d => `<option value="${d.contributor_ID}">${d.contributor_ID}</option>`).join('');
 }
 
-async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
+async function loadSurnameCloud(contributors, targetId = 'surname-cloud', options = {}) {
   const cloud = document.getElementById(targetId);
-  if (!cloud) return;
+  if (!cloud) return 0;
 
   cloud.innerHTML = `<span class="cloud-placeholder">${t('chart_surnames_loading')}</span>`;
 
@@ -479,8 +479,13 @@ async function loadSurnameCloud(contributors, targetId = 'surname-cloud') {
     const data = await res.json();
 
     if (!data.length) {
-      cloud.innerHTML = `<span class="cloud-placeholder">${t('no_results')}</span>`;
-      return;
+      if (options.hideSectionIfEmpty) {
+        const section = cloud.closest('.surname-cloud-section, #surname-cloud-section');
+        if (section) section.style.display = 'none';
+      } else {
+        cloud.innerHTML = `<span class="cloud-placeholder">${t('no_results')}</span>`;
+      }
+      return 0;
     }
 
     const maxCount = Math.max(...data.map(d => d.count));
@@ -640,23 +645,25 @@ function renderContributorStats(contribData) {
     </div>`;
   }
 
-  // 3-value grid: Sum / Tree / Matricula.
+  // 3-value grid: Total / Tree / Matricula.
   const metricRow = (tipKey, label, sum, treeVal, matVal) => {
     const a = ` title="${tip(tipKey)}"`;
     return `<span${a}>${label}:</span>` +
       `<strong${a}>${sum}</strong>` +
-      `<strong${a}>${treeVal}</strong>` +
-      `<strong${a}>${matVal}</strong>`;
+      `<span${a}>${treeVal}</span>` +
+      `<span${a}>${matVal}</span>`;
   };
   const lastTree = tree.last_modified || '';
   const lastMat  = mat.last_modified  || '';
   const lastSum  = contribData.last_modified || '';
+  const divider = '<div style="grid-column: 1 / -1; border-bottom: 1px solid var(--border); margin: 2px 0;"></div>';
 
   return `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: max-content max-content max-content max-content; column-gap: 16px; row-gap: 4px; justify-items: end;">
     <span></span>
     <strong>${t('col_total')}</strong>
     <strong>${t('col_tree')}</strong>
     <strong>${t('col_matricula')}</strong>
+    ${divider}
     ${metricRow('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons),  fmt(tree.total_persons),  fmt(mat.total_persons))}
     ${metricRow('tip_total_families', t('col_total_families'), fmt(contribData.total_families), fmt(tree.total_families), fmt(mat.total_families))}
     ${metricRow('tip_total_links',    t('col_total_links'),    fmt(contribData.total_links),    fmt(tree.total_links),    fmt(mat.total_links))}
@@ -755,7 +762,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
     const loadDetailClouds = () => {
       if (hasTree)      loadSurnameCloud([contribData._tree.contributor_ID],      'contributor-surname-cloud');
-      if (hasMatricula) loadSurnameCloud([contribData._matricula.contributor_ID], 'contributor-matricula-surname-cloud');
+      if (hasMatricula) loadSurnameCloud([contribData._matricula.contributor_ID], 'contributor-matricula-surname-cloud', { hideSectionIfEmpty: true });
     };
 
     if (!showMatchesSection) {
