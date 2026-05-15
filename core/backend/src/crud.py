@@ -2,6 +2,7 @@ import json
 import os
 import re
 import time
+import unicodedata
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from . import models
@@ -204,8 +205,10 @@ MATRICULA_SUFFIX = "-matricula"
 
 def _base_contributor_name(name: str) -> str:
     if name and name.endswith(MATRICULA_SUFFIX):
-        return name[: -len(MATRICULA_SUFFIX)]
-    return name
+        name = name[: -len(MATRICULA_SUFFIX)]
+    # Imported contributor names may have inconsistent unicode forms
+    # (e.g. "Kovačič" stored as NFC vs NFD); normalize so they group together.
+    return unicodedata.normalize("NFC", name) if name else name
 
 
 def get_contributors(db: Session):

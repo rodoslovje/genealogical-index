@@ -654,12 +654,11 @@ function renderContributorStats(contribData) {
 
   return `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: max-content max-content max-content max-content; column-gap: 16px; row-gap: 4px; justify-items: end;">
     <span></span>
-    <strong>${t('col_sum')}</strong>
+    <strong>${t('col_total')}</strong>
     <strong>${t('col_tree')}</strong>
     <strong>${t('col_matricula')}</strong>
     ${metricRow('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons),  fmt(tree.total_persons),  fmt(mat.total_persons))}
     ${metricRow('tip_total_families', t('col_total_families'), fmt(contribData.total_families), fmt(tree.total_families), fmt(mat.total_families))}
-    ${metricRow('tip_total',          t('col_total'),          fmt(contribData.total),          fmt(tree.total),          fmt(mat.total))}
     ${metricRow('tip_total_links',    t('col_total_links'),    fmt(contribData.total_links),    fmt(tree.total_links),    fmt(mat.total_links))}
     ${metricRow('tip_last_modified',  t('col_last_update'),    lastSum,                          lastTree,                  lastMat)}
   </div>`;
