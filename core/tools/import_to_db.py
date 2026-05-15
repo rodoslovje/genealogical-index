@@ -50,19 +50,23 @@ def setup_full(db):
             links_count INTEGER DEFAULT 0
         );
         CREATE TABLE persons (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, sex TEXT,
+            id SERIAL PRIMARY KEY, ext_id TEXT,
+            name TEXT, surname TEXT, alt_surname TEXT, sex TEXT,
             date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT,
+            date_of_baptism TEXT, place_of_baptism TEXT,
             date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
             parents_list TEXT, partners_list TEXT,
-            contributor TEXT, links TEXT
+            notes TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE families (
             id SERIAL PRIMARY KEY,
-            husband_name TEXT, husband_surname TEXT, husband_birth TEXT,
-            wife_name TEXT, wife_surname TEXT, wife_birth TEXT,
+            husband_ext_id TEXT, husband_name TEXT, husband_surname TEXT,
+            husband_alt_surname TEXT, husband_birth TEXT,
+            wife_ext_id TEXT, wife_name TEXT, wife_surname TEXT,
+            wife_alt_surname TEXT, wife_birth TEXT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
             children_list TEXT, husband_parents TEXT, wife_parents TEXT,
-            contributor TEXT, links TEXT
+            notes TEXT, contributor TEXT, links TEXT
         );
 
         CREATE INDEX idx_person_name_trgm    ON persons  USING gist (name gist_trgm_ops);
@@ -75,6 +79,16 @@ def setup_full(db):
         -- and fast equality joins during the match compute phase.
         CREATE INDEX idx_person_contrib_sur  ON persons(contributor, surname);
         CREATE INDEX idx_family_contrib_surs ON families(contributor, husband_surname, wife_surname);
+
+        -- Partial indexes on alt_surname columns: the column is sparsely populated,
+        -- so a partial index keeps it tiny while still supporting the OR-join in
+        -- compute_matches (surname = X OR alt_surname = X).
+        CREATE INDEX idx_person_contrib_alt_sur
+            ON persons(contributor, alt_surname) WHERE alt_surname <> '';
+        CREATE INDEX idx_family_contrib_h_alt_sur
+            ON families(contributor, husband_alt_surname) WHERE husband_alt_surname <> '';
+        CREATE INDEX idx_family_contrib_w_alt_sur
+            ON families(contributor, wife_alt_surname) WHERE wife_alt_surname <> '';
 
         -- B-tree indexes on year columns — used to pre-filter candidates by year range
         -- before the trigram similarity join, significantly reducing the candidate set.
@@ -164,19 +178,23 @@ def setup_update(db):
             last_modified VARCHAR(255)
         );
         CREATE TABLE IF NOT EXISTS persons (
-            id SERIAL PRIMARY KEY, name TEXT, surname TEXT, sex TEXT,
+            id SERIAL PRIMARY KEY, ext_id TEXT,
+            name TEXT, surname TEXT, alt_surname TEXT, sex TEXT,
             date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT,
+            date_of_baptism TEXT, place_of_baptism TEXT,
             date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
             parents_list TEXT, partners_list TEXT,
-            contributor TEXT, links TEXT
+            notes TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS families (
             id SERIAL PRIMARY KEY,
-            husband_name TEXT, husband_surname TEXT, husband_birth TEXT,
-            wife_name TEXT, wife_surname TEXT, wife_birth TEXT,
+            husband_ext_id TEXT, husband_name TEXT, husband_surname TEXT,
+            husband_alt_surname TEXT, husband_birth TEXT,
+            wife_ext_id TEXT, wife_name TEXT, wife_surname TEXT,
+            wife_alt_surname TEXT, wife_birth TEXT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
             children_list TEXT, husband_parents TEXT, wife_parents TEXT,
-            contributor TEXT, links TEXT
+            notes TEXT, contributor TEXT, links TEXT
         );
         CREATE TABLE IF NOT EXISTS matches (
             id SERIAL PRIMARY KEY,
@@ -212,6 +230,18 @@ def setup_update(db):
         ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_birth    TEXT;
         ALTER TABLE families DROP COLUMN IF EXISTS husband_year;
         ALTER TABLE families DROP COLUMN IF EXISTS wife_year;
+
+        -- New optional fields imported from richer JSON exports.
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS ext_id           TEXT;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS alt_surname      TEXT;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS date_of_baptism  TEXT;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS place_of_baptism TEXT;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS notes            TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_ext_id      TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_alt_surname TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_ext_id         TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_alt_surname    TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS notes               TEXT;
     """))
     db.commit()
 
@@ -224,6 +254,14 @@ def setup_update(db):
 
         CREATE INDEX IF NOT EXISTS idx_person_contrib_sur      ON persons(contributor, surname);
         CREATE INDEX IF NOT EXISTS idx_family_contrib_surs     ON families(contributor, husband_surname, wife_surname);
+
+        -- Partial indexes for alt_surname matches (sparse column → tiny index).
+        CREATE INDEX IF NOT EXISTS idx_person_contrib_alt_sur
+            ON persons(contributor, alt_surname) WHERE alt_surname <> '';
+        CREATE INDEX IF NOT EXISTS idx_family_contrib_h_alt_sur
+            ON families(contributor, husband_alt_surname) WHERE husband_alt_surname <> '';
+        CREATE INDEX IF NOT EXISTS idx_family_contrib_w_alt_sur
+            ON families(contributor, wife_alt_surname) WHERE wife_alt_surname <> '';
 
         CREATE INDEX IF NOT EXISTS idx_person_ancestor_search  ON persons(contributor, surname, name, birth_year);
         CREATE INDEX IF NOT EXISTS idx_person_birth_year       ON persons(birth_year);
@@ -300,19 +338,25 @@ def _to_json_or_none(v):
 
 def _flatten_person(p, contributor_id):
     birth = p.get("birth") or {}
+    baptism = p.get("baptism") or {}
     death = p.get("death") or {}
     return {
+        "ext_id": p.get("id") or "",
         "name": p.get("name") or "",
         "surname": p.get("surname") or "",
+        "alt_surname": p.get("alt_surname") or "",
         "sex": p.get("sex") or "",
         "date_of_birth": birth.get("date") or "",
         "birth_year": _extract_year(birth.get("date")),
         "place_of_birth": birth.get("place") or "",
+        "date_of_baptism": baptism.get("date") or "",
+        "place_of_baptism": baptism.get("place") or "",
         "date_of_death": death.get("date") or "",
         "death_year": _extract_year(death.get("date")),
         "place_of_death": death.get("place") or "",
         "parents_list": _to_json_or_none(p.get("parents_list")),
         "partners_list": _to_json_or_none(p.get("partners_list")),
+        "notes": p.get("notes") or "",
         "links": _to_json_or_none(p.get("links")),
         "contributor": contributor_id,
     }
@@ -323,11 +367,15 @@ def _flatten_family(f, contributor_id):
     wife = f.get("wife") or {}
     marriage = f.get("marriage") or {}
     return {
+        "husband_ext_id": husband.get("id") or "",
         "husband_name": husband.get("name") or "",
         "husband_surname": husband.get("surname") or "",
+        "husband_alt_surname": husband.get("alt_surname") or "",
         "husband_birth": husband.get("date_of_birth") or "",
+        "wife_ext_id": wife.get("id") or "",
         "wife_name": wife.get("name") or "",
         "wife_surname": wife.get("surname") or "",
+        "wife_alt_surname": wife.get("alt_surname") or "",
         "wife_birth": wife.get("date_of_birth") or "",
         "date_of_marriage": marriage.get("date") or "",
         "marriage_year": _extract_year(marriage.get("date")),
@@ -335,6 +383,7 @@ def _flatten_family(f, contributor_id):
         "children_list": _to_json_or_none(f.get("children_list")),
         "husband_parents": _to_json_or_none(f.get("husband_parents")),
         "wife_parents": _to_json_or_none(f.get("wife_parents")),
+        "notes": marriage.get("notes") or f.get("notes") or "",
         "links": _to_json_or_none(f.get("links")),
         "contributor": contributor_id,
     }
@@ -382,14 +431,16 @@ def import_contributor(
                 rows = [_flatten_person(p, contributor_id) for p in persons_data]
                 db.execute(
                     text("""
-                        INSERT INTO persons (name, surname, sex,
+                        INSERT INTO persons (ext_id, name, surname, alt_surname, sex,
                             date_of_birth, birth_year, place_of_birth,
+                            date_of_baptism, place_of_baptism,
                             date_of_death, death_year, place_of_death,
-                            parents_list, partners_list, contributor, links)
-                        VALUES (:name, :surname, :sex,
+                            parents_list, partners_list, notes, contributor, links)
+                        VALUES (:ext_id, :name, :surname, :alt_surname, :sex,
                             :date_of_birth, :birth_year, :place_of_birth,
+                            :date_of_baptism, :place_of_baptism,
                             :date_of_death, :death_year, :place_of_death,
-                            :parents_list, :partners_list, :contributor, :links)
+                            :parents_list, :partners_list, :notes, :contributor, :links)
                     """),
                     rows,
                 )
@@ -417,16 +468,22 @@ def import_contributor(
                 rows = [_flatten_family(fam, contributor_id) for fam in families_data]
                 db.execute(
                     text("""
-                        INSERT INTO families (husband_name, husband_surname, husband_birth,
-                            wife_name, wife_surname, wife_birth,
+                        INSERT INTO families (
+                            husband_ext_id, husband_name, husband_surname,
+                            husband_alt_surname, husband_birth,
+                            wife_ext_id, wife_name, wife_surname,
+                            wife_alt_surname, wife_birth,
                             date_of_marriage, marriage_year, place_of_marriage,
                             children_list, husband_parents, wife_parents,
-                            contributor, links)
-                        VALUES (:husband_name, :husband_surname, :husband_birth,
-                            :wife_name, :wife_surname, :wife_birth,
+                            notes, contributor, links)
+                        VALUES (
+                            :husband_ext_id, :husband_name, :husband_surname,
+                            :husband_alt_surname, :husband_birth,
+                            :wife_ext_id, :wife_name, :wife_surname,
+                            :wife_alt_surname, :wife_birth,
                             :date_of_marriage, :marriage_year, :place_of_marriage,
                             :children_list, :husband_parents, :wife_parents,
-                            :contributor, :links)
+                            :notes, :contributor, :links)
                     """),
                     rows,
                 )

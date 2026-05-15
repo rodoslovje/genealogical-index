@@ -91,12 +91,13 @@ def search_general(
     place: Optional[str] = None,
     contributor: Optional[str] = None,
     has_link: bool = False,
+    id: Optional[str] = None,
     limit: int = 500,
     exact: bool = False,
     type: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    if not any([name, surname, date_from, date_to, place, contributor, has_link]):
+    if not any([name, surname, date_from, date_to, place, contributor, has_link, id]):
         return {"persons": [], "families": []}
     return crud.search_all(
         db,
@@ -107,6 +108,7 @@ def search_general(
         place=place,
         contributor=contributor,
         has_link=has_link,
+        ext_id=id,
         limit=limit,
         exact=exact,
         record_type=type,
@@ -125,6 +127,7 @@ def search_advanced_persons(
     place_of_death: Optional[str] = None,
     contributor: Optional[str] = None,
     has_link: bool = False,
+    id: Optional[str] = None,
     limit: int = 500,
     exact: bool = False,
     db: Session = Depends(get_db),
@@ -141,6 +144,7 @@ def search_advanced_persons(
         place_of_death=place_of_death,
         contributor=contributor,
         has_link=has_link,
+        ext_id=id,
         limit=limit,
         exact=exact,
     )

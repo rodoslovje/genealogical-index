@@ -117,8 +117,12 @@ _PERSON_INSERT = text(r"""
                  THEN ABS(p1.death_year - p2.death_year)
                  ELSE NULL END AS d_yr_diff
         FROM sur_matches sm
-        JOIN persons p1 ON p1.contributor = :contrib_a AND p1.surname = sm.sur1
-        JOIN persons p2 ON p2.contributor = :contrib_b AND p2.surname = sm.sur2
+        JOIN persons p1 ON p1.contributor = :contrib_a
+                       AND (p1.surname = sm.sur1
+                            OR (p1.alt_surname <> '' AND p1.alt_surname = sm.sur1))
+        JOIN persons p2 ON p2.contributor = :contrib_b
+                       AND (p2.surname = sm.sur2
+                            OR (p2.alt_surname <> '' AND p2.alt_surname = sm.sur2))
         WHERE (
                 (p1.birth_year IS NULL OR p2.birth_year IS NULL
                     OR ABS(p1.birth_year - p2.birth_year) <= :yr_tol)
@@ -127,6 +131,14 @@ _PERSON_INSERT = text(r"""
                     AND ABS(p1.death_year - p2.death_year) <= :yr_tol)
               )
           AND (p1.name = p2.name OR similarity(p1.name, p2.name) >= :trgm_thresh)
+    ),
+    -- A person may match the same partner via several surname/alt_surname
+    -- combinations; keep only the strongest (highest s_sur) per pair so the
+    -- downstream scoring sees a single canonical candidate.
+    cands_dedup AS (
+        SELECT DISTINCT ON (a_id, b_id) *
+        FROM cands
+        ORDER BY a_id, b_id, s_sur DESC
     ),
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_bplace, s_dplace,
@@ -154,7 +166,7 @@ _PERSON_INSERT = text(r"""
                 CASE WHEN s_parents   IS NOT NULL THEN 20.0 ELSE 0.0 END +
                 CASE WHEN s_partners  IS NOT NULL THEN 15.0 ELSE 0.0 END
             ) AS conf
-        FROM cands
+        FROM cands_dedup
     ),
     filtered AS (
         SELECT a_id, b_id, conf, jsonb_build_object(
@@ -207,13 +219,24 @@ _FAMILY_INSERT = text(r"""
                  ELSE NULL END AS yr_diff
         FROM families f1
         JOIN sur_matches hm ON f1.husband_surname = hm.sur1
+                             OR (f1.husband_alt_surname <> '' AND f1.husband_alt_surname = hm.sur1)
         JOIN sur_matches wm ON f1.wife_surname = wm.sur1
+                             OR (f1.wife_alt_surname <> '' AND f1.wife_alt_surname = wm.sur1)
         JOIN families f2 ON f2.contributor = :contrib_b
-                        AND f2.husband_surname = hm.sur2
-                        AND f2.wife_surname = wm.sur2
+                        AND (f2.husband_surname = hm.sur2
+                             OR (f2.husband_alt_surname <> '' AND f2.husband_alt_surname = hm.sur2))
+                        AND (f2.wife_surname = wm.sur2
+                             OR (f2.wife_alt_surname <> '' AND f2.wife_alt_surname = wm.sur2))
         WHERE f1.contributor = :contrib_a
           AND (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
                  OR ABS(f1.marriage_year - f2.marriage_year) <= :yr_tol)
+    ),
+    -- Up to four surname/alt_surname combinations can hit the same (a_id, b_id);
+    -- keep the combo with the strongest combined surname signal.
+    cands_dedup AS (
+        SELECT DISTINCT ON (a_id, b_id) *
+        FROM cands
+        ORDER BY a_id, b_id, (s_hsur + s_wsur) DESC
     ),
     scored AS (
         SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff, s_hp, s_wp, s_cl,
@@ -233,7 +256,7 @@ _FAMILY_INSERT = text(r"""
                 CASE WHEN s_wp IS NOT NULL THEN 15.0 ELSE 0.0 END +
                 CASE WHEN s_cl IS NOT NULL THEN 15.0 ELSE 0.0 END
             ) AS conf
-        FROM cands
+        FROM cands_dedup
     ),
     filtered AS (
         SELECT a_id, b_id, conf, jsonb_build_object(
@@ -300,17 +323,26 @@ def process_job(contrib_a, contrib_b):
 
         conn.execute(
             text("""
+            -- alt_surname rows feed the candidate-surname pool too, so a
+            -- person whose canonical surname differs from the partner's
+            -- canonical surname can still match via either alt.
             CREATE TEMP TABLE a_sur ON COMMIT DROP AS
             SELECT surname AS sur FROM persons WHERE contributor = :contrib_a AND surname IS NOT NULL
+            UNION SELECT alt_surname FROM persons WHERE contributor = :contrib_a AND alt_surname IS NOT NULL AND alt_surname <> ''
             UNION SELECT husband_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL
-            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL;
+            UNION SELECT husband_alt_surname FROM families WHERE contributor = :contrib_a AND husband_alt_surname IS NOT NULL AND husband_alt_surname <> ''
+            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
+            UNION SELECT wife_alt_surname FROM families WHERE contributor = :contrib_a AND wife_alt_surname IS NOT NULL AND wife_alt_surname <> '';
 
             ALTER TABLE a_sur ADD PRIMARY KEY (sur);
 
             CREATE TEMP TABLE b_sur ON COMMIT DROP AS
             SELECT surname AS sur FROM persons WHERE contributor = :contrib_b AND surname IS NOT NULL
+            UNION SELECT alt_surname FROM persons WHERE contributor = :contrib_b AND alt_surname IS NOT NULL AND alt_surname <> ''
             UNION SELECT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
-            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL;
+            UNION SELECT husband_alt_surname FROM families WHERE contributor = :contrib_b AND husband_alt_surname IS NOT NULL AND husband_alt_surname <> ''
+            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
+            UNION SELECT wife_alt_surname FROM families WHERE contributor = :contrib_b AND wife_alt_surname IS NOT NULL AND wife_alt_surname <> '';
 
             ALTER TABLE b_sur ADD PRIMARY KEY (sur);
 

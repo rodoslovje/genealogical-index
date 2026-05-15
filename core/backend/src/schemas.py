@@ -3,15 +3,20 @@ from pydantic import BaseModel
 
 
 class PersonBase(BaseModel):
+    ext_id: Optional[str] = None
     name: Optional[str] = None
     surname: Optional[str] = None
+    alt_surname: Optional[str] = None
     sex: Optional[str] = None
     date_of_birth: Optional[str] = None
     place_of_birth: Optional[str] = None
+    date_of_baptism: Optional[str] = None
+    place_of_baptism: Optional[str] = None
     date_of_death: Optional[str] = None
     place_of_death: Optional[str] = None
     parents_list: Optional[Any] = None
     partners_list: Optional[Any] = None
+    notes: Optional[str] = None
     contributor: Optional[str] = None
     links: Optional[str] = None
 
@@ -24,17 +29,22 @@ class Person(PersonBase):
 
 
 class FamilyBase(BaseModel):
+    husband_ext_id: Optional[str] = None
     husband_name: Optional[str] = None
     husband_surname: Optional[str] = None
+    husband_alt_surname: Optional[str] = None
     husband_birth: Optional[str] = None
+    wife_ext_id: Optional[str] = None
     wife_name: Optional[str] = None
     wife_surname: Optional[str] = None
+    wife_alt_surname: Optional[str] = None
     wife_birth: Optional[str] = None
     children_list: Optional[str] = None
     husband_parents: Optional[str] = None
     wife_parents: Optional[str] = None
     date_of_marriage: Optional[str] = None
     place_of_marriage: Optional[str] = None
+    notes: Optional[str] = None
     contributor: Optional[str] = None
     links: Optional[str] = None
 

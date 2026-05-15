@@ -7,17 +7,22 @@ class Person(Base):
     __tablename__ = "persons"
 
     id = Column(Integer, primary_key=True, index=True)
+    ext_id = Column(Text)
     name = Column(Text, index=True)
     surname = Column(Text, index=True)
+    alt_surname = Column(Text)
     sex = Column(Text)
     date_of_birth = Column(Text)
     birth_year = Column(SmallInteger)
     place_of_birth = Column(Text)
+    date_of_baptism = Column(Text)
+    place_of_baptism = Column(Text)
     date_of_death = Column(Text)
     death_year = Column(SmallInteger)
     place_of_death = Column(Text)
     parents_list = Column(Text, nullable=True)
     partners_list = Column(Text, nullable=True)
+    notes = Column(Text)
     contributor = Column(Text, index=True)
     links = Column(Text)
 
@@ -26,11 +31,15 @@ class Family(Base):
     __tablename__ = "families"
 
     id = Column(Integer, primary_key=True, index=True)
+    husband_ext_id = Column(Text)
     husband_name = Column(Text, index=True)
     husband_surname = Column(Text, index=True)
+    husband_alt_surname = Column(Text)
     husband_birth = Column(Text)
+    wife_ext_id = Column(Text)
     wife_name = Column(Text, index=True)
     wife_surname = Column(Text, index=True)
+    wife_alt_surname = Column(Text)
     wife_birth = Column(Text)
     date_of_marriage = Column(Text)
     marriage_year = Column(SmallInteger)
@@ -38,6 +47,7 @@ class Family(Base):
     children_list = Column(Text)
     husband_parents = Column(Text)
     wife_parents = Column(Text)
+    notes = Column(Text)
     contributor = Column(Text, index=True)
     links = Column(Text)
 

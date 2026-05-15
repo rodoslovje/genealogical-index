@@ -64,14 +64,20 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
     person_rows = db.execute(
         text("""
         SELECT m.confidence, m.match_fields,
-               p1.id AS a_id, p1.name AS a_name, p1.surname AS a_surname, p1.sex AS a_sex,
+               p1.id AS a_id, p1.ext_id AS a_ext_id, p1.name AS a_name,
+               p1.surname AS a_surname, p1.alt_surname AS a_alt_surname, p1.sex AS a_sex,
                p1.date_of_birth AS a_dob, p1.place_of_birth AS a_pob,
+               p1.date_of_baptism AS a_dobap, p1.place_of_baptism AS a_pobap,
                p1.date_of_death AS a_dod, p1.place_of_death AS a_pod,
-               p1.parents_list AS a_parents, p1.partners_list AS a_partners, p1.links AS a_links,
-               p2.id AS b_id, p2.name AS b_name, p2.surname AS b_surname, p2.sex AS b_sex,
+               p1.parents_list AS a_parents, p1.partners_list AS a_partners,
+               p1.notes AS a_notes, p1.links AS a_links,
+               p2.id AS b_id, p2.ext_id AS b_ext_id, p2.name AS b_name,
+               p2.surname AS b_surname, p2.alt_surname AS b_alt_surname, p2.sex AS b_sex,
                p2.date_of_birth AS b_dob, p2.place_of_birth AS b_pob,
+               p2.date_of_baptism AS b_dobap, p2.place_of_baptism AS b_pobap,
                p2.date_of_death AS b_dod, p2.place_of_death AS b_pod,
-               p2.parents_list AS b_parents, p2.partners_list AS b_partners, p2.links AS b_links
+               p2.parents_list AS b_parents, p2.partners_list AS b_partners,
+               p2.notes AS b_notes, p2.links AS b_links
         FROM matches m
         JOIN persons p1 ON m.record_a_id = p1.id
         JOIN persons p2 ON m.record_b_id = p2.id
@@ -88,28 +94,38 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                 "match_fields": r.match_fields,
                 "record_a": {
                     "id": r.a_id,
+                    "ext_id": r.a_ext_id,
                     "name": r.a_name,
                     "surname": r.a_surname,
+                    "alt_surname": r.a_alt_surname,
                     "sex": r.a_sex,
                     "date_of_birth": r.a_dob,
                     "place_of_birth": r.a_pob,
+                    "date_of_baptism": r.a_dobap,
+                    "place_of_baptism": r.a_pobap,
                     "date_of_death": r.a_dod,
                     "place_of_death": r.a_pod,
                     "parents_list": r.a_parents,
                     "partners_list": r.a_partners,
+                    "notes": r.a_notes,
                     "links": r.a_links,
                 },
                 "record_b": {
                     "id": r.b_id,
+                    "ext_id": r.b_ext_id,
                     "name": r.b_name,
                     "surname": r.b_surname,
+                    "alt_surname": r.b_alt_surname,
                     "sex": r.b_sex,
                     "date_of_birth": r.b_dob,
                     "place_of_birth": r.b_pob,
+                    "date_of_baptism": r.b_dobap,
+                    "place_of_baptism": r.b_pobap,
                     "date_of_death": r.b_dod,
                     "place_of_death": r.b_pod,
                     "parents_list": r.b_parents,
                     "partners_list": r.b_partners,
+                    "notes": r.b_notes,
                     "links": r.b_links,
                 },
             }
@@ -118,17 +134,25 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
     family_rows = db.execute(
         text("""
         SELECT m.confidence, m.match_fields,
-               f1.id AS a_id, f1.husband_name AS a_hname, f1.husband_surname AS a_hsur,
+               f1.id AS a_id,
+               f1.husband_ext_id AS a_hext, f1.husband_name AS a_hname,
+               f1.husband_surname AS a_hsur, f1.husband_alt_surname AS a_halt,
                f1.husband_birth AS a_hbirth,
-               f1.wife_name AS a_wname, f1.wife_surname AS a_wsur,
+               f1.wife_ext_id AS a_wext, f1.wife_name AS a_wname,
+               f1.wife_surname AS a_wsur, f1.wife_alt_surname AS a_walt,
                f1.wife_birth AS a_wbirth,
-               f1.date_of_marriage AS a_date, f1.place_of_marriage AS a_place, f1.links AS a_links,
+               f1.date_of_marriage AS a_date, f1.place_of_marriage AS a_place,
+               f1.notes AS a_notes, f1.links AS a_links,
                f1.husband_parents AS a_hp, f1.wife_parents AS a_wp, f1.children_list AS a_cl,
-               f2.id AS b_id, f2.husband_name AS b_hname, f2.husband_surname AS b_hsur,
+               f2.id AS b_id,
+               f2.husband_ext_id AS b_hext, f2.husband_name AS b_hname,
+               f2.husband_surname AS b_hsur, f2.husband_alt_surname AS b_halt,
                f2.husband_birth AS b_hbirth,
-               f2.wife_name AS b_wname, f2.wife_surname AS b_wsur,
+               f2.wife_ext_id AS b_wext, f2.wife_name AS b_wname,
+               f2.wife_surname AS b_wsur, f2.wife_alt_surname AS b_walt,
                f2.wife_birth AS b_wbirth,
-               f2.date_of_marriage AS b_date, f2.place_of_marriage AS b_place, f2.links AS b_links,
+               f2.date_of_marriage AS b_date, f2.place_of_marriage AS b_place,
+               f2.notes AS b_notes, f2.links AS b_links,
                f2.husband_parents AS b_hp, f2.wife_parents AS b_wp, f2.children_list AS b_cl
         FROM matches m
         JOIN families f1 ON m.record_a_id = f1.id
@@ -146,32 +170,42 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                 "match_fields": r.match_fields,
                 "record_a": {
                     "id": r.a_id,
+                    "husband_ext_id": r.a_hext,
                     "husband_name": r.a_hname,
                     "husband_surname": r.a_hsur,
+                    "husband_alt_surname": r.a_halt,
                     "husband_birth": r.a_hbirth,
+                    "wife_ext_id": r.a_wext,
                     "wife_name": r.a_wname,
                     "wife_surname": r.a_wsur,
+                    "wife_alt_surname": r.a_walt,
                     "wife_birth": r.a_wbirth,
                     "date_of_marriage": r.a_date,
                     "place_of_marriage": r.a_place,
                     "husband_parents": r.a_hp,
                     "wife_parents": r.a_wp,
                     "children_list": r.a_cl,
+                    "notes": r.a_notes,
                     "links": r.a_links,
                 },
                 "record_b": {
                     "id": r.b_id,
+                    "husband_ext_id": r.b_hext,
                     "husband_name": r.b_hname,
                     "husband_surname": r.b_hsur,
+                    "husband_alt_surname": r.b_halt,
                     "husband_birth": r.b_hbirth,
+                    "wife_ext_id": r.b_wext,
                     "wife_name": r.b_wname,
                     "wife_surname": r.b_wsur,
+                    "wife_alt_surname": r.b_walt,
                     "wife_birth": r.b_wbirth,
                     "date_of_marriage": r.b_date,
                     "place_of_marriage": r.b_place,
                     "husband_parents": r.b_hp,
                     "wife_parents": r.b_wp,
                     "children_list": r.b_cl,
+                    "notes": r.b_notes,
                     "links": r.b_links,
                 },
             }
@@ -458,6 +492,15 @@ def _text_filter(column, value, exact: bool, split_comma: bool = False):
     return None
 
 
+def _surname_filter(surname_col, alt_surname_col, value, exact: bool, split_comma: bool = True):
+    """Search a record by either its primary surname or its alt_surname."""
+    primary = _text_filter(surname_col, value, exact, split_comma=split_comma)
+    alt = _text_filter(alt_surname_col, value, exact, split_comma=split_comma)
+    if primary is not None and alt is not None:
+        return or_(primary, alt)
+    return primary if primary is not None else alt
+
+
 def _set_trgm(db: Session, exact: bool):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
     db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
@@ -475,6 +518,7 @@ def search_all(
     place: str = None,
     contributor: str = None,
     has_link: bool = False,
+    ext_id: str = None,
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
@@ -485,13 +529,17 @@ def search_all(
     persons = []
     if record_type in (None, "persons"):
         q = db.query(models.Person)
+        if ext_id:
+            q = q.filter(models.Person.ext_id == ext_id)
         if name:
             q = q.filter(
                 _text_filter(models.Person.name, name, exact, split_comma=True)
             )
         if surname:
             q = q.filter(
-                _text_filter(models.Person.surname, surname, exact, split_comma=True)
+                _surname_filter(
+                    models.Person.surname, models.Person.alt_surname, surname, exact
+                )
             )
         if place:
             q = q.filter(
@@ -526,7 +574,8 @@ def search_all(
         persons = q.offset(skip).limit(limit).all()
 
     families = []
-    if record_type in (None, "families"):
+    # An ext_id is a person-record identifier; skip families to avoid noise.
+    if record_type in (None, "families") and not ext_id:
         families_q = db.query(models.Family)
         if name:
             families_q = families_q.filter(
@@ -542,11 +591,15 @@ def search_all(
         if surname:
             families_q = families_q.filter(
                 or_(
-                    _text_filter(
-                        models.Family.husband_surname, surname, exact, split_comma=True
+                    _surname_filter(
+                        models.Family.husband_surname,
+                        models.Family.husband_alt_surname,
+                        surname, exact,
                     ),
-                    _text_filter(
-                        models.Family.wife_surname, surname, exact, split_comma=True
+                    _surname_filter(
+                        models.Family.wife_surname,
+                        models.Family.wife_alt_surname,
+                        surname, exact,
                     ),
                 )
             )
@@ -590,6 +643,7 @@ def search_advanced_persons(
     place_of_death: str = None,
     contributor: str = None,
     has_link: bool = False,
+    ext_id: str = None,
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
@@ -598,13 +652,17 @@ def search_advanced_persons(
 
     query = db.query(models.Person)
 
+    if ext_id:
+        query = query.filter(models.Person.ext_id == ext_id)
     if name:
         query = query.filter(
             _text_filter(models.Person.name, name, exact, split_comma=True)
         )
     if surname:
         query = query.filter(
-            _text_filter(models.Person.surname, surname, exact, split_comma=True)
+            _surname_filter(
+                models.Person.surname, models.Person.alt_surname, surname, exact
+            )
         )
     if place_of_birth:
         query = query.filter(
@@ -676,8 +734,10 @@ def search_advanced_families(
         )
     if husband_surname:
         query = query.filter(
-            _text_filter(
-                models.Family.husband_surname, husband_surname, exact, split_comma=True
+            _surname_filter(
+                models.Family.husband_surname,
+                models.Family.husband_alt_surname,
+                husband_surname, exact,
             )
         )
     hb_cond = _date_filter(
@@ -697,8 +757,10 @@ def search_advanced_families(
         )
     if wife_surname:
         query = query.filter(
-            _text_filter(
-                models.Family.wife_surname, wife_surname, exact, split_comma=True
+            _surname_filter(
+                models.Family.wife_surname,
+                models.Family.wife_alt_surname,
+                wife_surname, exact,
             )
         )
     wb_cond = _date_filter(models.Family.wife_birth, wife_birth, wife_birth_to, exact)
