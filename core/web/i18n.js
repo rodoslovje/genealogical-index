@@ -119,6 +119,7 @@ const translations = {
     icon_census: 'Census',
     icon_military: 'War casualty',
     icon_matricula: 'Matricula Online',
+    icon_matricula_index: 'Matricula Index',
     icon_dlib: 'Digital Library of Slovenia',
 
     // Matches
@@ -279,6 +280,7 @@ const translations = {
     icon_census: 'Popis prebivalstva',
     icon_military: 'Žrtev vojne',
     icon_matricula: 'Matricula Online',
+    icon_matricula_index: 'Matricula indeks',
     icon_dlib: 'Digitalna knjižnica Slovenije',
 
     // Matches
@@ -439,6 +441,7 @@ const translations = {
     icon_census: 'Popis stanovništva',
     icon_military: 'Žrtva rata',
     icon_matricula: 'Matricula Online',
+    icon_matricula_index: 'Matricula indeks',
     icon_dlib: 'Digitalna knjižnica Slovenije',
 
     // Matches
@@ -599,6 +602,7 @@ const translations = {
     icon_census: 'Volkszählung',
     icon_military: 'Kriegsopfer',
     icon_matricula: 'Matricula Online',
+    icon_matricula_index: 'Matricula-Index',
     icon_dlib: 'Digitale Bibliothek Sloweniens',
 
     // Matches
@@ -759,6 +763,7 @@ const translations = {
     icon_census: 'Népszámlálás',
     icon_military: 'Háborús áldozat',
     icon_matricula: 'Matricula Online',
+    icon_matricula_index: 'Matricula index',
     icon_dlib: 'Szlovénia Digitális Könyvtára',
 
     // Matches
@@ -919,6 +924,7 @@ const translations = {
     icon_census: 'Censimento',
     icon_military: 'Vittima di guerra',
     icon_matricula: 'Matricula Online',
+    icon_matricula_index: 'Indice Matricula',
     icon_dlib: 'Biblioteca digitale della Slovenia',
 
     // Matches

@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './links.js';
-import { isPrivate, cmp, getExpandCollapseIcon } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml } from './utils.js';
 import { childYearOf, parseDateForSort } from './dates.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
@@ -529,19 +529,23 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         html += `<td class="col-center">${val}</td>`;
       } else if (col === 'contributor_ID') {
         const name = row[col] || '';
+        const display = baseContributorName(name);
+        const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index'));
         const internalHref = row._match_href || row._contributor_href || '';
         const externalUrl = row._url || '';
         if (internalHref) {
-          html += `<td class="col-center"><a href="${internalHref}" data-spa-nav>${name}</a></td>`;
+          html += `<td class="col-center"><a href="${internalHref}" data-spa-nav>${display}</a>${indicator}</td>`;
         } else if (externalUrl) {
-          html += `<td class="col-center"><a href="${externalUrl}" target="_blank" rel="noopener">${name}</a></td>`;
+          html += `<td class="col-center"><a href="${externalUrl}" target="_blank" rel="noopener">${display}</a>${indicator}</td>`;
         } else {
-          html += `<td class="col-center">${name}</td>`;
+          html += `<td class="col-center">${display}${indicator}</td>`;
         }
       } else if (col === 'contributor') {
         const name = row[col] || '';
         if (name) {
-          html += `<td><a href="${toUnicodeHref({ t: 'contributors', contributor: name })}" data-spa-nav>${name}</a></td>`;
+          const display = baseContributorName(name);
+          const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index'));
+          html += `<td><a href="${toUnicodeHref({ t: 'contributors', contributor: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
         } else {
           html += `<td></td>`;
         }

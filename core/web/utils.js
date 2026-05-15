@@ -17,6 +17,30 @@ export function getExpandCollapseIcon(isOpen) {
     : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
 }
 
+const MATRICULA_SUFFIX = '-matricula';
+const MATRICULA_INDICATOR = '⛪';
+
+/** Returns the base contributor name (strips trailing -matricula), Unicode-normalized. */
+export function baseContributorName(name) {
+  if (!name) return name;
+  const normalized = name.normalize('NFC');
+  return normalized.endsWith(MATRICULA_SUFFIX)
+    ? normalized.slice(0, -MATRICULA_SUFFIX.length)
+    : normalized;
+}
+
+export function isMatriculaContributor(name) {
+  if (!name) return false;
+  return name.normalize('NFC').endsWith(MATRICULA_SUFFIX);
+}
+
+/** Returns the HTML for the matricula indicator (with tooltip), or '' if not matricula. */
+export function matriculaIndicatorHtml(name, tooltip) {
+  if (!isMatriculaContributor(name)) return '';
+  const safeTooltip = String(tooltip || '').replace(/"/g, '&quot;');
+  return ` <span class="matricula-indicator" title="${safeTooltip}" aria-label="${safeTooltip}">${MATRICULA_INDICATOR}</span>`;
+}
+
 export function shortenUrlLabel(urlStr) {
   try {
     const u = new URL(urlStr);

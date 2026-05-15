@@ -2,16 +2,12 @@ import { t } from './i18n.js';
 import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
 import { formatLinks } from './links.js';
 import { parseDateForSort } from './dates.js';
-import { isPrivate, cmp, getExpandCollapseIcon, shortenUrlLabel } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, shortenUrlLabel, baseContributorName, matriculaIndicatorHtml } from './utils.js';
 import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
 
 const contributorColumns = ['contributor_ID', 'total_persons', 'total_families', 'total', 'total_links', 'last_modified', 'matches'];
-const MATRICULA_SUFFIX = '-matricula';
-const baseContributorName = (name) => name && name.endsWith(MATRICULA_SUFFIX)
-  ? name.slice(0, -MATRICULA_SUFFIX.length)
-  : name;
 
 // Expands aggregated contributor rows back to underlying DB contributor IDs
 // (e.g. ["Kovačič", "Kovačič-matricula"]) so surname-cloud / search queries
@@ -693,10 +689,11 @@ async function renderMatchesPage(contributor, withPartner) {
     const contribData = cachedData.find(d => d.contributor_ID === baseContributor);
 
     if (!contribData) {
-      const safeContributor = String(contributor).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const safeContributor = String(baseContributor).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const contribInd = matriculaIndicatorHtml(contributor, t('icon_matricula_index'));
       document.title = `${t('no_results')} | ${t('site_title')}`;
       container.innerHTML = `<div class="matches-page-header">
-        <h2 class="matches-page-title">${safeContributor} - ${t('col_contributor')}</h2>
+        <h2 class="matches-page-title">${safeContributor}${contribInd} - ${t('col_contributor')}</h2>
       </div>
       <p>${t('no_results')}</p>`;
       return;
@@ -711,16 +708,16 @@ async function renderMatchesPage(contributor, withPartner) {
       const basePartner = baseContributorName(withPartner);
       const partnerData = cachedData.find(d => d.contributor_ID === basePartner);
       if (!partnerData) {
-        const safeContributor = String(displayName).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const safePartner = String(withPartner).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safePartner = String(basePartner).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index'));
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
-          <h2 class="matches-page-title">${safePartner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${safeContributor}</a> - ${t('col_matches')}</h2>
+          <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', contributor: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${t('col_matches')}</h2>
         </div>
         <p>${t('no_results')}</p>`;
         return;
       }
-      document.title = `${withPartner} × ${displayName} - ${t('col_matches')} | ${t('site_title')}`;
+      document.title = `${basePartner} × ${displayName} - ${t('col_matches')} | ${t('site_title')}`;
       await renderMatchDetail(contributor, withPartner, contribData, container);
       return;
     }
@@ -859,26 +856,30 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
   const urlMap = getContributorUrlMap();
   const contribUrl = urlMap[contributor];
   const partnerUrl = urlMap[partner];
+  const contribBase = baseContributorName(contributor);
+  const partnerBase = baseContributorName(partner);
+  const contribInd  = matriculaIndicatorHtml(contributor, t('icon_matricula_index'));
+  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index'));
 
   let urlsHtml = '';
   if (contribUrl || partnerUrl) {
     urlsHtml = `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444; display: flex; flex-wrap: wrap; gap: 16px 40px;">`;
     if (partnerUrl) {
-      urlsHtml += `<div>${t('more_info_about')} <strong>${partner}</strong>:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(partnerUrl)}</a></div></div>`;
+      urlsHtml += `<div>${t('more_info_about')} <strong>${partnerBase}</strong>${partnerInd}:<div style="margin-top: 8px;"><a href="${partnerUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(partnerUrl)}</a></div></div>`;
     }
     if (contribUrl) {
-      urlsHtml += `<div>${t('more_info_about')} <strong>${contributor}</strong>:<div style="margin-top: 8px;"><a href="${contribUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(contribUrl)}</a></div></div>`;
+      urlsHtml += `<div>${t('more_info_about')} <strong>${contribBase}</strong>${contribInd}:<div style="margin-top: 8px;"><a href="${contribUrl}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(contribUrl)}</a></div></div>`;
     }
     urlsHtml += `</div>`;
   }
 
-  const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav>${contributor}</a></strong>`;
-  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a></strong>`;
+  const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: contribBase })}" data-spa-nav>${contribBase}</a></strong>${contribInd}`;
+  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partnerBase })}" data-spa-nav>${partnerBase}</a></strong>${partnerInd}`;
   const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
 
   const baseHtml = `
     <div class="matches-page-header">
-      <h2 class="matches-page-title">${partner} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav style="color: inherit; text-decoration: none;">${contributor}</a> - ${t('col_matches')}</h2>
+      <h2 class="matches-page-title">${partnerBase}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contribBase })}" data-spa-nav style="color: inherit; text-decoration: none;">${contribBase}</a>${contribInd} - ${t('col_matches')}</h2>
     </div>
     <p>${introText}</p>
     ${urlsHtml}`;
@@ -1059,8 +1060,12 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
           const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
           const bCells = fields.map(({ f }) => makeCell(r.record_b, f)).join('');
           const conf = Math.round((r.confidence || 0) * 100);
-          const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: contributor })}" data-spa-nav>${contributor}</a>`;
-          const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: partner })}" data-spa-nav>${partner}</a>`;
+          const contribBase = baseContributorName(contributor);
+          const partnerBase = baseContributorName(partner);
+          const contribIndicator = matriculaIndicatorHtml(contributor, t('icon_matricula_index'));
+          const partnerIndicator = matriculaIndicatorHtml(partner, t('icon_matricula_index'));
+          const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: contribBase })}" data-spa-nav>${contribBase}</a>${contribIndicator}`;
+          const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: partnerBase })}" data-spa-nav>${partnerBase}</a>${partnerIndicator}`;
           return `<tr class="match-pair-row ${pairCls}">
                     ${aCells}
                     <td class="match-pair-label match-pair-label-a col-center">${contributorLink}</td>

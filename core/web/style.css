@@ -826,3 +826,10 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
   opacity: 0.7;
 }
 .contributor-link:hover { opacity: 1; }
+
+.matricula-indicator {
+  font-size: 0.85em;
+  margin-left: 0.2em;
+  opacity: 0.75;
+  cursor: help;
+}
