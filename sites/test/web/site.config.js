@@ -23,7 +23,11 @@ const siteConfig = {
   // Per-language overrides: site title and society name
   i18n: {
     en: { site_title: 'TEST Genealogical Index',  society_name: 'TEST Genealogy Society' },
-    sl: { site_title: 'TEST rodoslovni indeks',   society_name: 'TEST rodoslovno društvo' }
+    sl: { site_title: 'TEST rodoslovni indeks',   society_name: 'TEST rodoslovno društvo' },
+    hr: { site_title: 'TEST rodoslovni indeks',   society_name: 'TEST rodoslovno društvo' },
+    hu: { site_title: 'TEST Genealógiai Index',   society_name: 'TEST Genealógiai Társaság' },
+    de: { site_title: 'TEST Genealogischer Index', society_name: 'TEST Genealogische Gesellschaft' },
+    it: { site_title: 'Indice genealogico TEST',  society_name: 'Società genealogica TEST' },
   },
 
   // Intro paragraphs shown on empty search tabs. Falls back to 'en' for missing languages.
@@ -41,6 +45,46 @@ const siteConfig = {
     ],
     sl: [
       { text: 'To je TESTNO okolje.' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+    ],
+    hr: [
+      { text: 'Ovo je TESTNA stranica.' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+    ],
+    hu: [
+      { text: 'Ez egy TESZT oldal.' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+    ],
+    de: [
+      { text: 'Dies ist eine TEST-Seite.' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+    ],
+    it: [
+      { text: 'Questo è un sito di TEST.' },
       { text: '' },
       { text: '' },
       { text: '' },
