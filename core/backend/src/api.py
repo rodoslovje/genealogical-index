@@ -170,6 +170,7 @@ def get_descendants_by_params(
     sn: Optional[str] = None,
     dob: Optional[str] = None,
     c: Optional[str] = None,
+    id: Optional[str] = None,
     max_generations: int = 5,
     db: Session = Depends(get_db),
 ):
@@ -177,6 +178,8 @@ def get_descendants_by_params(
         return None
 
     parent_info = {"name": n, "surname": sn}
+    if id:
+        parent_info["id"] = id
     if dob:
         if len(dob.strip()) == 4 and dob.strip().isdigit():
             parent_info["year"] = dob
@@ -238,6 +241,7 @@ def get_ancestors_by_params(
     sn: Optional[str] = None,
     dob: Optional[str] = None,
     c: Optional[str] = None,
+    id: Optional[str] = None,
     max_generations: int = 5,
     db: Session = Depends(get_db),
 ):
@@ -245,6 +249,8 @@ def get_ancestors_by_params(
         return None
 
     parent_info = {"name": n, "surname": sn}
+    if id:
+        parent_info["id"] = id
     if dob:
         if len(dob.strip()) == 4 and dob.strip().isdigit():
             parent_info["year"] = dob

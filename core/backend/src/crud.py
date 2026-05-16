@@ -813,6 +813,26 @@ def search_advanced_families(
 
 
 def find_parent_record(db: Session, parent_info: dict, contributor: str):
+    """Resolve a JSON parent/child/partner entry to a stored Person row.
+
+    GEDCOM xref-ids (`ext_id`) are unique within a single contributor's file,
+    so when one is present we use it as a precise primary-key lookup. If
+    the id is missing or doesn't match (older imports, matricula data, or
+    re-import differences) we fall back to the name/year heuristic.
+    """
+    ext_id = parent_info.get("id")
+    if ext_id and contributor:
+        match = (
+            db.query(models.Person)
+            .filter(
+                models.Person.contributor == contributor,
+                models.Person.ext_id == ext_id,
+            )
+            .first()
+        )
+        if match:
+            return match
+
     name = parent_info.get("name")
     surname = parent_info.get("surname")
 

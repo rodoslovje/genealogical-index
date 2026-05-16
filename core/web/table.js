@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, escapeHtml, downloadBlob } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isMatriculaContributor, escapeHtml, downloadBlob } from './utils.js';
 import { childYearOf, parseDateForSort } from './dates.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
@@ -272,7 +272,9 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null) {
     const hasSearchFields = famParams.has('hn') || famParams.has('hsn') || famParams.has('wn') || famParams.has('wsn');
 
     let treeBtn = '';
-    if (rootPerson && (rootPerson.name || rootPerson.surname)) {
+    // Matricula records have no stable IDs and shallow history, so the
+    // ancestor/descendant tree wouldn't be meaningful — skip the button.
+    if (rootPerson && (rootPerson.name || rootPerson.surname) && !isMatriculaContributor(rootPerson.contributor)) {
       const p = new URLSearchParams();
       p.set('t', 'ancestors');
       if (rootPerson.name) p.set('n', rootPerson.name);
@@ -280,6 +282,9 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null) {
       const dob = rootPerson.date_of_birth || childYearOf(rootPerson);
       if (dob) p.set('dob', dob);
       if (rootPerson.contributor) p.set('c', rootPerson.contributor);
+      // ext_id + contributor is the GEDCOM primary key — use it for an
+      // exact lookup; the backend falls back to name/year when missing.
+      if (rootPerson.ext_id) p.set('id', rootPerson.ext_id);
       const treeUrl = toUnicodeHref(p);
       treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_ancestors_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌳</a>`;
     }
@@ -330,12 +335,23 @@ export function formatSpecialCell(col, row) {
     }
 
     let treeBtn = '';
-    if (row.id && count > 0) {
+    if (row.id && count > 0 && !isMatriculaContributor(row.contributor)) {
         const p = new URLSearchParams();
         p.set('t', 'descendants');
-        if (row.husband_name && !isPrivate(row.husband_name)) { p.set('n', row.husband_name); if (row.husband_surname) p.set('sn', row.husband_surname); if (row.husband_birth) p.set('dob', row.husband_birth); }
-        else if (row.wife_name && !isPrivate(row.wife_name)) { p.set('n', row.wife_name); if (row.wife_surname) p.set('sn', row.wife_surname); if (row.wife_birth) p.set('dob', row.wife_birth); }
+        let chosenExtId = '';
+        if (row.husband_name && !isPrivate(row.husband_name)) {
+          p.set('n', row.husband_name);
+          if (row.husband_surname) p.set('sn', row.husband_surname);
+          if (row.husband_birth)   p.set('dob', row.husband_birth);
+          chosenExtId = row.husband_ext_id || '';
+        } else if (row.wife_name && !isPrivate(row.wife_name)) {
+          p.set('n', row.wife_name);
+          if (row.wife_surname) p.set('sn', row.wife_surname);
+          if (row.wife_birth)   p.set('dob', row.wife_birth);
+          chosenExtId = row.wife_ext_id || '';
+        }
         if (row.contributor) p.set('c', row.contributor);
+        if (chosenExtId)     p.set('id', chosenExtId);
         const treeUrl = toUnicodeHref(p);
         treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_descendants_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌿</a>`;
     }
@@ -351,7 +367,7 @@ export function formatSpecialCell(col, row) {
     const { html, count } = renderParentPair(row.parents_list, null);
     if (count > 0) {
       let treeBtn = '';
-      if (row.id) {
+      if (row.id && !isMatriculaContributor(row.contributor)) {
         const p = new URLSearchParams();
         p.set('t', 'ancestors');
         if (row.name) p.set('n', row.name);
@@ -359,6 +375,7 @@ export function formatSpecialCell(col, row) {
         const dob = row.date_of_birth || childYearOf(row);
         if (dob) p.set('dob', dob);
         if (row.contributor) p.set('c', row.contributor);
+        if (row.ext_id)      p.set('id', row.ext_id);
         const treeUrl = toUnicodeHref(p);
         treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_ancestors_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌳</a>`;
       }
@@ -398,7 +415,7 @@ export function formatSpecialCell(col, row) {
     let count = 0;
     let treeBtn = '';
     try {
-      if (row.id) {
+      if (row.id && !isMatriculaContributor(row.contributor)) {
           const p = new URLSearchParams();
           p.set('t', 'descendants');
           if (row.name) p.set('n', row.name);
@@ -406,6 +423,7 @@ export function formatSpecialCell(col, row) {
           const dob = row.date_of_birth || childYearOf(row);
           if (dob) p.set('dob', dob);
           if (row.contributor) p.set('c', row.contributor);
+          if (row.ext_id)      p.set('id', row.ext_id);
           const treeUrl = toUnicodeHref(p);
           treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_descendants_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌿</a>`;
       }

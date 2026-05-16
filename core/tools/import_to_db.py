@@ -90,6 +90,13 @@ def setup_full(db):
         CREATE INDEX idx_family_contrib_w_alt_sur
             ON families(contributor, wife_alt_surname) WHERE wife_alt_surname <> '';
 
+        -- GEDCOM xref id lookup: ext_id is unique within a contributor's file,
+        -- so this serves as the primary key for find_parent_record() when the
+        -- JSON entry includes an id. Partial because pre-id imports left the
+        -- column empty.
+        CREATE INDEX idx_person_contrib_ext_id
+            ON persons(contributor, ext_id) WHERE ext_id <> '';
+
         -- B-tree indexes on year columns — used to pre-filter candidates by year range
         -- before the trigram similarity join, significantly reducing the candidate set.
         CREATE INDEX idx_person_birth_year ON persons(birth_year);
@@ -262,6 +269,10 @@ def setup_update(db):
             ON families(contributor, husband_alt_surname) WHERE husband_alt_surname <> '';
         CREATE INDEX IF NOT EXISTS idx_family_contrib_w_alt_sur
             ON families(contributor, wife_alt_surname) WHERE wife_alt_surname <> '';
+
+        -- ext_id lookup for ancestor/descendant resolution (partial: sparse column).
+        CREATE INDEX IF NOT EXISTS idx_person_contrib_ext_id
+            ON persons(contributor, ext_id) WHERE ext_id <> '';
 
         CREATE INDEX IF NOT EXISTS idx_person_ancestor_search  ON persons(contributor, surname, name, birth_year);
         CREATE INDEX IF NOT EXISTS idx_person_birth_year       ON persons(birth_year);

@@ -45,6 +45,7 @@ function renderTreePage(kind) {
   const sn = params.get('sn') || '';
   const dob = params.get('dob') || '';
   const c = params.get('c') || '';
+  const extId = params.get('id') || '';
   const personName = [n, sn].filter(Boolean).join(' ');
 
   const pageTitle = personName ? `${personName} - ${t(config.titleKey)}` : t(config.titleKey);
@@ -76,6 +77,7 @@ function renderTreePage(kind) {
   if (sn) apiParams.set('sn', sn);
   if (dob) apiParams.set('dob', dob);
   if (c) apiParams.set('c', c);
+  if (extId) apiParams.set('id', extId);
 
   fetch(`${API_BASE_URL}/api/${config.apiPath}?${apiParams}`)
     .then(r => r.json())
