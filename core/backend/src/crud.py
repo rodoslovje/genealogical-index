@@ -867,286 +867,468 @@ def find_parent_record(db: Session, parent_info: dict, contributor: str):
     return query.first()
 
 
+def _normalize_info(info):
+    """Extract (name, surname, date_of_birth, birth_year, ext_id) from a JSON
+    parent/child/partner entry. Mirrors the precedence used by
+    find_parent_record so batch and single resolution behave identically."""
+    ext_id = (info.get("id") or "").strip() if info else ""
+    name = info.get("name") if info else None
+    surname = info.get("surname") if info else None
+
+    date_of_birth = info.get("date_of_birth") if info else None
+    if (
+        not date_of_birth
+        and info
+        and "birth" in info
+        and isinstance(info["birth"], dict)
+    ):
+        date_of_birth = info["birth"].get("date")
+
+    birth_year = _extract_year(str(date_of_birth)) if date_of_birth else None
+    if not birth_year and info and info.get("year"):
+        try:
+            birth_year = int(info["year"])
+        except (ValueError, TypeError):
+            pass
+    return ext_id, name, surname, date_of_birth, birth_year
+
+
+def _batch_resolve_persons(db: Session, infos: list, contributor: str) -> list:
+    """Resolve a list of JSON parent/child/partner dicts to Person rows in
+    bulk. Returns a list of length `len(infos)` aligned by index; entries
+    that couldn't be resolved are None.
+
+    Uses up to two batched queries:
+      1. One IN-query on (contributor, ext_id) for infos with an id.
+      2. One OR-of-AND query on (contributor, name, surname, date_of_birth /
+         birth_year) for the rest.
+
+    This collapses what was previously O(N) find_parent_record calls inside
+    a recursive tree walk into O(generations).
+    """
+    if not infos:
+        return []
+
+    result = [None] * len(infos)
+
+    # --- ext_id batch ------------------------------------------------------
+    ext_id_to_idxs = {}   # ext_id -> [input indices]
+    fallback_pending = [] # indices needing the name/year heuristic
+    for i, info in enumerate(infos):
+        ext_id, name, surname, _, _ = _normalize_info(info)
+        if ext_id:
+            ext_id_to_idxs.setdefault(ext_id, []).append(i)
+        elif name or surname:
+            fallback_pending.append(i)
+
+    if ext_id_to_idxs:
+        rows = (
+            db.query(models.Person)
+            .filter(
+                models.Person.contributor == contributor,
+                models.Person.ext_id.in_(list(ext_id_to_idxs.keys())),
+            )
+            .all()
+        )
+        by_ext = {}
+        for r in rows:
+            by_ext.setdefault(r.ext_id, r)
+        for ext_id, idxs in ext_id_to_idxs.items():
+            person = by_ext.get(ext_id)
+            if person is not None:
+                for idx in idxs:
+                    result[idx] = person
+            else:
+                # ext_id didn't resolve — try the name/year fallback for these
+                # entries (older imports, re-import drift, ...).
+                fallback_pending.extend(idxs)
+
+    # --- fallback batch (name + surname + date/year) -----------------------
+    if fallback_pending:
+        sub_conds = []
+        # (name, surname, date_of_birth, birth_year) -> [indices]
+        key_to_idxs = {}
+        for idx in fallback_pending:
+            if result[idx] is not None:
+                continue
+            _, name, surname, dob, year = _normalize_info(infos[idx])
+            if not name and not surname:
+                continue
+            key = (name or "", surname or "", dob or None, year)
+            key_to_idxs.setdefault(key, []).append(idx)
+
+            conds = [models.Person.contributor == contributor]
+            if surname:
+                conds.append(models.Person.surname == surname)
+            if name:
+                conds.append(models.Person.name == name)
+            if dob:
+                conds.append(models.Person.date_of_birth == dob)
+            elif year:
+                conds.append(models.Person.birth_year == year)
+            sub_conds.append(and_(*conds))
+
+        if sub_conds:
+            rows = db.query(models.Person).filter(or_(*sub_conds)).all()
+            for row in rows:
+                for (name, surname, dob, year), idxs in key_to_idxs.items():
+                    if name and name != (row.name or ""):
+                        continue
+                    if surname and surname != (row.surname or ""):
+                        continue
+                    if dob:
+                        if dob != (row.date_of_birth or ""):
+                            continue
+                    elif year and year != row.birth_year:
+                        continue
+                    for idx in idxs:
+                        if result[idx] is None:
+                            result[idx] = row
+
+    return result
+
+
+def _make_ancestor_node_from_record(p):
+    return {
+        "id": p.id,
+        "name": p.name,
+        "surname": p.surname,
+        "sex": p.sex,
+        "date_of_birth": p.date_of_birth,
+        "place_of_birth": p.place_of_birth,
+        "parents": [],
+    }
+
+
+def _make_ancestor_node_from_info(info):
+    return {
+        "id": None,
+        "name": info.get("name"),
+        "surname": info.get("surname"),
+        "sex": info.get("sex"),
+        "date_of_birth": (
+            info.get("date_of_birth")
+            or info.get("year")
+            or (info.get("birth", {}).get("date") if isinstance(info.get("birth"), dict) else None)
+        ),
+        "place_of_birth": None,
+        "parents": [],
+    }
+
+
 def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
+    """Build the ancestors tree using breadth-first expansion with per-level
+    batched lookups. Two queries per generation (parents resolution + family
+    lookup for parents_marriage) replace what used to be O(N) round-trips.
+    """
     root_person = db.query(models.Person).filter(models.Person.id == person_id).first()
     if not root_person:
         return None
+    contributor = root_person.contributor
 
-    visited = set()
+    root_node = _make_ancestor_node_from_record(root_person)
+    # Track parallel "records" list so we know which nodes can still grow
+    # (only nodes backed by a DB record have parents_list to expand).
+    current_records = [root_person]
+    current_nodes = [root_node]
+    visited = {root_person.id}
 
-    def build_tree(person_obj, current_generation):
-        if current_generation > max_generations:
-            return None
-
-        is_record = hasattr(person_obj, "id") and person_obj.id is not None
-
-        if is_record:
-            if person_obj.id in visited:
-                return None
-            visited.add(person_obj.id)
-
-            node = {
-                "id": person_obj.id,
-                "name": person_obj.name,
-                "surname": person_obj.surname,
-                "sex": person_obj.sex,
-                "date_of_birth": person_obj.date_of_birth,
-                "place_of_birth": person_obj.place_of_birth,
-                "parents": [],
-            }
-            parents_json = person_obj.parents_list
-        else:
-            node = {
-                "id": None,
-                "name": person_obj.get("name"),
-                "surname": person_obj.get("surname"),
-                "sex": person_obj.get("sex"),
-                "date_of_birth": person_obj.get("date_of_birth")
-                or person_obj.get("year")
-                or (
-                    person_obj.get("birth", {}).get("date")
-                    if isinstance(person_obj.get("birth"), dict)
-                    else None
-                ),
-                "place_of_birth": None,
-                "parents": [],
-            }
-            parents_json = None
-
-        if parents_json and is_record:
+    for _gen in range(max_generations):
+        # Gather (parent_node, parent_info) pairs from every record in this level.
+        pending = []
+        for parent_node, record in zip(current_nodes, current_records):
+            if not record or not record.parents_list:
+                continue
             try:
-                parents = json.loads(parents_json)
-                for p_info in parents:
-                    if not p_info:
-                        continue
-                    parent_record = find_parent_record(
-                        db, p_info, root_person.contributor
-                    )
-                    if parent_record:
-                        parent_node = build_tree(parent_record, current_generation + 1)
-                    else:
-                        parent_node = build_tree(p_info, current_generation + 1)
-
-                    if parent_node:
-                        node["parents"].append(parent_node)
-
-                if len(node["parents"]) == 2:
-                    p1 = node["parents"][0]
-                    p2 = node["parents"][1]
-
-                    if p1.get("sex") == "m" or p2.get("sex") == "f":
-                        h_node, w_node = p1, p2
-                    elif p1.get("sex") == "f" or p2.get("sex") == "m":
-                        h_node, w_node = p2, p1
-                    else:
-                        h_node, w_node = p1, p2
-
-                    q = db.query(models.Family).filter(
-                        models.Family.contributor == root_person.contributor
-                    )
-                    filter_count = 0
-                    if h_node.get("surname"):
-                        q = q.filter(models.Family.husband_surname == h_node["surname"])
-                        filter_count += 1
-                    if h_node.get("name"):
-                        q = q.filter(models.Family.husband_name == h_node["name"])
-                        filter_count += 1
-                    if w_node.get("surname"):
-                        q = q.filter(models.Family.wife_surname == w_node["surname"])
-                        filter_count += 1
-                    if w_node.get("name"):
-                        q = q.filter(models.Family.wife_name == w_node["name"])
-                        filter_count += 1
-
-                    if filter_count >= 2:
-                        fam = q.first()
-                        if fam and (fam.date_of_marriage or fam.place_of_marriage):
-                            node["parents_marriage"] = {
-                                "date": fam.date_of_marriage,
-                                "place": fam.place_of_marriage,
-                            }
+                parents = json.loads(record.parents_list)
             except (json.JSONDecodeError, TypeError):
-                pass
+                continue
+            if not parents:
+                continue
+            for p_info in parents:
+                if not p_info:
+                    continue
+                pending.append((parent_node, p_info))
 
-        return node
+        if not pending:
+            break
 
-    return build_tree(root_person, 0)
+        resolved = _batch_resolve_persons(db, [p[1] for p in pending], contributor)
+
+        next_records, next_nodes = [], []
+        for (parent_node, p_info), record in zip(pending, resolved):
+            if record:
+                if record.id in visited:
+                    continue
+                visited.add(record.id)
+                child_node = _make_ancestor_node_from_record(record)
+                next_records.append(record)
+                next_nodes.append(child_node)
+            else:
+                child_node = _make_ancestor_node_from_info(p_info)
+            parent_node["parents"].append(child_node)
+
+        current_records, current_nodes = next_records, next_nodes
+
+    # Batch-fetch parents_marriage families for every node that ended up with
+    # two parents. The single OR'd query collapses N family lookups into one.
+    _attach_parents_marriage(db, root_node, contributor)
+
+    return root_node
+
+
+def _attach_parents_marriage(db: Session, root_node: dict, contributor: str):
+    nodes_two = []
+
+    def walk(node):
+        if len(node.get("parents", [])) == 2:
+            nodes_two.append(node)
+        for p in node.get("parents", []):
+            walk(p)
+
+    walk(root_node)
+    if not nodes_two:
+        return
+
+    # Determine husband/wife orientation and build per-node lookup conditions.
+    sub_conds = []
+    keys = []  # parallel: (node, husband_dict, wife_dict)
+    for node in nodes_two:
+        p1, p2 = node["parents"][0], node["parents"][1]
+        if p1.get("sex") == "m" or p2.get("sex") == "f":
+            h, w = p1, p2
+        elif p1.get("sex") == "f" or p2.get("sex") == "m":
+            h, w = p2, p1
+        else:
+            h, w = p1, p2
+
+        conds = [models.Family.contributor == contributor]
+        filter_count = 0
+        if h.get("surname"):
+            conds.append(models.Family.husband_surname == h["surname"])
+            filter_count += 1
+        if h.get("name"):
+            conds.append(models.Family.husband_name == h["name"])
+            filter_count += 1
+        if w.get("surname"):
+            conds.append(models.Family.wife_surname == w["surname"])
+            filter_count += 1
+        if w.get("name"):
+            conds.append(models.Family.wife_name == w["name"])
+            filter_count += 1
+        if filter_count >= 2:
+            sub_conds.append(and_(*conds))
+            keys.append((node, h, w))
+
+    if not sub_conds:
+        return
+
+    fams = db.query(models.Family).filter(or_(*sub_conds)).all()
+    for node, h, w in keys:
+        for fam in fams:
+            if h.get("surname") and fam.husband_surname != h["surname"]:
+                continue
+            if h.get("name") and fam.husband_name != h["name"]:
+                continue
+            if w.get("surname") and fam.wife_surname != w["surname"]:
+                continue
+            if w.get("name") and fam.wife_name != w["name"]:
+                continue
+            if fam.date_of_marriage or fam.place_of_marriage:
+                node["parents_marriage"] = {
+                    "date": fam.date_of_marriage,
+                    "place": fam.place_of_marriage,
+                }
+            break
+
+
+def _make_descendant_node_from_record(p):
+    return {
+        "id": p.id,
+        "name": p.name,
+        "surname": p.surname,
+        "sex": p.sex,
+        "date_of_birth": p.date_of_birth,
+        "place_of_birth": p.place_of_birth,
+        "children": [],
+        "is_family": False,
+    }
+
+
+def _make_descendant_node_from_info(info):
+    return {
+        "id": None,
+        "name": info.get("name"),
+        "surname": info.get("surname"),
+        "sex": info.get("sex"),
+        "date_of_birth": (
+            info.get("date_of_birth")
+            or info.get("year")
+            or (info.get("birth", {}).get("date") if isinstance(info.get("birth"), dict) else None)
+        ),
+        "place_of_birth": None,
+        "children": [],
+        "is_family": False,
+    }
+
+
+def _person_family_filter(record):
+    """Build the SQL fragment that locates families where `record` is husband
+    or wife (constrained by sex if known). Returns None when the record has
+    insufficient identifying info to look anything up."""
+    name = record.name
+    surname = record.surname
+    if not name and not surname:
+        return None
+
+    h_conds = []
+    if name:    h_conds.append(models.Family.husband_name == name)
+    if surname: h_conds.append(models.Family.husband_surname == surname)
+    w_conds = []
+    if name:    w_conds.append(models.Family.wife_name == name)
+    if surname: w_conds.append(models.Family.wife_surname == surname)
+
+    sex = record.sex
+    if sex == "m":
+        return and_(*h_conds) if h_conds else None
+    if sex == "f":
+        return and_(*w_conds) if w_conds else None
+    # Unknown sex: match either side.
+    if h_conds and w_conds:
+        return or_(and_(*h_conds), and_(*w_conds))
+    if h_conds:
+        return and_(*h_conds)
+    if w_conds:
+        return and_(*w_conds)
+    return None
+
+
+def _family_belongs_to(fam, record, known_partners):
+    """Decide whether `fam` is a marriage of `record`, given the record's
+    known partners (from partners_list). Returns (is_husband, partner_dict)
+    or (None, None) when the family fails the filter."""
+    sex = record.sex
+    name = record.name or ""
+    surname = record.surname or ""
+
+    if sex == "m":
+        is_husband = True
+    elif sex == "f":
+        is_husband = False
+    else:
+        h_name = fam.husband_name or ""
+        h_sur = fam.husband_surname or ""
+        is_husband = True
+        if name and name != h_name:    is_husband = False
+        if surname and surname != h_sur: is_husband = False
+
+    fam_birth = fam.husband_birth if is_husband else fam.wife_birth
+    if record.date_of_birth and fam_birth and record.date_of_birth != fam_birth:
+        return None, None
+
+    if known_partners is not None:
+        part_name = (fam.wife_name if is_husband else fam.husband_name) or ""
+        part_sur  = (fam.wife_surname if is_husband else fam.husband_surname) or ""
+        matched = False
+        for kp in known_partners:
+            n_match = not kp["name"]    or kp["name"]    == part_name
+            s_match = not kp["surname"] or kp["surname"] == part_sur
+            if n_match and s_match:
+                matched = True
+                break
+        if not matched:
+            return None, None
+
+    if is_husband:
+        partner = {
+            "name": fam.wife_name, "surname": fam.wife_surname,
+            "date_of_birth": fam.wife_birth, "sex": "f",
+        }
+    else:
+        partner = {
+            "name": fam.husband_name, "surname": fam.husband_surname,
+            "date_of_birth": fam.husband_birth, "sex": "m",
+        }
+    return is_husband, partner
 
 
 def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
+    """Build the descendants tree using breadth-first expansion with per-level
+    batched lookups. Two queries per generation (families OR'd across the
+    level, then children resolution) replace the previously per-node fetches.
+    """
     root_person = db.query(models.Person).filter(models.Person.id == person_id).first()
     if not root_person:
         return None
+    contributor = root_person.contributor
 
-    visited_persons = set()
+    root_node = _make_descendant_node_from_record(root_person)
+    current_records = [root_person]
+    current_nodes = [root_node]
+    visited = {root_person.id}
 
-    def build_tree(person_obj, current_generation):
-        if current_generation > max_generations:
-            return None
+    # Iterate max_generations+1 times so the deepest persons still get their
+    # families/marriage info attached (with empty children arrays), matching
+    # the original recursive behaviour.
+    for gen in range(max_generations + 1):
+        is_last_gen = (gen == max_generations)
+        # 1) Build per-record family-lookup conditions and OR them together.
+        sub_conds = []
+        owners = []  # parallel to sub_conds: (record, node)
+        for record, node in zip(current_records, current_nodes):
+            if not record:
+                continue
+            cond = _person_family_filter(record)
+            if cond is None:
+                continue
+            sub_conds.append(and_(models.Family.contributor == contributor, cond))
+            owners.append((record, node))
 
-        is_record = hasattr(person_obj, "id") and person_obj.id is not None
+        if not sub_conds:
+            break
 
-        if is_record:
-            if person_obj.id in visited_persons:
-                return None
-            visited_persons.add(person_obj.id)
+        # 2) One query fetches every family relevant to this generation.
+        fams_all = db.query(models.Family).filter(or_(*sub_conds)).all()
 
-            node = {
-                "id": person_obj.id,
-                "name": person_obj.name,
-                "surname": person_obj.surname,
-                "sex": person_obj.sex,
-                "date_of_birth": person_obj.date_of_birth,
-                "place_of_birth": person_obj.place_of_birth,
-                "children": [],
-                "is_family": False,
-            }
-            contributor = person_obj.contributor
-        else:
-            node = {
-                "id": None,
-                "name": person_obj.get("name"),
-                "surname": person_obj.get("surname"),
-                "sex": person_obj.get("sex"),
-                "date_of_birth": person_obj.get("date_of_birth")
-                or person_obj.get("year")
-                or (
-                    person_obj.get("birth", {}).get("date")
-                    if isinstance(person_obj.get("birth"), dict)
-                    else None
-                ),
-                "place_of_birth": None,
-                "children": [],
-                "is_family": False,
-            }
-            contributor = root_person.contributor
-
-        if contributor and is_record:
-            fams_raw = []
-            if node["name"] or node["surname"]:
-                # Combine husband/wife search into a single query with OR.
-                # This allows the DB to potentially use a bitmap index scan over the two new indexes,
-                # which is more efficient than two separate queries from the application.
-                husband_conds = [models.Family.contributor == contributor]
-                if node["name"]:
-                    husband_conds.append(models.Family.husband_name == node["name"])
-                if node["surname"]:
-                    husband_conds.append(
-                        models.Family.husband_surname == node["surname"]
-                    )
-
-                wife_conds = [models.Family.contributor == contributor]
-                if node["name"]:
-                    wife_conds.append(models.Family.wife_name == node["name"])
-                if node["surname"]:
-                    wife_conds.append(models.Family.wife_surname == node["surname"])
-
-                sex = node.get("sex")
-                query_filter = None
-                # Only build a query if we have more than just the contributor to filter on
-                if sex == "m":
-                    if len(husband_conds) > 1:
-                        query_filter = and_(*husband_conds)
-                elif sex == "f":
-                    if len(wife_conds) > 1:
-                        query_filter = and_(*wife_conds)
-                else:  # sex is unknown or not specified
-                    can_be_husband = len(husband_conds) > 1
-                    can_be_wife = len(wife_conds) > 1
-                    if can_be_husband and can_be_wife:
-                        query_filter = or_(and_(*husband_conds), and_(*wife_conds))
-                    elif can_be_husband:
-                        query_filter = and_(*husband_conds)
-                    elif can_be_wife:
-                        query_filter = and_(*wife_conds)
-
-                if query_filter is not None:
-                    fams_raw = db.query(models.Family).filter(query_filter).all()
-
-            # Filter fams_raw to only those truly belonging to this person
-            known_partners = []
-            has_partners = False
-            if person_obj.partners_list:
+        # 3) For each owner, filter the families that genuinely belong to them
+        #    and collect child-info dicts for batch resolution.
+        pending_children = []  # (fam_node, child_info) pairs
+        for record, node in owners:
+            known_partners = None
+            if record.partners_list:
                 try:
-                    p_list = json.loads(person_obj.partners_list)
-                    has_partners = True
-                    for p in p_list:
-                        if p:
-                            known_partners.append(
-                                {
-                                    "name": p.get("name") or "",
-                                    "surname": p.get("surname") or "",
-                                }
-                            )
+                    p_list = json.loads(record.partners_list)
+                    known_partners = [
+                        {"name": p.get("name") or "", "surname": p.get("surname") or ""}
+                        for p in p_list if p
+                    ]
                 except Exception:
                     pass
 
-            for fam in fams_raw:
-                is_husband = False
-                if node.get("sex") == "m":
-                    is_husband = True
-                elif node.get("sex") == "f":
-                    is_husband = False
+            name = record.name or ""
+            surname = record.surname or ""
+            sex = record.sex
+
+            for fam in fams_all:
+                # Cheap pre-check: does this family even reference the record's name?
+                if sex == "m":
+                    if name and fam.husband_name != name: continue
+                    if surname and fam.husband_surname != surname: continue
+                elif sex == "f":
+                    if name and fam.wife_name != name: continue
+                    if surname and fam.wife_surname != surname: continue
                 else:
-                    n_name = node.get("name") or ""
-                    n_sur = node.get("surname") or ""
-                    h_name = fam.husband_name or ""
-                    h_sur = fam.husband_surname or ""
-
-                    h_match = True
-                    if n_name and n_name != h_name:
-                        h_match = False
-                    if n_sur and n_sur != h_sur:
-                        h_match = False
-
-                    is_husband = h_match
-
-                # Check birth date constraint if both are present
-                fam_birth = fam.husband_birth if is_husband else fam.wife_birth
-                if node.get("date_of_birth") and fam_birth:
-                    if node.get("date_of_birth") != fam_birth:
+                    on_h = (not name or fam.husband_name == name) and (not surname or fam.husband_surname == surname)
+                    on_w = (not name or fam.wife_name == name)    and (not surname or fam.wife_surname == surname)
+                    if not (on_h or on_w):
                         continue
 
-                # Check partner constraint
-                if has_partners:
-                    part_name = fam.wife_name if is_husband else fam.husband_name
-                    part_sur = fam.wife_surname if is_husband else fam.husband_surname
-                    part_name = part_name or ""
-                    part_sur = part_sur or ""
-
-                    matched = False
-                    for kp in known_partners:
-                        n_match = True
-                        s_match = True
-                        if kp["name"] and kp["name"] != part_name:
-                            n_match = False
-                        if kp["surname"] and kp["surname"] != part_sur:
-                            s_match = False
-
-                        if n_match and s_match:
-                            matched = True
-                            break
-
-                    if not matched:
-                        continue
+                is_husband, partner = _family_belongs_to(fam, record, known_partners)
+                if is_husband is None:
+                    continue
 
                 if not node.get("sex"):
                     node["sex"] = "m" if is_husband else "f"
-
-                if is_husband:
-                    partner = {
-                        "name": fam.wife_name,
-                        "surname": fam.wife_surname,
-                        "date_of_birth": fam.wife_birth,
-                        "sex": "f",
-                    }
-                else:
-                    partner = {
-                        "name": fam.husband_name,
-                        "surname": fam.husband_surname,
-                        "date_of_birth": fam.husband_birth,
-                        "sex": "m",
-                    }
 
                 fam_node = {
                     "is_family": True,
@@ -1157,28 +1339,43 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
                     },
                     "children": [],
                 }
+                node["children"].append(fam_node)
 
                 if fam.children_list:
                     try:
                         children = json.loads(fam.children_list)
-                        for c_info in children:
-                            if not c_info:
-                                continue
-                            child_record = find_parent_record(db, c_info, contributor)
-                            if child_record:
-                                child_node = build_tree(
-                                    child_record, current_generation + 1
-                                )
-                            else:
-                                child_node = build_tree(c_info, current_generation + 1)
-
-                            if child_node:
-                                fam_node["children"].append(child_node)
                     except (json.JSONDecodeError, TypeError):
-                        pass
+                        children = []
+                    for c_info in children:
+                        if not c_info:
+                            continue
+                        pending_children.append((fam_node, c_info))
 
-                node["children"].append(fam_node)
+        # At the deepest generation we still want the families to appear on
+        # the leaf persons, but we don't expand further (their children would
+        # exceed max_generations).
+        if is_last_gen or not pending_children:
+            break
 
-        return node
+        # 4) Batch-resolve every child across this level in a single query
+        #    (with the ext_id partial index this is a cheap PK probe).
+        resolved = _batch_resolve_persons(
+            db, [c[1] for c in pending_children], contributor
+        )
 
-    return build_tree(root_person, 0)
+        next_records, next_nodes = [], []
+        for (fam_node, c_info), record in zip(pending_children, resolved):
+            if record:
+                if record.id in visited:
+                    continue
+                visited.add(record.id)
+                child_node = _make_descendant_node_from_record(record)
+                next_records.append(record)
+                next_nodes.append(child_node)
+            else:
+                child_node = _make_descendant_node_from_info(c_info)
+            fam_node["children"].append(child_node)
+
+        current_records, current_nodes = next_records, next_nodes
+
+    return root_node
