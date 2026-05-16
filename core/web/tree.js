@@ -1,11 +1,11 @@
 import { API_BASE_URL } from './config.js';
-import { toUnicodeSearch, toUnicodeHref } from './url.js';
+import { toUnicodeSearch, toUnicodeHref, currentParams } from './url.js';
 import { t } from './i18n.js';
-import { isPrivate } from './utils.js';
+import { isPrivate, escapeHtml, downloadBlob } from './utils.js';
 import { parseDateForSort } from './dates.js';
 
 export function renderDescendantsPage() {
-  const params = new URLSearchParams(window.location.search);
+  const params = currentParams();
   const n = params.get('n') || '';
   const sn = params.get('sn') || '';
   const dob = params.get('dob') || '';
@@ -56,7 +56,7 @@ export function renderDescendantsPage() {
       }
       controls.style.display = 'flex';
       if (sourceEl && c) {
-        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', c: c })}" data-spa-nav>${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
+        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', c: c })}" data-spa-nav>${escapeHtml(c)}</a>`;
         sourceEl.style.display = 'block';
       }
       renderD3DescendantsTree(data, container, personName, c);
@@ -68,7 +68,7 @@ export function renderDescendantsPage() {
 }
 
 export function renderAncestorsPage() {
-  const params = new URLSearchParams(window.location.search);
+  const params = currentParams();
   const n = params.get('n') || '';
   const sn = params.get('sn') || '';
   const dob = params.get('dob') || '';
@@ -119,7 +119,7 @@ export function renderAncestorsPage() {
       }
       controls.style.display = 'flex';
       if (sourceEl && c) {
-        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', c: c })}" data-spa-nav>${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
+        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', c: c })}" data-spa-nav>${escapeHtml(c)}</a>`;
         sourceEl.style.display = 'block';
       }
       renderD3Tree(data, container, personName, c);
@@ -322,16 +322,11 @@ function renderD3Tree(data, container, personName, contributorName) {
     svg.attr('height', originalHeight);
     g.attr('transform', originalTransform);
 
-    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
     const safeName = (personName || 'ancestors').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    link.download = `ancestors_${safeName}.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(
+      new Blob([source], { type: 'image/svg+xml;charset=utf-8;' }),
+      `ancestors_${safeName}.svg`
+    );
   });
 
   const link = g.append('g')
@@ -702,16 +697,11 @@ function renderD3DescendantsTree(data, container, personName, contributorName) {
     svg.attr('height', originalHeight);
     g.attr('transform', originalTransform);
 
-    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
     const safeName = (personName || 'descendants').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    link.download = `descendants_${safeName}.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(
+      new Blob([source], { type: 'image/svg+xml;charset=utf-8;' }),
+      `descendants_${safeName}.svg`
+    );
   });
 
   const link = g.append('g')

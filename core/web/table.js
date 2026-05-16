@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, escapeHtml, downloadBlob } from './utils.js';
 import { childYearOf, parseDateForSort } from './dates.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
@@ -106,6 +106,8 @@ export function exportToCSV(data, columns, filename) {
         label = t('has_link');
       } else if (field === 'with') {
         label = t('filter_with');
+      } else if (field === 'filter') {
+        label = t('general_search_label');
       } else if (field.endsWith('_to')) {
         const baseField = field.replace('_to', '');
         const baseLabel = t('col_' + baseField) !== 'col_' + baseField ? t('col_' + baseField) : baseField;
@@ -130,14 +132,7 @@ export function exportToCSV(data, columns, filename) {
     }
   }
 
-  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  downloadBlob(new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }), filename);
 }
 
 const CENTERED_COLUMNS = new Set([
@@ -226,7 +221,7 @@ function sortData(data, primary, secondary) {
 }
 
 function makePersonLink(name, surname, display) {
-  const safeDisplay = display ? String(display).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+  const safeDisplay = display ? escapeHtml(display) : '';
   if (isPrivate(name) || isPrivate(surname)) return safeDisplay;
   if (!name && !surname) return safeDisplay;
   const p = new URLSearchParams();
@@ -318,7 +313,7 @@ export function formatSpecialCell(col, row) {
         const cy = childYearOf(c);
         if (cy) childDisplay += ` *${cy}`;
 
-        if (cPriv) return String(childDisplay).replace(/</g, '&lt;').replace(/>/g, '&gt;').trim();
+        if (cPriv) return escapeHtml(childDisplay).trim();
 
         const params = new URLSearchParams();
         params.set('t', 'person');
@@ -328,7 +323,7 @@ export function formatSpecialCell(col, row) {
         if (dob) params.set('dob', dob);
         params.set('ex', '1');
 
-        return `<a href="${toUnicodeHref(params)}" data-spa-nav>${String(childDisplay).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
+        return `<a href="${toUnicodeHref(params)}" data-spa-nav>${escapeHtml(childDisplay)}</a>`;
       });
     } catch (e) {
       console.error("Failed to parse JSON for children", e);
@@ -438,7 +433,7 @@ export function formatSpecialCell(col, row) {
         if (py) partnerDisplay += ` *${py}`;
         if (isPrivate(p.name) || p.name === 'unknown') partnerDisplay = p.name;
         const label = isHusband ? t('label_husband') : (p.sex === 'f' ? t('label_wife') : '');
-        const safeDisplay = String(partnerDisplay).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeDisplay = escapeHtml(partnerDisplay);
         formattedList.push(`<a href="${toUnicodeHref(famParams)}" data-spa-nav${label ? ` title="${label}"` : ''}>${safeDisplay}</a>`);
       });
     } catch (e) {
@@ -555,7 +550,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (col === 'total_links' && Number(row[col] || 0) === 0) val = '';
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
-        const raw = String(row[col] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const raw = escapeHtml(row[col]);
         const extra = col === 'date_of_birth'
           ? baptismIconHtml(row.date_of_baptism, row.place_of_baptism, t('icon_baptism'))
           : '';
@@ -565,7 +560,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           ? altSurnameIconHtml(row.husband_alt_surname, t('icon_alt_surname'))
           : '';
         const val = row[col];
-        const safeDisplay = String(val || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeDisplay = escapeHtml(val);
         if (val) {
           const isPriv = isPrivate(row.husband_name) || isPrivate(row.husband_surname);
           if (isPriv) {
@@ -586,7 +581,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           ? altSurnameIconHtml(row.wife_alt_surname, t('icon_alt_surname'))
           : '';
         const val = row[col];
-        const safeDisplay = String(val || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeDisplay = escapeHtml(val);
         if (val) {
           const isPriv = isPrivate(row.wife_name) || isPrivate(row.wife_surname);
           if (isPriv) {
@@ -607,7 +602,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           ? altSurnameIconHtml(row.alt_surname, t('icon_alt_surname'))
           : '';
         const val = row[col];
-        const safeDisplay = String(val || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeDisplay = escapeHtml(val);
         if (val) {
           const isPriv = isPrivate(row.name) || isPrivate(row.surname);
           if (isPriv) {
@@ -627,7 +622,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         const inner = formatSpecialCell(col, row);
         html += `<td>${inner || ''}</td>`;
       } else {
-        const raw = String(row[col] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const raw = escapeHtml(row[col]);
         let extra = '';
         if (col === 'place_of_birth' || col === 'place_of_marriage') {
           extra = notesIconHtml(row.notes, t('icon_notes'));

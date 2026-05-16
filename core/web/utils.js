@@ -1,3 +1,71 @@
+/**
+ * Returns the HTML for an `<input type=text>` paired with a clear (×) button,
+ * inside an `.input-wrapper`. Used by every search form input in search.js.
+ * Pair with `wireClearableContainer()` (below) to hook up the listeners.
+ */
+export function inputWithClear({ id, placeholder = '', value = '', title = '', type = 'text' } = {}) {
+  const safeId = escapeHtml(id);
+  const safePlaceholder = escapeHtml(placeholder);
+  const safeValue = escapeHtml(value);
+  const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+  const clearDisplay = value ? 'block' : 'none';
+  return `<div class="input-wrapper">
+    <input type="${type}" id="${safeId}" placeholder="${safePlaceholder}" value="${safeValue}"${titleAttr} />
+    <button type="button" class="clear-btn" style="display:${clearDisplay}">&times;</button>
+  </div>`;
+}
+
+/**
+ * Adds clear-button + Enter-key + input-event wiring on a container that holds
+ * one or more `inputWithClear()` outputs. Idempotent — call after each render.
+ * @param {HTMLElement} container
+ * @param {() => void} onEnter   Called on Enter inside any text input.
+ */
+export function wireClearableContainer(container, onEnter) {
+  if (!container || container.dataset.clearableWired) return;
+  container.dataset.clearableWired = '1';
+  container.addEventListener('click', (event) => {
+    if (event.target.matches('.clear-btn')) {
+      const input = event.target.previousElementSibling;
+      if (input) { input.value = ''; event.target.style.display = 'none'; input.focus(); }
+    }
+  });
+  container.addEventListener('input', (event) => {
+    if (event.target.matches('input[type="text"]')) {
+      const clearBtn = event.target.nextElementSibling;
+      if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = event.target.value ? 'block' : 'none';
+    }
+  });
+  if (onEnter) {
+    container.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && event.target.matches('input[type="text"]')) onEnter();
+    });
+  }
+}
+
+/** Escapes a value for safe insertion into HTML text content / attribute. */
+export function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Triggers a browser download for a Blob. Common shape used by CSV/SVG exports. */
+export function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function isPrivate(val) {
   if (!val) return false;
   const v = String(val).toLowerCase();
@@ -37,8 +105,8 @@ export function isMatriculaContributor(name) {
 /** Returns the HTML for the matricula indicator (with tooltip), or '' if not matricula. */
 export function matriculaIndicatorHtml(name, tooltip) {
   if (!isMatriculaContributor(name)) return '';
-  const safeTooltip = String(tooltip || '').replace(/"/g, '&quot;');
-  return ` <span class="matricula-indicator" title="${safeTooltip}" aria-label="${safeTooltip}">${MATRICULA_INDICATOR}</span>`;
+  const safe = escapeHtml(tooltip || '');
+  return ` <span class="matricula-indicator" title="${safe}" aria-label="${safe}">${MATRICULA_INDICATOR}</span>`;
 }
 
 // --- inline row icons for optional fields shown in result cells ---
@@ -48,7 +116,7 @@ const NOTES_ICON       = '🗒';
 
 function _inlineIcon(glyph, label, value) {
   const tooltip = label ? `${label}: ${value}` : String(value);
-  const safe = tooltip.replace(/"/g, '&quot;');
+  const safe = escapeHtml(tooltip);
   return ` <span class="row-icon" title="${safe}" aria-label="${safe}">${glyph}</span>`;
 }
 

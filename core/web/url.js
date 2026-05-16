@@ -28,6 +28,10 @@ export const PARAM_MAP = {
   husband_birth_to: 'hbt',
   wife_birth:       'wb',
   wife_birth_to:    'wbt',
+  // Contributors / matches view: which contributor is active and who they're
+  // being compared with; `filter` is the per-view filter input.
+  with:             'w',
+  filter:           'f',
 };
 
 /** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point at the unified person tab. */
@@ -39,6 +43,17 @@ export const LEGACY_TAB_MAP = {
 export const PARAM_MAP_REVERSE = Object.fromEntries(
   Object.entries(PARAM_MAP).map(([field, short]) => [short, field])
 );
+
+/** Current URLSearchParams from the browser address bar. */
+export function currentParams() {
+  return new URLSearchParams(window.location.search);
+}
+
+/** Read a param using both the short (PARAM_MAP) and long key forms. */
+export function getParam(params, longKey) {
+  const short = PARAM_MAP[longKey];
+  return (short && params.get(short)) || params.get(longKey) || null;
+}
 
 function buildURL(params) {
   const url = new URL(window.location);

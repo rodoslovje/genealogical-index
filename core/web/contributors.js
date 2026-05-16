@@ -2,7 +2,7 @@ import { t } from './i18n.js';
 import { renderTable, formatSpecialCell, exportToCSV } from './table.js';
 import { formatLinks } from './links.js';
 import { parseDateForSort } from './dates.js';
-import { isPrivate, cmp, getExpandCollapseIcon, shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, escapeHtml } from './utils.js';
 import { API_BASE_URL } from './config.js';
 import { toUnicodeHref, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
@@ -249,12 +249,6 @@ export async function renderContributors() {
   bindFilterInput();
   updateFilterPlaceholder();
   restoreFilterFromUrl();
-  // Auto-open the sidebar on desktop so the filter input is discoverable on
-  // every contributors view (list, single-contributor matches summary, and
-  // per-record detail). On mobile the sidebar covers content — leave that to
-  // the hamburger so we don't trap the user.
-  const sidebar = document.getElementById('sidebar');
-  if (sidebar && window.innerWidth > 768) sidebar.classList.add('open');
   const urlParams = new URLSearchParams(window.location.search);
   const contributor = readContributorParam(urlParams);
   const withPartner = readWithParam(urlParams);
@@ -798,7 +792,7 @@ async function renderMatchesPage(contributor, withPartner) {
     let cloudSectionsHtml = '';
     if (hasTree) {
       cloudSectionsHtml += `<div class="surname-cloud-section" style="margin-bottom: 24px;">
-        <div class="surname-cloud-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">
+        <div class="surname-cloud-header section-bar">
           <h3 class="section-heading" data-i18n="section_surnames" style="margin: 0; padding: 0; border: none;">${t('section_surnames')}</h3>
         </div>
         <p>${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}</p>
@@ -807,7 +801,7 @@ async function renderMatchesPage(contributor, withPartner) {
     }
     if (hasMatricula) {
       cloudSectionsHtml += `<div class="surname-cloud-section" style="margin-bottom: 24px;">
-        <div class="surname-cloud-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">
+        <div class="surname-cloud-header section-bar">
           <h3 class="section-heading" data-i18n="section_surnames_matricula" style="margin: 0; padding: 0; border: none;">${t('section_surnames_matricula')}</h3>
         </div>
         <p>${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_matricula_outro')}</p>
@@ -871,7 +865,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
     container.innerHTML = heading +
       `<div class="matches-summary-section">
-        <div class="matches-summary-header" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 2rem; margin-bottom: 10px;">
+        <div class="matches-summary-header section-bar section-bar--top">
           <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('col_matches')}</h3>
           <button class="export-btn export-matches-summary-btn" title="${t('download_csv')}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
@@ -912,6 +906,27 @@ async function renderMatchesPage(contributor, withPartner) {
   } finally {
     if (overlay) overlay.style.display = 'none';
   }
+}
+
+function highlightDifferences(val, otherVal) {
+  if (!val) return '';
+  const valStr = String(val);
+  if (!otherVal) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
+
+  if (valStr.toLowerCase() === String(otherVal).toLowerCase()) {
+    return escapeHtml(valStr);
+  }
+
+  const otherWords = new Set(String(otherVal).toLowerCase().match(/[\p{L}\d]+/gu) || []);
+  if (otherWords.size === 0) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
+
+  const tokens = valStr.split(/([\p{L}\d]+)/u);
+  return tokens.map(token => {
+    if (/^[\p{L}\d]+$/u.test(token) && !otherWords.has(token.toLowerCase())) {
+      return `<span class="match-diff">${escapeHtml(token)}</span>`;
+    }
+    return escapeHtml(token);
+  }).join('');
 }
 
 async function renderMatchDetail(contributor, partner, contribData, container) {
@@ -1105,17 +1120,20 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
 
         const state = sortState[key];
 
-        const isDateField = f => f === 'date_of_birth' || f === 'date_of_death' || f === 'date_of_marriage' || f === 'husband_birth' || f === 'wife_birth';
-        const extraIcon = (rec, f) => {
-          if (f === 'surname')         return altSurnameIconHtml(rec.alt_surname, t('icon_alt_surname'));
-          if (f === 'husband_surname') return altSurnameIconHtml(rec.husband_alt_surname, t('icon_alt_surname'));
-          if (f === 'wife_surname')    return altSurnameIconHtml(rec.wife_alt_surname, t('icon_alt_surname'));
-          if (f === 'date_of_birth')   return baptismIconHtml(rec.date_of_baptism, rec.place_of_baptism, t('icon_baptism'));
-          if (f === 'place_of_birth' || f === 'place_of_marriage') return notesIconHtml(rec.notes, t('icon_notes'));
-          return '';
+        const DATE_FIELDS_SET = new Set(['date_of_birth', 'date_of_death', 'date_of_marriage', 'husband_birth', 'wife_birth']);
+        const isDateField = (f) => DATE_FIELDS_SET.has(f);
+        // Field → optional row-icon builder. Adding a new icon is one entry.
+        const ROW_ICON_BUILDERS = {
+          surname:         (r) => altSurnameIconHtml(r.alt_surname,        t('icon_alt_surname')),
+          husband_surname: (r) => altSurnameIconHtml(r.husband_alt_surname, t('icon_alt_surname')),
+          wife_surname:    (r) => altSurnameIconHtml(r.wife_alt_surname,    t('icon_alt_surname')),
+          date_of_birth:   (r) => baptismIconHtml(r.date_of_baptism, r.place_of_baptism, t('icon_baptism')),
+          place_of_birth:    (r) => notesIconHtml(r.notes, t('icon_notes')),
+          place_of_marriage: (r) => notesIconHtml(r.notes, t('icon_notes')),
         };
+        const extraIcon = (rec, f) => ROW_ICON_BUILDERS[f]?.(rec) || '';
 
-        const makeCell = (rec, f) => {
+        const makeCell = (rec, otherRec, f) => {
           if (f === 'parents' || f === 'children' || f === 'partners') {
             const inner = formatSpecialCell(f, rec);
             return `<td>${inner || ''}</td>`;
@@ -1125,7 +1143,20 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
             return `<td class="link-cell">${icons || ''}</td>`;
           }
           const val = rec[f] || '';
-          const safeVal = String(val).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+          const isHighlightable = ['name', 'surname', 'husband_name', 'husband_surname', 'wife_name', 'wife_surname', 'date_of_birth', 'place_of_birth', 'date_of_death', 'place_of_death', 'date_of_marriage', 'place_of_marriage', 'husband_birth', 'wife_birth'].includes(f);
+          let safeVal;
+          if (isHighlightable) {
+            let otherText = otherRec[f] || '';
+            if (f.endsWith('surname')) {
+              const altF = f === 'surname' ? 'alt_surname' : f.replace('surname', 'alt_surname');
+              if (otherRec[altF]) otherText += ' ' + otherRec[altF];
+            }
+          safeVal = highlightDifferences(val, otherText);
+          } else {
+            safeVal = escapeHtml(val);
+          }
+
           const cls = isDateField(f) ? ' class="col-right"' : '';
           const extra = extraIcon(rec, f);
           if (val && linkedFields.has(f)) {
@@ -1157,8 +1188,8 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
           r.record_a.contributor = contributor;
           r.record_b.contributor = partner;
           const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
-          const aCells = fields.map(({ f }) => makeCell(r.record_a, f)).join('');
-          const bCells = fields.map(({ f }) => makeCell(r.record_b, f)).join('');
+          const aCells = fields.map(({ f }) => makeCell(r.record_a, r.record_b, f)).join('');
+          const bCells = fields.map(({ f }) => makeCell(r.record_b, r.record_a, f)).join('');
           const conf = Math.round((r.confidence || 0) * 100);
           const contribBase = baseContributorName(contributor);
           const partnerBase = baseContributorName(partner);
@@ -1191,7 +1222,7 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
             const contentDisplay = isCollapsed ? ' style="display: none;"' : '';
 
         html += `<div class="matches-section" data-type="${key}">
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 1.5rem; margin-bottom: 10px;">
+          <div class="section-bar section-bar--top-sm">
                 <h4 class="${collapsedClass}" style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
             <div class="matches-section-actions" style="display: flex; gap: 10px;">
               ${expandBtnHtml}

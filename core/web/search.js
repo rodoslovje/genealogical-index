@@ -2,9 +2,10 @@ import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
 import { normalizeSearchDate } from './dates.js';
 import { API_BASE_URL, personColumns, familyColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
-import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP } from './url.js';
+import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP, currentParams } from './url.js';
 import { hideIntro, tabsWithResults } from './main.js';
 import { getContributorUrlMap } from './contributors.js';
+import { inputWithClear, wireClearableContainer } from './utils.js';
 
 let lastGeneralResults = null;
 const lastAdvResults = { person: null, family: null };
@@ -18,7 +19,7 @@ function normalizeNameList(val) {
 }
 
 function pushOrReplaceURL(params) {
-  const current = new URLSearchParams(window.location.search);
+  const current = currentParams();
   current.delete('t');
   const hasExistingSearch = current.toString() !== '';
   if (!isRestoring && hasExistingSearch) pushURL(params); else updateURL(params);
@@ -51,46 +52,23 @@ export function setupGeneralSearch() {
 
   function renderFields() {
     if (!container) return;
-    const nameVal = document.getElementById('general-name')?.value || '';
-    const surnameVal = document.getElementById('general-surname')?.value || '';
-    const dateFromVal = document.getElementById('general-date_from')?.value || '';
-    const dateToVal = document.getElementById('general-date_to')?.value || '';
-    const placeVal = document.getElementById('general-place')?.value || '';
-    const contributorVal = document.getElementById('general-contributor')?.value || '';
+    const valOf = (id) => document.getElementById(id)?.value || '';
     const approxExists = document.getElementById('general-exact-approx');
     const exactChecked = approxExists ? document.getElementById('general-exact')?.checked : true;
     const hasLinkChecked = document.getElementById('general-has_link')?.checked || false;
 
-    let html = `
+    container.innerHTML = `
       <div class="field-group">
         <div class="field-group-label">${t('label_person')}</div>
-        <div class="input-wrapper">
-          <input type="text" id="general-name" placeholder="${t('col_name')}" value="${nameVal}" title="${t('tip_comma_separated_name')}" />
-          <button type="button" class="clear-btn" style="display:${nameVal ? 'block' : 'none'}">&times;</button>
-        </div>
-        <div class="input-wrapper">
-          <input type="text" id="general-surname" placeholder="${t('col_surname')}" value="${surnameVal}" title="${t('tip_comma_separated_surname')}" />
-          <button type="button" class="clear-btn" style="display:${surnameVal ? 'block' : 'none'}">&times;</button>
-        </div>
+        ${inputWithClear({ id: 'general-name',    placeholder: t('col_name'),    value: valOf('general-name'),    title: t('tip_comma_separated_name')    })}
+        ${inputWithClear({ id: 'general-surname', placeholder: t('col_surname'), value: valOf('general-surname'), title: t('tip_comma_separated_surname') })}
       </div>
       <div class="date-range">
-        <div class="input-wrapper">
-          <input type="text" id="general-date_from" placeholder="${t('col_date')}" value="${dateFromVal}" />
-          <button type="button" class="clear-btn" style="display:${dateFromVal ? 'block' : 'none'}">&times;</button>
-        </div>
-        <div class="input-wrapper">
-          <input type="text" id="general-date_to" placeholder="${t('date_to')}" value="${dateToVal}" />
-          <button type="button" class="clear-btn" style="display:${dateToVal ? 'block' : 'none'}">&times;</button>
-        </div>
+        ${inputWithClear({ id: 'general-date_from', placeholder: t('col_date'), value: valOf('general-date_from') })}
+        ${inputWithClear({ id: 'general-date_to',   placeholder: t('date_to'),  value: valOf('general-date_to') })}
       </div>
-      <div class="input-wrapper">
-        <input type="text" id="general-place" placeholder="${t('col_place')}" value="${placeVal}" title="${t('tip_comma_separated_place')}" />
-        <button type="button" class="clear-btn" style="display:${placeVal ? 'block' : 'none'}">&times;</button>
-      </div>
-      <div class="input-wrapper">
-        <input type="text" id="general-contributor" placeholder="${t('col_contributor')}" value="${contributorVal}" title="${t('tip_comma_separated_contributor')}" />
-        <button type="button" class="clear-btn" style="display:${contributorVal ? 'block' : 'none'}">&times;</button>
-      </div>
+      ${inputWithClear({ id: 'general-place',       placeholder: t('col_place'),       value: valOf('general-place'),       title: t('tip_comma_separated_place')       })}
+      ${inputWithClear({ id: 'general-contributor', placeholder: t('col_contributor'), value: valOf('general-contributor'), title: t('tip_comma_separated_contributor') })}
       <label class="exact-toggle">
         <input type="checkbox" id="general-has_link"${hasLinkChecked ? ' checked' : ''} />
         <span>${t('has_link')}</span>
@@ -107,27 +85,14 @@ export function setupGeneralSearch() {
       </div>
       <button id="btn-general-search">${t('search_btn')}</button>
     `;
-    container.innerHTML = html;
   }
 
   if (container) {
     renderFields();
     container.addEventListener('click', (event) => {
       if (event.target.matches('#btn-general-search')) performGeneralSearch();
-      if (event.target.matches('.clear-btn')) {
-        const input = event.target.previousElementSibling;
-        if (input) { input.value = ''; event.target.style.display = 'none'; input.focus(); }
-      }
     });
-    container.addEventListener('input', (event) => {
-      if (event.target.matches('input[type="text"]')) {
-        const clearBtn = event.target.nextElementSibling;
-        if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = event.target.value ? 'block' : 'none';
-      }
-    });
-    container.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && event.target.matches('input[type="text"]')) performGeneralSearch();
-    });
+    wireClearableContainer(container, performGeneralSearch);
   } else {
     document.getElementById('btn-general-search')?.addEventListener('click', performGeneralSearch);
   }
@@ -243,39 +208,30 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     place_of_marriage: 'col_place',
   };
 
+  function tipFor(col) {
+    if (col.includes('surname'))      return t('tip_comma_separated_surname');
+    if (col.includes('name'))         return t('tip_comma_separated_name');
+    if (col.includes('place'))        return t('tip_comma_separated_place');
+    if (col === 'contributor')        return t('tip_comma_separated_contributor');
+    return '';
+  }
+
   function renderInput(col, { grouped = false } = {}) {
     const inputId = `${prefix}${col}`;
     const labelKey = grouped && GROUPED_PLACEHOLDER_KEYS[col] ? GROUPED_PLACEHOLDER_KEYS[col] : `col_${col}`;
-    const label = t(labelKey);
-    const val = document.getElementById(inputId)?.value || '';
-    let titleAttr = '';
-    if (col.includes('surname')) {
-      titleAttr = ` title="${t('tip_comma_separated_surname')}"`;
-    } else if (col.includes('name')) {
-      titleAttr = ` title="${t('tip_comma_separated_name')}"`;
-    } else if (col.includes('place')) {
-      titleAttr = ` title="${t('tip_comma_separated_place')}"`;
-    } else if (col === 'contributor') {
-      titleAttr = ` title="${t('tip_comma_separated_contributor')}"`;
-    }
+    const placeholder = t(labelKey);
+    const value = document.getElementById(inputId)?.value || '';
+    const title = tipFor(col);
+
     if (DATE_RANGE_COLUMNS.has(col)) {
       const toId = `${prefix}${col}_to`;
-      const toVal = document.getElementById(toId)?.value || '';
+      const toValue = document.getElementById(toId)?.value || '';
       return `<div class="date-range">
-                <div class="input-wrapper">
-                  <input type="text" id="${inputId}" placeholder="${label}" value="${val}" />
-                  <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
-                </div>
-                <div class="input-wrapper">
-                  <input type="text" id="${toId}" placeholder="${t('date_to')}" value="${toVal}" />
-                  <button type="button" class="clear-btn" style="display:${toVal ? 'block' : 'none'}">&times;</button>
-                </div>
-              </div>`;
+        ${inputWithClear({ id: inputId, placeholder, value })}
+        ${inputWithClear({ id: toId,    placeholder: t('date_to'), value: toValue })}
+      </div>`;
     }
-    return `<div class="input-wrapper">
-              <input type="text" id="${inputId}" placeholder="${label}" value="${val}"${titleAttr} />
-              <button type="button" class="clear-btn" style="display:${val ? 'block' : 'none'}">&times;</button>
-            </div>`;
+    return inputWithClear({ id: inputId, placeholder, value, title });
   }
 
   function renderFields() {
@@ -386,22 +342,8 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
   container.addEventListener('click', (event) => {
     if (event.target.matches(`#btn-adv-search-${urlType}`)) performSearch();
-    if (event.target.matches('.clear-btn')) {
-      const input = event.target.previousElementSibling;
-      if (input) { input.value = ''; event.target.style.display = 'none'; input.focus(); }
-    }
   });
-
-  container.addEventListener('input', (event) => {
-    if (event.target.matches('input[type="text"]')) {
-      const clearBtn = event.target.nextElementSibling;
-      if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = event.target.value ? 'block' : 'none';
-    }
-  });
-
-  container.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && event.target.matches('input[type="text"]')) performSearch();
-  });
+  wireClearableContainer(container, performSearch);
 
   renderFields();
 
@@ -495,7 +437,7 @@ export function clearAllSearchForms() {
 
 export function restoreFromURL() {
   isRestoring = true;
-  const params = new URLSearchParams(window.location.search);
+  const params = currentParams();
   const tParam = resolveTabType(params.get('t'));
 
   const hasGenParam = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params.has(k) || params.has(PARAM_MAP[k] || k));

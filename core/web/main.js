@@ -3,7 +3,7 @@ import siteConfig from '@site-config';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
-import { toUnicodeSearch, LEGACY_TAB_MAP } from './url.js';
+import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams, getParam } from './url.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree.js';
 
 // --- Global Link Styles ---
@@ -37,7 +37,7 @@ const SEARCH_TABS = ['tab-general', 'tab-person', 'tab-family', 'tab-contributor
  *  bar always shows the canonical tab.  Other params (n, sn, dob, pob, dod, pod…)
  *  already line up with the unified person form so nothing else needs renaming. */
 function normalizeLegacyURL() {
-  const params = new URLSearchParams(window.location.search);
+  const params = currentParams();
   const t = params.get('t');
   const mapped = t && LEGACY_TAB_MAP[t];
   if (!mapped) return;
@@ -230,7 +230,7 @@ export function activateTab(targetTab) {
       if (v) url.searchParams.set(k, v);
     }
     const newUrlStr = url.pathname + (url.searchParams.toString() ? '?' + toUnicodeSearch(url.searchParams) : '');
-    const currentT = new URLSearchParams(window.location.search).get('t') || 'general';
+    const currentT = currentParams().get('t') || 'general';
     if (currentT !== urlT) {
       history.pushState(null, '', newUrlStr);
     } else {
@@ -279,14 +279,13 @@ export function activateTab(targetTab) {
     showIntros(introMap[targetTab]);
   }
 
-  const isMatchesPage = targetTab === 'tab-contributors' && (() => {
-    const p = new URLSearchParams(window.location.search);
-    return p.get('c') || p.get('contributor');
-  })();
-
-  if (SEARCH_TABS.includes(targetTab) && !isMatchesPage && targetTab !== 'tab-ancestors' && targetTab !== 'tab-descendants') {
-    sidebar.classList.add('open');
-  } else if (window.innerWidth > 768 || isMatchesPage || targetTab === 'tab-ancestors' || targetTab === 'tab-descendants') {
+  if (SEARCH_TABS.includes(targetTab)) {
+    if (targetTab === 'tab-contributors' && window.innerWidth <= 768) {
+      sidebar.classList.remove('open');
+    } else {
+      sidebar.classList.add('open');
+    }
+  } else {
     sidebar.classList.remove('open');
   }
 
@@ -346,7 +345,7 @@ async function init() {
     normalizeLegacyURL();
 
     // Infer active tab from the (now-normalized) URL.
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = currentParams();
     const urlT = urlParams.get('t');
     let urlTab = 'general';
     if (urlT === 'contributors') urlTab = 'contributors';
@@ -383,7 +382,7 @@ init();
 function navigateToURL(urlSearch) {
   // If the user followed a legacy ?t=birth / ?t=death link, rewrite it before doing anything.
   normalizeLegacyURL();
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = currentParams();
   const urlT = urlParams.get('t') || 'general';
   const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors', ancestors: 'tab-ancestors', descendants: 'tab-descendants' };
   const targetTab = tabMap[urlT] || 'tab-general';

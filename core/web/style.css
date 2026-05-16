@@ -675,6 +675,10 @@ h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 
 }
 .match-pair-label-a { font-weight: 600; color: var(--primary); }
 
+.match-diff {
+  font-weight: bold;
+}
+
 /* --- Connections panel --- */
 .connections-table {
   font-size: 0.78rem;
