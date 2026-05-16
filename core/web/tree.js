@@ -56,7 +56,7 @@ export function renderDescendantsPage() {
       }
       controls.style.display = 'flex';
       if (sourceEl && c) {
-        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', contributor: c })}" data-spa-nav>${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
+        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', c: c })}" data-spa-nav>${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
         sourceEl.style.display = 'block';
       }
       renderD3DescendantsTree(data, container, personName, c);
@@ -119,7 +119,7 @@ export function renderAncestorsPage() {
       }
       controls.style.display = 'flex';
       if (sourceEl && c) {
-        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', contributor: c })}" data-spa-nav>${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
+        sourceEl.innerHTML = `${t('tree_source')}: <a href="${toUnicodeHref({ t: 'contributors', c: c })}" data-spa-nav>${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</a>`;
         sourceEl.style.display = 'block';
       }
       renderD3Tree(data, container, personName, c);

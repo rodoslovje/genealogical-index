@@ -170,12 +170,6 @@ hamburgerBtn.addEventListener('click', (e) => {
     return;
   }
 
-  // On desktop, the sidebar on the detailed match page is completely empty, so prevent it from opening
-  const isDetailedMatch = new URLSearchParams(window.location.search).get('with');
-  if (isDetailedMatch && window.innerWidth > 768) {
-    return;
-  }
-
   if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
     const rect = sidebar.getBoundingClientRect();
     const sidebarVisible = rect.bottom > 0;
@@ -285,7 +279,10 @@ export function activateTab(targetTab) {
     showIntros(introMap[targetTab]);
   }
 
-  const isMatchesPage = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('contributor');
+  const isMatchesPage = targetTab === 'tab-contributors' && (() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get('c') || p.get('contributor');
+  })();
 
   if (SEARCH_TABS.includes(targetTab) && !isMatchesPage && targetTab !== 'tab-ancestors' && targetTab !== 'tab-descendants') {
     sidebar.classList.add('open');
@@ -306,15 +303,10 @@ export function activateTab(targetTab) {
   const sidebarSection = sidebarSectionMap[targetTab];
   if (sidebarSection) {
     const section = document.getElementById(sidebarSection);
-    const isDetailedMatch = targetTab === 'tab-contributors' && new URLSearchParams(window.location.search).get('with');
-    if (isDetailedMatch) {
-      section.classList.remove('active');
-    } else {
-      section.classList.add('active');
-      const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
-      const target = inputs.find(i => i.value.trim()) || inputs[0];
-      if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
-    }
+    section.classList.add('active');
+    const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
+    const target = inputs.find(i => i.value.trim()) || inputs[0];
+    if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
   }
 
   document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));

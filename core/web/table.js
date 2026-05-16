@@ -545,7 +545,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         if (name) {
           const display = baseContributorName(name);
           const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index'));
-          html += `<td><a href="${toUnicodeHref({ t: 'contributors', contributor: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
+          html += `<td><a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
         } else {
           html += `<td></td>`;
         }
@@ -560,53 +560,68 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           ? baptismIconHtml(row.date_of_baptism, row.place_of_baptism, t('icon_baptism'))
           : '';
         html += `<td class="col-right">${raw}${extra}</td>`;
-      } else if ((col === 'husband_name' || col === 'husband_surname') && row[col]) {
-        const params = new URLSearchParams();
-        params.set('t', 'person');
-        const isPriv = isPrivate(row.husband_name) || isPrivate(row.husband_surname);
-        if (row.husband_name && !isPriv) params.set('n', row.husband_name);
-        if (row.husband_surname && !isPriv) params.set('sn', row.husband_surname);
-        params.set('ex', '1');
-        const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      } else if (col === 'husband_name' || col === 'husband_surname') {
         const altIcon = col === 'husband_surname'
           ? altSurnameIconHtml(row.husband_alt_surname, t('icon_alt_surname'))
           : '';
-        if (isPriv) {
-          html += `<td>${safeDisplay}${altIcon}</td>`;
+        const val = row[col];
+        const safeDisplay = String(val || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (val) {
+          const isPriv = isPrivate(row.husband_name) || isPrivate(row.husband_surname);
+          if (isPriv) {
+            html += `<td>${safeDisplay}${altIcon}</td>`;
+          } else {
+            const params = new URLSearchParams();
+            params.set('t', 'person');
+            if (row.husband_name) params.set('n', row.husband_name);
+            if (row.husband_surname) params.set('sn', row.husband_surname);
+            params.set('ex', '1');
+            html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
+          }
         } else {
-          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
+          html += `<td>${altIcon}</td>`;
         }
-      } else if ((col === 'wife_name' || col === 'wife_surname') && row[col]) {
-        const params = new URLSearchParams();
-        params.set('t', 'person');
-        const isPriv = isPrivate(row.wife_name) || isPrivate(row.wife_surname);
-        if (row.wife_name && !isPriv) params.set('n', row.wife_name);
-        if (row.wife_surname && !isPriv) params.set('sn', row.wife_surname);
-        params.set('ex', '1');
-        const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      } else if (col === 'wife_name' || col === 'wife_surname') {
         const altIcon = col === 'wife_surname'
           ? altSurnameIconHtml(row.wife_alt_surname, t('icon_alt_surname'))
           : '';
-        if (isPriv) {
-          html += `<td>${safeDisplay}${altIcon}</td>`;
+        const val = row[col];
+        const safeDisplay = String(val || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (val) {
+          const isPriv = isPrivate(row.wife_name) || isPrivate(row.wife_surname);
+          if (isPriv) {
+            html += `<td>${safeDisplay}${altIcon}</td>`;
+          } else {
+            const params = new URLSearchParams();
+            params.set('t', 'person');
+            if (row.wife_name) params.set('n', row.wife_name);
+            if (row.wife_surname) params.set('sn', row.wife_surname);
+            params.set('ex', '1');
+            html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
+          }
         } else {
-          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
+          html += `<td>${altIcon}</td>`;
         }
-      } else if ((col === 'name' || col === 'surname') && row[col] && row.husband_name === undefined) {
-        const params = new URLSearchParams();
-        params.set('t', 'person');
-        const isPriv = isPrivate(row.name) || isPrivate(row.surname);
-        if (row.name && !isPriv) params.set('n', row.name);
-        if (row.surname && !isPriv) params.set('sn', row.surname);
-        params.set('ex', '1');
-        const safeDisplay = String(row[col]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      } else if ((col === 'name' || col === 'surname') && row.husband_name === undefined) {
         const altIcon = col === 'surname'
           ? altSurnameIconHtml(row.alt_surname, t('icon_alt_surname'))
           : '';
-        if (isPriv) {
-          html += `<td>${safeDisplay}${altIcon}</td>`;
+        const val = row[col];
+        const safeDisplay = String(val || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (val) {
+          const isPriv = isPrivate(row.name) || isPrivate(row.surname);
+          if (isPriv) {
+            html += `<td>${safeDisplay}${altIcon}</td>`;
+          } else {
+            const params = new URLSearchParams();
+            params.set('t', 'person');
+            if (row.name) params.set('n', row.name);
+            if (row.surname) params.set('sn', row.surname);
+            params.set('ex', '1');
+            html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
+          }
         } else {
-          html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
+          html += `<td>${altIcon}</td>`;
         }
       } else if (col === 'children' || col === 'parents' || col === 'partners') {
         const inner = formatSpecialCell(col, row);

@@ -36,6 +36,10 @@ let matchCountsPromise = null;
 let currentMatchesData = null;
 let currentMatchesContributor = null;
 
+// Holds a refresh callback set by renderMatchDetail so the sidebar filter input
+// can re-render the per-record matches table when the user types.
+let currentDetailRefilter = null;
+
 function _toPart(p) {
   if (!p) return null;
   return {
@@ -142,7 +146,7 @@ export async function renderTotalsBar() {
     setEl('total-last-update', lastUpdate);
     setEl('data-updated', lastUpdate);
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('contributor')) {
+    if (readContributorParam(urlParams)) {
       document.getElementById('totals-bar').style.display = 'none';
     } else {
       document.getElementById('totals-bar').style.display = '';
@@ -154,6 +158,83 @@ function getContributorFilter() {
   return (document.getElementById('contributors-query')?.value || '').trim().toLowerCase();
 }
 
+// Reads the active-contributor URL param. Prefers the short `c=`; falls back
+// to the legacy `contributor=` so old shared links keep working.
+const readContributorParam = (p) => p.get('c') || p.get('contributor');
+const readWithParam = (p) => p.get('w') || p.get('with');
+
+// Mirrors the current filter value into the URL (`f=…`) so the filtered
+// view can be shared via a link. Uses replaceState so each keystroke does
+// not pollute history.
+function syncFilterToUrl(value) {
+  const u = new URL(window.location.href);
+  if (value) u.searchParams.set('f', value);
+  else u.searchParams.delete('f');
+  const search = toUnicodeSearch(u.searchParams);
+  history.replaceState(null, '', u.pathname + (search ? '?' + search : ''));
+}
+
+// Restores the filter input value from `?f=…` on (re-)render of a view.
+function restoreFilterFromUrl() {
+  const input = document.getElementById('contributors-query');
+  if (!input) return;
+  const f = new URLSearchParams(window.location.search).get('f') || '';
+  if (input.value !== f) input.value = f;
+}
+
+// Updates the sidebar filter input placeholder for the current view (list,
+// single-contributor matches summary, or per-record matches detail).
+function updateFilterPlaceholder() {
+  const input = document.getElementById('contributors-query');
+  if (!input) return;
+  const urlParams = new URLSearchParams(window.location.search);
+  const withPartner = readWithParam(urlParams);
+  const key = withPartner ? 'matches_filter_placeholder' : 'contributors_filter_placeholder';
+  input.placeholder = t(key);
+  input.dataset.i18nPlaceholder = key;
+}
+
+// Binds the sidebar filter input once. The handler dispatches based on URL
+// params at event time, so it works regardless of which contributors view
+// we're currently rendering — including direct loads of the matches detail
+// URL where renderContributors returns early.
+function bindFilterInput() {
+  const input = document.getElementById('contributors-query');
+  if (!input || input.dataset.bound) return;
+  input.dataset.bound = '1';
+  input.addEventListener('input', () => {
+    const q = getContributorFilter();
+    syncFilterToUrl(q);
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeContributor = readContributorParam(urlParams);
+    const withPartner = readWithParam(urlParams);
+    const activeBase = activeContributor ? baseContributorName(activeContributor) : null;
+
+    if (activeContributor && !withPartner && currentMatchesData && currentMatchesContributor === activeBase) {
+      const filtered = q ? currentMatchesData.filter(p => p.contributor.toLowerCase().includes(q)) : currentMatchesData;
+      const tableData = filtered.map(p => ({
+        contributor_ID: p.contributor,
+        _match_href: toUnicodeHref({ t: 'contributors', c: activeBase, w: p.contributor }),
+        total_persons:  p.persons_count  || 0,
+        total_families: p.families_count || 0,
+        total:          p.total_count,
+        confidence:     Math.round((p.max_confidence || 0) * 100),
+      }));
+      renderTable(tableData, 'matches-summary', ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'], 'total', false);
+    } else if (activeContributor && withPartner && currentDetailRefilter) {
+      currentDetailRefilter(q);
+    } else if (!activeContributor && cachedData) {
+      const filtered = enrichWithMatchCounts(filterContributorData(cachedData));
+      const filteredTableData = filtered.map(d => ({
+        ...d,
+        _contributor_href: toUnicodeHref({ t: 'contributors', c: d.contributor_ID })
+      }));
+      renderTable(filteredTableData, 'table-contributors', contributorColumns, 'total', false);
+      loadSurnameCloud(expandContributorNames(filtered), 'surname-cloud');
+    }
+  });
+}
+
 function filterContributorData(data) {
   const q = getContributorFilter();
   if (!q) return data;
@@ -161,9 +242,22 @@ function filterContributorData(data) {
 }
 
 export async function renderContributors() {
+  // Reset the detail-view filter callback; renderMatchDetail will reinstall it.
+  currentDetailRefilter = null;
+  // Bind input handler once (works for any sub-view because the handler
+  // dispatches off live URL params) and refresh placeholder for this view.
+  bindFilterInput();
+  updateFilterPlaceholder();
+  restoreFilterFromUrl();
+  // Auto-open the sidebar on desktop so the filter input is discoverable on
+  // every contributors view (list, single-contributor matches summary, and
+  // per-record detail). On mobile the sidebar covers content — leave that to
+  // the hamburger so we don't trap the user.
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar && window.innerWidth > 768) sidebar.classList.add('open');
   const urlParams = new URLSearchParams(window.location.search);
-  const contributor = urlParams.get('contributor');
-  const withPartner = urlParams.get('with');
+  const contributor = readContributorParam(urlParams);
+  const withPartner = readWithParam(urlParams);
 
   const chartsContainer = document.getElementById('charts-container');
   const surnameCloudSection = document.getElementById('surname-cloud-section');
@@ -214,43 +308,11 @@ export async function renderContributors() {
     const initialFiltered = enrichWithMatchCounts(filterContributorData(data));
     const tableData = initialFiltered.map(d => ({
       ...d,
-      _contributor_href: toUnicodeHref({ t: 'contributors', contributor: d.contributor_ID })
+      _contributor_href: toUnicodeHref({ t: 'contributors', c: d.contributor_ID })
     }));
     renderTable(tableData, 'table-contributors', contributorColumns, 'total', false);
     loadSurnameCloud(expandContributorNames(initialFiltered), 'surname-cloud');
 
-    const input = document.getElementById('contributors-query');
-    if (input && !input.dataset.bound) {
-      input.dataset.bound = '1';
-      input.addEventListener('input', () => {
-        const q = getContributorFilter();
-        const urlParams = new URLSearchParams(window.location.search);
-        const activeContributor = urlParams.get('contributor');
-        const withPartner = urlParams.get('with');
-        const activeBase = activeContributor ? baseContributorName(activeContributor) : null;
-
-        if (activeContributor && !withPartner && currentMatchesData && currentMatchesContributor === activeBase) {
-          const filtered = q ? currentMatchesData.filter(p => p.contributor.toLowerCase().includes(q)) : currentMatchesData;
-          const tableData = filtered.map(p => ({
-            contributor_ID: p.contributor,
-            _match_href: toUnicodeHref({ t: 'contributors', contributor: activeBase, with: p.contributor }),
-            total_persons:  p.persons_count  || 0,
-            total_families: p.families_count || 0,
-            total:          p.total_count,
-            confidence:     Math.round((p.max_confidence || 0) * 100),
-          }));
-          renderTable(tableData, 'matches-summary', ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'], 'total', false);
-        } else if (!activeContributor && cachedData) {
-          const filtered = enrichWithMatchCounts(filterContributorData(cachedData));
-          const filteredTableData = filtered.map(d => ({
-            ...d,
-            _contributor_href: toUnicodeHref({ t: 'contributors', contributor: d.contributor_ID })
-          }));
-          renderTable(filteredTableData, 'table-contributors', contributorColumns, 'total', false);
-          loadSurnameCloud(expandContributorNames(filtered), 'surname-cloud');
-        }
-      });
-    }
   } catch {
     container.innerHTML = `<p>${t('contributors_failed')}</p>`;
   } finally {
@@ -670,6 +732,9 @@ function renderContributorStats(contribData) {
 async function renderMatchesPage(contributor, withPartner) {
   window.scrollTo(0, 0);
 
+  // The detail-view refilter is only valid while that view is mounted.
+  currentDetailRefilter = null;
+
   const totalsBar = document.getElementById('totals-bar');
   if (totalsBar) totalsBar.style.display = 'none';
 
@@ -712,7 +777,7 @@ async function renderMatchesPage(contributor, withPartner) {
         const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index'));
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
-          <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', contributor: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${t('col_matches')}</h2>
+          <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${t('col_matches')}</h2>
         </div>
         <p>${t('no_results')}</p>`;
         return;
@@ -797,7 +862,7 @@ async function renderMatchesPage(contributor, withPartner) {
 
     const tableData = filteredPartners.map(p => ({
       contributor_ID: p.contributor,
-      _match_href: toUnicodeHref({ t: 'contributors', contributor: displayName, with: p.contributor }),
+      _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor }),
       total_persons:  p.persons_count  || 0,
       total_families: p.families_count || 0,
       total:          p.total_count,
@@ -873,13 +938,13 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
     urlsHtml += `</div>`;
   }
 
-  const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: contribBase })}" data-spa-nav>${contribBase}</a></strong>${contribInd}`;
-  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', contributor: partnerBase })}" data-spa-nav>${partnerBase}</a></strong>${partnerInd}`;
+  const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav>${contribBase}</a></strong>${contribInd}`;
+  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', c: partnerBase })}" data-spa-nav>${partnerBase}</a></strong>${partnerInd}`;
   const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
 
   const baseHtml = `
     <div class="matches-page-header">
-      <h2 class="matches-page-title">${partnerBase}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', contributor: contribBase })}" data-spa-nav style="color: inherit; text-decoration: none;">${contribBase}</a>${contribInd} - ${t('col_matches')}</h2>
+      <h2 class="matches-page-title">${partnerBase}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav style="color: inherit; text-decoration: none;">${contribBase}</a>${contribInd} - ${t('col_matches')}</h2>
     </div>
     <p>${introText}</p>
     ${urlsHtml}`;
@@ -909,9 +974,34 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
 
     const collapseState = { person: false, family: false };
 
+    // Text fields scanned when filtering match-detail rows. Genealogist IDs and
+    // ext_ids/links are deliberately excluded — the user filters by what they
+    // see (name, surname, dates, places, notes).
+    const FILTER_FIELDS = [
+      'name', 'surname', 'alt_surname',
+      'date_of_birth', 'place_of_birth',
+      'date_of_baptism', 'place_of_baptism',
+      'date_of_death', 'place_of_death',
+      'notes',
+      'husband_name', 'husband_surname', 'husband_alt_surname', 'husband_birth',
+      'wife_name', 'wife_surname', 'wife_alt_surname', 'wife_birth',
+      'date_of_marriage', 'place_of_marriage',
+    ];
+    const recordSearchText = (rec) =>
+      FILTER_FIELDS.map(f => rec[f] || '').join(' ').toLowerCase();
+    const pairMatchesFilter = (r, q) => {
+      if (!q) return true;
+      return recordSearchText(r.record_a).includes(q)
+          || recordSearchText(r.record_b).includes(q);
+    };
+
+    let currentFilter = getContributorFilter();
+
     function renderTables() {
       const byType = { person: [], family: [] };
-      records.forEach(r => byType[r.record_type]?.push(r));
+      records.forEach(r => {
+        if (pairMatchesFilter(r, currentFilter)) byType[r.record_type]?.push(r);
+      });
 
       const collator = new Intl.Collator('sl', { sensitivity: 'base' });
       function getMatchValue(r, col) {
@@ -1074,8 +1164,8 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
           const partnerBase = baseContributorName(partner);
           const contribIndicator = matriculaIndicatorHtml(contributor, t('icon_matricula_index'));
           const partnerIndicator = matriculaIndicatorHtml(partner, t('icon_matricula_index'));
-          const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: contribBase })}" data-spa-nav>${contribBase}</a>${contribIndicator}`;
-          const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', contributor: partnerBase })}" data-spa-nav>${partnerBase}</a>${partnerIndicator}`;
+          const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav>${contribBase}</a>${contribIndicator}`;
+          const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', c: partnerBase })}" data-spa-nav>${partnerBase}</a>${partnerIndicator}`;
           return `<tr class="match-pair-row ${pairCls}">
                     ${aCells}
                     <td class="match-pair-label match-pair-label-a col-center">${contributorLink}</td>
@@ -1188,6 +1278,11 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
 
     renderTables();
 
+    // Expose a refilter callback so the sidebar input can re-filter live.
+    currentDetailRefilter = (q) => {
+      currentFilter = (q || '').trim().toLowerCase();
+      renderTables();
+    };
   } finally {
     // no-op, overlay is already handled cleanly by renderMatchesPage
   }
