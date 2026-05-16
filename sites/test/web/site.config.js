@@ -15,7 +15,7 @@ const siteConfig = {
   filePrefix: 'tgi',
 
   // Languages shown in the dropdown, ordered alphabetically by language name
-  languages: ['en', 'sl'],
+  languages: ['de', 'en', 'hr', 'hu', 'it', 'sl'],
 
   // Preferred language when no saved preference or browser match is found
   defaultLang: 'sl',

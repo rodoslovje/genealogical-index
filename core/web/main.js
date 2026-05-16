@@ -320,7 +320,10 @@ async function init() {
   loading.style.display = 'none';
 
   try {
-    initI18n();
+    // i18n boots first so the preferred locale is already loaded when the rest
+    // of the UI starts calling t(). Without this, a Slovenian user would see a
+    // brief English flash before the locale chunk arrived.
+    await initI18n();
 
     setupClearableInput(document.getElementById('contributors-query'), () => {
       sidebar.classList.remove('open');
