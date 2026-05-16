@@ -43,6 +43,35 @@ export function wireClearableContainer(container, onEnter) {
   }
 }
 
+// --- CDN script loaders ------------------------------------------------------
+// Chart.js (~90 kB gzipped) and D3 (~200 kB gzipped) are only needed on the
+// contributors and ancestors/descendants views respectively. Loading them
+// lazily keeps the initial bundle small for the common Search-only user.
+
+const _scriptPromises = new Map();
+
+/** Idempotent dynamic-script loader. Returns a promise that resolves once
+ *  `src` has finished executing; concurrent callers share the same fetch. */
+export function loadScript(src) {
+  if (_scriptPromises.has(src)) return _scriptPromises.get(src);
+  const p = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => {
+      _scriptPromises.delete(src); // allow a retry on next call
+      reject(new Error(`Failed to load script: ${src}`));
+    };
+    document.head.appendChild(s);
+  });
+  _scriptPromises.set(src, p);
+  return p;
+}
+
+export const ensureChartJs = () => loadScript('https://cdn.jsdelivr.net/npm/chart.js');
+export const ensureD3      = () => loadScript('https://cdn.jsdelivr.net/npm/d3@7');
+
 /** Escapes a value for safe insertion into HTML text content / attribute. */
 export function escapeHtml(value) {
   if (value === null || value === undefined) return '';

@@ -1,7 +1,7 @@
 import { API_BASE_URL } from './config.js';
 import { toUnicodeSearch, toUnicodeHref, currentParams } from './url.js';
 import { t } from './i18n.js';
-import { isPrivate, escapeHtml, downloadBlob } from './utils.js';
+import { isPrivate, escapeHtml, downloadBlob, ensureD3 } from './utils.js';
 import { parseDateForSort } from './dates.js';
 
 // --- DOM id maps for each variant. The two tree pages re-use the same HTML
@@ -79,9 +79,13 @@ function renderTreePage(kind) {
   if (c) apiParams.set('c', c);
   if (extId) apiParams.set('id', extId);
 
-  fetch(`${API_BASE_URL}/api/${config.apiPath}?${apiParams}`)
-    .then(r => r.json())
-    .then(data => {
+  // Kick off D3 load alongside the API call so the script lands while the
+  // tree data is in flight; both must resolve before we can render.
+  const dataPromise = fetch(`${API_BASE_URL}/api/${config.apiPath}?${apiParams}`).then(r => r.json());
+  const d3Promise   = ensureD3().catch(() => {});
+
+  Promise.all([dataPromise, d3Promise])
+    .then(([data]) => {
       container.innerHTML = '';
       if (!data) {
         container.innerHTML = `<p style="padding: 20px;">${t('no_results')}</p>`;

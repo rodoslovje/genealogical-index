@@ -13,6 +13,7 @@ import {
   getContributorUrlMap, prefetchContributors,
 } from './contributors/data.js';
 import { renderChart, renderTimelineChart } from './contributors/charts.js';
+import { ensureChartJs } from './utils.js';
 import { loadSurnameCloud } from './contributors/cloud.js';
 import {
   contributorColumns,
@@ -107,8 +108,11 @@ export async function renderContributors() {
   }
 
   try {
+    // Kick off Chart.js load alongside the API calls so the charts can paint
+    // as soon as both arrive instead of waiting serially.
     const [data, timeline] = await Promise.all([
       ensureData(), ensureTimelineData(), ensureMatchCounts(),
+      ensureChartJs().catch(() => {}),
     ]);
 
     renderChart(data);

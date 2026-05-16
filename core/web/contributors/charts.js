@@ -1,4 +1,5 @@
 import { t } from '../i18n.js';
+import { ensureChartJs } from '../utils.js';
 
 let chartInstance = null;
 let timelineChartInstance = null;
@@ -6,7 +7,8 @@ let timelineChartInstance = null;
 const CHART_FONT = { family: 'system-ui, -apple-system, sans-serif', size: 14, weight: '600' };
 
 /** Top-contributors doughnut chart (top 10 + "Others"). */
-export function renderChart(data) {
+export async function renderChart(data) {
+  try { await ensureChartJs(); } catch { return; }
   if (!window.Chart) return;
   const ctx = document.getElementById('contributorsChart')?.getContext('2d');
   if (!ctx) return;
@@ -64,7 +66,8 @@ export function renderChart(data) {
 }
 
 /** Births/marriages/deaths timeline (per decade, stacked bar). */
-export function renderTimelineChart(data) {
+export async function renderTimelineChart(data) {
+  try { await ensureChartJs(); } catch { return; }
   if (!window.Chart) return;
   const ctx = document.getElementById('timelineChart')?.getContext('2d');
   if (!ctx) return;
