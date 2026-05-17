@@ -533,8 +533,8 @@ def import_contributor(
                             :date_of_birth, :birth_year, :place_of_birth,
                             :date_of_baptism, :place_of_baptism,
                             :date_of_death, :death_year, :place_of_death,
-                            :parents_list::jsonb, :partners_list::jsonb,
-                            :notes, :contributor, :links::jsonb)
+                            CAST(:parents_list AS jsonb), CAST(:partners_list AS jsonb),
+                            :notes, :contributor, CAST(:links AS jsonb))
                     """),
                     rows,
                 )
@@ -576,8 +576,10 @@ def import_contributor(
                             :wife_ext_id, :wife_name, :wife_surname,
                             :wife_alt_surname, :wife_birth,
                             :date_of_marriage, :marriage_year, :place_of_marriage,
-                            :children_list::jsonb, :husband_parents::jsonb, :wife_parents::jsonb,
-                            :notes, :contributor, :links::jsonb)
+                            CAST(:children_list AS jsonb),
+                            CAST(:husband_parents AS jsonb),
+                            CAST(:wife_parents AS jsonb),
+                            :notes, :contributor, CAST(:links AS jsonb))
                     """),
                     rows,
                 )
