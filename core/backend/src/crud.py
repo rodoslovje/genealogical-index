@@ -5,7 +5,29 @@ import time
 import unicodedata
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, cast, Text, Integer
+from sqlalchemy.dialects.postgresql import JSONB
 from . import models
+
+
+def _as_list(v):
+    """JSONB columns auto-decode to Python lists; legacy TEXT might still be
+    strings during a transition. Coerce either to a list, empty on failure."""
+    if v is None:
+        return []
+    if isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        try:
+            return json.loads(v) or []
+        except (json.JSONDecodeError, TypeError):
+            return []
+    return []
+
+
+def _has_links_clause(column):
+    """Returns a SQLAlchemy clause asserting that a JSONB list column is
+    populated (non-NULL and not an empty array)."""
+    return and_(column.isnot(None), column != cast("[]", JSONB))
 
 METADATA_PATH = os.path.join(
     os.path.dirname(__file__), "..", "data", "output", "metadata.json"
@@ -570,7 +592,7 @@ def search_all(
                 )
             )
         if has_link:
-            q = q.filter(models.Person.links.isnot(None), models.Person.links != "")
+            q = q.filter(_has_links_clause(models.Person.links))
         persons = q.offset(skip).limit(limit).all()
 
     families = []
@@ -621,11 +643,7 @@ def search_all(
                 )
             )
         if has_link:
-            families_q = families_q.filter(
-                models.Family.links.isnot(None),
-                models.Family.links != "",
-                models.Family.links != "[]",
-            )
+            families_q = families_q.filter(_has_links_clause(models.Family.links))
         families = families_q.offset(skip).limit(limit).all()
 
     return {"persons": persons, "families": families}
@@ -693,11 +711,7 @@ def search_advanced_persons(
             )
         )
     if has_link:
-        query = query.filter(
-            models.Person.links.isnot(None),
-            models.Person.links != "",
-            models.Person.links != "[]",
-        )
+        query = query.filter(_has_links_clause(models.Person.links))
 
     return query.offset(skip).limit(limit).all()
 
@@ -774,12 +788,16 @@ def search_advanced_families(
         )
     if children:
         v = children.replace("%", r"\%").replace("_", r"\_")
+        # children_list is JSONB; trgm/ILIKE need its text serialization. The
+        # matching trgm expression index `idx_family_children_list_trgm`
+        # (over `children_list::text`) lets these stay index-fast.
+        children_text = cast(models.Family.children_list, Text)
         if exact:
-            children_filter = models.Family.children_list.ilike(f'%"{v}"%')
+            children_filter = children_text.ilike(f'%"{v}"%')
         else:
             children_filter = or_(
-                models.Family.children_list.ilike(f"%{v}%"),
-                models.Family.children_list.op("%>")(cast(children, Text)),
+                children_text.ilike(f"%{v}%"),
+                children_text.op("%>")(cast(children, Text)),
             )
         query = query.filter(children_filter)
     if place_of_marriage:
@@ -803,11 +821,7 @@ def search_advanced_families(
             )
         )
     if has_link:
-        query = query.filter(
-            models.Family.links.isnot(None),
-            models.Family.links != "",
-            models.Family.links != "[]",
-        )
+        query = query.filter(_has_links_clause(models.Family.links))
 
     return query.offset(skip).limit(limit).all()
 
@@ -1039,10 +1053,7 @@ def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
         for parent_node, record in zip(current_nodes, current_records):
             if not record or not record.parents_list:
                 continue
-            try:
-                parents = json.loads(record.parents_list)
-            except (json.JSONDecodeError, TypeError):
-                continue
+            parents = _as_list(record.parents_list)
             if not parents:
                 continue
             for p_info in parents:
@@ -1296,14 +1307,12 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
         for record, node in owners:
             known_partners = None
             if record.partners_list:
-                try:
-                    p_list = json.loads(record.partners_list)
+                p_list = _as_list(record.partners_list)
+                if p_list:
                     known_partners = [
                         {"name": p.get("name") or "", "surname": p.get("surname") or ""}
                         for p in p_list if p
                     ]
-                except Exception:
-                    pass
 
             name = record.name or ""
             surname = record.surname or ""
@@ -1342,11 +1351,7 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
                 node["children"].append(fam_node)
 
                 if fam.children_list:
-                    try:
-                        children = json.loads(fam.children_list)
-                    except (json.JSONDecodeError, TypeError):
-                        children = []
-                    for c_info in children:
+                    for c_info in _as_list(fam.children_list):
                         if not c_info:
                             continue
                         pending_children.append((fam_node, c_info))

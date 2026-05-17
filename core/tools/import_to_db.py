@@ -55,8 +55,8 @@ def setup_full(db):
             date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT,
             date_of_baptism TEXT, place_of_baptism TEXT,
             date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
-            parents_list TEXT, partners_list TEXT,
-            notes TEXT, contributor TEXT, links TEXT
+            parents_list JSONB, partners_list JSONB,
+            notes TEXT, contributor TEXT, links JSONB
         );
         CREATE TABLE families (
             id SERIAL PRIMARY KEY,
@@ -65,15 +65,18 @@ def setup_full(db):
             wife_ext_id TEXT, wife_name TEXT, wife_surname TEXT,
             wife_alt_surname TEXT, wife_birth TEXT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
-            children_list TEXT, husband_parents TEXT, wife_parents TEXT,
-            notes TEXT, contributor TEXT, links TEXT
+            children_list JSONB, husband_parents JSONB, wife_parents JSONB,
+            notes TEXT, contributor TEXT, links JSONB
         );
 
         CREATE INDEX idx_person_name_trgm    ON persons  USING gist (name gist_trgm_ops);
         CREATE INDEX idx_person_surname_trgm ON persons  USING gist (surname gist_trgm_ops);
         CREATE INDEX idx_family_h_surname_trgm   ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX idx_family_w_surname_trgm   ON families USING gist (wife_surname gist_trgm_ops);
-        CREATE INDEX idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
+        -- Expression index on the JSONB column's text serialization so the
+        -- existing ILIKE / trigram `%>` search filter stays index-fast.
+        CREATE INDEX idx_family_children_list_trgm
+            ON families USING gist ((children_list::text) gist_trgm_ops);
 
         -- Composite indexes allow instantaneous Index-Only Scans for DISTINCT surnames
         -- and fast equality joins during the match compute phase.
@@ -130,6 +133,26 @@ def setup_full(db):
         );
         CREATE INDEX idx_matches_b  ON matches(contributor_b);
         CREATE INDEX idx_matches_ab ON matches(contributor_a, contributor_b);
+
+        -- Strips the GEDCOM xref `id` field from every element of a JSONB
+        -- array of person-info objects. compute_matches uses this to compare
+        -- parents_list / partners_list / children_list across contributors —
+        -- their ids are unique per file so leaving them in would always
+        -- break equality and dilute the trigram similarity score.
+        CREATE OR REPLACE FUNCTION list_for_match(arr jsonb) RETURNS jsonb AS $$
+          SELECT CASE
+            WHEN arr IS NULL THEN NULL
+            WHEN jsonb_typeof(arr) = 'array' THEN COALESCE(
+              (SELECT jsonb_agg(
+                CASE WHEN jsonb_typeof(elem) = 'object' THEN elem - 'id'
+                     ELSE elem END
+                ORDER BY ord)
+               FROM jsonb_array_elements(arr) WITH ORDINALITY AS t(elem, ord)),
+              '[]'::jsonb
+            )
+            ELSE arr
+          END;
+        $$ LANGUAGE sql IMMUTABLE STRICT;
     """))
     db.commit()
 
@@ -190,8 +213,8 @@ def setup_update(db):
             date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT,
             date_of_baptism TEXT, place_of_baptism TEXT,
             date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
-            parents_list TEXT, partners_list TEXT,
-            notes TEXT, contributor TEXT, links TEXT
+            parents_list JSONB, partners_list JSONB,
+            notes TEXT, contributor TEXT, links JSONB
         );
         CREATE TABLE IF NOT EXISTS families (
             id SERIAL PRIMARY KEY,
@@ -200,8 +223,8 @@ def setup_update(db):
             wife_ext_id TEXT, wife_name TEXT, wife_surname TEXT,
             wife_alt_surname TEXT, wife_birth TEXT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
-            children_list TEXT, husband_parents TEXT, wife_parents TEXT,
-            notes TEXT, contributor TEXT, links TEXT
+            children_list JSONB, husband_parents JSONB, wife_parents JSONB,
+            notes TEXT, contributor TEXT, links JSONB
         );
         CREATE TABLE IF NOT EXISTS matches (
             id SERIAL PRIMARY KEY,
@@ -257,7 +280,10 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_person_surname_trgm     ON persons  USING gist (surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm   ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm   ON families USING gist (wife_surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm ON families USING gist (children_list gist_trgm_ops);
+        -- Expression index on the JSONB column's text serialization (matches
+        -- the cast(children_list, Text) form used by search_advanced_families).
+        CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm
+            ON families USING gist ((children_list::text) gist_trgm_ops);
 
         CREATE INDEX IF NOT EXISTS idx_person_contrib_sur      ON persons(contributor, surname);
         CREATE INDEX IF NOT EXISTS idx_family_contrib_surs     ON families(contributor, husband_surname, wife_surname);
@@ -286,6 +312,25 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_matches_b  ON matches(contributor_b);
         CREATE INDEX IF NOT EXISTS idx_matches_ab ON matches(contributor_a, contributor_b);
         CREATE INDEX IF NOT EXISTS idx_match_jobs_status ON match_jobs(status, queued_at);
+
+        -- Helper used by compute_matches: strips the per-file GEDCOM xref
+        -- `id` from each element of a JSONB array so cross-contributor
+        -- comparisons (parents_list, children_list, …) aren't poisoned by
+        -- ids that are guaranteed unique per source file.
+        CREATE OR REPLACE FUNCTION list_for_match(arr jsonb) RETURNS jsonb AS $$
+          SELECT CASE
+            WHEN arr IS NULL THEN NULL
+            WHEN jsonb_typeof(arr) = 'array' THEN COALESCE(
+              (SELECT jsonb_agg(
+                CASE WHEN jsonb_typeof(elem) = 'object' THEN elem - 'id'
+                     ELSE elem END
+                ORDER BY ord)
+               FROM jsonb_array_elements(arr) WITH ORDINALITY AS t(elem, ord)),
+              '[]'::jsonb
+            )
+            ELSE arr
+          END;
+        $$ LANGUAGE sql IMMUTABLE STRICT;
     """))
     db.commit()
 
@@ -488,7 +533,8 @@ def import_contributor(
                             :date_of_birth, :birth_year, :place_of_birth,
                             :date_of_baptism, :place_of_baptism,
                             :date_of_death, :death_year, :place_of_death,
-                            :parents_list, :partners_list, :notes, :contributor, :links)
+                            :parents_list::jsonb, :partners_list::jsonb,
+                            :notes, :contributor, :links::jsonb)
                     """),
                     rows,
                 )
@@ -530,8 +576,8 @@ def import_contributor(
                             :wife_ext_id, :wife_name, :wife_surname,
                             :wife_alt_surname, :wife_birth,
                             :date_of_marriage, :marriage_year, :place_of_marriage,
-                            :children_list, :husband_parents, :wife_parents,
-                            :notes, :contributor, :links)
+                            :children_list::jsonb, :husband_parents::jsonb, :wife_parents::jsonb,
+                            :notes, :contributor, :links::jsonb)
                     """),
                     rows,
                 )

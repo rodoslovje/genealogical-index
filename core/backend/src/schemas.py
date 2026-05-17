@@ -18,7 +18,7 @@ class PersonBase(BaseModel):
     partners_list: Optional[Any] = None
     notes: Optional[str] = None
     contributor: Optional[str] = None
-    links: Optional[str] = None
+    links: Optional[Any] = None
 
 
 class Person(PersonBase):
@@ -39,14 +39,14 @@ class FamilyBase(BaseModel):
     wife_surname: Optional[str] = None
     wife_alt_surname: Optional[str] = None
     wife_birth: Optional[str] = None
-    children_list: Optional[str] = None
-    husband_parents: Optional[str] = None
-    wife_parents: Optional[str] = None
+    children_list: Optional[Any] = None
+    husband_parents: Optional[Any] = None
+    wife_parents: Optional[Any] = None
     date_of_marriage: Optional[str] = None
     place_of_marriage: Optional[str] = None
     notes: Optional[str] = None
     contributor: Optional[str] = None
-    links: Optional[str] = None
+    links: Optional[Any] = None
 
 
 class Family(FamilyBase):

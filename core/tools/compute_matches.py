@@ -106,10 +106,22 @@ _PERSON_INSERT = text(r"""
                       AND COALESCE(p2.place_of_death,'') != ''
                  THEN CASE WHEN p1.place_of_death = p2.place_of_death THEN 1.0 ELSE similarity(p1.place_of_death, p2.place_of_death) END
                  ELSE NULL END AS s_dplace,
-            CASE WHEN COALESCE(p1.parents_list,'') NOT IN ('', '[]') AND COALESCE(p2.parents_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN p1.parents_list = p2.parents_list THEN 1.0 ELSE similarity(p1.parents_list, p2.parents_list) END ELSE NULL END AS s_parents,
-            CASE WHEN COALESCE(p1.partners_list,'') NOT IN ('', '[]') AND COALESCE(p2.partners_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN p1.partners_list = p2.partners_list THEN 1.0 ELSE similarity(p1.partners_list, p2.partners_list) END ELSE NULL END AS s_partners,
+            -- JSONB columns: NULL or '[]'::jsonb means "no data"; cast to
+            -- text for similarity() since pg_trgm operates on TEXT. list_for_match()
+            -- strips the per-file GEDCOM `id` from each element so different
+            -- contributors' lists can match (their ids are guaranteed unique).
+            CASE WHEN p1.parents_list IS NOT NULL AND p1.parents_list <> '[]'::jsonb
+                  AND p2.parents_list IS NOT NULL AND p2.parents_list <> '[]'::jsonb
+                 THEN CASE WHEN list_for_match(p1.parents_list) = list_for_match(p2.parents_list) THEN 1.0
+                           ELSE similarity(list_for_match(p1.parents_list)::text,
+                                           list_for_match(p2.parents_list)::text) END
+                 ELSE NULL END AS s_parents,
+            CASE WHEN p1.partners_list IS NOT NULL AND p1.partners_list <> '[]'::jsonb
+                  AND p2.partners_list IS NOT NULL AND p2.partners_list <> '[]'::jsonb
+                 THEN CASE WHEN list_for_match(p1.partners_list) = list_for_match(p2.partners_list) THEN 1.0
+                           ELSE similarity(list_for_match(p1.partners_list)::text,
+                                           list_for_match(p2.partners_list)::text) END
+                 ELSE NULL END AS s_partners,
             CASE WHEN p1.birth_year IS NOT NULL AND p2.birth_year IS NOT NULL
                  THEN ABS(p1.birth_year - p2.birth_year)
                  ELSE NULL END AS b_yr_diff,
@@ -208,12 +220,24 @@ _FAMILY_INSERT = text(r"""
                       AND COALESCE(f2.place_of_marriage,'') != ''
                  THEN CASE WHEN f1.place_of_marriage = f2.place_of_marriage THEN 1.0 ELSE similarity(f1.place_of_marriage, f2.place_of_marriage) END
                  ELSE NULL END AS s_place,
-            CASE WHEN COALESCE(f1.husband_parents,'') NOT IN ('', '[]') AND COALESCE(f2.husband_parents,'') NOT IN ('', '[]')
-                 THEN CASE WHEN f1.husband_parents = f2.husband_parents THEN 1.0 ELSE similarity(f1.husband_parents, f2.husband_parents) END ELSE NULL END AS s_hp,
-            CASE WHEN COALESCE(f1.wife_parents,'') NOT IN ('', '[]') AND COALESCE(f2.wife_parents,'') NOT IN ('', '[]')
-                 THEN CASE WHEN f1.wife_parents = f2.wife_parents THEN 1.0 ELSE similarity(f1.wife_parents, f2.wife_parents) END ELSE NULL END AS s_wp,
-            CASE WHEN COALESCE(f1.children_list,'') NOT IN ('', '[]') AND COALESCE(f2.children_list,'') NOT IN ('', '[]')
-                 THEN CASE WHEN f1.children_list = f2.children_list THEN 1.0 ELSE similarity(f1.children_list, f2.children_list) END ELSE NULL END AS s_cl,
+            CASE WHEN f1.husband_parents IS NOT NULL AND f1.husband_parents <> '[]'::jsonb
+                  AND f2.husband_parents IS NOT NULL AND f2.husband_parents <> '[]'::jsonb
+                 THEN CASE WHEN list_for_match(f1.husband_parents) = list_for_match(f2.husband_parents) THEN 1.0
+                           ELSE similarity(list_for_match(f1.husband_parents)::text,
+                                           list_for_match(f2.husband_parents)::text) END
+                 ELSE NULL END AS s_hp,
+            CASE WHEN f1.wife_parents IS NOT NULL AND f1.wife_parents <> '[]'::jsonb
+                  AND f2.wife_parents IS NOT NULL AND f2.wife_parents <> '[]'::jsonb
+                 THEN CASE WHEN list_for_match(f1.wife_parents) = list_for_match(f2.wife_parents) THEN 1.0
+                           ELSE similarity(list_for_match(f1.wife_parents)::text,
+                                           list_for_match(f2.wife_parents)::text) END
+                 ELSE NULL END AS s_wp,
+            CASE WHEN f1.children_list IS NOT NULL AND f1.children_list <> '[]'::jsonb
+                  AND f2.children_list IS NOT NULL AND f2.children_list <> '[]'::jsonb
+                 THEN CASE WHEN list_for_match(f1.children_list) = list_for_match(f2.children_list) THEN 1.0
+                           ELSE similarity(list_for_match(f1.children_list)::text,
+                                           list_for_match(f2.children_list)::text) END
+                 ELSE NULL END AS s_cl,
             CASE WHEN f1.marriage_year IS NOT NULL AND f2.marriage_year IS NOT NULL
                  THEN ABS(f1.marriage_year - f2.marriage_year)
                  ELSE NULL END AS yr_diff

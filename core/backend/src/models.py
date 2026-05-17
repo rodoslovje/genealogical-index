@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, Text, Float, DateTime, SmallInteger
+from sqlalchemy.dialects.postgresql import JSONB
 import datetime
 from .database import Base
 
@@ -20,11 +21,11 @@ class Person(Base):
     date_of_death = Column(Text)
     death_year = Column(SmallInteger)
     place_of_death = Column(Text)
-    parents_list = Column(Text, nullable=True)
-    partners_list = Column(Text, nullable=True)
+    parents_list = Column(JSONB, nullable=True)
+    partners_list = Column(JSONB, nullable=True)
     notes = Column(Text)
     contributor = Column(Text, index=True)
-    links = Column(Text)
+    links = Column(JSONB)
 
 
 class Family(Base):
@@ -44,12 +45,12 @@ class Family(Base):
     date_of_marriage = Column(Text)
     marriage_year = Column(SmallInteger)
     place_of_marriage = Column(Text)
-    children_list = Column(Text)
-    husband_parents = Column(Text)
-    wife_parents = Column(Text)
+    children_list = Column(JSONB)
+    husband_parents = Column(JSONB)
+    wife_parents = Column(JSONB)
     notes = Column(Text)
     contributor = Column(Text, index=True)
-    links = Column(Text)
+    links = Column(JSONB)
 
 
 class Contributor(Base):
