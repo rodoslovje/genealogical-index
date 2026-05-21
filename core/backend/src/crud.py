@@ -415,32 +415,59 @@ def _extract_year(val: str):
     return int(m.group()) if m else None
 
 
-def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool = False):
+def _date_filter(
+    column,
+    from_val: str = None,
+    to_val: str = None,
+    exact: bool = False,
+    year_column=None,
+):
     """
     If only from_val is given: existing fuzzy/exact string match.
     If to_val is given: year-range comparison, handling three date formats:
       - Exact year (e.g. "15 MAR 1875"): included when from_year <= year <= to_year
       - Decade approx (e.g. "ABT 193_"): included when range 1930-1939 overlaps search range
       - Century approx (e.g. "ABT 19__"): included when range 1900-1999 overlaps search range
+
+    When `year_column` is supplied (the SmallInt birth_year / death_year /
+    marriage_year sibling of the TEXT date column), the exact-year branch
+    uses the indexed integer column directly instead of running
+    `cast(substring(col, '\\d{4}'), int)` on every row. Since the year
+    column is populated by the same `\\d{4}` regex at import time, an
+    indexed range scan covers every row that has a parseable 4-digit year.
+    The decade/century branches are then gated on `year_column IS NULL`
+    so they only walk the small subset of rows where no exact year exists.
     """
     if to_val is not None:
         from_year = _extract_year(from_val) if from_val else None
         to_year = _extract_year(to_val)
 
-        # Case 1: exact 4-digit year
-        year_expr = cast(func.substring(column, r"\d{4}"), Integer)
-        exact_conds = [column.op("~")(r"\d{4}")]
-        if from_year:
-            exact_conds.append(year_expr >= from_year)
-        if to_year:
-            exact_conds.append(year_expr <= to_year)
-        exact_match = and_(*exact_conds)
+        # Case 1: exact 4-digit year.
+        if year_column is not None:
+            exact_conds = []
+            if from_year:
+                exact_conds.append(year_column >= from_year)
+            if to_year:
+                exact_conds.append(year_column <= to_year)
+            if not exact_conds:
+                exact_conds.append(year_column.isnot(None))
+            exact_match = and_(*exact_conds)
+        else:
+            year_expr = cast(func.substring(column, r"\d{4}"), Integer)
+            exact_conds = [column.op("~")(r"\d{4}")]
+            if from_year:
+                exact_conds.append(year_expr >= from_year)
+            if to_year:
+                exact_conds.append(year_expr <= to_year)
+            exact_match = and_(*exact_conds)
 
         # Case 2: decade approximation — 3 known digits + underscore (e.g. "193_" → 1930–1939)
         decade_prefix = cast(func.substring(column, r"(\d{3})_"), Integer)
         decade_min = decade_prefix * 10
         decade_max = decade_prefix * 10 + 9
         decade_conds = [column.op("~")(r"\d{3}_")]
+        if year_column is not None:
+            decade_conds.append(year_column.is_(None))
         if exact:
             if from_year:
                 decade_conds.append(decade_min >= from_year)
@@ -458,6 +485,8 @@ def _date_filter(column, from_val: str = None, to_val: str = None, exact: bool =
         century_min = century_prefix * 100
         century_max = century_prefix * 100 + 99
         century_conds = [column.op("~")(r"\d{2}__")]
+        if year_column is not None:
+            century_conds.append(year_column.is_(None))
         if exact:
             if from_year:
                 century_conds.append(century_min >= from_year)
@@ -576,10 +605,12 @@ def search_all(
             )
         # Date range filters apply to either birth or death.
         date_cond_b = _date_filter(
-            models.Person.date_of_birth, date_from, date_to, exact
+            models.Person.date_of_birth, date_from, date_to, exact,
+            year_column=models.Person.birth_year,
         )
         date_cond_d = _date_filter(
-            models.Person.date_of_death, date_from, date_to, exact
+            models.Person.date_of_death, date_from, date_to, exact,
+            year_column=models.Person.death_year,
         )
         if date_cond_b is not None and date_cond_d is not None:
             q = q.filter(or_(date_cond_b, date_cond_d))
@@ -632,7 +663,8 @@ def search_all(
                 )
             )
         date_cond_f = _date_filter(
-            models.Family.date_of_marriage, date_from, date_to, exact
+            models.Family.date_of_marriage, date_from, date_to, exact,
+            year_column=models.Family.marriage_year,
         )
         if date_cond_f is not None:
             families_q = families_q.filter(date_cond_f)
@@ -695,12 +727,14 @@ def search_advanced_persons(
             )
         )
     bcond = _date_filter(
-        models.Person.date_of_birth, date_of_birth, date_of_birth_to, exact
+        models.Person.date_of_birth, date_of_birth, date_of_birth_to, exact,
+        year_column=models.Person.birth_year,
     )
     if bcond is not None:
         query = query.filter(bcond)
     dcond = _date_filter(
-        models.Person.date_of_death, date_of_death, date_of_death_to, exact
+        models.Person.date_of_death, date_of_death, date_of_death_to, exact,
+        year_column=models.Person.death_year,
     )
     if dcond is not None:
         query = query.filter(dcond)
@@ -810,7 +844,8 @@ def search_advanced_families(
             )
         )
     date_cond = _date_filter(
-        models.Family.date_of_marriage, date_of_marriage, date_of_marriage_to, exact
+        models.Family.date_of_marriage, date_of_marriage, date_of_marriage_to, exact,
+        year_column=models.Family.marriage_year,
     )
     if date_cond is not None:
         query = query.filter(date_cond)
