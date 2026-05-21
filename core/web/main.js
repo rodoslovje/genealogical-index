@@ -415,7 +415,10 @@ async function init() {
 init();
 
 // --- SPA navigation (shared by link clicks and popstate) ---
-function navigateToURL(urlSearch) {
+// `triggerSearch` false on browser Back/Forward — the results table for the
+// returned-to URL is still in the DOM from when that search originally ran,
+// so we skip the fetch and just switch tabs / refill the form.
+function navigateToURL(urlSearch, { triggerSearch = true } = {}) {
   // If the user followed a legacy ?t=birth / ?t=death link, rewrite it before doing anything.
   normalizeLegacyURL();
   const urlParams = currentParams();
@@ -426,7 +429,7 @@ function navigateToURL(urlSearch) {
   activateTab(targetTab);
   isInitializing = false;
   clearAllSearchForms();
-  restoreFromURL();
+  restoreFromURL({ triggerSearch });
 }
 
 document.addEventListener('click', (e) => {
@@ -443,5 +446,5 @@ document.addEventListener('click', (e) => {
 });
 
 window.addEventListener('popstate', () => {
-  navigateToURL(window.location.search);
+  navigateToURL(window.location.search, { triggerSearch: false });
 });

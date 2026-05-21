@@ -435,7 +435,7 @@ export function clearAllSearchForms() {
   });
 }
 
-export function restoreFromURL() {
+export function restoreFromURL({ triggerSearch = true } = {}) {
   isRestoring = true;
   const params = currentParams();
   const tParam = resolveTabType(params.get('t'));
@@ -463,7 +463,7 @@ export function restoreFromURL() {
       const cb = document.getElementById('general-has_link');
       if (cb) cb.checked = true;
     }
-    document.getElementById('btn-general-search')?.click();
+    if (triggerSearch) document.getElementById('btn-general-search')?.click();
   } else if (tParam === 'person' || tParam === 'family') {
     const columns = tParam === 'person' ? personColumns : familyColumns;
     const prefix = `adv-${tParam}-`;
@@ -501,7 +501,7 @@ export function restoreFromURL() {
       const cb = document.getElementById(`${prefix}has_link`);
       if (cb) { cb.checked = true; hasCriteria = true; }
     }
-    if (hasCriteria) document.getElementById(`btn-adv-search-${tParam}`)?.click();
+    if (hasCriteria && triggerSearch) document.getElementById(`btn-adv-search-${tParam}`)?.click();
   }
   setTimeout(() => { isRestoring = false; }, 0);
 }
