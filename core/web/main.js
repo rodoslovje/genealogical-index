@@ -213,6 +213,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 export function activateTab(targetTab) {
+  if (targetTab === 'tab-ancestors'   && siteConfig.gatedFeatures?.includes('ancestors'))   targetTab = 'tab-general';
+  if (targetTab === 'tab-descendants' && siteConfig.gatedFeatures?.includes('descendants')) targetTab = 'tab-general';
   const tabTypeMap = {
     'tab-general':      'general',
     'tab-person':       'person',

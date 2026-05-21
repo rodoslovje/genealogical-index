@@ -274,7 +274,7 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null) {
     let treeBtn = '';
     // Matricula records have no stable IDs and shallow history, so the
     // ancestor/descendant tree wouldn't be meaningful — skip the button.
-    if (rootPerson && (rootPerson.name || rootPerson.surname) && !isMatriculaContributor(rootPerson.contributor)) {
+    if (!siteConfig.gatedFeatures?.includes('ancestors') && rootPerson && (rootPerson.name || rootPerson.surname) && !isMatriculaContributor(rootPerson.contributor)) {
       const p = new URLSearchParams();
       p.set('t', 'ancestors');
       if (rootPerson.name) p.set('n', rootPerson.name);
@@ -335,7 +335,7 @@ export function formatSpecialCell(col, row) {
     }
 
     let treeBtn = '';
-    if (row.id && count > 0 && !isMatriculaContributor(row.contributor)) {
+    if (!siteConfig.gatedFeatures?.includes('descendants') && row.id && count > 0 && !isMatriculaContributor(row.contributor)) {
         const p = new URLSearchParams();
         p.set('t', 'descendants');
         let chosenExtId = '';
@@ -367,7 +367,7 @@ export function formatSpecialCell(col, row) {
     const { html, count } = renderParentPair(row.parents_list, null);
     if (count > 0) {
       let treeBtn = '';
-      if (row.id && !isMatriculaContributor(row.contributor)) {
+      if (!siteConfig.gatedFeatures?.includes('ancestors') && row.id && !isMatriculaContributor(row.contributor)) {
         const p = new URLSearchParams();
         p.set('t', 'ancestors');
         if (row.name) p.set('n', row.name);
@@ -415,7 +415,7 @@ export function formatSpecialCell(col, row) {
     let count = 0;
     let treeBtn = '';
     try {
-      if (row.id && !isMatriculaContributor(row.contributor)) {
+      if (!siteConfig.gatedFeatures?.includes('descendants') && row.id && !isMatriculaContributor(row.contributor)) {
           const p = new URLSearchParams();
           p.set('t', 'descendants');
           if (row.name) p.set('n', row.name);

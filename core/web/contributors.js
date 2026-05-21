@@ -4,6 +4,7 @@
 // the public surface that main.js and search.js depend on.
 
 import { t } from './i18n.js';
+import siteConfig from '@site-config';
 import { renderTable } from './table.js';
 import { toUnicodeHref, currentParams } from './url.js';
 
@@ -66,7 +67,10 @@ export async function renderContributors() {
 
   const urlParams = currentParams();
   const contributor = readContributorParam(urlParams);
-  const withPartner = readWithParam(urlParams);
+  // Per-pair drill-in is a premium feature: ignore ?w= when 'matches' is
+  // gated, so a shared per-pair URL still resolves to the contributor
+  // summary page.
+  const withPartner = siteConfig.gatedFeatures?.includes('matches') ? null : readWithParam(urlParams);
 
   const chartsContainer = document.getElementById('charts-container');
   const surnameCloudSection = document.getElementById('surname-cloud-section');

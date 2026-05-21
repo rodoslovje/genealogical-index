@@ -506,18 +506,48 @@ npm install
 npm run build:slo
 ```
 
-The production-ready files are written to `sites/slo/dist/`.
+If the site's `site.config.js` exports a non-empty `PREMIUM_FEATURES` list (currently only `sites/slo/`), the build produces **two output variants**:
+
+| Path                         | Description                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| `sites/slo/dist/base/`       | **Public** build — premium features stripped from the bundle and the UI    |
+| `sites/slo/dist/premium/`    | **Gated** build — all features enabled; intended to be served behind login |
+
+Sites without a `PREMIUM_FEATURES` export (cro, test) produce a single `sites/<name>/dist/` build as before.
 
 ### 4.4 Deploy to the server
 
-Copy the built files to the directory Caddy serves:
+Copy each built variant to the directory Caddy serves. For Slovenia (two variants):
 
 ```bash
+# Public site
 ssh user@yourserver "mkdir -p /var/www/sites/sgi"
-rsync -avz --delete sites/slo/dist/ user@yourserver:/var/www/sites/sgi/
+rsync -avz --delete sites/slo/dist/base/ user@yourserver:/var/www/sites/sgi/
+
+# Gated site (basic-auth subdomain)
+ssh user@yourserver "mkdir -p /var/www/sites/sgi-premium"
+rsync -avz --delete sites/slo/dist/premium/ user@yourserver:/var/www/sites/sgi-premium/
+```
+
+For single-variant sites (Croatia, test):
+
+```bash
+ssh user@yourserver "mkdir -p /var/www/sites/cgi"
+rsync -avz --delete sites/cro/dist/ user@yourserver:/var/www/sites/cgi/
 ```
 
 No Caddy reload is needed — Caddy serves files directly from disk.
+
+### 4.5 Generate the basic-auth credential (gated site only)
+
+The premium subdomain is gated by HTTP basic auth (a placeholder for the eventual WordPress SSO integration). Generate the bcrypt hash once and paste it into the `basicauth` block in `sites/slo/caddy/conf.d/sgi.caddyfile`:
+
+```bash
+docker exec caddy caddy hash-password
+# enter the desired password twice; copy the printed bcrypt hash
+```
+
+Then reload Caddy (see §3.5).
 
 ---
 
@@ -559,7 +589,15 @@ docker compose exec api python tools/import_to_db.py --mode update
 
 ```bash
 npm run build:slo
-rsync -avz --delete sites/slo/dist/ user@yourserver:/var/www/sites/sgi/
+rsync -avz --delete sites/slo/dist/base/    user@yourserver:/var/www/sites/sgi/
+rsync -avz --delete sites/slo/dist/premium/ user@yourserver:/var/www/sites/sgi-premium/
+```
+
+For single-variant sites omit the `base/` / `premium/` subpath:
+
+```bash
+npm run build:cro
+rsync -avz --delete sites/cro/dist/ user@yourserver:/var/www/sites/cgi/
 ```
 
 ---

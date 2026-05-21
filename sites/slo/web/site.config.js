@@ -3,6 +3,17 @@
  * This is the only file that differs between installations.
  * Fork this file (and the public/ assets) to create a new country site.
  */
+
+// Premium features supported by this site. Recognised values:
+//   'ancestors'   — ancestor tree view
+//   'descendants' — descendant tree view
+//   'matches'     — cross-contributor matches view + matches drill-in
+// When non-empty, `npm run build:slo` produces two output variants:
+//   dist/base/    — premium features stripped (public site)
+//   dist/premium/ — all features enabled (gated site)
+// Leave the empty array to produce a single dist/ build with no gating.
+export const PREMIUM_FEATURES = ['ancestors', 'descendants'];
+
 const siteConfig = {
   // Branding
   logo:        '/srd-logo.png',
@@ -13,6 +24,15 @@ const siteConfig = {
 
   apiHost: 'indeks-api.rodoslovje.si',
   filePrefix: 'sgi',
+
+  // Runtime view of which features are HIDDEN in this build. In the base
+  // build the PREMIUM_FEATURES are stripped out (gated behind the premium
+  // subdomain). In the premium build, and for non-variant builds, nothing
+  // is hidden. Features not listed here are always available — adding a
+  // feature to PREMIUM_FEATURES gates it; removing it makes it freely
+  // available again. BUILD_VARIANT is injected by vite.config.js via
+  // `define`.
+  gatedFeatures: process.env.BUILD_VARIANT === 'base' ? PREMIUM_FEATURES : [],
 
   // Languages shown in the dropdown, ordered alphabetically by language name
   languages: ['de', 'en', 'hr', 'hu', 'it', 'sl'],

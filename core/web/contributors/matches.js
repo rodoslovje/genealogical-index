@@ -129,7 +129,9 @@ export async function renderMatchesPage(contributor, withPartner) {
     const displayName = baseContributor;
     const hasTree = !!contribData._tree;
     const hasMatricula = !!contribData._matricula;
-    const showMatchesSection = hasTree; // matches only exist for Genealogist data
+    // Matches section needs Genealogist data AND the 'matches' feature not
+    // being gated out of this build.
+    const showMatchesSection = hasTree && !siteConfig.gatedFeatures?.includes('matches');
 
     if (withPartner) {
       const basePartner = baseContributorName(withPartner);

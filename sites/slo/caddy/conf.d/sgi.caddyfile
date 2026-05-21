@@ -2,7 +2,7 @@
 # Place this file in the Caddy conf.d/ directory on your server.
 # Replace the domain names to match your environment.
 
-# Frontend — serves the built Vite app
+# Public frontend — base build with premium features stripped out.
 indeks.rodoslovje.si {
     root * /var/www/sites/sgi
     file_server
@@ -10,7 +10,22 @@ indeks.rodoslovje.si {
     encode gzip
 }
 
-# Backend API — reverse proxy to the Docker container
+# Gated frontend — premium build behind HTTP basic auth. Used as a
+# transitional measure until WordPress-based login is in place. Generate the
+# bcrypt hash with:  docker exec caddy caddy hash-password
+# then replace REPLACE_WITH_BCRYPT_HASH below.
+pgi.renko.fyi {
+    basicauth {
+        clan REPLACE_WITH_BCRYPT_HASH
+    }
+    root * /var/www/sites/sgi-premium
+    file_server
+    try_files {path} /index.html
+    encode gzip
+}
+
+# Backend API — reverse proxy to the Docker container. Shared by both the
+# public and gated frontends (same database, same data).
 indeks-api.rodoslovlje.si {
     reverse_proxy sgi_api:8000
     encode gzip
