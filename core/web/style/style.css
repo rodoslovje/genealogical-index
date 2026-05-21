@@ -793,14 +793,17 @@ body.compact-nav .mobile-nav-section { display: flex; }
   cursor: pointer;
 }
 
-/* Section header w/ title + action buttons on the right. */
+/* Section header w/ title + action buttons on the right.
+   margin top/bottom mirror the h2 rhythm used on the search/person/family
+   pages so the gap above and below the heading is consistent. */
 .section-bar {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   border-bottom: 1px solid var(--srd-line);
   padding-bottom: 6px;
-  margin-bottom: 12px;
+  margin-top: 1.6rem;
+  margin-bottom: 1rem;
 }
 .section-bar--top    { margin-top: 2rem; }
 .section-bar--top-sm { margin-top: 1.5rem; }
