@@ -79,6 +79,28 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/003_trgm_gist_to_gin.sql
 ```
 
+### 004 — `place_trgm_gin`
+
+Adds GIN trigram indexes for the three place columns that the search
+endpoints actually filter on:
+
+- `persons.place_of_birth`
+- `persons.place_of_death`
+- `families.place_of_marriage`
+
+Without these, every place search seq-scanned the table.
+`place_of_baptism` is intentionally not indexed (no endpoint filters
+on it).
+
+- `CREATE INDEX CONCURRENTLY` — no table lock; safe online.
+- Must run **outside** a transaction block.
+- Re-runnable.
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/004_place_trgm_gin.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

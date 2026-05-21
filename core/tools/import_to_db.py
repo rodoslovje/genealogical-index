@@ -82,6 +82,10 @@ def setup_full(db):
         CREATE INDEX idx_family_w_surname_trgm     ON families USING gin (wife_surname gin_trgm_ops);
         CREATE INDEX idx_family_h_alt_surname_trgm ON families USING gin (husband_alt_surname gin_trgm_ops);
         CREATE INDEX idx_family_w_alt_surname_trgm ON families USING gin (wife_alt_surname gin_trgm_ops);
+        -- Place columns used by search_all / search_advanced_*.
+        CREATE INDEX idx_person_place_of_birth_trgm    ON persons  USING gin (place_of_birth gin_trgm_ops);
+        CREATE INDEX idx_person_place_of_death_trgm    ON persons  USING gin (place_of_death gin_trgm_ops);
+        CREATE INDEX idx_family_place_of_marriage_trgm ON families USING gin (place_of_marriage gin_trgm_ops);
         -- Expression index on the JSONB column's text serialization so the
         -- existing ILIKE / trigram `%>` search filter stays index-fast.
         CREATE INDEX idx_family_children_list_trgm
@@ -295,6 +299,10 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm       ON families USING gin (wife_surname gin_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_h_alt_surname_trgm   ON families USING gin (husband_alt_surname gin_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_w_alt_surname_trgm   ON families USING gin (wife_alt_surname gin_trgm_ops);
+        -- Place columns used by search_all / search_advanced_* (see migration 004).
+        CREATE INDEX IF NOT EXISTS idx_person_place_of_birth_trgm    ON persons  USING gin (place_of_birth gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_person_place_of_death_trgm    ON persons  USING gin (place_of_death gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_place_of_marriage_trgm ON families USING gin (place_of_marriage gin_trgm_ops);
         -- Expression index on the JSONB column's text serialization (matches
         -- the cast(children_list, Text) form used by search_advanced_families).
         CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm
