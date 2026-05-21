@@ -101,6 +101,28 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/004_place_trgm_gin.sql
 ```
 
+### 005 — `misc_trgm_gin`
+
+Adds GIN trigram indexes for the last batch of columns that `_text_filter`
+operates on but that had only btree indexes (or none):
+
+- `persons.contributor`
+- `families.contributor`
+- `families.husband_name`
+- `families.wife_name`
+
+Audited from crud.py — these complete the trgm coverage for every column
+the search endpoints filter via ILIKE / `%>`.
+
+- `CREATE INDEX CONCURRENTLY` — online.
+- Must run outside a transaction block.
+- Re-runnable.
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/005_misc_trgm_gin.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

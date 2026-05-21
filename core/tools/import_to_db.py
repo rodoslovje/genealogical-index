@@ -86,6 +86,12 @@ def setup_full(db):
         CREATE INDEX idx_person_place_of_birth_trgm    ON persons  USING gin (place_of_birth gin_trgm_ops);
         CREATE INDEX idx_person_place_of_death_trgm    ON persons  USING gin (place_of_death gin_trgm_ops);
         CREATE INDEX idx_family_place_of_marriage_trgm ON families USING gin (place_of_marriage gin_trgm_ops);
+        -- Contributor and family-name columns: also filtered via ILIKE / `%>`
+        -- by _text_filter, so they need GIN trgm for fuzzy/substring search.
+        CREATE INDEX idx_person_contributor_trgm ON persons  USING gin (contributor gin_trgm_ops);
+        CREATE INDEX idx_family_contributor_trgm ON families USING gin (contributor gin_trgm_ops);
+        CREATE INDEX idx_family_h_name_trgm      ON families USING gin (husband_name gin_trgm_ops);
+        CREATE INDEX idx_family_w_name_trgm      ON families USING gin (wife_name gin_trgm_ops);
         -- Expression index on the JSONB column's text serialization so the
         -- existing ILIKE / trigram `%>` search filter stays index-fast.
         CREATE INDEX idx_family_children_list_trgm
@@ -303,6 +309,11 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_person_place_of_birth_trgm    ON persons  USING gin (place_of_birth gin_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_person_place_of_death_trgm    ON persons  USING gin (place_of_death gin_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_place_of_marriage_trgm ON families USING gin (place_of_marriage gin_trgm_ops);
+        -- Contributor + family-name columns also filtered via _text_filter (see migration 005).
+        CREATE INDEX IF NOT EXISTS idx_person_contributor_trgm ON persons  USING gin (contributor gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_contributor_trgm ON families USING gin (contributor gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_h_name_trgm      ON families USING gin (husband_name gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_w_name_trgm      ON families USING gin (wife_name gin_trgm_ops);
         -- Expression index on the JSONB column's text serialization (matches
         -- the cast(children_list, Text) form used by search_advanced_families).
         CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm
