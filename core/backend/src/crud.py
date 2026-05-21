@@ -324,34 +324,37 @@ def get_contributors(db: Session):
 
 
 def get_timeline_distribution(db: Session):
-    """Extracts 4-digit years from persons (birth & death) and families (marriage)."""
+    """Year-distribution of births, deaths, and marriages for the timeline.
+
+    Uses the pre-extracted birth_year / death_year / marriage_year SMALLINT
+    columns (populated at import by the same `\\d{4}` regex used here) so
+    each query is a cheap index-driven GROUP BY instead of a full table
+    seq scan with substring/regex on the TEXT date column.
+    """
     now = time.time()
     if _timeline_cache["data"] is not None and (
         now - _timeline_cache["time"] < CACHE_TTL
     ):
         return _timeline_cache["data"]
 
-    birth_year = cast(func.substring(models.Person.date_of_birth, r"\d{4}"), Integer)
     births = (
-        db.query(birth_year.label("year"), func.count(models.Person.id))
-        .filter(models.Person.date_of_birth.op("~")(r"\d{4}"))
-        .group_by("year")
+        db.query(models.Person.birth_year.label("year"), func.count())
+        .filter(models.Person.birth_year.isnot(None))
+        .group_by(models.Person.birth_year)
         .all()
     )
 
-    marr_year = cast(func.substring(models.Family.date_of_marriage, r"\d{4}"), Integer)
     marriages = (
-        db.query(marr_year.label("year"), func.count(models.Family.id))
-        .filter(models.Family.date_of_marriage.op("~")(r"\d{4}"))
-        .group_by("year")
+        db.query(models.Family.marriage_year.label("year"), func.count())
+        .filter(models.Family.marriage_year.isnot(None))
+        .group_by(models.Family.marriage_year)
         .all()
     )
 
-    death_year = cast(func.substring(models.Person.date_of_death, r"\d{4}"), Integer)
     deaths = (
-        db.query(death_year.label("year"), func.count(models.Person.id))
-        .filter(models.Person.date_of_death.op("~")(r"\d{4}"))
-        .group_by("year")
+        db.query(models.Person.death_year.label("year"), func.count())
+        .filter(models.Person.death_year.isnot(None))
+        .group_by(models.Person.death_year)
         .all()
     )
 
