@@ -3,11 +3,19 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
+from sqlalchemy import text
+
 from . import crud, models, schemas
 from .database import SessionLocal, engine
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
+
+# pg_trgm is required for the trigram operators used in search. Doing this
+# once at startup avoids a per-request roundtrip from inside _set_trgm.
+with engine.connect() as _conn:
+    _conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    _conn.commit()
 
 # Initialize the FastAPI app
 app = FastAPI()

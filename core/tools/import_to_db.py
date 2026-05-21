@@ -73,6 +73,18 @@ def setup_full(db):
         CREATE INDEX idx_person_surname_trgm ON persons  USING gist (surname gist_trgm_ops);
         CREATE INDEX idx_family_h_surname_trgm   ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX idx_family_w_surname_trgm   ON families USING gist (wife_surname gist_trgm_ops);
+        -- Partial trigram indexes for alt_surname columns. Without these, the
+        -- `surname OR alt_surname` predicate in search_all / search_advanced_*
+        -- collapses to a seq scan (the OR is only as fast as its slowest side).
+        CREATE INDEX idx_person_alt_surname_trgm
+            ON persons USING gist (alt_surname gist_trgm_ops)
+            WHERE alt_surname IS NOT NULL AND alt_surname <> '';
+        CREATE INDEX idx_family_h_alt_surname_trgm
+            ON families USING gist (husband_alt_surname gist_trgm_ops)
+            WHERE husband_alt_surname IS NOT NULL AND husband_alt_surname <> '';
+        CREATE INDEX idx_family_w_alt_surname_trgm
+            ON families USING gist (wife_alt_surname gist_trgm_ops)
+            WHERE wife_alt_surname IS NOT NULL AND wife_alt_surname <> '';
         -- Expression index on the JSONB column's text serialization so the
         -- existing ILIKE / trigram `%>` search filter stays index-fast.
         CREATE INDEX idx_family_children_list_trgm
@@ -280,6 +292,17 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_person_surname_trgm     ON persons  USING gist (surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm   ON families USING gist (husband_surname gist_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm   ON families USING gist (wife_surname gist_trgm_ops);
+        -- Partial trigram indexes for alt_surname columns — without these,
+        -- the surname-OR-alt_surname search predicate falls back to a seq scan.
+        CREATE INDEX IF NOT EXISTS idx_person_alt_surname_trgm
+            ON persons USING gist (alt_surname gist_trgm_ops)
+            WHERE alt_surname IS NOT NULL AND alt_surname <> '';
+        CREATE INDEX IF NOT EXISTS idx_family_h_alt_surname_trgm
+            ON families USING gist (husband_alt_surname gist_trgm_ops)
+            WHERE husband_alt_surname IS NOT NULL AND husband_alt_surname <> '';
+        CREATE INDEX IF NOT EXISTS idx_family_w_alt_surname_trgm
+            ON families USING gist (wife_alt_surname gist_trgm_ops)
+            WHERE wife_alt_surname IS NOT NULL AND wife_alt_surname <> '';
         -- Expression index on the JSONB column's text serialization (matches
         -- the cast(children_list, Text) form used by search_advanced_families).
         CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm

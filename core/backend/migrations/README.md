@@ -41,6 +41,22 @@ docker compose logs api --tail 50
 Re-running the script after success prints `Skipping … (already jsonb)`
 for every column and exits clean.
 
+### 002 — `alt_surname_trgm`
+
+Adds partial GIST trigram indexes on `persons.alt_surname`,
+`families.husband_alt_surname`, and `families.wife_alt_surname`. Without
+them, surname search (`surname OR alt_surname`) seq-scans the table.
+
+- Uses `CREATE INDEX CONCURRENTLY` — no table lock, safe to run online.
+- The script must run **outside** a transaction block; pipe it through
+  psql directly (no `-c` wrapping that opens a tx).
+- Re-runnable (`IF NOT EXISTS`).
+
+```bash
+docker compose exec -T db psql -U $POSTGRES_USER -d $POSTGRES_DB \
+  < core/backend/migrations/002_alt_surname_trgm.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

@@ -524,11 +524,11 @@ def _surname_filter(surname_col, alt_surname_col, value, exact: bool, split_comm
 
 
 def _set_trgm(db: Session, exact: bool):
-    db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
-    db.execute(text(f"SET pg_trgm.similarity_threshold = {0.5 if not exact else 1.0};"))
-    db.execute(
-        text(f"SET pg_trgm.word_similarity_threshold = {0.5 if not exact else 1.0};")
-    )
+    # The pg_trgm extension is created once at API startup; no need to issue
+    # CREATE EXTENSION per request.
+    threshold = 1.0 if exact else 0.5
+    db.execute(text(f"SET LOCAL pg_trgm.similarity_threshold = {threshold};"))
+    db.execute(text(f"SET LOCAL pg_trgm.word_similarity_threshold = {threshold};"))
 
 
 def search_all(
