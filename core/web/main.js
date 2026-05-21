@@ -162,6 +162,31 @@ function updateSidebarTop() {
 updateSidebarTop();
 window.addEventListener('resize', updateSidebarTop);
 
+// Collapse inline navbar tabs into the sidebar when the navbar would overflow.
+// Measures by temporarily un-compacting and comparing scrollWidth — the
+// synchronous read/write keeps the browser from painting an intermediate state.
+const navbarEl = document.querySelector('.srd-navbar');
+const brandEl = navbarEl?.querySelector('.srd-brand');
+function updateCompactNav() {
+  if (!navbarEl) return;
+  document.body.classList.remove('compact-nav');
+  // The brand block ellipsis-clips its title to fit; force it to natural
+  // width during the measurement so a too-narrow navbar registers as overflow
+  // (rather than silently truncating the title).
+  const prevShrink = brandEl?.style.flexShrink;
+  if (brandEl) brandEl.style.flexShrink = '0';
+  const overflowing = navbarEl.scrollWidth > navbarEl.clientWidth + 1;
+  if (brandEl) brandEl.style.flexShrink = prevShrink ?? '';
+  if (overflowing) document.body.classList.add('compact-nav');
+  updateSidebarTop();
+}
+updateCompactNav();
+window.addEventListener('resize', updateCompactNav);
+if (window.ResizeObserver && navbarEl) {
+  new ResizeObserver(updateCompactNav).observe(navbarEl);
+}
+onLanguageChange(updateCompactNav);
+
 hamburgerBtn.addEventListener('click', (e) => {
   e.stopPropagation();
 

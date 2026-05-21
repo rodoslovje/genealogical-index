@@ -1,0 +1,613 @@
+/* =============================================================
+ * SRD shared component patterns
+ *
+ * Header / navbar, buttons, inputs, language switcher, info
+ * popover, floating action buttons, loading overlay. Anything
+ * that both rodoslovje.si web apps can share verbatim.
+ *
+ * Depends on srd-tokens.css. App-specific styling (lineage
+ * controls, tree node styling, map labels, etc.) lives in
+ * each app's own style.css.
+ * ============================================================= */
+
+/* ---- Base / reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--srd-font-sans);
+  color: var(--srd-ink);
+  background: var(--srd-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* =============================================================
+ * Unified header — Variant A
+ *
+ * Two-line brand block on desktop (app title in serif + org
+ * tagline in micro-caps), collapses to one line on phones.
+ * Tabs fold into the hamburger when the navbar overflows
+ * (the host page's JS toggles `compact-nav` on <body>).
+ * ============================================================= */
+
+.srd-navbar {
+  height: var(--srd-nav-h);
+  width: 100%;
+  background: var(--srd-surface);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--srd-line);
+  box-shadow: var(--srd-shadow-1);
+  position: relative;
+  z-index: 2001;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.srd-navbar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: var(--srd-brand);
+}
+
+/* Brand block (mark + title) */
+.srd-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.srd-brand-mark {
+  /* SRD emblem is a vesica piscis (taller than wide). Height defines size;
+     width is auto so the aspect ratio is preserved. */
+  height: 38px;
+  width: auto;
+  flex-shrink: 0;
+  display: block;
+}
+
+.srd-brand-title {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.srd-brand-title .app {
+  font-family: var(--srd-font-serif);
+  font-weight: 500;
+  font-size: 18px;
+  /* Serif ascenders/descenders need more vertical room than the parent's 1.15;
+     otherwise `overflow: hidden` (needed for ellipsis) clips glyph tails. */
+  line-height: 1.3;
+  color: var(--srd-ink);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.srd-brand-title .org {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--srd-ink-subtle);
+  white-space: nowrap;
+}
+
+.srd-nav-sep {
+  width: 1px;
+  height: 24px;
+  background: var(--srd-line);
+  flex-shrink: 0;
+}
+
+/* Tabs — primary navigation */
+.srd-nav-tabs {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;
+  align-items: center;
+}
+
+.srd-nav-tabs a,
+.srd-nav-tabs button.tab-btn {
+  color: var(--srd-ink-muted);
+  font-family: var(--srd-font-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.srd-nav-tabs a:hover,
+.srd-nav-tabs button.tab-btn:hover {
+  background: var(--srd-bg);
+  color: var(--srd-ink);
+}
+
+.srd-nav-tabs a.active,
+.srd-nav-tabs button.tab-btn.active {
+  color: var(--srd-brand);
+  background: var(--srd-brand-tint);
+  font-weight: 600;
+}
+
+/* Right cluster (lang + hamburger) */
+.srd-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Language switcher button */
+.srd-lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--srd-surface);
+  border: 1px solid var(--srd-line);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-family: var(--srd-font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--srd-ink-muted);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.srd-lang-btn:hover {
+  background: var(--srd-bg-subtle);
+  border-color: var(--srd-line-strong);
+  color: var(--srd-ink);
+}
+
+.srd-lang-btn img {
+  width: 16px;
+  border-radius: 2px;
+  display: block;
+}
+
+.srd-lang-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--srd-surface);
+  border: 1px solid var(--srd-line);
+  border-radius: 6px;
+  box-shadow: var(--srd-shadow-2);
+  display: none;
+  flex-direction: column;
+  min-width: 170px;
+  z-index: 2500;
+  overflow: hidden;
+}
+
+.srd-lang-menu.open {
+  display: flex;
+}
+
+.srd-lang-menu a,
+.srd-lang-menu .lang-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  text-decoration: none;
+  color: var(--srd-ink-muted);
+  font-family: var(--srd-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.srd-lang-menu a:hover,
+.srd-lang-menu .lang-option:hover {
+  background: var(--srd-bg);
+  color: var(--srd-ink);
+}
+
+.srd-lang-menu .lang-option.active {
+  color: var(--srd-brand);
+  font-weight: 600;
+}
+
+.srd-lang-menu a img,
+.srd-lang-menu .lang-option img {
+  width: 16px;
+  border-radius: 2px;
+}
+
+/* Icon button (hamburger + future utilities) */
+.srd-icon-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--srd-line);
+  border-radius: 6px;
+  background: var(--srd-surface);
+  color: var(--srd-ink-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.srd-icon-btn:hover {
+  background: var(--srd-bg-subtle);
+  border-color: var(--srd-line-strong);
+  color: var(--srd-ink);
+}
+
+.srd-hamburger {
+  position: relative;
+  width: 16px;
+  height: 12px;
+  display: inline-block;
+}
+
+.srd-hamburger::before,
+.srd-hamburger::after,
+.srd-hamburger span {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.srd-hamburger::before { top: 0; }
+.srd-hamburger span    { top: 5px; }
+.srd-hamburger::after  { bottom: 0; }
+
+/* ---- Responsive: phone (≤480px) ---- */
+@media (max-width: 480px) {
+  .srd-navbar {
+    height: 52px;
+    padding: 0 12px;
+    gap: 10px;
+  }
+  .srd-brand-mark { height: 32px; }
+  .srd-brand-title .org { display: none; } /* one-line brand on phone */
+  .srd-lang-btn { padding: 4px 7px; font-size: 11.5px; gap: 4px; }
+  .srd-lang-btn img { width: 14px; }
+  .srd-icon-btn { width: 32px; height: 32px; }
+}
+
+/* ---- Compact / mobile mode (driven by host JS adding .compact-nav to <body>) ---- */
+/* When the navbar overflows, hide inline tabs; they reappear inside the sidebar's
+   mobile-nav-section. The hamburger stays visible at all sizes — it's the toggle
+   for the persistent right-side panel (search, lineage filters, etc.). */
+body.compact-nav .srd-nav-tabs,
+body.compact-nav .srd-nav-sep {
+  display: none;
+}
+
+/* =============================================================
+ * Sidebar (right-side panel)
+ * ============================================================= */
+
+.srd-sidebar {
+  position: fixed;
+  right: 0;
+  top: var(--srd-nav-h);
+  width: 240px;
+  height: calc(100% - var(--srd-nav-h));
+  background: var(--srd-surface);
+  border-left: 1px solid var(--srd-line);
+  padding: 18px 16px 80px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  z-index: 1500;
+  box-shadow: -4px 0 14px rgba(15, 34, 64, 0.06);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  -webkit-overflow-scrolling: touch;
+}
+
+.srd-sidebar.open {
+  transform: translateX(0);
+}
+
+@media (max-width: 480px) {
+  .srd-sidebar {
+    top: 52px;
+    height: calc(100% - 52px);
+    width: 86%;
+    max-width: 320px;
+  }
+}
+
+.srd-sidebar-section {
+  margin-bottom: 22px;
+}
+
+.srd-sidebar-title {
+  margin: 0 0 10px 0;
+  font-family: var(--srd-font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--srd-ink-subtle);
+  border-bottom: 1px solid var(--srd-line);
+  padding-bottom: 6px;
+}
+
+/* =============================================================
+ * Form controls
+ * ============================================================= */
+
+.srd-input {
+  width: 100%;
+  padding: 7px 10px;
+  font-family: var(--srd-font-sans);
+  font-size: 13px;
+  color: var(--srd-ink);
+  border: 1px solid var(--srd-line-strong);
+  border-radius: var(--srd-radius);
+  background: var(--srd-surface);
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.srd-input::placeholder {
+  color: var(--srd-ink-subtle);
+}
+
+.srd-input:focus {
+  border-color: var(--srd-accent);
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+}
+
+.srd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-family: var(--srd-font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--srd-line-strong);
+  border-radius: var(--srd-radius);
+  background: var(--srd-surface);
+  color: var(--srd-ink);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.srd-btn:hover {
+  background: var(--srd-bg-subtle);
+  border-color: var(--srd-ink-subtle);
+}
+
+.srd-btn-primary {
+  background: var(--srd-brand);
+  border-color: var(--srd-brand);
+  color: white;
+}
+
+.srd-btn-primary:hover {
+  background: var(--srd-brand-strong);
+  border-color: var(--srd-brand-strong);
+  color: white;
+}
+
+/* =============================================================
+ * Floating action buttons (info / reset / export)
+ * Circular, navy, drop-shadowed.
+ * ============================================================= */
+
+.srd-fab {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--srd-brand);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--srd-shadow-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  padding: 0;
+}
+
+.srd-fab:hover {
+  background: var(--srd-brand-strong);
+  box-shadow: var(--srd-shadow-3);
+}
+
+.srd-fab:active {
+  transform: translateY(1px);
+}
+
+.srd-fab svg {
+  width: 18px;
+  height: 18px;
+}
+
+.srd-fab--info {
+  font-family: var(--srd-font-serif);
+  font-style: italic;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+/* =============================================================
+ * Info popover (the "i" bubble)
+ * ============================================================= */
+
+.srd-popover {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  background: var(--srd-surface);
+  border: 1px solid var(--srd-line);
+  border-radius: var(--srd-radius-lg);
+  padding: 18px;
+  box-shadow: var(--srd-shadow-3);
+  width: max-content;
+  max-width: 440px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: none;
+}
+
+.srd-popover.open {
+  display: block;
+}
+
+.srd-popover ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.srd-popover li {
+  margin-bottom: 8px;
+}
+
+.srd-popover li:last-child {
+  margin-bottom: 0;
+}
+
+.srd-popover a {
+  text-decoration: none;
+  color: var(--srd-accent);
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.srd-popover a:hover {
+  color: var(--srd-brand);
+  text-decoration: underline;
+}
+
+.srd-popover .meta {
+  font-size: 11px;
+  color: var(--srd-ink-subtle);
+  border-top: 1px solid var(--srd-line);
+  padding-top: 8px;
+  margin-top: 10px;
+}
+
+/* =============================================================
+ * Loading overlay
+ * ============================================================= */
+
+.srd-loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(2px);
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--srd-brand);
+  font-family: var(--srd-font-sans);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.srd-loading.active {
+  display: flex;
+}
+
+.srd-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(26, 54, 93, 0.18);
+  border-top-color: var(--srd-brand);
+  border-radius: 50%;
+  animation: srd-spin 0.9s linear infinite;
+  margin-bottom: 14px;
+}
+
+@keyframes srd-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =============================================================
+ * Tooltips (map / tree)
+ * ============================================================= */
+
+.srd-tooltip {
+  position: absolute;
+  padding: 11px 14px;
+  background: var(--srd-surface);
+  color: var(--srd-ink-muted);
+  border: 1px solid var(--srd-line-strong);
+  border-radius: var(--srd-radius);
+  pointer-events: auto;
+  font-family: var(--srd-font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: var(--srd-shadow-2);
+  z-index: 3000;
+}
+
+.srd-tooltip b {
+  color: var(--srd-ink);
+  font-weight: 600;
+}
+
+.srd-tooltip a,
+.srd-link {
+  color: var(--srd-accent);
+  text-decoration: none;
+}
+
+.srd-tooltip a:hover,
+.srd-link:hover {
+  color: var(--srd-accent-strong);
+  text-decoration: underline;
+}

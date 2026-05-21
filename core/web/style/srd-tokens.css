@@ -1,0 +1,52 @@
+/* =============================================================
+ * SRD design tokens — single source of truth for color, type,
+ * geometry across all rodoslovje.si web apps.
+ *
+ * This file is intentionally token-only. No selectors, no
+ * component styles. Component patterns live in srd.css.
+ *
+ * Once both apps adopt it, this file (with srd.css) will be
+ * promoted to a shared package (e.g. rodoslovje/srd-ui served
+ * via jsDelivr, or @rodoslovje/srd-ui on npm).
+ * ============================================================= */
+
+:root {
+  /* ---- Brand & accent ---- */
+  --srd-brand:          #1a365d;   /* heritage navy — primary */
+  --srd-brand-strong:   #0f2240;   /* hover / pressed */
+  --srd-brand-tint:     #e8eef6;   /* active backgrounds */
+
+  --srd-accent:         #3182ce;   /* links, active tab underline */
+  --srd-accent-strong:  #2b6cb0;   /* link hover */
+
+  /* ---- Neutrals (Tailwind slate, picked for Š / Č / Ž readability) ---- */
+  --srd-ink:            #1a202c;   /* body text */
+  --srd-ink-muted:      #4a5568;   /* secondary text */
+  --srd-ink-subtle:     #718096;   /* tertiary, captions */
+  --srd-line:           #e2e8f0;   /* default border */
+  --srd-line-strong:    #cbd5e0;   /* input border */
+  --srd-surface:        #ffffff;   /* cards, table rows */
+  --srd-bg:             #f1f5f9;   /* page background */
+  --srd-bg-subtle:      #f8fafc;   /* alt rows, hover */
+
+  /* ---- Semantic ---- */
+  --srd-warn:           #f0a500;
+  --srd-warn-bg:        #fff8e1;
+  --srd-error:          #e53e3e;
+  --srd-ok:             #2f855a;
+
+  /* ---- Type ---- */
+  --srd-font-sans:  "IBM Plex Sans", "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;
+  --srd-font-serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --srd-font-mono:  "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---- Geometry ---- */
+  --srd-radius:     6px;
+  --srd-radius-lg:  10px;
+  --srd-nav-h:      60px;
+
+  /* ---- Shadows ---- */
+  --srd-shadow-1:   0 1px 2px rgba(15, 34, 64, 0.05);
+  --srd-shadow-2:   0 4px 12px rgba(15, 34, 64, 0.08);
+  --srd-shadow-3:   0 8px 28px rgba(15, 34, 64, 0.12);
+}
