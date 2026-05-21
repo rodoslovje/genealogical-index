@@ -488,17 +488,13 @@ h2 {
 }
 
 .sidebar-nav .tab-btn {
-  background: transparent;
-  border: none;
   border-left: 3px solid transparent;
   text-align: left;
   padding: 8px 12px;
   color: var(--srd-ink-muted);
-  font-family: var(--srd-font-sans);
   font-size: 0.95rem;
   font-weight: 500;
-  border-radius: 0;
-  cursor: pointer;
+  text-decoration: none;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 

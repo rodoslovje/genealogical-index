@@ -7,10 +7,10 @@ import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams, getParam } from './url.
 import { renderAncestorsPage, renderDescendantsPage } from './tree.js';
 
 // --- Global Link Styles ---
+// (Anchor color/underline is handled per-area in style.css — `.intro-text a`,
+// `.link-cell a`, `.srd-nav-tabs a`, etc. — so no global `a` rule here.)
 const globalStyles = document.createElement('style');
 globalStyles.textContent = `
-  a, a:visited { color: #3498db; text-decoration: none; }
-  a:hover { text-decoration: underline; }
   .collapsible-header { cursor: pointer; user-select: none; position: relative; }
   .collapsible-header::before {
     content: '';
@@ -166,26 +166,28 @@ window.addEventListener('resize', updateSidebarTop);
 // Measures by temporarily un-compacting and comparing scrollWidth — the
 // synchronous read/write keeps the browser from painting an intermediate state.
 const navbarEl = document.querySelector('.srd-navbar');
-const brandEl = navbarEl?.querySelector('.srd-brand');
-function updateCompactNav() {
+function checkNavOverflow() {
   if (!navbarEl) return;
-  document.body.classList.remove('compact-nav');
-  // The brand block ellipsis-clips its title to fit; force it to natural
-  // width during the measurement so a too-narrow navbar registers as overflow
-  // (rather than silently truncating the title).
-  const prevShrink = brandEl?.style.flexShrink;
-  if (brandEl) brandEl.style.flexShrink = '0';
-  const overflowing = navbarEl.scrollWidth > navbarEl.clientWidth + 1;
-  if (brandEl) brandEl.style.flexShrink = prevShrink ?? '';
-  if (overflowing) document.body.classList.add('compact-nav');
+  // Phones are always compact (tabs in sidebar) — at ≤480px the brand can
+  // shrink, so an overflow measurement would never fire and tabs would stay
+  // stuck in the navbar. At larger widths, .srd-brand is flex-shrink: 0 and
+  // the navbar genuinely overflows when content doesn't fit.
+  if (window.innerWidth <= 480) {
+    document.body.classList.add('compact-nav');
+  } else {
+    document.body.classList.remove('compact-nav');
+    if (navbarEl.scrollWidth > navbarEl.clientWidth + 1) {
+      document.body.classList.add('compact-nav');
+    }
+  }
   updateSidebarTop();
 }
-updateCompactNav();
-window.addEventListener('resize', updateCompactNav);
+checkNavOverflow();
+window.addEventListener('resize', checkNavOverflow);
 if (window.ResizeObserver && navbarEl) {
-  new ResizeObserver(updateCompactNav).observe(navbarEl);
+  new ResizeObserver(checkNavOverflow).observe(navbarEl);
 }
-onLanguageChange(updateCompactNav);
+onLanguageChange(checkNavOverflow);
 
 hamburgerBtn.addEventListener('click', (e) => {
   e.stopPropagation();
@@ -231,9 +233,13 @@ let isInitializing = false;
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
+    // .tab-btn is now an <a href="?t=X"> — middle/ctrl/cmd-click should keep
+    // the default behavior (open the deep-linked URL in a new tab); plain
+    // clicks switch tabs in-place without a page reload.
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
+    e.preventDefault();
     e.stopPropagation();
-    const targetTab = btn.dataset.target;
-    activateTab(targetTab);
+    activateTab(btn.dataset.target);
   });
 });
 

@@ -10,14 +10,15 @@ import en from './i18n/en.js';
 
 const translations = { en };
 
-// Flag and code for each supported language (used to render the lang switcher)
+// Flag, code, and native name for each supported language. The flag + code go
+// on the navbar toggle; the dropdown shows "<flag> <native name> (<code>)".
 const LANG_META = {
-  en: { flag: '🇬🇧', code: 'EN' },
-  sl: { flag: '🇸🇮', code: 'SL' },
-  hr: { flag: '🇭🇷', code: 'HR' },
-  hu: { flag: '🇭🇺', code: 'HU' },
-  de: { flag: '🇩🇪', code: 'DE' },
-  it: { flag: '🇮🇹', code: 'IT' },
+  en: { flag: '🇬🇧', code: 'EN', name: 'English' },
+  sl: { flag: '🇸🇮', code: 'SL', name: 'Slovenščina' },
+  hr: { flag: '🇭🇷', code: 'HR', name: 'Hrvatski' },
+  hu: { flag: '🇭🇺', code: 'HU', name: 'Magyar' },
+  de: { flag: '🇩🇪', code: 'DE', name: 'Deutsch' },
+  it: { flag: '🇮🇹', code: 'IT', name: 'Italiano' },
 };
 
 let currentLang = 'en';
@@ -129,7 +130,7 @@ export async function initI18n() {
       .map(lang => {
         const meta = LANG_META[lang];
         if (!meta) return '';
-        return `<button class="lang-option" data-lang="${lang}">${meta.flag} ${meta.code}</button>`;
+        return `<a class="lang-option" data-lang="${lang}" href="#">${meta.flag} ${meta.name} (${meta.code})</a>`;
       })
       .join('');
   }
@@ -159,6 +160,7 @@ export async function initI18n() {
   dropdown.addEventListener('click', (e) => {
     const btn = e.target.closest('.lang-option');
     if (btn) {
+      e.preventDefault();
       setLanguage(btn.dataset.lang);
       dropdown.classList.remove('open');
     }
