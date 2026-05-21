@@ -309,6 +309,7 @@ body {
     gap: 10px;
   }
   .srd-brand-mark { height: 32px; }
+  .srd-brand-title .app { font-size: 14px; }
   .srd-brand-title .org { display: none; } /* one-line brand on phone */
   .srd-lang-btn { padding: 4px 7px; font-size: 11.5px; gap: 4px; }
   .srd-lang-btn img { width: 14px; }
