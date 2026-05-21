@@ -69,26 +69,23 @@ def setup_full(db):
             notes TEXT, contributor TEXT, links JSONB
         );
 
-        CREATE INDEX idx_person_name_trgm    ON persons  USING gist (name gist_trgm_ops);
-        CREATE INDEX idx_person_surname_trgm ON persons  USING gist (surname gist_trgm_ops);
-        CREATE INDEX idx_family_h_surname_trgm   ON families USING gist (husband_surname gist_trgm_ops);
-        CREATE INDEX idx_family_w_surname_trgm   ON families USING gist (wife_surname gist_trgm_ops);
-        -- Partial trigram indexes for alt_surname columns. Without these, the
-        -- `surname OR alt_surname` predicate in search_all / search_advanced_*
-        -- collapses to a seq scan (the OR is only as fast as its slowest side).
-        CREATE INDEX idx_person_alt_surname_trgm
-            ON persons USING gist (alt_surname gist_trgm_ops)
-            WHERE alt_surname IS NOT NULL AND alt_surname <> '';
-        CREATE INDEX idx_family_h_alt_surname_trgm
-            ON families USING gist (husband_alt_surname gist_trgm_ops)
-            WHERE husband_alt_surname IS NOT NULL AND husband_alt_surname <> '';
-        CREATE INDEX idx_family_w_alt_surname_trgm
-            ON families USING gist (wife_alt_surname gist_trgm_ops)
-            WHERE wife_alt_surname IS NOT NULL AND wife_alt_surname <> '';
+        -- GIN trigram indexes serve ILIKE / `%>` searches on the
+        -- name/surname/alt_surname columns. We use GIN (not GIST): for our
+        -- ~1.9M-row tables GIN is 5–20x faster to search, at the cost of
+        -- slower writes — fine since persons/families are only written
+        -- during import. No partial WHERE: GIN already skips NULLs and
+        -- empty strings produce no trigrams, so sparse columns stay tiny.
+        CREATE INDEX idx_person_name_trgm        ON persons  USING gin (name gin_trgm_ops);
+        CREATE INDEX idx_person_surname_trgm     ON persons  USING gin (surname gin_trgm_ops);
+        CREATE INDEX idx_person_alt_surname_trgm ON persons  USING gin (alt_surname gin_trgm_ops);
+        CREATE INDEX idx_family_h_surname_trgm     ON families USING gin (husband_surname gin_trgm_ops);
+        CREATE INDEX idx_family_w_surname_trgm     ON families USING gin (wife_surname gin_trgm_ops);
+        CREATE INDEX idx_family_h_alt_surname_trgm ON families USING gin (husband_alt_surname gin_trgm_ops);
+        CREATE INDEX idx_family_w_alt_surname_trgm ON families USING gin (wife_alt_surname gin_trgm_ops);
         -- Expression index on the JSONB column's text serialization so the
         -- existing ILIKE / trigram `%>` search filter stays index-fast.
         CREATE INDEX idx_family_children_list_trgm
-            ON families USING gist ((children_list::text) gist_trgm_ops);
+            ON families USING gin ((children_list::text) gin_trgm_ops);
 
         -- Composite indexes allow instantaneous Index-Only Scans for DISTINCT surnames
         -- and fast equality joins during the match compute phase.
@@ -288,25 +285,20 @@ def setup_update(db):
     db.commit()
 
     db.execute(text("""
-        CREATE INDEX IF NOT EXISTS idx_person_name_trgm        ON persons  USING gist (name gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_person_surname_trgm     ON persons  USING gist (surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm   ON families USING gist (husband_surname gist_trgm_ops);
-        CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm   ON families USING gist (wife_surname gist_trgm_ops);
-        -- Partial trigram indexes for alt_surname columns — without these,
-        -- the surname-OR-alt_surname search predicate falls back to a seq scan.
-        CREATE INDEX IF NOT EXISTS idx_person_alt_surname_trgm
-            ON persons USING gist (alt_surname gist_trgm_ops)
-            WHERE alt_surname IS NOT NULL AND alt_surname <> '';
-        CREATE INDEX IF NOT EXISTS idx_family_h_alt_surname_trgm
-            ON families USING gist (husband_alt_surname gist_trgm_ops)
-            WHERE husband_alt_surname IS NOT NULL AND husband_alt_surname <> '';
-        CREATE INDEX IF NOT EXISTS idx_family_w_alt_surname_trgm
-            ON families USING gist (wife_alt_surname gist_trgm_ops)
-            WHERE wife_alt_surname IS NOT NULL AND wife_alt_surname <> '';
+        -- GIN trigram indexes (see migration 003 — GIST was ~20x slower
+        -- for our search workload). No partial: GIN already skips NULLs
+        -- and empty-string rows produce no trigrams.
+        CREATE INDEX IF NOT EXISTS idx_person_name_trgm            ON persons  USING gin (name gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_person_surname_trgm         ON persons  USING gin (surname gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_person_alt_surname_trgm     ON persons  USING gin (alt_surname gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_h_surname_trgm       ON families USING gin (husband_surname gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_w_surname_trgm       ON families USING gin (wife_surname gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_h_alt_surname_trgm   ON families USING gin (husband_alt_surname gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_family_w_alt_surname_trgm   ON families USING gin (wife_alt_surname gin_trgm_ops);
         -- Expression index on the JSONB column's text serialization (matches
         -- the cast(children_list, Text) form used by search_advanced_families).
         CREATE INDEX IF NOT EXISTS idx_family_children_list_trgm
-            ON families USING gist ((children_list::text) gist_trgm_ops);
+            ON families USING gin ((children_list::text) gin_trgm_ops);
 
         CREATE INDEX IF NOT EXISTS idx_person_contrib_sur      ON persons(contributor, surname);
         CREATE INDEX IF NOT EXISTS idx_family_contrib_surs     ON families(contributor, husband_surname, wife_surname);

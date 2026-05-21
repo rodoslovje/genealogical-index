@@ -57,6 +57,28 @@ docker compose exec -T db psql -U $POSTGRES_USER -d $POSTGRES_DB \
   < core/backend/migrations/002_alt_surname_trgm.sql
 ```
 
+### 003 — `trgm_gist_to_gin`
+
+Replaces all `gist_trgm_ops` indexes with `gin_trgm_ops` and drops the
+partial WHERE on the alt_surname variants. On a ~1.9M-row `persons` table
+the production GIST index scan for a surname search was taking ~8 s by
+itself; GIN brings that into the tens-of-ms range for the same query.
+
+- Uses `CREATE INDEX CONCURRENTLY` / `DROP INDEX CONCURRENTLY` — no
+  table lock. Builds new GIN indexes alongside the existing GIST ones,
+  then drops the GIST ones, so there's never a window without a trgm
+  index.
+- Must run **outside** a transaction block (psql `-f` or piped stdin
+  works; `-c` wrapping a tx does not).
+- Re-runnable: every step is `IF NOT EXISTS` / `IF EXISTS`.
+- Disk impact: GIN trgm ≈ 1.5–2× the GIST size while both coexist
+  during the build; the GIST indexes get reclaimed when dropped.
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/003_trgm_gist_to_gin.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the
