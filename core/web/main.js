@@ -414,6 +414,11 @@ async function init() {
 
 init();
 
+// Safety net: if i18n init never resolves (network error loading a locale,
+// thrown exception, etc.) reveal the page anyway after 2s so the user isn't
+// stuck looking at a blank screen.
+setTimeout(() => document.documentElement.classList.remove('i18n-pending'), 2000);
+
 // --- SPA navigation (shared by link clicks and popstate) ---
 // `triggerSearch` false on browser Back/Forward — the results table for the
 // returned-to URL is still in the DOM from when that search originally ran,

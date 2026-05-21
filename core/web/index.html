@@ -24,6 +24,15 @@
 
     <!-- App-specific styles (tables, intro, sidebar layout, charts, etc.) -->
     <link rel="stylesheet" href="/style/style.css" />
+
+    <!-- Hide the page until JS has applied the user's preferred language. The
+         HTML has English fallback text in [data-i18n] elements; painting them
+         and then swapping to (say) Slovenian causes a visible flash. The class
+         is removed in i18n.js once applyStaticTranslations() has run; a safety
+         timeout in main.js reveals it anyway after 2s if i18n ever fails. -->
+    <style>html.i18n-pending body { visibility: hidden; }</style>
+    <script>document.documentElement.classList.add('i18n-pending');</script>
+
     <!-- Chart.js and D3 are loaded on demand by the views that need them
          (contributors view / ancestors+descendants view). See utils.js. -->
   </head>

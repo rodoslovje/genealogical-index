@@ -142,6 +142,7 @@ export async function initI18n() {
   }
 
   applyStaticTranslations();
+  document.documentElement.classList.remove('i18n-pending');
 
   const toggle = document.getElementById('lang-toggle');
   if (!toggle || !dropdown) return;
