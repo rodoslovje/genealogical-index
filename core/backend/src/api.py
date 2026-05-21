@@ -100,7 +100,7 @@ def search_general(
     contributor: Optional[str] = None,
     has_link: bool = False,
     id: Optional[str] = None,
-    limit: int = 500,
+    limit: int = 999,
     exact: bool = False,
     type: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -136,7 +136,7 @@ def search_advanced_persons(
     contributor: Optional[str] = None,
     has_link: bool = False,
     id: Optional[str] = None,
-    limit: int = 500,
+    limit: int = 999,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
@@ -218,7 +218,7 @@ def search_advanced_families(
     place_of_marriage: Optional[str] = None,
     contributor: Optional[str] = None,
     has_link: bool = False,
-    limit: int = 500,
+    limit: int = 999,
     exact: bool = False,
     db: Session = Depends(get_db),
 ):
