@@ -93,9 +93,9 @@ body {
 .srd-brand-title {
   display: flex;
   flex-direction: column;
-  line-height: 1.25;   /* tight, but enough below-baseline room for descenders —
-                          the `.app` span has overflow: hidden for ellipsis, which
-                          clips glyph tails at 1.15. */
+  line-height: 1.25;   /* tight, but enough below-baseline room for descenders
+                          like the "g" in "genetski" — the `.app` span has
+                          overflow: hidden for ellipsis, which clips at 1.15. */
   min-width: 0;
 }
 
@@ -224,18 +224,12 @@ body {
   color: var(--srd-ink-muted);
   font-size: 13px;
   font-weight: 500;
-  white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
 
 .srd-lang-menu a:hover {
   background: var(--srd-bg);
   color: var(--srd-ink);
-}
-
-.srd-lang-menu a.active {
-  color: var(--srd-brand);
-  font-weight: 600;
 }
 
 .srd-lang-menu a img {
@@ -297,7 +291,7 @@ body {
   }
   .srd-brand { flex-shrink: 1; } /* allow ellipsis fallback on narrow phones */
   .srd-brand-mark { height: 32px; }
-  .srd-brand-title .app { font-size: 14px; }
+  /* .app keeps its desktop 18px size — with .org hidden, there's room for it. */
   .srd-brand-title .org { display: none; } /* one-line brand on phone */
   .srd-nav-sep { display: none; }
   .srd-lang-btn { padding: 4px 7px; font-size: 11.5px; gap: 4px; }
@@ -312,6 +306,14 @@ body {
 body.compact-nav .srd-nav-tabs,
 body.compact-nav .srd-nav-sep {
   display: none;
+}
+
+/* Sidebar nav mirrors the navbar tabs only when those tabs are hidden. */
+.mobile-nav-section {
+  display: none;
+}
+body.compact-nav .mobile-nav-section {
+  display: block;
 }
 
 /* =============================================================
@@ -344,8 +346,6 @@ body.compact-nav .srd-nav-sep {
   .srd-sidebar {
     top: 52px;
     height: calc(100% - 52px);
-    width: 86%;
-    max-width: 320px;
   }
 }
 

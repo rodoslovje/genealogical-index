@@ -112,10 +112,6 @@ function applyStaticTranslations() {
   if (flagEl && meta) flagEl.textContent = meta.flag;
   if (codeEl && meta) codeEl.textContent = meta.code;
 
-  document.querySelectorAll('.lang-option').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.lang === currentLang);
-  });
-
   document.documentElement.lang = currentLang;
 }
 

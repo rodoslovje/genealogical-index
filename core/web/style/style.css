@@ -478,7 +478,7 @@ h2 {
   display: block;
 }
 
-.sidebar-nav {
+.mobile-nav-section {
   display: none;
   flex-direction: column;
   gap: 5px;
@@ -487,7 +487,7 @@ h2 {
   padding-bottom: 15px;
 }
 
-.sidebar-nav .tab-btn {
+.mobile-nav-section .tab-btn {
   border-left: 3px solid transparent;
   text-align: left;
   padding: 8px 12px;
@@ -498,8 +498,8 @@ h2 {
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.sidebar-nav .tab-btn.active,
-.sidebar-nav .tab-btn:hover {
+.mobile-nav-section .tab-btn.active,
+.mobile-nav-section .tab-btn:hover {
   background: var(--srd-brand-tint);
   border-left-color: var(--srd-brand);
   color: var(--srd-brand);
@@ -560,6 +560,10 @@ h2 {
 }
 
 @media (max-width: 480px) {
+  /* Local override of srd.css's default 18px: "Slovenski rodoslovni indeks"
+     is longer than the atlas brand and would ellipsis on narrow phones. */
+  .srd-brand-title .app { font-size: 14px; }
+
   .totals-bar {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -689,7 +693,7 @@ h2 {
  * ============================================================= */
 /* Tabs collapse from navbar into the sidebar when the navbar runs out of
    horizontal space. `compact-nav` is toggled on <body> by main.js. */
-body.compact-nav .sidebar-nav { display: flex; }
+body.compact-nav .mobile-nav-section { display: flex; }
 
 @media (max-width: 768px) {
   .content-area {
