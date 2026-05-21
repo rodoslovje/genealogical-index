@@ -142,7 +142,7 @@ export default {
 
     // Footer
     footer_version: 'Version',
-    footer_data_update: 'Data update',
+    footer_data_update: 'Data',
 
     // Other indexes
     other_indexes: 'Genealogical indexes:',

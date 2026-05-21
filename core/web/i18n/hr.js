@@ -142,7 +142,7 @@ export default {
 
     // Footer
     footer_version: 'Verzija',
-    footer_data_update: 'Ažuriranje podataka',
+    footer_data_update: 'Podaci',
 
     // Other indexes
     other_indexes: 'Rodoslovni indeksi:',

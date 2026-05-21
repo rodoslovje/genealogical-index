@@ -142,7 +142,7 @@ export default {
 
     // Footer
     footer_version: 'Verzió',
-    footer_data_update: 'Adatfrissítés',
+    footer_data_update: 'Adatok',
 
     // Other indexes
     other_indexes: 'Genealógiai indexek:',
