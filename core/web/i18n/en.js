@@ -162,4 +162,5 @@ export default {
     tree_descendants_of: 'Descendants of',
     tree_descendants_title: 'Descendants',
     tree_source: 'Source',
+    tree_created: 'Created',
 };

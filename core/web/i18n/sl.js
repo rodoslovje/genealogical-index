@@ -162,4 +162,5 @@ export default {
     tree_descendants_of: 'Potomci osebe',
     tree_descendants_title: 'Potomci',
     tree_source: 'Vir',
+    tree_created: 'Ustvarjeno',
 };

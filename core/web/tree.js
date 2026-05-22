@@ -324,13 +324,14 @@ function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorN
 
     const bbox = g.node().getBBox();
     const padding = 20;
+    const diagramPadding = 20;
     const headerHeight = 50;
     const footerHeight = 40;
 
     const exportX = bbox.x - padding;
-    const exportY = bbox.y - padding - headerHeight;
+    const exportY = bbox.y - diagramPadding - headerHeight;
     const exportWidth = bbox.width + padding * 2;
-    const exportHeight = bbox.height + padding * 2 + headerHeight + footerHeight;
+    const exportHeight = bbox.height + diagramPadding * 2 + headerHeight + footerHeight;
 
     const vb = svg.property('viewBox').baseVal;
     const originalViewBox = `${vb.x} ${vb.y} ${vb.width} ${vb.height}`;
@@ -349,6 +350,21 @@ function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorN
 
     const overlay = svg.append('g').attr('class', 'export-only');
 
+    // Add header and footer background using --srd-brand-tint
+    overlay.append('rect')
+        .attr('x', exportX)
+        .attr('y', exportY)
+        .attr('width', exportWidth)
+        .attr('height', headerHeight)
+        .attr('fill', '#e8eef6');
+
+    overlay.append('rect')
+        .attr('x', exportX)
+        .attr('y', exportY + exportHeight - footerHeight)
+        .attr('width', exportWidth)
+        .attr('height', footerHeight)
+        .attr('fill', '#e8eef6');
+
     const rootParams = new URLSearchParams();
     rootParams.set('t', 'person');
     if (data.name) rootParams.set('n', data.name);
@@ -363,52 +379,91 @@ function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorN
         .attr('target', '_blank')
         .append('text')
         .attr('x', exportX + padding)
-        .attr('y', exportY + padding + 15)
+        .attr('y', exportY + headerHeight / 2)
+        .attr('dominant-baseline', 'central')
         .attr('font-size', '18px')
         .attr('font-weight', 'bold')
         .attr('fill', '#3498db')
         .text(titleText);
 
-    const indexUrl = window.location.origin + window.location.pathname;
+    const domainUrl = window.location.origin;
+    const domainText = window.location.hostname;
     overlay.append('a')
-        .attr('href', indexUrl)
+        .attr('href', domainUrl)
         .attr('target', '_blank')
         .append('text')
         .attr('x', exportX + exportWidth - padding)
-        .attr('y', exportY + padding + 15)
+        .attr('y', exportY + headerHeight / 2)
         .attr('text-anchor', 'end')
-        .attr('font-size', '14px')
+        .attr('dominant-baseline', 'central')
+        .attr('font-size', '12px')
         .attr('fill', '#3498db')
-        .text(t('site_title'));
+        .text(domainText);
 
+    let footerLeftX = exportX + padding;
     if (contributorName) {
+      overlay.append('image')
+          .attr('href', window.location.origin + '/srd-logo-transparent.png')
+          .attr('x', footerLeftX)
+          .attr('y', exportY + exportHeight - footerHeight / 2 - 16)
+          .attr('width', 32)
+          .attr('height', 32);
+
+      footerLeftX += 40;
+
       const sourceLabel = overlay.append('text')
-          .attr('x', exportX + padding)
-          .attr('y', exportY + exportHeight - padding)
+          .attr('x', footerLeftX)
+          .attr('y', exportY + exportHeight - footerHeight / 2)
+          .attr('dominant-baseline', 'central')
           .attr('font-size', '14px')
           .attr('fill', '#555')
           .text(`${t('tree_source')}:`);
 
       const labelWidth = sourceLabel.node().getComputedTextLength();
       const contribUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', c: contributorName });
-      overlay.append('a')
+      const contribText = overlay.append('a')
           .attr('href', contribUrl)
           .attr('target', '_blank')
           .append('text')
-          .attr('x', exportX + padding + labelWidth + 6)
-          .attr('y', exportY + exportHeight - padding)
+          .attr('x', footerLeftX + labelWidth + 6)
+          .attr('y', exportY + exportHeight - footerHeight / 2)
+          .attr('dominant-baseline', 'central')
           .attr('font-size', '14px')
           .attr('fill', '#3498db')
           .text(`${t('col_contributor')} ${contributorName}`);
+
+      const contribWidth = contribText.node().getComputedTextLength();
+
+      const commaNode = overlay.append('text')
+          .attr('x', footerLeftX + labelWidth + 6 + contribWidth)
+          .attr('y', exportY + exportHeight - footerHeight / 2)
+          .attr('dominant-baseline', 'central')
+          .attr('font-size', '14px')
+          .attr('fill', '#555')
+          .text(',\u00A0');
+
+      const commaWidth = commaNode.node().getComputedTextLength();
+      overlay.append('a')
+          .attr('href', window.location.origin + window.location.pathname)
+          .attr('target', '_blank')
+          .append('text')
+          .attr('x', footerLeftX + labelWidth + 6 + contribWidth + commaWidth)
+          .attr('y', exportY + exportHeight - footerHeight / 2)
+          .attr('dominant-baseline', 'central')
+          .attr('font-size', '14px')
+          .attr('fill', '#3498db')
+          .text(t('site_title'));
     }
 
+    const dateStr = new Date().toLocaleDateString(document.documentElement.lang || 'en');
     overlay.append('text')
         .attr('x', exportX + exportWidth - padding)
-        .attr('y', exportY + exportHeight - padding)
+        .attr('y', exportY + exportHeight - footerHeight / 2)
         .attr('text-anchor', 'end')
+        .attr('dominant-baseline', 'central')
         .attr('font-size', '14px')
         .attr('fill', '#555')
-        .text(new Date().toLocaleString(document.documentElement.lang || 'en'));
+        .text(`${t('tree_created')}: ${dateStr}`);
 
     const svgNode = svg.node();
     const serializer = new XMLSerializer();

@@ -162,4 +162,5 @@ export default {
     tree_descendants_of: 'Leszármazottai:',
     tree_descendants_title: 'Leszármazottak',
     tree_source: 'Forrás',
+    tree_created: 'Létrehozva',
 };

@@ -162,4 +162,5 @@ export default {
     tree_descendants_of: 'Potomci osobe',
     tree_descendants_title: 'Potomci',
     tree_source: 'Izvor',
+    tree_created: 'Izrađeno',
 };
