@@ -645,7 +645,11 @@ h2 {
 }
 .match-pair-label-a { font-weight: 600; color: var(--srd-brand); }
 
-.match-diff { font-weight: bold; }
+.match-diff {
+  background: var(--srd-warn-bg);
+  padding: 0 0.2em;
+  border-radius: 2px;
+}
 
 /* --- Connections panel --- */
 .connections-table {
