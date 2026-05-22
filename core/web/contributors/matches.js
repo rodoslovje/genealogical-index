@@ -59,7 +59,7 @@ function renderContributorStats(contribData) {
       ${row('tip_total_families', t('col_total_families'), fmt(contribData.total_families))}
       ${row('tip_total',          t('col_total'),          fmt(contribData.total))}
       ${row('tip_total_links',    t('col_total_links'),    fmt(contribData.total_links))}
-      ${row('tip_last_modified',  t('col_last_update'),    contribData.last_modified || '')}
+      ${row('tip_last_modified',  t('col_last_modified'),  contribData.last_modified || '')}
     </div>`;
   }
 
@@ -85,7 +85,7 @@ function renderContributorStats(contribData) {
     ${metricRow('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons),  fmt(tree.total_persons),  fmt(mat.total_persons))}
     ${metricRow('tip_total_families', t('col_total_families'), fmt(contribData.total_families), fmt(tree.total_families), fmt(mat.total_families))}
     ${metricRow('tip_total_links',    t('col_total_links'),    fmt(contribData.total_links),    fmt(tree.total_links),    fmt(mat.total_links))}
-    ${metricRow('tip_last_modified',  t('col_last_update'),    lastSum,                          lastTree,                  lastMat)}
+    ${metricRow('tip_last_modified',  t('col_last_modified'),  lastSum,                          lastTree,                  lastMat)}
   </div>`;
 }
 

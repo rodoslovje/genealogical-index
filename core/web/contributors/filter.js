@@ -17,7 +17,7 @@ let currentMatchesData = null;
 let currentMatchesContributor = null;
 let currentDetailRefilter = null;
 
-export const contributorColumns = ['contributor_ID', 'total_persons', 'total_families', 'total', 'total_links', 'last_modified', 'matches'];
+export const contributorColumns = ['contributor_ID', 'total_persons', 'total_families', 'total', 'total_links', 'matches', 'last_modified'];
 
 /** Read the active-contributor / partner URL params. Use the shared getParam
  *  so short `c=` / `w=` and legacy `contributor=` / `with=` forms both work. */

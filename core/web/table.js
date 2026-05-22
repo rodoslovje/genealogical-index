@@ -87,7 +87,7 @@ export function exportToCSV(data, columns, filename) {
     csvContent += `\n"${t('col_total_families')}","${families}"`;
     csvContent += `\n"${t('col_total')}","${total}"`;
     csvContent += `\n"${t('col_total_links')}","${links}"`;
-    csvContent += `\n"${t('col_last_update')}","${lastUpdate}"`;
+    csvContent += `\n"${t('col_last_modified')}","${lastUpdate}"`;
   } else {
     const params = new URLSearchParams(window.location.search);
     const activeFilters = [];
