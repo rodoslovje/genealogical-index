@@ -748,6 +748,19 @@ body.compact-nav .mobile-nav-section { display: flex; }
   text-decoration: underline;
 }
 
+/* Bare anchors inside the contributors page (matches header, URL info
+ * boxes, etc.) — match the rest of the site instead of browser default.
+ * Already-classed links (.name-link, .contributor-link, etc.) and the
+ * page-title links that use inline color:inherit are unaffected. */
+#tab-contributors a:not([class]):not([style*="color"]) {
+  color: var(--srd-accent);
+  text-decoration: none;
+}
+#tab-contributors a:not([class]):not([style*="color"]):hover {
+  color: var(--srd-accent-strong);
+  text-decoration: underline;
+}
+
 /* --- Surname Word Cloud --- */
 .surname-cloud-section { margin: 1rem 0 2rem; }
 .surname-cloud {
