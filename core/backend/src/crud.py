@@ -1278,15 +1278,19 @@ def _family_belongs_to(fam, record, known_partners):
     if known_partners is not None:
         part_name = (fam.wife_name if is_husband else fam.husband_name) or ""
         part_sur  = (fam.wife_surname if is_husband else fam.husband_surname) or ""
-        matched = False
-        for kp in known_partners:
-            n_match = not kp["name"]    or kp["name"]    == part_name
-            s_match = not kp["surname"] or kp["surname"] == part_sur
-            if n_match and s_match:
-                matched = True
-                break
-        if not matched:
-            return None, None
+        # Families with a fully-unknown partner are not represented in
+        # partners_list (GEDCOM export skips empty spouse pointers), so don't
+        # let the partner check orphan them.
+        if part_name or part_sur:
+            matched = False
+            for kp in known_partners:
+                n_match = not kp["name"]    or kp["name"]    == part_name
+                s_match = not kp["surname"] or kp["surname"] == part_sur
+                if n_match and s_match:
+                    matched = True
+                    break
+            if not matched:
+                return None, None
 
     if is_husband:
         partner = {
