@@ -768,19 +768,22 @@ function renderD3DescendantsTree(data, container, personName, contributorName, i
 function appendDescendantFamilyLinks(node, contributorName) {
   const familyNode = node.filter(d => d.data.is_family);
 
+  const isPartnerUnknown = p => !p?.name && !p?.surname;
+
   const familyLink = familyNode.append(d => {
     const person = d.parent.data;
     const partner = d.data.partner;
     const pPriv = isPrivate(person.name) || isPrivate(person.surname);
     const partPriv = isPrivate(partner.name) || isPrivate(partner.surname);
-    return document.createElementNS('http://www.w3.org/2000/svg', (pPriv || partPriv) ? 'g' : 'a');
+    const partUnknown = isPartnerUnknown(partner);
+    return document.createElementNS('http://www.w3.org/2000/svg', (pPriv || partPriv || partUnknown) ? 'g' : 'a');
   })
     .attr('href', d => {
       const person = d.parent.data;
       const partner = d.data.partner;
       const pPriv = isPrivate(person.name) || isPrivate(person.surname);
       const partPriv = isPrivate(partner.name) || isPrivate(partner.surname);
-      if (pPriv || partPriv) return null;
+      if (pPriv || partPriv || isPartnerUnknown(partner)) return null;
 
       const params = new URLSearchParams();
       params.set('t', 'family');
@@ -808,7 +811,7 @@ function appendDescendantFamilyLinks(node, contributorName) {
       const partner = d.data.partner;
       const pPriv = isPrivate(person.name) || isPrivate(person.surname);
       const partPriv = isPrivate(partner.name) || isPrivate(partner.surname);
-      return (pPriv || partPriv) ? null : '';
+      return (pPriv || partPriv || isPartnerUnknown(partner)) ? null : '';
     });
 
   const familyText = familyLink.append('text')
@@ -821,21 +824,23 @@ function appendDescendantFamilyLinks(node, contributorName) {
         const partner = d.data.partner;
         const pPriv = isPrivate(person.name) || isPrivate(person.surname);
         const partPriv = isPrivate(partner.name) || isPrivate(partner.surname);
-        return (pPriv || partPriv) ? '#555' : '#3498db';
+        return (pPriv || partPriv || isPartnerUnknown(partner)) ? '#555' : '#3498db';
       });
 
   familyText.each(function(d) {
     const el = d3.select(this);
     const p = d.data.partner;
     const m = d.data.marriage || {};
-    const partnerName = [p.name, p.surname].filter(Boolean).join(' ');
+    const partUnknown = isPartnerUnknown(p);
+    const partnerName = partUnknown ? '<unknown>' : [p.name, p.surname].filter(Boolean).join(' ');
     const date = m.date || '';
     const place = m.place ? m.place.split(',')[0].trim() : '';
 
     let firstLine = true;
     if (partnerName) {
       const isPriv = isPrivate(p.name) || isPrivate(p.surname);
-      el.append('tspan').attr('x', 14).attr('font-weight', isPriv ? 'normal' : 'bold').text(partnerName);
+      const bold = !partUnknown && !isPriv;
+      el.append('tspan').attr('x', 14).attr('font-weight', bold ? 'bold' : 'normal').text(partnerName);
       firstLine = false;
     }
     if (date) {
