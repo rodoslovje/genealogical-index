@@ -16,7 +16,7 @@ export const PREMIUM_FEATURES = ['ancestors', 'descendants'];
 
 const siteConfig = {
   // Branding
-  logo:        '/srd-logo.png',
+  logo:        '/srd-logo-transparent.png',
   logoAlt:     'Slovensko rodoslovno društvo',
   societyUrl:  'https://rodoslovje.si',
   indexUrl:    'https://rodoslovje.si/rodoslovni-indeks/',
