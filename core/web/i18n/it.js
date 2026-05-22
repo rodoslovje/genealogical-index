@@ -136,6 +136,7 @@ export default {
     section_surnames_matricula: 'Cognomi più frequenti - Indice Matricula',
     more_info_about: 'Maggiori informazioni su',
     back_to_genealogists: 'Genealogisti',
+    genealogist: 'Genealogista',
     matches_persons: 'Persone',
     matches_families: 'Famiglie',
 

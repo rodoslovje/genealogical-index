@@ -136,6 +136,7 @@ export default {
     section_surnames_matricula: 'Leggyakoribb vezetéknevek - Matricula index',
     more_info_about: 'További információk róla:',
     back_to_genealogists: 'Genealógusok',
+    genealogist: 'Genealógus',
     matches_persons: 'Személyek',
     matches_families: 'Családok',
 

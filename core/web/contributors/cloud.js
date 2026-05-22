@@ -9,7 +9,7 @@ import { getCachedData } from './data.js';
 // One abort controller per target so re-renders cancel stale fetches.
 const cloudAbortControllers = {};
 
-function downloadCloudAsSVG(cloudEl, filename) {
+function downloadCloudAsSVG(cloudEl, filename, list = []) {
   // When the section is collapsed, cloudEl (or an ancestor) has inline
   // display:none and getBoundingClientRect returns zeros. Walk up to the
   // section and clear any inline display:none for the measurement, then
@@ -48,13 +48,33 @@ function downloadCloudAsSVG(cloudEl, filename) {
       svgContent += `<text x="${x}" y="${y}" font-family="${fontFamily}" font-size="${computed.fontSize}" font-weight="${computed.fontWeight}" fill="${computed.color}" opacity="${computed.opacity}" dominant-baseline="hanging">${text}</text>`;
     });
 
-    const rawUrl = window.location.href;
-    let decodedUrl = rawUrl;
-    try {
-      const u = new URL(rawUrl);
-      decodedUrl = u.origin + u.pathname + (u.searchParams.toString() ? '?' + toUnicodeSearch(u.searchParams) : '');
-    } catch (e) {}
-    svgContent += `<a href="${escapeHtml(rawUrl)}" target="_blank" rel="noopener"><text x="${rect.width - 5}" y="${svgHeight - 5}" font-family="system-ui, -apple-system, sans-serif" font-size="10px" fill="#777" text-anchor="end">${escapeHtml(t('tree_source'))}: ${escapeHtml(decodedUrl)}</text></a>`;
+    // Decide what "filtered" means: list has values AND is a proper subset
+    // of the cached contributor data. Empty list or full list = main view.
+    const cached = getCachedData();
+    const totalCount = cached ? cached.length : 0;
+    const isFiltered = list.length > 0 && (totalCount === 0 || list.length < totalCount);
+
+    const pageOrigin = window.location.origin + window.location.pathname;
+    const sourceUrl = window.location.origin + window.location.pathname
+      + (window.location.search ? '?' + toUnicodeSearch(new URLSearchParams(window.location.search)) : '');
+    const siteTitle = t('site_title');
+    const linkAttrs = 'fill="#4a6fa5" text-decoration="underline"';
+    const footerFont = 'font-family="system-ui, -apple-system, sans-serif" font-size="10px" fill="#777"';
+
+    // Left title: heading text (so Matricula context keeps its variant)
+    // plus appended genealogist list when the cloud is a proper subset.
+    // Whole title is a single link back to the source page that produced
+    // the export.
+    const heading = section ? section.querySelector('h3, .section-heading') : null;
+    const titleBase = (heading && heading.textContent.trim()) || t('section_surnames');
+    const labelKey = list.length === 1 ? 'genealogist' : 'back_to_genealogists';
+    const titleText = isFiltered ? `${titleBase} - ${t(labelKey)} ${list.join(', ')}` : titleBase;
+    svgContent += `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener"><text x="5" y="${svgHeight - 5}" ${footerFont} font-weight="bold" text-anchor="start"><tspan ${linkAttrs}>${escapeHtml(titleText)}</tspan></text></a>`;
+
+    // Right footer: "Source: <site_title>" linked to the page homepage.
+    // The genealogist names live in the left title now, so no duplication.
+    const footer = `${escapeHtml(t('tree_source'))}: <a href="${escapeHtml(pageOrigin)}" target="_blank" rel="noopener"><tspan ${linkAttrs}>${escapeHtml(siteTitle)}</tspan></a>`;
+    svgContent += `<text x="${rect.width - 5}" y="${svgHeight - 5}" ${footerFont} text-anchor="end">${footer}</text>`;
     svgContent += `</svg>`;
 
     downloadBlob(new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8;' }), filename);
@@ -247,7 +267,7 @@ function decorateCloudHeader(cloud, data, list) {
   btnSvg.addEventListener('click', () => {
     const prefix = siteConfig.filePrefix || 'sgi';
     const filename = list.length === 1 ? `${prefix}-surnames-${list[0]}.svg` : `${prefix}-surnames.svg`;
-    downloadCloudAsSVG(cloud, filename);
+    downloadCloudAsSVG(cloud, filename, list);
   });
 
   controls.appendChild(btnCsv);

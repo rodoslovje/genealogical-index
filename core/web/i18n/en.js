@@ -136,6 +136,7 @@ export default {
     section_surnames_matricula: 'Top Surnames - Matricula Index',
     more_info_about: 'More information about',
     back_to_genealogists: 'Genealogists',
+    genealogist: 'Genealogist',
     matches_persons: 'Persons',
     matches_families: 'Families',
 

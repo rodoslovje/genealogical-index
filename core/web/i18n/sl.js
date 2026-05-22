@@ -136,6 +136,7 @@ export default {
     section_surnames_matricula: 'Najpogostejši priimki - Matricula indeks',
     more_info_about: 'Več informacij o',
     back_to_genealogists: 'Rodoslovci',
+    genealogist: 'Rodoslovec',
     matches_persons: 'Osebe',
     matches_families: 'Družine',
 
