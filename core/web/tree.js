@@ -136,7 +136,7 @@ function sizeContainerToViewport(container, wrapperId) {
   else container.style.height = `${availableHeight}px`;
 }
 
-function createSvgWithZoom(container, bounds, zoomInId, zoomOutId) {
+function createSvgWithZoom(container, bounds, root, ids) {
   const width = container.clientWidth || 900;
   const height = container.clientHeight || 500;
 
@@ -148,20 +148,170 @@ function createSvgWithZoom(container, bounds, zoomInId, zoomOutId) {
   const g = svg.append('g');
 
   const minScale = Math.min(1, width / bounds.treeWidth, height / bounds.treeHeight);
+  const initialScale = Math.max(minScale, 1);
+
+  // Relax the translate extent by ~half a viewport on each side. Without
+  // this, the root (which sits at the left edge of the tree's natural
+  // bounds) gets pinned to the left edge of the wrapper when we try to
+  // center it at scale 1×. Slightly more pan-headroom is fine; the
+  // alternative (centering the *content*) pushes the root off-screen on
+  // deep ancestor/descendant trees.
+  const halfVw = (width / initialScale) / 2;
+  const halfVh = (height / initialScale) / 2;
+  const extent = [
+    [Math.min(bounds.minX, -halfVw), Math.min(bounds.minY, -halfVh)],
+    [Math.max(bounds.maxX, halfVw), Math.max(bounds.maxY, halfVh)],
+  ];
   const zoom = d3.zoom()
       .scaleExtent([minScale, 4])
-      .translateExtent([[bounds.minX, bounds.minY], [bounds.maxX, bounds.maxY]])
+      .translateExtent(extent)
       .on('zoom', (e) => g.attr('transform', e.transform));
   svg.call(zoom);
 
-  const tx = (width - bounds.treeWidth * minScale) / 2 - bounds.minX * minScale;
-  const ty = (height - bounds.treeHeight * minScale) / 2 - bounds.minY * minScale;
-  svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(minScale));
+  // Initial view: center the tree diagram on the screen.
+  // If the tree is small enough to fit, center its full bounding box.
+  // If it's wide, place the root slightly to the left (width / 3) so
+  // the branches, which expand to the right, are comfortably centered.
+  let tx, ty;
+  if (root) {
+    if (bounds.treeWidth * initialScale <= width) {
+      tx = width / 2 - (bounds.minX + bounds.treeWidth / 2) * initialScale;
+    } else {
+      tx = width / 3 - root.y * initialScale;
+    }
+    ty = height / 2 - root.x * initialScale;
+  } else {
+    tx = width / 2 - (bounds.minX + bounds.treeWidth / 2) * initialScale;
+    ty = height / 2 - (bounds.minY + bounds.treeHeight / 2) * initialScale;
+  }
+  svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(initialScale));
 
-  d3.select(`#${zoomInId}`).on('click', null).on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1.3));
-  d3.select(`#${zoomOutId}`).on('click', null).on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.3));
+  d3.select(`#${ids.zoomIn}`).on('click', null).on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1.3));
+  d3.select(`#${ids.zoomOut}`).on('click', null).on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.3));
+
+  // Minimap on desktop and large-tablet sized viewports. Below ~1024px the
+  // overlay would just steal real-estate from the tree itself.
+  if (root && ids.wrapper && window.innerWidth >= 1024) {
+    const updateMinimap = addMinimap(ids.wrapper, root, bounds, width, height, svg, zoom);
+    zoom.on('zoom.minimap', (e) => updateMinimap(e.transform));
+    updateMinimap(d3.zoomTransform(svg.node()));
+  }
 
   return { svg, g };
+}
+
+// Small top-left overview that shows the entire tree plus a rectangle
+// indicating the currently visible portion of the main view. Clicking the
+// minimap re-centers the main view at the chosen tree coordinate.
+// Returns an `update(transform)` callback the caller must invoke whenever
+// the main view's zoom transform changes.
+function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoom) {
+  const wrapper = document.getElementById(wrapperId);
+  if (!wrapper) return () => {};
+
+  // Clear any leftover minimap from a prior render of this page.
+  wrapper.querySelectorAll('.tree-minimap').forEach(el => el.remove());
+
+  const maxMmSize = 200;
+  const mmPad = 6;
+
+  const treeW = Math.max(bounds.treeWidth, 1);
+  const treeH = Math.max(bounds.treeHeight, 1);
+  const treeAspect = treeW / treeH;
+
+  let mmContentWidth, mmContentHeight;
+  if (treeAspect > 1) {
+    mmContentWidth = maxMmSize - mmPad * 2;
+    mmContentHeight = mmContentWidth / treeAspect;
+  } else {
+    mmContentHeight = maxMmSize - mmPad * 2;
+    mmContentWidth = mmContentHeight * treeAspect;
+  }
+
+  const mmWidth = mmContentWidth + mmPad * 2;
+  const mmHeight = mmContentHeight + mmPad * 2;
+  const mmScale = mmContentWidth / treeW;
+
+  const offsetX = mmPad;
+  const offsetY = mmPad;
+
+  const mm = d3.select(wrapper).append('svg')
+      .attr('class', 'tree-minimap')
+      .attr('width', mmWidth)
+      .attr('height', mmHeight);
+
+  // Tree origin maps to the computed centered offsets
+  const mmG = mm.append('g')
+      .attr('transform', `translate(${offsetX - bounds.minX * mmScale}, ${offsetY - bounds.minY * mmScale}) scale(${mmScale})`);
+
+  // Simplified links — stroke width compensates for the scale so it
+  // stays ~1px on screen regardless of how zoomed-out the tree is.
+  mmG.append('g')
+      .attr('fill', 'none')
+      .attr('stroke', '#bbb')
+      .attr('stroke-width', 1 / mmScale)
+    .selectAll('path')
+    .data(root.links())
+    .join('path')
+      .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
+
+  // Person nodes as small coloured dots. Family nodes are dropped — their
+  // ⚭ glyph would be illegible at minimap scale anyway.
+  mmG.append('g')
+    .selectAll('circle')
+    .data(root.descendants().filter(d => !d.data.is_family))
+    .join('circle')
+      .attr('cx', d => d.y)
+      .attr('cy', d => d.x)
+      .attr('r', 4 / mmScale)
+      .attr('fill', d => d.data.sex === 'm' ? '#3498db' : (d.data.sex === 'f' ? '#e83e8c' : '#999'));
+
+  // Viewport rectangle, drawn on top of the minimap content.
+  const viewport = mm.append('rect')
+      .attr('class', 'tree-minimap-viewport')
+      .attr('fill', 'rgba(52, 152, 219, 0.18)')
+      .attr('stroke', '#3498db')
+      .attr('stroke-width', 1.5)
+      .attr('pointer-events', 'none');
+
+  // Click-to-pan: clicking anywhere on the minimap re-centers the main
+  // view at the corresponding tree position, preserving the current zoom.
+  mm.style('cursor', 'pointer').on('click', (event) => {
+    const [mx, my] = d3.pointer(event, mm.node());
+    const treeY = (mx - offsetX) / mmScale + bounds.minX;
+    const treeX = (my - offsetY) / mmScale + bounds.minY;
+    const current = d3.zoomTransform(mainSvg.node());
+    const k = current.k;
+    const newTx = viewWidth / 2 - treeY * k;
+    const newTy = viewHeight / 2 - treeX * k;
+    mainSvg.transition().duration(300).call(
+      zoom.transform,
+      d3.zoomIdentity.translate(newTx, newTy).scale(k)
+    );
+  });
+
+  return function update(transform) {
+    const k = transform.k;
+    // Visible tree rect in tree coordinates (note: d3.tree rotates so y is
+    // horizontal, x is vertical).
+    const treeHorizMin = (0 - transform.x) / k;
+    const treeHorizMax = (viewWidth - transform.x) / k;
+    const treeVertMin  = (0 - transform.y) / k;
+    const treeVertMax  = (viewHeight - transform.y) / k;
+
+    // Map to minimap pixels, clamped to the bounds so the rectangle
+    // never extends past the minimap edges when the view is zoomed out.
+    const x0 = Math.max(0, offsetX + (treeHorizMin - bounds.minX) * mmScale);
+    const y0 = Math.max(0, offsetY + (treeVertMin  - bounds.minY) * mmScale);
+    const x1 = Math.min(mmWidth, offsetX + (treeHorizMax - bounds.minX) * mmScale);
+    const y1 = Math.min(mmHeight, offsetY + (treeVertMax  - bounds.minY) * mmScale);
+
+    viewport
+      .attr('x', x0)
+      .attr('y', y0)
+      .attr('width',  Math.max(0, x1 - x0))
+      .attr('height', Math.max(0, y1 - y0));
+  };
 }
 
 // Wires the SVG-download button. Both trees produce the same export chrome
@@ -369,7 +519,7 @@ function renderD3AncestorsTree(data, container, personName, contributorName, ids
 
   const bounds = computeBounds(root, dx, dy);
   sizeContainerToViewport(container, ids.wrapper);
-  const { svg, g } = createSvgWithZoom(container, bounds, ids.zoomIn, ids.zoomOut);
+  const { svg, g } = createSvgWithZoom(container, bounds, root, ids);
 
   attachSvgExport({
     svg, g, downloadBtnId: ids.downloadSvg,
@@ -516,7 +666,7 @@ function renderD3DescendantsTree(data, container, personName, contributorName, i
 
   const bounds = computeBounds(root, dx, dy);
   sizeContainerToViewport(container, ids.wrapper);
-  const { svg, g } = createSvgWithZoom(container, bounds, ids.zoomIn, ids.zoomOut);
+  const { svg, g } = createSvgWithZoom(container, bounds, root, ids);
 
   attachSvgExport({
     svg, g, downloadBtnId: ids.downloadSvg,

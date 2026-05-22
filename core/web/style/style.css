@@ -752,6 +752,24 @@ body.compact-nav .mobile-nav-section { display: flex; }
   text-decoration: underline;
 }
 
+/* Ancestors / descendants tree minimap — small overview in the top-left
+ * corner of the tree wrapper. JS only injects it on viewports >= 1024px,
+ * but the media query is a safety net if the user resizes after load. */
+.tree-minimap {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--srd-line, #ccc);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  user-select: none;
+}
+@media (max-width: 1023px) {
+  .tree-minimap { display: none; }
+}
+
 /* Bare anchors inside the contributors page (matches header, URL info
  * boxes, etc.) — match the rest of the site instead of browser default.
  * Already-classed links (.name-link, .contributor-link, etc.) and the
