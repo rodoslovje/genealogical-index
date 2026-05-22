@@ -10,38 +10,57 @@ import { getCachedData } from './data.js';
 const cloudAbortControllers = {};
 
 function downloadCloudAsSVG(cloudEl, filename) {
-  const rect = cloudEl.getBoundingClientRect();
-  const paddingBottom = 20;
-  const svgHeight = rect.height + paddingBottom;
-  const words = cloudEl.querySelectorAll('.cloud-word');
-  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${svgHeight}" viewBox="0 0 ${rect.width} ${svgHeight}">`;
-
-  let bgColor = window.getComputedStyle(document.body).backgroundColor;
-  if (!bgColor || bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
-    bgColor = 'white';
+  // When the section is collapsed, cloudEl (or an ancestor) has inline
+  // display:none and getBoundingClientRect returns zeros. Walk up to the
+  // section and clear any inline display:none for the measurement, then
+  // restore. Synchronous, so the browser never paints the intermediate
+  // state — no visible flash.
+  const section = cloudEl.closest('.surname-cloud-section, #surname-cloud-section');
+  const stop = section ? section.parentElement : null;
+  const hidden = [];
+  for (let el = cloudEl; el && el !== stop; el = el.parentElement) {
+    if (el.style.display === 'none') {
+      hidden.push([el, el.style.display]);
+      el.style.display = '';
+    }
   }
-  svgContent += `<rect width="100%" height="100%" fill="${bgColor}"/>`;
 
-  words.forEach(w => {
-    const wRect = w.getBoundingClientRect();
-    const computed = window.getComputedStyle(w);
-    const x = wRect.left - rect.left;
-    const y = (wRect.top - rect.top) + (parseFloat(computed.fontSize) * 0.15); // Slight bump to align baseline
-    const text = escapeHtml(w.textContent);
-    const fontFamily = computed.fontFamily.replace(/"/g, "'");
-    svgContent += `<text x="${x}" y="${y}" font-family="${fontFamily}" font-size="${computed.fontSize}" font-weight="${computed.fontWeight}" fill="${computed.color}" opacity="${computed.opacity}" dominant-baseline="hanging">${text}</text>`;
-  });
-
-  const rawUrl = window.location.href;
-  let decodedUrl = rawUrl;
   try {
-    const u = new URL(rawUrl);
-    decodedUrl = u.origin + u.pathname + (u.searchParams.toString() ? '?' + toUnicodeSearch(u.searchParams) : '');
-  } catch (e) {}
-  svgContent += `<a href="${escapeHtml(rawUrl)}" target="_blank" rel="noopener"><text x="${rect.width - 5}" y="${svgHeight - 5}" font-family="system-ui, -apple-system, sans-serif" font-size="10px" fill="#777" text-anchor="end">Source: ${escapeHtml(decodedUrl)}</text></a>`;
-  svgContent += `</svg>`;
+    const rect = cloudEl.getBoundingClientRect();
+    const paddingBottom = 20;
+    const svgHeight = rect.height + paddingBottom;
+    const words = cloudEl.querySelectorAll('.cloud-word');
+    let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${svgHeight}" viewBox="0 0 ${rect.width} ${svgHeight}">`;
 
-  downloadBlob(new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8;' }), filename);
+    let bgColor = window.getComputedStyle(document.body).backgroundColor;
+    if (!bgColor || bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+      bgColor = 'white';
+    }
+    svgContent += `<rect width="100%" height="100%" fill="${bgColor}"/>`;
+
+    words.forEach(w => {
+      const wRect = w.getBoundingClientRect();
+      const computed = window.getComputedStyle(w);
+      const x = wRect.left - rect.left;
+      const y = (wRect.top - rect.top) + (parseFloat(computed.fontSize) * 0.15); // Slight bump to align baseline
+      const text = escapeHtml(w.textContent);
+      const fontFamily = computed.fontFamily.replace(/"/g, "'");
+      svgContent += `<text x="${x}" y="${y}" font-family="${fontFamily}" font-size="${computed.fontSize}" font-weight="${computed.fontWeight}" fill="${computed.color}" opacity="${computed.opacity}" dominant-baseline="hanging">${text}</text>`;
+    });
+
+    const rawUrl = window.location.href;
+    let decodedUrl = rawUrl;
+    try {
+      const u = new URL(rawUrl);
+      decodedUrl = u.origin + u.pathname + (u.searchParams.toString() ? '?' + toUnicodeSearch(u.searchParams) : '');
+    } catch (e) {}
+    svgContent += `<a href="${escapeHtml(rawUrl)}" target="_blank" rel="noopener"><text x="${rect.width - 5}" y="${svgHeight - 5}" font-family="system-ui, -apple-system, sans-serif" font-size="10px" fill="#777" text-anchor="end">${escapeHtml(t('tree_source'))}: ${escapeHtml(decodedUrl)}</text></a>`;
+    svgContent += `</svg>`;
+
+    downloadBlob(new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8;' }), filename);
+  } finally {
+    hidden.forEach(([el, val]) => { el.style.display = val; });
+  }
 }
 
 function buildSelectOptions(contributorData) {
