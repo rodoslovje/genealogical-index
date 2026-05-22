@@ -1,6 +1,6 @@
 import { API_BASE_URL } from './config.js';
 import { toUnicodeSearch, toUnicodeHref, currentParams } from './url.js';
-import { t } from './i18n.js';
+import { t, formatTitleSuffix } from './i18n.js';
 import { isPrivate, escapeHtml, downloadBlob, ensureD3 } from './utils.js';
 import { parseDateForSort } from './dates.js';
 
@@ -48,7 +48,8 @@ function renderTreePage(kind) {
   const extId = params.get('id') || '';
   const personName = [n, sn].filter(Boolean).join(' ');
 
-  const pageTitle = personName ? `${personName} - ${t(config.titleKey)}` : t(config.titleKey);
+  const titleSuffix = personName ? formatTitleSuffix(t(config.titleKey)) : t(config.titleKey);
+  const pageTitle = personName ? `${personName} - ${titleSuffix}` : t(config.titleKey);
   document.getElementById(config.ids.pageTitle).textContent = pageTitle;
   document.title = `${pageTitle} | ${t('site_title')}`;
 
@@ -101,7 +102,7 @@ function renderTreePage(kind) {
         sourceEl.style.display = 'block';
       }
       config.renderTree(data, container, personName, c, config.ids, {
-        titleText: `${personName} - ${t(config.titleKey)}`,
+        titleText: personName ? `${personName} - ${titleSuffix}` : t(config.titleKey),
         filePrefix: config.filePrefix,
       });
     })

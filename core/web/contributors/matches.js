@@ -1,4 +1,4 @@
-import { t } from '../i18n.js';
+import { t, formatTitleSuffix } from '../i18n.js';
 import { renderTable, formatSpecialCell, exportToCSV } from '../table.js';
 import { formatLinks } from '../links.js';
 import { parseDateForSort } from '../dates.js';
@@ -120,7 +120,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       const contribInd = matriculaIndicatorHtml(contributor, t('icon_matricula_index'));
       document.title = `${t('no_results')} | ${t('site_title')}`;
       container.innerHTML = `<div class="matches-page-header">
-        <h2 class="matches-page-title">${safeContributor}${contribInd} - ${t('col_contributor')}</h2>
+        <h2 class="matches-page-title">${safeContributor}${contribInd} - ${formatTitleSuffix(t('col_contributor'))}</h2>
       </div>
       <p>${t('no_results')}</p>`;
       return;
@@ -141,17 +141,17 @@ export async function renderMatchesPage(contributor, withPartner) {
         const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index'));
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
-          <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${t('col_matches')}</h2>
+          <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${formatTitleSuffix(t('col_matches'))}</h2>
         </div>
         <p>${t('no_results')}</p>`;
         return;
       }
-      document.title = `${basePartner} × ${displayName} - ${t('col_matches')} | ${t('site_title')}`;
+      document.title = `${basePartner} × ${displayName} - ${formatTitleSuffix(t('col_matches'))} | ${t('site_title')}`;
       await renderMatchDetail(contributor, withPartner, contribData, container);
       return;
     }
 
-    document.title = `${displayName} - ${t('col_contributor')} | ${t('site_title')}`;
+    document.title = `${displayName} - ${formatTitleSuffix(t('col_contributor'))} | ${t('site_title')}`;
 
     const urlMap = getContributorUrlMap();
     const url = urlMap[displayName] || (contribData._tree?._url) || (contribData._matricula?._url);
@@ -180,7 +180,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     }
 
     const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${displayName} - ${t('col_contributor')}</h2>
+      <h2 class="matches-page-title">${displayName} - ${formatTitleSuffix(t('col_contributor'))}</h2>
     </div>
     ${statsHtml}
     ${urlHtml}
@@ -331,7 +331,7 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
 
   const baseHtml = `
     <div class="matches-page-header">
-      <h2 class="matches-page-title">${partnerBase}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav style="color: inherit; text-decoration: none;">${contribBase}</a>${contribInd} - ${t('col_matches')}</h2>
+      <h2 class="matches-page-title">${partnerBase}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav style="color: inherit; text-decoration: none;">${contribBase}</a>${contribInd} - ${formatTitleSuffix(t('col_matches'))}</h2>
     </div>
     <p>${introText}</p>
     ${urlsHtml}`;

@@ -65,6 +65,13 @@ export function t(key) {
   return (translations[currentLang]?.[key]) ?? (translations.en?.[key]) ?? key;
 }
 
+/** Formats a word appended after a hyphen for titles (lowercases it in languages that require it) */
+export function formatTitleSuffix(text) {
+  if (!text) return text;
+  if (currentLang === 'en' || currentLang === 'de') return text;
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 /** Intro paragraphs are site-specific (`siteConfig.intro`). */
 export function getIntro() {
   return siteConfig.intro?.[currentLang] || siteConfig.intro?.en || [];
