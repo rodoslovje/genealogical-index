@@ -169,17 +169,14 @@ function createSvgWithZoom(container, bounds, root, ids) {
       .on('zoom', (e) => g.attr('transform', e.transform));
   svg.call(zoom);
 
-  // Initial view: center the tree diagram on the screen.
-  // If the tree is small enough to fit, center its full bounding box.
-  // If it's wide, place the root slightly to the left (width / 3) so
-  // the branches, which expand to the right, are comfortably centered.
+  // Initial view: anchor the root node near the left border, vertically
+  // centered, so the branches (which expand to the right) fill the rest
+  // of the viewport. A small left margin keeps the centered name label
+  // from being clipped against the edge.
   let tx, ty;
   if (root) {
-    if (bounds.treeWidth * initialScale <= width) {
-      tx = width / 2 - (bounds.minX + bounds.treeWidth / 2) * initialScale;
-    } else {
-      tx = width / 3 - root.y * initialScale;
-    }
+    const leftMargin = 120;
+    tx = leftMargin - root.y * initialScale;
     ty = height / 2 - root.x * initialScale;
   } else {
     tx = width / 2 - (bounds.minX + bounds.treeWidth / 2) * initialScale;
