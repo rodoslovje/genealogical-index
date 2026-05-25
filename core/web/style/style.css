@@ -123,14 +123,16 @@ h2 .export-btn {
  * Tables
  * ============================================================= */
 
-.table-responsive { overflow-x: clip; margin-bottom: 2rem; }
-table {
-  width: 100%;
-  border-collapse: collapse;
+.table-responsive {
+  overflow: clip;
+  margin-bottom: 2rem;
   background: var(--srd-surface);
   box-shadow: var(--srd-shadow-1);
   border-radius: var(--srd-radius);
-  overflow: hidden;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
 }
 th, td {
   padding: 12px;
