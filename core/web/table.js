@@ -275,24 +275,34 @@ function matchToken(s) {
 }
 
 // Pairs an entry on one match-side with its best counterpart on the other side
-// for diff highlighting. Exact name+surname match wins; failing that, surname
-// alone, then name alone. Returns null if neither field matches anything.
+// for diff highlighting. Match quality: name+surname > surname only > name only.
+// A matching year breaks ties between equally-strong name/surname matches —
+// without this, duplicate-name children (e.g. two Ivanas) could pair to the
+// wrong sibling and falsely flag the year as a diff.
 function findBestMatch(p, otherList) {
   if (!p || !otherList?.length) return null;
   const name = matchToken(p.name);
   const sur  = matchToken(p.surname);
   if (!name && !sur) return null;
-  let nameOnly = null, surOnly = null;
+  const year = String(childYearOf(p) || '');
+
+  let best = null, bestScore = -1;
   for (const o of otherList) {
     const oName = matchToken(o?.name);
     const oSur  = matchToken(o?.surname);
     const nameMatch = !!name && oName === name;
     const surMatch  = !!sur  && oSur  === sur;
-    if (nameMatch && surMatch) return o;
-    if (surMatch  && !surOnly)  surOnly  = o;
-    if (nameMatch && !nameOnly) nameOnly = o;
+    if (!nameMatch && !surMatch) continue;
+
+    // Base score by match strength; year bonus (5) is smaller than the gap
+    // between strength tiers (10), so it never overrides a stronger structural
+    // match — only breaks ties within a tier.
+    let score = nameMatch && surMatch ? 30 : surMatch ? 20 : 10;
+    if (year && String(childYearOf(o) || '') === year) score += 5;
+
+    if (score > bestScore) { bestScore = score; best = o; }
   }
-  return surOnly || nameOnly || null;
+  return best;
 }
 
 const yearsDiffer = (a, b) => String(a || '') !== String(b || '');
