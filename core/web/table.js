@@ -371,7 +371,7 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParents
     const otherMother = oList[1] || {};
     const fatherYearDiff = diffOn && yearsDiffer(childYearOf(father), childYearOf(otherFather));
     const motherYearDiff = diffOn && yearsDiffer(childYearOf(mother), childYearOf(otherMother));
-    if (!father.name && !mother.name) return { html: '', count: 0 };
+    if (!father.name && !father.surname && !mother.name && !mother.surname) return { html: '', count: 0 };
 
     const fName = father.name || '';
     const fSur = father.surname || '';
@@ -628,73 +628,26 @@ export function formatSpecialCell(col, row, otherRow) {
   return null;
 }
 
-export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
-  const container = document.getElementById(containerId);
-  const headerEl = container.previousElementSibling;
-  const isHeaderValid = headerEl && (headerEl.tagName === 'H2' || headerEl.classList.contains('totals-bar'));
+function buildArrowIndicator(col, state) {
+  if (state?.primary?.column === col)   return state.primary.ascending   ? '&nbsp;▲' : '&nbsp;▼';
+  if (state?.secondary?.column === col) return state.secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
+  return '';
+}
 
-  // Reset collapse state on a new render to ensure content isn't accidentally hidden
-  container.style.display = '';
-  if (isHeaderValid && headerEl.classList.contains('collapsed')) {
-    headerEl.classList.remove('collapsed');
-  }
-
-  if (data.length === 0) {
-    container.innerHTML = `<p>${t('no_results')}</p>`;
-    if (isHeaderValid) {
-      let btn = headerEl.querySelector('.export-btn');
-      if (btn) btn.remove();
-    }
-    return;
-  }
-
-  if (!container._sortState) {
-    container._sortState = {
-      primary: defaultSortColumn ? { column: defaultSortColumn, ascending: defaultSortAscending } : null,
-      secondary: defaultSecondarySortColumn ? { column: defaultSecondarySortColumn, ascending: true } : null,
-    };
-  }
-
-  const { primary, secondary } = container._sortState;
-  if (primary) sortData(data, primary, secondary);
-
-  const isFamilyTable = containerId.includes('famil');
-  const isMatchesSummary = containerId === 'matches-summary';
-
-  let html = '<table><thead><tr>';
-  columns.forEach(col => {
-    let indicator = '';
-    if (primary?.column === col) indicator = primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
-    else if (secondary?.column === col) indicator = secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
-    const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
-    let tipKey;
-    if (col === 'parents') {
-      tipKey = isFamilyTable ? 'tip_parents_family' : 'tip_parents_person';
-    } else if (isMatchesSummary && MATCHES_CONTEXT_COLS.has(col)) {
-      tipKey = `tip_${col}_matches`;
-    } else {
-      tipKey = `tip_${col}`;
-    }
-    const tipText = t(tipKey);
-    const titleAttr = tipText && tipText !== tipKey ? ` title="${tipText.replace(/"/g, '&quot;')}"` : '';
-    html += `<th data-col="${col}"${cls}${titleAttr}>${t(`col_${col}`)}${indicator}</th>`;
-  });
-  html += '</tr></thead><tbody>';
-
+// Builds the per-row `<tr>` HTML. Used both for initial render and for the
+// in-place sort re-render (which replaces only `<tbody>` so the surrounding
+// `<thead>` listeners and toolbar buttons survive).
+function renderRowsHtml(data, columns) {
+  let html = '';
   data.forEach(row => {
     html += '<tr>';
     columns.forEach(col => {
       if (col === 'links') {
         const icons = formatLinks(row.links);
-        if (icons) {
-          html += `<td class="link-cell">${icons}</td>`;
-        } else {
-          html += '<td></td>';
-        }
+        html += icons ? `<td class="link-cell">${icons}</td>` : '<td></td>';
       } else if (col === 'matches') {
         const count = row.matches_count || 0;
-        const cell = count > 0 ? count : '';
-        html += `<td class="col-center">${cell}</td>`;
+        html += `<td class="col-center">${count > 0 ? count : ''}</td>`;
       } else if (col === 'confidence') {
         const val = row[col] != null ? `${row[col]}%` : '—';
         html += `<td class="col-center">${val}</td>`;
@@ -741,17 +694,73 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         html += `<td>${inner || ''}</td>`;
       } else {
         const raw = escapeHtml(row[col]);
-        let extra = '';
-        if (col === 'place_of_birth' || col === 'place_of_marriage') {
-          extra = notesIconHtml(row.notes, t('icon_notes'));
-        }
+        const extra = (col === 'place_of_birth' || col === 'place_of_marriage')
+          ? notesIconHtml(row.notes, t('icon_notes'))
+          : '';
         html += `<td>${raw}${extra}</td>`;
       }
     });
     html += '</tr>';
   });
-  html += '</tbody></table>';
-  container.innerHTML = html;
+  return html;
+}
+
+export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
+  const container = document.getElementById(containerId);
+  const headerEl = container.previousElementSibling;
+  const isHeaderValid = headerEl && (headerEl.tagName === 'H2' || headerEl.classList.contains('totals-bar'));
+
+  // Reset collapse state on a new render to ensure content isn't accidentally hidden
+  container.style.display = '';
+  if (isHeaderValid && headerEl.classList.contains('collapsed')) {
+    headerEl.classList.remove('collapsed');
+  }
+
+  if (data.length === 0) {
+    container.innerHTML = `<p>${t('no_results')}</p>`;
+    if (isHeaderValid) {
+      let btn = headerEl.querySelector('.export-btn');
+      if (btn) btn.remove();
+    }
+    return;
+  }
+
+  if (!container._sortState) {
+    container._sortState = {
+      primary: defaultSortColumn ? { column: defaultSortColumn, ascending: defaultSortAscending } : null,
+      secondary: defaultSecondarySortColumn ? { column: defaultSecondarySortColumn, ascending: true } : null,
+    };
+  }
+
+  const { primary, secondary } = container._sortState;
+  if (primary) sortData(data, primary, secondary);
+
+  const isFamilyTable = containerId.includes('famil');
+  const isMatchesSummary = containerId === 'matches-summary';
+
+  let theadHtml = '<thead><tr>';
+  columns.forEach(col => {
+    const cls = CENTERED_COLUMNS.has(col) ? ' class="sortable col-center"' : RIGHT_COLUMNS.has(col) ? ' class="sortable col-right"' : ' class="sortable"';
+    let tipKey;
+    if (col === 'parents') {
+      tipKey = isFamilyTable ? 'tip_parents_family' : 'tip_parents_person';
+    } else if (isMatchesSummary && MATCHES_CONTEXT_COLS.has(col)) {
+      tipKey = `tip_${col}_matches`;
+    } else {
+      tipKey = `tip_${col}`;
+    }
+    const tipText = t(tipKey);
+    const titleAttr = tipText && tipText !== tipKey ? ` title="${tipText.replace(/"/g, '&quot;')}"` : '';
+    theadHtml += `<th data-col="${col}"${cls}${titleAttr}>${t(`col_${col}`)}${buildArrowIndicator(col, container._sortState)}</th>`;
+  });
+  theadHtml += '</tr></thead>';
+
+  container.innerHTML = `<table>${theadHtml}<tbody>${renderRowsHtml(data, columns)}</tbody></table>`;
+
+  // Hoisted so the sort handler can reset the expand toggle after a re-render
+  // (rebuilt <tbody> always starts with all <details> collapsed).
+  let expandBtn = null;
+  let setExpandLabel = () => {};
 
   if (isHeaderValid) {
     if (headerEl.tagName === 'H2' && !headerEl.classList.contains('collapsible-header')) {
@@ -770,11 +779,10 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
     // has expandable cells (parents/partners/children).  Skipping it on tables
     // that don't keeps the header uncluttered.
     const expandables = container.querySelectorAll('details.expandable-cell');
-    let expandBtn = null;
     if (expandables.length) {
       expandBtn = document.createElement('button');
       expandBtn.className = 'export-btn expand-toggle-btn';
-      const setExpandLabel = (allOpen) => {
+      setExpandLabel = (allOpen) => {
         const labelText = t(allOpen ? 'collapse_all' : 'expand_all');
         expandBtn.innerHTML = `${getExpandCollapseIcon(allOpen)}${labelText}`;
         expandBtn.title = labelText;
@@ -821,7 +829,47 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         state.secondary = state.primary;
         state.primary = { column: col, ascending: true };
       }
-      renderTable(data, containerId, columns, null, true, null);
+      // Capture which <details> cells are currently open, keyed by row object
+      // identity + column name. Row references survive the sortData() reorder,
+      // so we can re-open the same cells in the new positions.
+      const openMap = new Map();
+      container.querySelectorAll('tbody tr').forEach((tr, rowIdx) => {
+        const row = data[rowIdx];
+        if (!row) return;
+        Array.from(tr.children).forEach((td, colIdx) => {
+          const det = td.querySelector('details.expandable-cell');
+          if (!det?.open) return;
+          if (!openMap.has(row)) openMap.set(row, new Set());
+          openMap.get(row).add(columns[colIdx]);
+        });
+      });
+
+      // Re-sort in place and swap only <tbody> + update <thead> arrows.
+      // <thead> stays put so the click listeners survive; headerEl buttons
+      // (CSV / expand-all) are outside `container` and untouched.
+      sortData(data, state.primary, state.secondary);
+      container.querySelectorAll('thead th.sortable').forEach(thNode => {
+        const c = thNode.dataset.col;
+        thNode.innerHTML = `${t(`col_${c}`)}${buildArrowIndicator(c, state)}`;
+      });
+      container.querySelector('tbody').innerHTML = renderRowsHtml(data, columns);
+
+      // Restore open <details> in their new row positions.
+      if (openMap.size) {
+        container.querySelectorAll('tbody tr').forEach((tr, rowIdx) => {
+          const openCols = openMap.get(data[rowIdx]);
+          if (!openCols) return;
+          Array.from(tr.children).forEach((td, colIdx) => {
+            if (!openCols.has(columns[colIdx])) return;
+            const det = td.querySelector('details.expandable-cell');
+            if (det) det.open = true;
+          });
+        });
+      }
+
+      // Sync the expand-all toggle to reflect the (possibly restored) state.
+      const allEls = container.querySelectorAll('details.expandable-cell');
+      setExpandLabel(allEls.length > 0 && Array.from(allEls).every(d => d.open));
     });
   });
 }

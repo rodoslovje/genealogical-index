@@ -348,6 +348,15 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
 
     let currentFilter = getContributorFilter();
 
+    // Synthetic per-record keys used to map DOM rows ↔ records across
+    // sort/filter re-renders so we can preserve expanded <details> state.
+    const recordKeys = new WeakMap();
+    let nextRecordKey = 0;
+    const keyFor = (rec) => {
+      if (!recordKeys.has(rec)) recordKeys.set(rec, `r${++nextRecordKey}`);
+      return recordKeys.get(rec);
+    };
+
     function renderTables() {
       const byType = { person: [], family: [] };
       records.forEach(r => {
@@ -469,7 +478,8 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
         const makeCell = (rec, otherRec, f) => {
           if (f === 'parents' || f === 'children' || f === 'partners') {
             const inner = formatSpecialCell(f, rec, otherRec);
-            return `<td>${inner || ''}</td>`;
+            // data-col lets the sort-rerender capture/restore open <details> state.
+            return `<td data-col="${f}">${inner || ''}</td>`;
           }
           if (f === 'links') {
             const icons = formatLinks(rec.links, otherRec.links);
@@ -529,12 +539,12 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
           const partnerIndicator = matriculaIndicatorHtml(partner, t('icon_matricula_index'));
           const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', c: contribBaseL })}" data-spa-nav>${contribBaseL}</a>${contribIndicator}`;
           const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', c: partnerBaseL })}" data-spa-nav>${partnerBaseL}</a>${partnerIndicator}`;
-          return `<tr class="match-pair-row ${pairCls}">
+          return `<tr class="match-pair-row ${pairCls}" data-row-key="${keyFor(r.record_a)}">
                     ${aCells}
                     <td class="match-pair-label match-pair-label-a col-center">${contributorLink}</td>
                     <td rowspan="2" class="match-conf col-center">${conf}%</td>
                   </tr>
-                  <tr class="match-pair-row ${pairCls}">
+                  <tr class="match-pair-row ${pairCls}" data-row-key="${keyFor(r.record_b)}">
                     ${bCells}
                     <td class="match-pair-label match-pair-label-b col-center">${partnerLink}</td>
                   </tr>`;
@@ -577,7 +587,45 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
       }
 
       html += '</div>';
+
+      // Capture which <details> cells are currently open, keyed by row-key +
+      // column name. Re-applied after the innerHTML swap so sorting/filtering
+      // doesn't collapse cells the user expanded.
+      const openMap = new Map();
+      detailEl.querySelectorAll('details.expandable-cell[open]').forEach(det => {
+        const td = det.closest('td');
+        const tr = det.closest('tr');
+        const col = td?.dataset.col;
+        const rowKey = tr?.dataset.rowKey;
+        if (!col || !rowKey) return;
+        if (!openMap.has(rowKey)) openMap.set(rowKey, new Set());
+        openMap.get(rowKey).add(col);
+      });
+
       detailEl.innerHTML = html;
+
+      if (openMap.size) {
+        detailEl.querySelectorAll('tr[data-row-key]').forEach(tr => {
+          const openCols = openMap.get(tr.dataset.rowKey);
+          if (!openCols) return;
+          openCols.forEach(col => {
+            const det = tr.querySelector(`td[data-col="${col}"] details.expandable-cell`);
+            if (det) det.open = true;
+          });
+        });
+
+        // Sync each section's expand-all toggle to match the restored state.
+        detailEl.querySelectorAll('.matches-section').forEach(section => {
+          const btn = section.querySelector('.expand-matches-btn');
+          if (!btn) return;
+          const allEls = section.querySelectorAll('details.expandable-cell');
+          const allOpen = allEls.length > 0 && Array.from(allEls).every(d => d.open);
+          btn.dataset.allOpen = allOpen ? '1' : '0';
+          const text = allOpen ? t('collapse_all') : t('expand_all');
+          btn.innerHTML = `${getExpandCollapseIcon(allOpen)}${text}`;
+          btn.title = text;
+        });
+      }
 
       // --- listeners -----------------------------------------------------
       detailEl.querySelectorAll('.matches-section').forEach(section => {
