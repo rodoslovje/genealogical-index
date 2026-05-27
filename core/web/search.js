@@ -4,7 +4,6 @@ import { normalizeSearchDate } from './dates.js';
 import { API_BASE_URL, personColumns, familyColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
 import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP, currentParams } from './url.js';
 import { hideIntro, tabsWithResults } from './main.js';
-import { getContributorUrlMap } from './contributors.js';
 import { inputWithClear, wireClearableContainer } from './utils.js';
 
 let lastGeneralResults = null;
@@ -100,8 +99,8 @@ export function setupGeneralSearch() {
   onLanguageChange(() => {
     if (container) renderFields();
     if (lastGeneralResults) {
-      renderTable(lastGeneralResults.persons || [], 'table-general-persons', personColumns, 'surname', true, 'name', getContributorUrlMap());
-      renderTable(lastGeneralResults.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name', getContributorUrlMap());
+      renderTable(lastGeneralResults.persons || [], 'table-general-persons', personColumns, 'surname', true, 'name');
+      renderTable(lastGeneralResults.families || [], 'table-general-families', familyColumns, 'husband_surname', true, 'husband_name');
     }
   });
 }
@@ -155,7 +154,7 @@ function performGeneralSearch() {
         lastGeneralResults[type] = rows;
         tabsWithResults.add('tab-general');
         document.getElementById(countId).textContent = rows.length;
-        renderTable(rows, tableId, columns, defaultSort, true, secondarySort, getContributorUrlMap());
+        renderTable(rows, tableId, columns, defaultSort, true, secondarySort);
         collapseSidebarOnDesktop();
         dismissKeyboardAndScrollToResults('general-results');
       })
@@ -329,7 +328,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       lastAdvResults[urlType] = { data: results, cols: columns, defaultSort, defaultSecondarySort };
       tabsWithResults.add(`tab-${urlType}`);
       document.getElementById(countId).textContent = results.length;
-      renderTable(results, tableId, columns, defaultSort, true, defaultSecondarySort, getContributorUrlMap());
+      renderTable(results, tableId, columns, defaultSort, true, defaultSecondarySort);
       collapseSidebarOnDesktop();
       dismissKeyboardAndScrollToResults(resultsId);
     } catch (error) {
@@ -350,7 +349,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   onLanguageChange(() => {
     renderFields();
     const last = lastAdvResults[urlType];
-    if (last) renderTable(last.data, tableId, last.cols, last.defaultSort, true, last.defaultSecondarySort, getContributorUrlMap());
+    if (last) renderTable(last.data, tableId, last.cols, last.defaultSort, true, last.defaultSecondarySort);
   });
 }
 

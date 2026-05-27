@@ -36,7 +36,7 @@ export function exportToCSV(data, columns, filename) {
         try {
           const arr = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
           val = arr.map(c => {
-             if (isPrivate(c.name) || c.name === 'unknown') return c.name;
+             if (isPrivate(c.name)) return c.name;
              let d = c.name || '';
              if (c.surname && c.surname !== row.husband_surname) d += ' ' + c.surname;
              const childYear = childYearOf(c);
@@ -145,6 +145,52 @@ const RIGHT_COLUMNS = new Set([
   'date_of_birth', 'date_of_marriage', 'date_of_death', 'husband_birth', 'wife_birth',
 ]);
 
+const NUMERIC_COLUMNS = new Set([
+  'total_persons', 'total_families', 'total', 'total_links', 'confidence', 'matches',
+]);
+
+const MATCHES_CONTEXT_COLS = new Set(['contributor_ID', 'total_persons', 'total_families', 'total']);
+
+// Renders the 🌳/🌿 tree button used in expandable parent/child/partner cells.
+// Returns '' when the feature is gated, there's no name/surname to seed the
+// tree, or the contributor is matricula (no stable IDs for tree nav).
+function treeButton({ kind, n, sn, dob, contributor, extId }) {
+  const feature  = kind === 'ancestors' ? 'ancestors' : 'descendants';
+  const icon     = kind === 'ancestors' ? '🌳' : '🌿';
+  const titleKey = kind === 'ancestors' ? 'tree_ancestors_title' : 'tree_descendants_title';
+  if (siteConfig.gatedFeatures?.includes(feature)) return '';
+  if (isMatriculaContributor(contributor)) return '';
+  if (!n && !sn) return '';
+  const p = new URLSearchParams();
+  p.set('t', kind);
+  if (n)   p.set('n', n);
+  if (sn)  p.set('sn', sn);
+  if (dob) p.set('dob', dob);
+  if (contributor) p.set('c', contributor);
+  if (extId)       p.set('id', extId);
+  return `<a href="${toUnicodeHref(p)}" data-spa-nav class="tree-link-btn" title="${t(titleKey)}">${icon}</a>`;
+}
+
+// Renders a name/surname cell — used by husband_*, wife_*, and plain name/surname
+// columns. The three originally had ~20 lines of duplicated logic each.
+function renderPersonNameCell(col, row, namePrefix, altField) {
+  const nameField = namePrefix ? `${namePrefix}_name`    : 'name';
+  const surField  = namePrefix ? `${namePrefix}_surname` : 'surname';
+  const altIcon = col === surField ? altSurnameIconHtml(row[altField], t('icon_alt_surname')) : '';
+  const val = row[col];
+  if (!val) return `<td>${altIcon}</td>`;
+  const safeDisplay = escapeHtml(val);
+  if (isPrivate(row[nameField]) || isPrivate(row[surField])) {
+    return `<td>${safeDisplay}${altIcon}</td>`;
+  }
+  const params = new URLSearchParams();
+  params.set('t', 'person');
+  if (row[nameField]) params.set('n',  row[nameField]);
+  if (row[surField])  params.set('sn', row[surField]);
+  params.set('ex', '1');
+  return `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
+}
+
 function getValue(row, col) {
   if (col === 'parents') {
     if (row._parents_count !== undefined) return row._parents_count;
@@ -200,10 +246,8 @@ function getValue(row, col) {
     try { return JSON.parse(row.links).length; } catch { return 0; }
   }
   if (col === 'matches') return Number(row.matches_count || 0);
-  const isGedcomDate = col === 'date_of_birth' || col === 'date_of_marriage' || col === 'date_of_death' || col === 'husband_birth' || col === 'wife_birth';
-  const isNumeric = ['total_persons', 'total_families', 'total', 'total_links', 'confidence', 'matches'].includes(col);
-  if (isGedcomDate) return parseDateForSort(row[col]);
-  if (isNumeric) return Number(row[col] || 0);
+  if (RIGHT_COLUMNS.has(col)) return parseDateForSort(row[col]);
+  if (NUMERIC_COLUMNS.has(col)) return Number(row[col] || 0);
   return String(row[col] || '').toLowerCase();
 }
 
@@ -352,23 +396,17 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParents
     let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">`;
     const hasSearchFields = famParams.has('hn') || famParams.has('hsn') || famParams.has('wn') || famParams.has('wsn');
 
-    let treeBtn = '';
-    // Matricula records have no stable IDs and shallow history, so the
-    // ancestor/descendant tree wouldn't be meaningful — skip the button.
-    if (!siteConfig.gatedFeatures?.includes('ancestors') && rootPerson && (rootPerson.name || rootPerson.surname) && !isMatriculaContributor(rootPerson.contributor)) {
-      const p = new URLSearchParams();
-      p.set('t', 'ancestors');
-      if (rootPerson.name) p.set('n', rootPerson.name);
-      if (rootPerson.surname) p.set('sn', rootPerson.surname);
-      const dob = rootPerson.date_of_birth || childYearOf(rootPerson);
-      if (dob) p.set('dob', dob);
-      if (rootPerson.contributor) p.set('c', rootPerson.contributor);
-      // ext_id + contributor is the GEDCOM primary key — use it for an
-      // exact lookup; the backend falls back to name/year when missing.
-      if (rootPerson.ext_id) p.set('id', rootPerson.ext_id);
-      const treeUrl = toUnicodeHref(p);
-      treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_ancestors_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌳</a>`;
-    }
+    // ext_id + contributor is the GEDCOM primary key, used for exact lookup.
+    const treeBtn = rootPerson
+      ? treeButton({
+          kind: 'ancestors',
+          n: rootPerson.name,
+          sn: rootPerson.surname,
+          dob: rootPerson.date_of_birth || childYearOf(rootPerson),
+          contributor: rootPerson.contributor,
+          extId: rootPerson.ext_id,
+        })
+      : '';
 
     if (hasSearchFields) {
       htmlStr += `<a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight: 600;">${headerLabel}:</a>${treeBtn}<br>`;
@@ -440,26 +478,21 @@ export function formatSpecialCell(col, row, otherRow) {
       console.error("Failed to parse JSON for children", e);
     }
 
+    // Seed the descendants tree from whichever spouse has a usable name.
     let treeBtn = '';
-    if (!siteConfig.gatedFeatures?.includes('descendants') && row.id && count > 0 && !isMatriculaContributor(row.contributor)) {
-        const p = new URLSearchParams();
-        p.set('t', 'descendants');
-        let chosenExtId = '';
-        if (row.husband_name && !isPrivate(row.husband_name)) {
-          p.set('n', row.husband_name);
-          if (row.husband_surname) p.set('sn', row.husband_surname);
-          if (row.husband_birth)   p.set('dob', row.husband_birth);
-          chosenExtId = row.husband_ext_id || '';
-        } else if (row.wife_name && !isPrivate(row.wife_name)) {
-          p.set('n', row.wife_name);
-          if (row.wife_surname) p.set('sn', row.wife_surname);
-          if (row.wife_birth)   p.set('dob', row.wife_birth);
-          chosenExtId = row.wife_ext_id || '';
-        }
-        if (row.contributor) p.set('c', row.contributor);
-        if (chosenExtId)     p.set('id', chosenExtId);
-        const treeUrl = toUnicodeHref(p);
-        treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_descendants_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌿</a>`;
+    if (row.id && count > 0) {
+      const useHusband = row.husband_name && !isPrivate(row.husband_name);
+      const useWife    = !useHusband && row.wife_name && !isPrivate(row.wife_name);
+      if (useHusband || useWife) {
+        treeBtn = treeButton({
+          kind: 'descendants',
+          n:    useHusband ? row.husband_name    : row.wife_name,
+          sn:   useHusband ? row.husband_surname : row.wife_surname,
+          dob:  useHusband ? row.husband_birth   : row.wife_birth,
+          contributor: row.contributor,
+          extId: useHusband ? row.husband_ext_id : row.wife_ext_id,
+        });
+      }
     }
 
     if (count === 0) return '';
@@ -473,19 +506,14 @@ export function formatSpecialCell(col, row, otherRow) {
     const otherParents = diffMode ? (otherRow?.parents_list ?? null) : undefined;
     const { html, count } = renderParentPair(row.parents_list, null, null, otherParents);
     if (count > 0) {
-      let treeBtn = '';
-      if (!siteConfig.gatedFeatures?.includes('ancestors') && row.id && !isMatriculaContributor(row.contributor)) {
-        const p = new URLSearchParams();
-        p.set('t', 'ancestors');
-        if (row.name) p.set('n', row.name);
-        if (row.surname) p.set('sn', row.surname);
-        const dob = row.date_of_birth || childYearOf(row);
-        if (dob) p.set('dob', dob);
-        if (row.contributor) p.set('c', row.contributor);
-        if (row.ext_id)      p.set('id', row.ext_id);
-        const treeUrl = toUnicodeHref(p);
-        treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_ancestors_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌳</a>`;
-      }
+      const treeBtn = row.id ? treeButton({
+        kind: 'ancestors',
+        n: row.name,
+        sn: row.surname,
+        dob: row.date_of_birth || childYearOf(row),
+        contributor: row.contributor,
+        extId: row.ext_id,
+      }) : '';
       return `<details class="expandable-cell">
             <summary>${count}${treeBtn}</summary>
             <div class="expanded-content">${html}</div>
@@ -522,21 +550,16 @@ export function formatSpecialCell(col, row, otherRow) {
   if (col === 'partners' && row.partners_list) {
     let formattedList = [];
     let count = 0;
-    let treeBtn = '';
+    const treeBtn = row.id ? treeButton({
+      kind: 'descendants',
+      n: row.name,
+      sn: row.surname,
+      dob: row.date_of_birth || childYearOf(row),
+      contributor: row.contributor,
+      extId: row.ext_id,
+    }) : '';
     const otherPartners = diffMode ? parseList(otherRow?.partners_list) : [];
     try {
-      if (!siteConfig.gatedFeatures?.includes('descendants') && row.id && !isMatriculaContributor(row.contributor)) {
-          const p = new URLSearchParams();
-          p.set('t', 'descendants');
-          if (row.name) p.set('n', row.name);
-          if (row.surname) p.set('sn', row.surname);
-          const dob = row.date_of_birth || childYearOf(row);
-          if (dob) p.set('dob', dob);
-          if (row.contributor) p.set('c', row.contributor);
-          if (row.ext_id)      p.set('id', row.ext_id);
-          const treeUrl = toUnicodeHref(p);
-          treeBtn = `<a href="${treeUrl}" data-spa-nav title="${t('tree_descendants_title')}" style="text-decoration: none; padding: 2px 6px; font-size: 0.8em; margin-left: 8px; background: transparent; color: var(--secondary); border: 1px solid var(--secondary); border-radius: 4px; cursor: pointer; display: inline-block;">🌿</a>`;
-      }
       const pList = typeof row.partners_list === 'string' ? JSON.parse(row.partners_list) : row.partners_list;
       pList.forEach(p => {
         count++;
@@ -544,19 +567,19 @@ export function formatSpecialCell(col, row, otherRow) {
         const famParams = new URLSearchParams();
         famParams.set('t', 'family');
         if (isHusband) {
-          if (p.name && p.name !== 'unknown' && !isPrivate(p.name)) famParams.set('hn', p.name);
-          if (p.surname) famParams.set('hsn', p.surname);
-          if (row.name && row.name !== 'unknown' && !isPrivate(row.name)) famParams.set('wn', row.name);
-          if (row.surname) famParams.set('wsn', row.surname);
+          if (p.name && !isPrivate(p.name))     famParams.set('hn',  p.name);
+          if (p.surname)                         famParams.set('hsn', p.surname);
+          if (row.name && !isPrivate(row.name)) famParams.set('wn',  row.name);
+          if (row.surname)                       famParams.set('wsn', row.surname);
         } else {
-          if (row.name && row.name !== 'unknown' && !isPrivate(row.name)) famParams.set('hn', row.name);
-          if (row.surname) famParams.set('hsn', row.surname);
-          if (p.name && p.name !== 'unknown' && !isPrivate(p.name)) famParams.set('wn', p.name);
-          if (p.surname) famParams.set('wsn', p.surname);
+          if (row.name && !isPrivate(row.name)) famParams.set('hn',  row.name);
+          if (row.surname)                       famParams.set('hsn', row.surname);
+          if (p.name && !isPrivate(p.name))     famParams.set('wn',  p.name);
+          if (p.surname)                         famParams.set('wsn', p.surname);
         }
         famParams.set('ex', '1');
         const py = childYearOf(p);
-        const pPriv = isPrivate(p.name) || p.name === 'unknown';
+        const pPriv = isPrivate(p.name);
         const yearTok = py ? `*${py}` : '';
 
         const match = diffMode ? findBestMatch(p, otherPartners) : null;
@@ -595,7 +618,7 @@ export function formatSpecialCell(col, row, otherRow) {
   return null;
 }
 
-export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null, contributorUrlMap = {}) {
+export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
   const container = document.getElementById(containerId);
   const headerEl = container.previousElementSibling;
   const isHeaderValid = headerEl && (headerEl.tagName === 'H2' || headerEl.classList.contains('totals-bar'));
@@ -627,7 +650,6 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
 
   const isFamilyTable = containerId.includes('famil');
   const isMatchesSummary = containerId === 'matches-summary';
-  const MATCHES_CONTEXT_COLS = new Set(['contributor_ID', 'total_persons', 'total_families', 'total']);
 
   let html = '<table><thead><tr>';
   columns.forEach(col => {
@@ -689,8 +711,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           html += `<td></td>`;
         }
       } else if (CENTERED_COLUMNS.has(col)) {
-        const isNumeric = ['total_persons', 'total_families', 'total', 'total_links', 'confidence', 'matches'].includes(col);
-        let val = isNumeric && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
+        let val = NUMERIC_COLUMNS.has(col) && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
         if (col === 'total_links' && Number(row[col] || 0) === 0) val = '';
         html += `<td class="col-center">${val}</td>`;
       } else if (RIGHT_COLUMNS.has(col)) {
@@ -700,68 +721,11 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           : '';
         html += `<td class="col-right">${raw}${extra}</td>`;
       } else if (col === 'husband_name' || col === 'husband_surname') {
-        const altIcon = col === 'husband_surname'
-          ? altSurnameIconHtml(row.husband_alt_surname, t('icon_alt_surname'))
-          : '';
-        const val = row[col];
-        const safeDisplay = escapeHtml(val);
-        if (val) {
-          const isPriv = isPrivate(row.husband_name) || isPrivate(row.husband_surname);
-          if (isPriv) {
-            html += `<td>${safeDisplay}${altIcon}</td>`;
-          } else {
-            const params = new URLSearchParams();
-            params.set('t', 'person');
-            if (row.husband_name) params.set('n', row.husband_name);
-            if (row.husband_surname) params.set('sn', row.husband_surname);
-            params.set('ex', '1');
-            html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
-          }
-        } else {
-          html += `<td>${altIcon}</td>`;
-        }
+        html += renderPersonNameCell(col, row, 'husband', 'husband_alt_surname');
       } else if (col === 'wife_name' || col === 'wife_surname') {
-        const altIcon = col === 'wife_surname'
-          ? altSurnameIconHtml(row.wife_alt_surname, t('icon_alt_surname'))
-          : '';
-        const val = row[col];
-        const safeDisplay = escapeHtml(val);
-        if (val) {
-          const isPriv = isPrivate(row.wife_name) || isPrivate(row.wife_surname);
-          if (isPriv) {
-            html += `<td>${safeDisplay}${altIcon}</td>`;
-          } else {
-            const params = new URLSearchParams();
-            params.set('t', 'person');
-            if (row.wife_name) params.set('n', row.wife_name);
-            if (row.wife_surname) params.set('sn', row.wife_surname);
-            params.set('ex', '1');
-            html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
-          }
-        } else {
-          html += `<td>${altIcon}</td>`;
-        }
+        html += renderPersonNameCell(col, row, 'wife', 'wife_alt_surname');
       } else if ((col === 'name' || col === 'surname') && row.husband_name === undefined) {
-        const altIcon = col === 'surname'
-          ? altSurnameIconHtml(row.alt_surname, t('icon_alt_surname'))
-          : '';
-        const val = row[col];
-        const safeDisplay = escapeHtml(val);
-        if (val) {
-          const isPriv = isPrivate(row.name) || isPrivate(row.surname);
-          if (isPriv) {
-            html += `<td>${safeDisplay}${altIcon}</td>`;
-          } else {
-            const params = new URLSearchParams();
-            params.set('t', 'person');
-            if (row.name) params.set('n', row.name);
-            if (row.surname) params.set('sn', row.surname);
-            params.set('ex', '1');
-            html += `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
-          }
-        } else {
-          html += `<td>${altIcon}</td>`;
-        }
+        html += renderPersonNameCell(col, row, '', 'alt_surname');
       } else if (col === 'children' || col === 'parents' || col === 'partners') {
         const inner = formatSpecialCell(col, row);
         html += `<td>${inner || ''}</td>`;
@@ -847,7 +811,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         state.secondary = state.primary;
         state.primary = { column: col, ascending: true };
       }
-      renderTable(data, containerId, columns, null, true, null, contributorUrlMap);
+      renderTable(data, containerId, columns, null, true, null);
     });
   });
 }
