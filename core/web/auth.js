@@ -1,4 +1,4 @@
-import { t } from './i18n.js';
+import { t, onLanguageChange } from './i18n.js';
 import siteConfig from '@site-config';
 import { escapeHtml } from './utils.js';
 
@@ -133,19 +133,19 @@ export function initAuth() {
     <div id="login-modal" class="srd-modal-overlay">
       <div class="srd-modal">
         <button type="button" class="srd-modal-close" aria-label="Close">&times;</button>
-        <h3>${t('login_title')}</h3>
-        <p id="login-desc">${loginDescText}</p>
-        <div id="login-error" class="login-error" style="display: none;"></div>
+        <h3 data-i18n="login_title">${t('login_title')}</h3>
+        <p id="login-desc" data-msg-key="login_desc">${loginDescText}</p>
+        <div id="login-error" class="login-error" style="display: none;" data-i18n="login_error"></div>
         <form id="login-form">
           <div class="input-wrapper" style="margin-bottom: 12px; display: block;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;">${t('username')}</label>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;" data-i18n="username">${t('username')}</label>
             <input type="text" id="login-user" required style="width: 100%; box-sizing: border-box; padding: 8px;" />
           </div>
           <div class="input-wrapper" style="margin-bottom: 20px; display: block;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;">${t('password')}</label>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;" data-i18n="password">${t('password')}</label>
             <input type="password" id="login-pass" required style="width: 100%; box-sizing: border-box; padding: 8px;" />
           </div>
-          <button type="submit" class="primary-btn" style="width: 100%;">${t('login_submit')}</button>
+          <button type="submit" class="primary-btn" style="width: 100%;" data-i18n="login_submit">${t('login_submit')}</button>
         </form>
       </div>
     </div>
@@ -190,6 +190,16 @@ export function initAuth() {
     }
   });
 
+  onLanguageChange(() => {
+    const desc = document.getElementById('login-desc');
+    if (desc) {
+      const msgKey = desc.dataset.msgKey || 'login_desc';
+      const societyNameStr = escapeHtml(String(t('society_name') || ''));
+      desc.innerHTML = String(t(msgKey) || '').replace('{society}', `<strong>${societyNameStr}</strong>`);
+    }
+    updateUserIconState();
+  });
+
   updateUserIconState();
 }
 
@@ -197,6 +207,7 @@ export function requireLogin(messageKey = 'login_desc') {
   const modal = document.getElementById('login-modal');
   const desc = document.getElementById('login-desc');
   if (modal && desc) {
+    desc.dataset.msgKey = messageKey;
     const societyNameStr = escapeHtml(String(t('society_name') || ''));
     desc.innerHTML = String(t(messageKey) || '').replace('{society}', `<strong>${societyNameStr}</strong>`);
     modal.classList.add('open');

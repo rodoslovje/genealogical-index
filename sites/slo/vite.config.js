@@ -50,17 +50,8 @@ export default defineConfig({
     },
   },
   build: {
-    // BUILD_VARIANT is set by scripts/build-site.mjs: 'base' or 'premium' for
-    // two-variant sites, empty string for single-variant sites. Vite picks up
-    // the parent dir if the subdir is empty, so single-variant outputs land
-    // in dist/ as before.
-    outDir: path.resolve(__dirname, 'dist', process.env.BUILD_VARIANT || ''),
+    outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
-  },
-  define: {
-    // Inline the variant into client code so site.config.js can branch on
-    // it (process.env is not otherwise available in the browser bundle).
-    'process.env.BUILD_VARIANT': JSON.stringify(process.env.BUILD_VARIANT || ''),
   },
   server: {
     host: true,

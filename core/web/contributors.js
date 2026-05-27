@@ -68,10 +68,7 @@ export async function renderContributors() {
 
   const urlParams = currentParams();
   const contributor = readContributorParam(urlParams);
-  // Per-pair drill-in is a premium feature: ignore ?w= when 'matches' is
-  // gated, so a shared per-pair URL still resolves to the contributor
-  // summary page.
-  let withPartner = siteConfig.gatedFeatures?.includes('matches') ? null : readWithParam(urlParams);
+  let withPartner = readWithParam(urlParams);
 
   if (withPartner && !isLoggedIn()) {
     requireLogin('premium_gated_desc');
