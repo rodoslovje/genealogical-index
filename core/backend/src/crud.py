@@ -29,6 +29,7 @@ def _has_links_clause(column):
     populated (non-NULL and not an empty array)."""
     return and_(column.isnot(None), column != cast("[]", JSONB))
 
+
 METADATA_PATH = os.path.join(
     os.path.dirname(__file__), "..", "data", "output", "metadata.json"
 )
@@ -314,8 +315,7 @@ def get_contributors(db: Session):
                 "persons_count": persons,
                 "families_count": families,
                 "links_count": link_total,
-                "url": (tree["url"] if tree else None)
-                or (mat["url"] if mat else None),
+                "url": (tree["url"] if tree else None) or (mat["url"] if mat else None),
                 "tree": tree,
                 "matricula": mat,
             }
@@ -546,7 +546,9 @@ def _text_filter(column, value, exact: bool, split_comma: bool = False):
     return None
 
 
-def _surname_filter(surname_col, alt_surname_col, value, exact: bool, split_comma: bool = True):
+def _surname_filter(
+    surname_col, alt_surname_col, value, exact: bool, split_comma: bool = True
+):
     """Search a record by either its primary surname or its alt_surname."""
     primary = _text_filter(surname_col, value, exact, split_comma=split_comma)
     alt = _text_filter(alt_surname_col, value, exact, split_comma=split_comma)
@@ -608,11 +610,17 @@ def search_all(
             )
         # Date range filters apply to either birth or death.
         date_cond_b = _date_filter(
-            models.Person.date_of_birth, date_from, date_to, exact,
+            models.Person.date_of_birth,
+            date_from,
+            date_to,
+            exact,
             year_column=models.Person.birth_year,
         )
         date_cond_d = _date_filter(
-            models.Person.date_of_death, date_from, date_to, exact,
+            models.Person.date_of_death,
+            date_from,
+            date_to,
+            exact,
             year_column=models.Person.death_year,
         )
         if date_cond_b is not None and date_cond_d is not None:
@@ -650,12 +658,14 @@ def search_all(
                     _surname_filter(
                         models.Family.husband_surname,
                         models.Family.husband_alt_surname,
-                        surname, exact,
+                        surname,
+                        exact,
                     ),
                     _surname_filter(
                         models.Family.wife_surname,
                         models.Family.wife_alt_surname,
-                        surname, exact,
+                        surname,
+                        exact,
                     ),
                 )
             )
@@ -666,7 +676,10 @@ def search_all(
                 )
             )
         date_cond_f = _date_filter(
-            models.Family.date_of_marriage, date_from, date_to, exact,
+            models.Family.date_of_marriage,
+            date_from,
+            date_to,
+            exact,
             year_column=models.Family.marriage_year,
         )
         if date_cond_f is not None:
@@ -730,13 +743,19 @@ def search_advanced_persons(
             )
         )
     bcond = _date_filter(
-        models.Person.date_of_birth, date_of_birth, date_of_birth_to, exact,
+        models.Person.date_of_birth,
+        date_of_birth,
+        date_of_birth_to,
+        exact,
         year_column=models.Person.birth_year,
     )
     if bcond is not None:
         query = query.filter(bcond)
     dcond = _date_filter(
-        models.Person.date_of_death, date_of_death, date_of_death_to, exact,
+        models.Person.date_of_death,
+        date_of_death,
+        date_of_death_to,
+        exact,
         year_column=models.Person.death_year,
     )
     if dcond is not None:
@@ -788,7 +807,8 @@ def search_advanced_families(
             _surname_filter(
                 models.Family.husband_surname,
                 models.Family.husband_alt_surname,
-                husband_surname, exact,
+                husband_surname,
+                exact,
             )
         )
     hb_cond = _date_filter(
@@ -811,7 +831,8 @@ def search_advanced_families(
             _surname_filter(
                 models.Family.wife_surname,
                 models.Family.wife_alt_surname,
-                wife_surname, exact,
+                wife_surname,
+                exact,
             )
         )
     wb_cond = _date_filter(models.Family.wife_birth, wife_birth, wife_birth_to, exact)
@@ -847,7 +868,10 @@ def search_advanced_families(
             )
         )
     date_cond = _date_filter(
-        models.Family.date_of_marriage, date_of_marriage, date_of_marriage_to, exact,
+        models.Family.date_of_marriage,
+        date_of_marriage,
+        date_of_marriage_to,
+        exact,
         year_column=models.Family.marriage_year,
     )
     if date_cond is not None:
@@ -964,8 +988,8 @@ def _batch_resolve_persons(db: Session, infos: list, contributor: str) -> list:
     result = [None] * len(infos)
 
     # --- ext_id batch ------------------------------------------------------
-    ext_id_to_idxs = {}   # ext_id -> [input indices]
-    fallback_pending = [] # indices needing the name/year heuristic
+    ext_id_to_idxs = {}  # ext_id -> [input indices]
+    fallback_pending = []  # indices needing the name/year heuristic
     for i, info in enumerate(infos):
         ext_id, name, surname, _, _ = _normalize_info(info)
         if ext_id:
@@ -1043,6 +1067,7 @@ def _batch_resolve_persons(db: Session, infos: list, contributor: str) -> list:
 def _make_ancestor_node_from_record(p):
     return {
         "id": p.id,
+        "ext_id": p.ext_id,
         "name": p.name,
         "surname": p.surname,
         "sex": p.sex,
@@ -1055,13 +1080,18 @@ def _make_ancestor_node_from_record(p):
 def _make_ancestor_node_from_info(info):
     return {
         "id": None,
+        "ext_id": info.get("id"),
         "name": info.get("name"),
         "surname": info.get("surname"),
         "sex": info.get("sex"),
         "date_of_birth": (
             info.get("date_of_birth")
             or info.get("year")
-            or (info.get("birth", {}).get("date") if isinstance(info.get("birth"), dict) else None)
+            or (
+                info.get("birth", {}).get("date")
+                if isinstance(info.get("birth"), dict)
+                else None
+            )
         ),
         "place_of_birth": None,
         "parents": [],
@@ -1153,18 +1183,43 @@ def _attach_parents_marriage(db: Session, root_node: dict, contributor: str):
 
         conds = [models.Family.contributor == contributor]
         filter_count = 0
-        if h.get("surname"):
-            conds.append(models.Family.husband_surname == h["surname"])
-            filter_count += 1
-        if h.get("name"):
-            conds.append(models.Family.husband_name == h["name"])
-            filter_count += 1
-        if w.get("surname"):
-            conds.append(models.Family.wife_surname == w["surname"])
-            filter_count += 1
-        if w.get("name"):
-            conds.append(models.Family.wife_name == w["name"])
-            filter_count += 1
+        for role, ext_col, name_col, surname_col in (
+            (
+                h,
+                models.Family.husband_ext_id,
+                models.Family.husband_name,
+                models.Family.husband_surname,
+            ),
+            (
+                w,
+                models.Family.wife_ext_id,
+                models.Family.wife_name,
+                models.Family.wife_surname,
+            ),
+        ):
+            role_ext = role.get("ext_id")
+            if role_ext:
+                name_terms = []
+                if role.get("name"):
+                    name_terms.append(name_col == role["name"])
+                if role.get("surname"):
+                    name_terms.append(surname_col == role["surname"])
+                empty = or_(ext_col.is_(None), ext_col == "")
+                if name_terms:
+                    conds.append(
+                        or_(ext_col == role_ext, and_(empty, *name_terms))
+                    )
+                else:
+                    conds.append(ext_col == role_ext)
+                # ext_id is a strong, unique constraint on its own.
+                filter_count += 2
+            else:
+                if role.get("surname"):
+                    conds.append(surname_col == role["surname"])
+                    filter_count += 1
+                if role.get("name"):
+                    conds.append(name_col == role["name"])
+                    filter_count += 1
         if filter_count >= 2:
             sub_conds.append(and_(*conds))
             keys.append((node, h, w))
@@ -1172,16 +1227,27 @@ def _attach_parents_marriage(db: Session, root_node: dict, contributor: str):
     if not sub_conds:
         return
 
+    def _side_matches(role, fam_ext, fam_name, fam_surname):
+        role_ext = role.get("ext_id") or ""
+        fam_ext = fam_ext or ""
+        if role_ext and fam_ext:
+            return role_ext == fam_ext
+        if role.get("name") and (fam_name or "") != role["name"]:
+            return False
+        if role.get("surname") and (fam_surname or "") != role["surname"]:
+            return False
+        return True
+
     fams = db.query(models.Family).filter(or_(*sub_conds)).all()
     for node, h, w in keys:
         for fam in fams:
-            if h.get("surname") and fam.husband_surname != h["surname"]:
+            if not _side_matches(
+                h, fam.husband_ext_id, fam.husband_name, fam.husband_surname
+            ):
                 continue
-            if h.get("name") and fam.husband_name != h["name"]:
-                continue
-            if w.get("surname") and fam.wife_surname != w["surname"]:
-                continue
-            if w.get("name") and fam.wife_name != w["name"]:
+            if not _side_matches(
+                w, fam.wife_ext_id, fam.wife_name, fam.wife_surname
+            ):
                 continue
             if fam.date_of_marriage or fam.place_of_marriage:
                 node["parents_marriage"] = {
@@ -1194,6 +1260,7 @@ def _attach_parents_marriage(db: Session, root_node: dict, contributor: str):
 def _make_descendant_node_from_record(p):
     return {
         "id": p.id,
+        "ext_id": p.ext_id,
         "name": p.name,
         "surname": p.surname,
         "sex": p.sex,
@@ -1207,13 +1274,18 @@ def _make_descendant_node_from_record(p):
 def _make_descendant_node_from_info(info):
     return {
         "id": None,
+        "ext_id": info.get("id"),
         "name": info.get("name"),
         "surname": info.get("surname"),
         "sex": info.get("sex"),
         "date_of_birth": (
             info.get("date_of_birth")
             or info.get("year")
-            or (info.get("birth", {}).get("date") if isinstance(info.get("birth"), dict) else None)
+            or (
+                info.get("birth", {}).get("date")
+                if isinstance(info.get("birth"), dict)
+                else None
+            )
         ),
         "place_of_birth": None,
         "children": [],
@@ -1224,32 +1296,58 @@ def _make_descendant_node_from_info(info):
 def _person_family_filter(record):
     """Build the SQL fragment that locates families where `record` is husband
     or wife (constrained by sex if known). Returns None when the record has
-    insufficient identifying info to look anything up."""
+    insufficient identifying info to look anything up.
+
+    When the record carries an ext_id we prefer matching on
+    husband_ext_id / wife_ext_id — the GEDCOM xref-id disambiguates same-named
+    persons within a contributor. Name match remains as a fallback for legacy
+    family rows whose ext_id columns are empty.
+    """
+    ext_id = record.ext_id
     name = record.name
     surname = record.surname
-    if not name and not surname:
+    if not ext_id and not name and not surname:
         return None
 
-    h_conds = []
-    if name:    h_conds.append(models.Family.husband_name == name)
-    if surname: h_conds.append(models.Family.husband_surname == surname)
-    w_conds = []
-    if name:    w_conds.append(models.Family.wife_name == name)
-    if surname: w_conds.append(models.Family.wife_surname == surname)
+    def side_filter(ext_col, name_col, surname_col):
+        if ext_id:
+            name_terms = []
+            if name:
+                name_terms.append(name_col == name)
+            if surname:
+                name_terms.append(surname_col == surname)
+            empty = or_(ext_col.is_(None), ext_col == "")
+            if name_terms:
+                return or_(ext_col == ext_id, and_(empty, *name_terms))
+            return ext_col == ext_id
+        terms = []
+        if name:
+            terms.append(name_col == name)
+        if surname:
+            terms.append(surname_col == surname)
+        if not terms:
+            return None
+        return and_(*terms) if len(terms) > 1 else terms[0]
+
+    h_filter = side_filter(
+        models.Family.husband_ext_id,
+        models.Family.husband_name,
+        models.Family.husband_surname,
+    )
+    w_filter = side_filter(
+        models.Family.wife_ext_id,
+        models.Family.wife_name,
+        models.Family.wife_surname,
+    )
 
     sex = record.sex
     if sex == "m":
-        return and_(*h_conds) if h_conds else None
+        return h_filter
     if sex == "f":
-        return and_(*w_conds) if w_conds else None
-    # Unknown sex: match either side.
-    if h_conds and w_conds:
-        return or_(and_(*h_conds), and_(*w_conds))
-    if h_conds:
-        return and_(*h_conds)
-    if w_conds:
-        return and_(*w_conds)
-    return None
+        return w_filter
+    if h_filter is not None and w_filter is not None:
+        return or_(h_filter, w_filter)
+    return h_filter if h_filter is not None else w_filter
 
 
 def _family_belongs_to(fam, record, known_partners):
@@ -1259,17 +1357,35 @@ def _family_belongs_to(fam, record, known_partners):
     sex = record.sex
     name = record.name or ""
     surname = record.surname or ""
+    ext_id = record.ext_id or ""
 
     if sex == "m":
         is_husband = True
     elif sex == "f":
         is_husband = False
+    elif ext_id and ((fam.husband_ext_id or "") or (fam.wife_ext_id or "")):
+        # Unknown sex but ext_ids are present: use them to pick the side.
+        if ext_id == (fam.husband_ext_id or ""):
+            is_husband = True
+        elif ext_id == (fam.wife_ext_id or ""):
+            is_husband = False
+        else:
+            return None, None
     else:
         h_name = fam.husband_name or ""
         h_sur = fam.husband_surname or ""
         is_husband = True
-        if name and name != h_name:    is_husband = False
-        if surname and surname != h_sur: is_husband = False
+        if name and name != h_name:
+            is_husband = False
+        if surname and surname != h_sur:
+            is_husband = False
+
+    # When the record has an ext_id and the matching family side also has one,
+    # they must agree — otherwise this is a same-named different person.
+    if ext_id:
+        fam_ext = (fam.husband_ext_id if is_husband else fam.wife_ext_id) or ""
+        if fam_ext and fam_ext != ext_id:
+            return None, None
 
     fam_birth = fam.husband_birth if is_husband else fam.wife_birth
     if record.date_of_birth and fam_birth and record.date_of_birth != fam_birth:
@@ -1277,14 +1393,14 @@ def _family_belongs_to(fam, record, known_partners):
 
     if known_partners is not None:
         part_name = (fam.wife_name if is_husband else fam.husband_name) or ""
-        part_sur  = (fam.wife_surname if is_husband else fam.husband_surname) or ""
+        part_sur = (fam.wife_surname if is_husband else fam.husband_surname) or ""
         # Families with a fully-unknown partner are not represented in
         # partners_list (GEDCOM export skips empty spouse pointers), so don't
         # let the partner check orphan them.
         if part_name or part_sur:
             matched = False
             for kp in known_partners:
-                n_match = not kp["name"]    or kp["name"]    == part_name
+                n_match = not kp["name"] or kp["name"] == part_name
                 s_match = not kp["surname"] or kp["surname"] == part_sur
                 if n_match and s_match:
                     matched = True
@@ -1294,13 +1410,19 @@ def _family_belongs_to(fam, record, known_partners):
 
     if is_husband:
         partner = {
-            "name": fam.wife_name, "surname": fam.wife_surname,
-            "date_of_birth": fam.wife_birth, "sex": "f",
+            "ext_id": fam.wife_ext_id,
+            "name": fam.wife_name,
+            "surname": fam.wife_surname,
+            "date_of_birth": fam.wife_birth,
+            "sex": "f",
         }
     else:
         partner = {
-            "name": fam.husband_name, "surname": fam.husband_surname,
-            "date_of_birth": fam.husband_birth, "sex": "m",
+            "ext_id": fam.husband_ext_id,
+            "name": fam.husband_name,
+            "surname": fam.husband_surname,
+            "date_of_birth": fam.husband_birth,
+            "sex": "m",
         }
     return is_husband, partner
 
@@ -1324,7 +1446,7 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
     # families/marriage info attached (with empty children arrays), matching
     # the original recursive behaviour.
     for gen in range(max_generations + 1):
-        is_last_gen = (gen == max_generations)
+        is_last_gen = gen == max_generations
         # 1) Build per-record family-lookup conditions and OR them together.
         sub_conds = []
         owners = []  # parallel to sub_conds: (record, node)
@@ -1353,7 +1475,8 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
                 if p_list:
                     known_partners = [
                         {"name": p.get("name") or "", "surname": p.get("surname") or ""}
-                        for p in p_list if p
+                        for p in p_list
+                        if p
                     ]
 
             name = record.name or ""
@@ -1363,14 +1486,22 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
             for fam in fams_all:
                 # Cheap pre-check: does this family even reference the record's name?
                 if sex == "m":
-                    if name and fam.husband_name != name: continue
-                    if surname and fam.husband_surname != surname: continue
+                    if name and fam.husband_name != name:
+                        continue
+                    if surname and fam.husband_surname != surname:
+                        continue
                 elif sex == "f":
-                    if name and fam.wife_name != name: continue
-                    if surname and fam.wife_surname != surname: continue
+                    if name and fam.wife_name != name:
+                        continue
+                    if surname and fam.wife_surname != surname:
+                        continue
                 else:
-                    on_h = (not name or fam.husband_name == name) and (not surname or fam.husband_surname == surname)
-                    on_w = (not name or fam.wife_name == name)    and (not surname or fam.wife_surname == surname)
+                    on_h = (not name or fam.husband_name == name) and (
+                        not surname or fam.husband_surname == surname
+                    )
+                    on_w = (not name or fam.wife_name == name) and (
+                        not surname or fam.wife_surname == surname
+                    )
                     if not (on_h or on_w):
                         continue
 
