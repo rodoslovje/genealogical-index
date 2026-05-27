@@ -158,6 +158,7 @@ function treeButton({ kind, n, sn, dob, contributor, extId }) {
 function renderPersonNameCell(col, row, namePrefix, altField) {
   const nameField = namePrefix ? `${namePrefix}_name`    : 'name';
   const surField  = namePrefix ? `${namePrefix}_surname` : 'surname';
+  const extField  = namePrefix ? `${namePrefix}_ext_id`  : 'ext_id';
   const altIcon = col === surField ? altSurnameIconHtml(row[altField], t('icon_alt_surname')) : '';
   const val = row[col];
   if (!val) return `<td>${altIcon}</td>`;
@@ -169,6 +170,10 @@ function renderPersonNameCell(col, row, namePrefix, altField) {
   params.set('t', 'person');
   if (row[nameField]) params.set('n',  row[nameField]);
   if (row[surField])  params.set('sn', row[surField]);
+  if (row[extField]) {
+    params.set('id', row[extField]);
+    if (row.contributor) params.set('c', row.contributor);
+  }
   params.set('ex', '1');
   return `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
 }
@@ -319,18 +324,22 @@ function buildNameSurnameHtml(p, other, diffOn) {
 // Wraps already-HTML-safe inner content in a person-search anchor, unless the
 // person is private or has no name — in which case the inner HTML is returned
 // as-is. Caller is responsible for escaping/wrapping `innerHtml`.
-function wrapPersonAnchor(name, surname, innerHtml) {
+function wrapPersonAnchor(name, surname, innerHtml, extId, contributor) {
   if (isPrivate(name) || isPrivate(surname)) return innerHtml;
   if (!name && !surname) return innerHtml;
   const p = new URLSearchParams();
   p.set('t', 'person');
   if (name) p.set('n', name);
   if (surname) p.set('sn', surname);
+  if (extId) {
+    p.set('id', extId);
+    if (contributor) p.set('c', contributor);
+  }
   p.set('ex', '1');
   return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${innerHtml}</a>`;
 }
 
-function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParentsJson) {
+function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParentsJson, contributor = null) {
   if (!parentsJson) return { html: '', count: 0 };
   try {
     const pList = typeof parentsJson === 'string' ? JSON.parse(parentsJson) : parentsJson;
@@ -355,9 +364,11 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParents
     const fName = father.name || '';
     const fSur = father.surname || '';
     const fYear = childYearOf(father);
+    const fExtId = father.id || '';
     const mName = mother.name || '';
     const mSur = mother.surname || '';
     const mYear = childYearOf(mother);
+    const mExtId = mother.id || '';
 
     const fPriv = isPrivate(fName) || isPrivate(fSur);
     const mPriv = isPrivate(mName) || isPrivate(mSur);
@@ -402,8 +413,8 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParents
     } else {
       htmlStr += `<span style="font-weight: 600;">${headerLabel}:</span>${treeBtn}<br>`;
     }
-    if (fName || fSur) htmlStr += `${wrapPersonAnchor(fName, fSur, fInner)}<br>`;
-    if (mName || mSur) htmlStr += `${wrapPersonAnchor(mName, mSur, mInner)}`;
+    if (fName || fSur) htmlStr += `${wrapPersonAnchor(fName, fSur, fInner, fExtId, contributor)}<br>`;
+    if (mName || mSur) htmlStr += `${wrapPersonAnchor(mName, mSur, mInner, mExtId, contributor)}`;
     htmlStr += `</div>`;
     return { html: htmlStr, count };
   } catch(e) {
@@ -451,6 +462,10 @@ export function formatSpecialCell(col, row, otherRow) {
           if (c.surname) params.set('sn', c.surname);
           const dob = c.date_of_birth || cy;
           if (dob) params.set('dob', dob);
+          if (c.id) {
+            params.set('id', c.id);
+            if (row.contributor) params.set('c', row.contributor);
+          }
           params.set('ex', '1');
           entry = `<a href="${toUnicodeHref(params)}" data-spa-nav>${innerHtml}</a>`;
         }
@@ -481,7 +496,7 @@ export function formatSpecialCell(col, row, otherRow) {
 
   if (col === 'parents' && row.parents_list) {
     const otherParents = diffMode ? (otherRow?.parents_list ?? null) : undefined;
-    const { html, count } = renderParentPair(row.parents_list, null, null, otherParents);
+    const { html, count } = renderParentPair(row.parents_list, null, null, otherParents, row.contributor);
     const treeBtn = (count > 0 && row.id) ? treeButton({
       kind: 'ancestors',
       n: row.name,
@@ -500,14 +515,16 @@ export function formatSpecialCell(col, row, otherRow) {
       name: row.husband_name,
       surname: row.husband_surname,
       date_of_birth: row.husband_birth,
-      contributor: row.contributor
-    }, otherHusbandParents);
+      contributor: row.contributor,
+      ext_id: row.husband_ext_id
+    }, otherHusbandParents, row.contributor);
     const wife = renderParentPair(row.wife_parents, 'label_wife', {
       name: row.wife_name,
       surname: row.wife_surname,
       date_of_birth: row.wife_birth,
-      contributor: row.contributor
-    }, otherWifeParents);
+      contributor: row.contributor,
+      ext_id: row.wife_ext_id
+    }, otherWifeParents, row.contributor);
     return wrapExpandable(husband.count + wife.count, '', husband.html + wife.html);
   }
 

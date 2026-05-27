@@ -369,6 +369,7 @@ function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorN
     if (data.surname) rootParams.set('sn', data.surname);
     if (data.date_of_birth) rootParams.set('dob', data.date_of_birth);
     if (contributorName) rootParams.set('c', contributorName);
+    if (data.ext_id) rootParams.set('id', data.ext_id);
     rootParams.set('ex', '1');
     const rootUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch(rootParams);
 
@@ -509,6 +510,7 @@ function personHrefBuilder(contributorName) {
     if (d.data.surname) params.set('sn', d.data.surname);
     if (d.data.date_of_birth) params.set('dob', d.data.date_of_birth);
     if (contributorName) params.set('c', contributorName);
+    if (d.data.ext_id) params.set('id', d.data.ext_id);
     params.set('ex', '1');
     return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
   };
