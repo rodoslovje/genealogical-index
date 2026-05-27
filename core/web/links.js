@@ -1,15 +1,21 @@
 import { t, getCurrentLang } from './i18n.js';
 
-export function formatLinks(links) {
-  let linksList = [];
-  if (links) {
-    if (Array.isArray(links)) {
-      linksList = links;
-    } else {
-      try { linksList = JSON.parse(links); } catch(e) { linksList = [links]; }
-    }
-  }
+function parseLinksList(links) {
+  if (!links) return [];
+  if (Array.isArray(links)) return links;
+  try {
+    const parsed = JSON.parse(links);
+    return Array.isArray(parsed) ? parsed : [links];
+  } catch(e) { return [links]; }
+}
+
+export function formatLinks(links, diffAgainst) {
+  const linksList = parseLinksList(links);
   if (!linksList.length) return '';
+
+  const otherSet = diffAgainst !== undefined
+    ? new Set(parseLinksList(diffAgainst))
+    : null;
 
   return linksList.map(url => {
     let icon = '📜';
@@ -40,6 +46,10 @@ export function formatLinks(links) {
     const href = url.includes('matricula-online.eu')
       ? url.replace(/\/(en|sl)\//, `/${getCurrentLang()}/`)
       : url;
-    return `<a href="${href}" target="_blank" rel="noopener" title="${titleText}">${icon}</a>`;
+    const anchor = `<a href="${href}" target="_blank" rel="noopener" title="${titleText}">${icon}</a>`;
+    if (otherSet && !otherSet.has(url)) {
+      return `<span class="match-diff">${anchor}</span>`;
+    }
+    return anchor;
   }).join(' ');
 }

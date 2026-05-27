@@ -83,6 +83,30 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+// Wraps each word in `val` that doesn't appear in `otherVal` in a diff-highlight
+// span; equal strings return plain escaped text. Used by match-pair views to
+// flag only the differing token(s) instead of the whole field.
+export function highlightDifferences(val, otherVal) {
+  if (!val) return '';
+  const valStr = String(val);
+  if (!otherVal) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
+
+  if (valStr.toLowerCase() === String(otherVal).toLowerCase()) {
+    return escapeHtml(valStr);
+  }
+
+  const otherWords = new Set(String(otherVal).toLowerCase().match(/[\p{L}\d]+/gu) || []);
+  if (otherWords.size === 0) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
+
+  const tokens = valStr.split(/([\p{L}\d]+)/u);
+  return tokens.map(token => {
+    if (/^[\p{L}\d]+$/u.test(token) && !otherWords.has(token.toLowerCase())) {
+      return `<span class="match-diff">${escapeHtml(token)}</span>`;
+    }
+    return escapeHtml(token);
+  }).join('');
+}
+
 /** Triggers a browser download for a Blob. Common shape used by CSV/SVG exports. */
 export function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);

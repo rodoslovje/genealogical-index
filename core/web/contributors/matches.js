@@ -5,7 +5,7 @@ import { parseDateForSort } from '../dates.js';
 import {
   isPrivate, getExpandCollapseIcon, shortenUrlLabel, baseContributorName,
   matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
-  escapeHtml,
+  escapeHtml, highlightDifferences,
 } from '../utils.js';
 import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref } from '../url.js';
@@ -16,29 +16,6 @@ import { loadSurnameCloud } from './cloud.js';
 import {
   getContributorFilter, setCurrentMatches, setDetailRefilter,
 } from './filter.js';
-
-// Wraps a value in a diff-highlight span when it differs from the partner's
-// equivalent field. Falls back to plain escape when both sides match.
-function highlightDifferences(val, otherVal) {
-  if (!val) return '';
-  const valStr = String(val);
-  if (!otherVal) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
-
-  if (valStr.toLowerCase() === String(otherVal).toLowerCase()) {
-    return escapeHtml(valStr);
-  }
-
-  const otherWords = new Set(String(otherVal).toLowerCase().match(/[\p{L}\d]+/gu) || []);
-  if (otherWords.size === 0) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
-
-  const tokens = valStr.split(/([\p{L}\d]+)/u);
-  return tokens.map(token => {
-    if (/^[\p{L}\d]+$/u.test(token) && !otherWords.has(token.toLowerCase())) {
-      return `<span class="match-diff">${escapeHtml(token)}</span>`;
-    }
-    return escapeHtml(token);
-  }).join('');
-}
 
 /** Renders the per-contributor stats grid (single column or 3-column Sum/Tree/Matricula). */
 function renderContributorStats(contribData) {
@@ -491,11 +468,11 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
 
         const makeCell = (rec, otherRec, f) => {
           if (f === 'parents' || f === 'children' || f === 'partners') {
-            const inner = formatSpecialCell(f, rec);
+            const inner = formatSpecialCell(f, rec, otherRec);
             return `<td>${inner || ''}</td>`;
           }
           if (f === 'links') {
-            const icons = formatLinks(rec.links);
+            const icons = formatLinks(rec.links, otherRec.links);
             return `<td class="link-cell">${icons || ''}</td>`;
           }
           const val = rec[f] || '';

@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isMatriculaContributor, escapeHtml, downloadBlob } from './utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isMatriculaContributor, escapeHtml, highlightDifferences, downloadBlob } from './utils.js';
 import { childYearOf, parseDateForSort } from './dates.js';
 import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
 import siteConfig from '@site-config';
@@ -220,19 +220,84 @@ function sortData(data, primary, secondary) {
   });
 }
 
-function makePersonLink(name, surname, display) {
-  const safeDisplay = display ? escapeHtml(display) : '';
-  if (isPrivate(name) || isPrivate(surname)) return safeDisplay;
-  if (!name && !surname) return safeDisplay;
+// Canonicalizes a name/surname token for matching. All private-placeholder
+// variants ('<private>', 'private', 'unknown') collapse to one key so they
+// pair across sides regardless of which placeholder each side stores.
+function matchToken(s) {
+  const v = String(s || '').trim().toLowerCase();
+  if (!v) return '';
+  if (isPrivate(v)) return '<private>';
+  return v;
+}
+
+// Pairs an entry on one match-side with its best counterpart on the other side
+// for diff highlighting. Exact name+surname match wins; failing that, surname
+// alone, then name alone. Returns null if neither field matches anything.
+function findBestMatch(p, otherList) {
+  if (!p || !otherList?.length) return null;
+  const name = matchToken(p.name);
+  const sur  = matchToken(p.surname);
+  if (!name && !sur) return null;
+  let nameOnly = null, surOnly = null;
+  for (const o of otherList) {
+    const oName = matchToken(o?.name);
+    const oSur  = matchToken(o?.surname);
+    const nameMatch = !!name && oName === name;
+    const surMatch  = !!sur  && oSur  === sur;
+    if (nameMatch && surMatch) return o;
+    if (surMatch  && !surOnly)  surOnly  = o;
+    if (nameMatch && !nameOnly) nameOnly = o;
+  }
+  return surOnly || nameOnly || null;
+}
+
+const yearsDiffer = (a, b) => String(a || '') !== String(b || '');
+
+function parseList(jsonOrArr) {
+  if (!jsonOrArr) return [];
+  if (Array.isArray(jsonOrArr)) return jsonOrArr;
+  try {
+    const v = typeof jsonOrArr === 'string' ? JSON.parse(jsonOrArr) : jsonOrArr;
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
+}
+
+const diffWrap = (html) => `<span class="match-diff">${html}</span>`;
+
+// Builds the "name surname" portion of a person entry with word-level diff
+// against the matched other-side entry. Private entries (where name/surname is
+// a placeholder like '<private>'/'unknown') skip the diff — comparing them
+// would just flag the placeholder text itself.
+function buildNameSurnameHtml(p, other, diffOn) {
+  const name = p?.name || '';
+  const sur  = p?.surname || '';
+  const isPriv = isPrivate(name) || isPrivate(sur);
+  if (!diffOn || isPriv || !other) {
+    const label = isPriv ? (name || sur) : [name, sur].filter(Boolean).join(' ');
+    return escapeHtml(label);
+  }
+  const otherName = other.name || '';
+  const otherSur  = other.surname || '';
+  const nameHtml = name ? highlightDifferences(name, otherName) : '';
+  const surHtml  = sur  ? highlightDifferences(sur,  otherSur)  : '';
+  return [nameHtml, surHtml].filter(Boolean).join(' ');
+}
+
+// Wraps already-HTML-safe inner content in a person-search anchor, unless the
+// person is private or has no name — in which case the inner HTML is returned
+// as-is. Caller is responsible for escaping/wrapping `innerHtml`.
+function wrapPersonAnchor(name, surname, innerHtml) {
+  if (isPrivate(name) || isPrivate(surname)) return innerHtml;
+  if (!name && !surname) return innerHtml;
   const p = new URLSearchParams();
   p.set('t', 'person');
   if (name) p.set('n', name);
   if (surname) p.set('sn', surname);
   p.set('ex', '1');
-  return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${safeDisplay}</a>`;
+  return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${innerHtml}</a>`;
 }
 
-function renderParentPair(parentsJson, labelKey, rootPerson = null) {
+function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParentsJson) {
   if (!parentsJson) return { html: '', count: 0 };
   try {
     const pList = typeof parentsJson === 'string' ? JSON.parse(parentsJson) : parentsJson;
@@ -240,6 +305,18 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null) {
 
     const father = pList[0] || {};
     const mother = pList[1] || {};
+
+    // Positional diff: father vs other's father, mother vs other's mother.
+    // undefined => diff mode off; any defined value (even null) enables it.
+    // We compare name & surname separately (via highlightDifferences) and the
+    // year separately too — so partial diffs highlight just the part that
+    // actually changed (e.g. only the surname).
+    const diffOn = otherParentsJson !== undefined;
+    const oList = diffOn ? parseList(otherParentsJson) : [];
+    const otherFather = oList[0] || {};
+    const otherMother = oList[1] || {};
+    const fatherYearDiff = diffOn && yearsDiffer(childYearOf(father), childYearOf(otherFather));
+    const motherYearDiff = diffOn && yearsDiffer(childYearOf(mother), childYearOf(otherMother));
     if (!father.name && !mother.name) return { html: '', count: 0 };
 
     const fName = father.name || '';
@@ -260,8 +337,12 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null) {
     if (mSur && !mPriv) famParams.set('wsn', mSur);
     famParams.set('ex', '1');
 
-    const fDisplay = (fPriv ? (fName || fSur) : [fName, fSur].filter(Boolean).join(' ')) + (fYear ? ` *${fYear}` : '');
-    const mDisplay = (mPriv ? (mName || mSur) : [mName, mSur].filter(Boolean).join(' ')) + (mYear ? ` *${mYear}` : '');
+    const fYearTok = fYear ? `*${fYear}` : '';
+    const mYearTok = mYear ? `*${mYear}` : '';
+    const fNameHtml = buildNameSurnameHtml(father, otherFather, diffOn);
+    const mNameHtml = buildNameSurnameHtml(mother, otherMother, diffOn);
+    const fInner = fNameHtml + (fYearTok ? ' ' + (fatherYearDiff ? diffWrap(escapeHtml(fYearTok)) : escapeHtml(fYearTok)) : '');
+    const mInner = mNameHtml + (mYearTok ? ' ' + (motherYearDiff ? diffWrap(escapeHtml(mYearTok)) : escapeHtml(mYearTok)) : '');
 
     let count = 0;
     if (fName || fSur) count++;
@@ -294,8 +375,8 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null) {
     } else {
       htmlStr += `<span style="font-weight: 600;">${headerLabel}:</span>${treeBtn}<br>`;
     }
-    if (fName || fSur) htmlStr += `${makePersonLink(fName, fSur, fDisplay)}<br>`;
-    if (mName || mSur) htmlStr += `${makePersonLink(mName, mSur, mDisplay)}`;
+    if (fName || fSur) htmlStr += `${wrapPersonAnchor(fName, fSur, fInner)}<br>`;
+    if (mName || mSur) htmlStr += `${wrapPersonAnchor(mName, mSur, mInner)}`;
     htmlStr += `</div>`;
     return { html: htmlStr, count };
   } catch(e) {
@@ -303,32 +384,57 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null) {
   }
 }
 
-export function formatSpecialCell(col, row) {
+export function formatSpecialCell(col, row, otherRow) {
+  const diffMode = otherRow !== undefined;
+
   if (col === 'children' && row.children_list) {
     let formattedList = [];
     let count = 0;
+
+    const otherChildren = diffMode ? parseList(otherRow?.children_list) : [];
 
     try {
       const pList = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
       count = pList.length;
       formattedList = pList.map(c => {
         const cPriv = isPrivate(c.name) || isPrivate(c.surname);
-        let childDisplay = cPriv ? (c.name || c.surname || '') : c.name || '';
-        if (!cPriv && c.surname && c.surname !== row.husband_surname) childDisplay += ` ${c.surname}`;
+        const showSurname = !cPriv && c.surname && c.surname !== row.husband_surname;
         const cy = childYearOf(c);
-        if (cy) childDisplay += ` *${cy}`;
+        const yearTok = cy ? `*${cy}` : '';
 
-        if (cPriv) return escapeHtml(childDisplay).trim();
+        const match = diffMode ? findBestMatch(c, otherChildren) : null;
+        const noMatch = diffMode && !cPriv && !match && (c.name || c.surname);
+        const yearDiff = !!match && yearsDiffer(cy, childYearOf(match));
 
-        const params = new URLSearchParams();
-        params.set('t', 'person');
-        if (c.name) params.set('n', c.name);
-        if (c.surname) params.set('sn', c.surname);
-        const dob = c.date_of_birth || cy;
-        if (dob) params.set('dob', dob);
-        params.set('ex', '1');
+        let labelHtml;
+        if (cPriv || !diffMode || !match) {
+          const label = cPriv ? (c.name || c.surname || '') : (c.name || '') + (showSurname ? ' ' + c.surname : '');
+          labelHtml = escapeHtml(label.trim());
+        } else {
+          const nameHtml = c.name    ? highlightDifferences(c.name, match.name || '')       : '';
+          const surHtml  = showSurname ? highlightDifferences(c.surname, match.surname || '') : '';
+          labelHtml = [nameHtml, surHtml].filter(Boolean).join(' ');
+        }
 
-        return `<a href="${toUnicodeHref(params)}" data-spa-nav>${escapeHtml(childDisplay)}</a>`;
+        const innerHtml = labelHtml +
+          (yearTok ? ' ' + (yearDiff ? diffWrap(escapeHtml(yearTok)) : escapeHtml(yearTok)) : '');
+
+        let entry;
+        if (cPriv) {
+          entry = innerHtml.trim();
+        } else {
+          const params = new URLSearchParams();
+          params.set('t', 'person');
+          if (c.name) params.set('n', c.name);
+          if (c.surname) params.set('sn', c.surname);
+          const dob = c.date_of_birth || cy;
+          if (dob) params.set('dob', dob);
+          params.set('ex', '1');
+          entry = `<a href="${toUnicodeHref(params)}" data-spa-nav>${innerHtml}</a>`;
+        }
+
+        if (noMatch) entry = diffWrap(entry);
+        return entry;
       });
     } catch (e) {
       console.error("Failed to parse JSON for children", e);
@@ -364,7 +470,8 @@ export function formatSpecialCell(col, row) {
   }
 
   if (col === 'parents' && row.parents_list) {
-    const { html, count } = renderParentPair(row.parents_list, null);
+    const otherParents = diffMode ? (otherRow?.parents_list ?? null) : undefined;
+    const { html, count } = renderParentPair(row.parents_list, null, null, otherParents);
     if (count > 0) {
       let treeBtn = '';
       if (!siteConfig.gatedFeatures?.includes('ancestors') && row.id && !isMatriculaContributor(row.contributor)) {
@@ -388,18 +495,20 @@ export function formatSpecialCell(col, row) {
   }
 
   if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
+    const otherHusbandParents = diffMode ? (otherRow?.husband_parents ?? null) : undefined;
+    const otherWifeParents    = diffMode ? (otherRow?.wife_parents ?? null)    : undefined;
     const husband = renderParentPair(row.husband_parents, 'label_husband', {
       name: row.husband_name,
       surname: row.husband_surname,
       date_of_birth: row.husband_birth,
       contributor: row.contributor
-    });
+    }, otherHusbandParents);
     const wife = renderParentPair(row.wife_parents, 'label_wife', {
       name: row.wife_name,
       surname: row.wife_surname,
       date_of_birth: row.wife_birth,
       contributor: row.contributor
-    });
+    }, otherWifeParents);
     const count = husband.count + wife.count;
     if (count > 0) {
       return `<details class="expandable-cell">
@@ -414,6 +523,7 @@ export function formatSpecialCell(col, row) {
     let formattedList = [];
     let count = 0;
     let treeBtn = '';
+    const otherPartners = diffMode ? parseList(otherRow?.partners_list) : [];
     try {
       if (!siteConfig.gatedFeatures?.includes('descendants') && row.id && !isMatriculaContributor(row.contributor)) {
           const p = new URLSearchParams();
@@ -445,14 +555,30 @@ export function formatSpecialCell(col, row) {
           if (p.surname) famParams.set('wsn', p.surname);
         }
         famParams.set('ex', '1');
-        let partnerDisplay = p.name || '';
-        if (p.surname) partnerDisplay += ` ${p.surname}`;
         const py = childYearOf(p);
-        if (py) partnerDisplay += ` *${py}`;
-        if (isPrivate(p.name) || p.name === 'unknown') partnerDisplay = p.name;
+        const pPriv = isPrivate(p.name) || p.name === 'unknown';
+        const yearTok = py ? `*${py}` : '';
+
+        const match = diffMode ? findBestMatch(p, otherPartners) : null;
+        const noMatch = diffMode && !pPriv && !match && (p.name || p.surname);
+        const yearDiff = !!match && yearsDiffer(py, childYearOf(match));
+
+        let labelHtml;
+        if (pPriv || !diffMode || !match) {
+          const text = pPriv ? p.name : (p.name || '') + (p.surname ? ' ' + p.surname : '');
+          labelHtml = escapeHtml(String(text || '').trim());
+        } else {
+          const nameHtml = p.name    ? highlightDifferences(p.name, match.name || '')       : '';
+          const surHtml  = p.surname ? highlightDifferences(p.surname, match.surname || '') : '';
+          labelHtml = [nameHtml, surHtml].filter(Boolean).join(' ');
+        }
+
+        const innerHtml = labelHtml +
+          (yearTok ? ' ' + (yearDiff ? diffWrap(escapeHtml(yearTok)) : escapeHtml(yearTok)) : '');
         const label = isHusband ? t('label_husband') : (p.sex === 'f' ? t('label_wife') : '');
-        const safeDisplay = escapeHtml(partnerDisplay);
-        formattedList.push(`<a href="${toUnicodeHref(famParams)}" data-spa-nav${label ? ` title="${label}"` : ''}>${safeDisplay}</a>`);
+        let entry = `<a href="${toUnicodeHref(famParams)}" data-spa-nav${label ? ` title="${label}"` : ''}>${innerHtml}</a>`;
+        if (noMatch) entry = diffWrap(entry);
+        formattedList.push(entry);
       });
     } catch (e) {
       console.error("Failed to parse JSON for partners", e);
