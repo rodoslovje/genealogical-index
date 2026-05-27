@@ -253,8 +253,9 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
     .join('path')
       .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
 
-  // Person nodes as small coloured dots. Family nodes are dropped — their
-  // ⚭ glyph would be illegible at minimap scale anyway.
+  // Person nodes as small coloured dots; family nodes (partners) as rings of
+  // the same size — the ⚭ glyph is illegible at minimap scale, but skipping
+  // them entirely makes the map look broken when a person has a partner.
   mmG.append('g')
     .selectAll('circle')
     .data(root.descendants().filter(d => !d.data.is_family))
@@ -263,6 +264,20 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
       .attr('cy', d => d.x)
       .attr('r', 4 / mmScale)
       .attr('fill', d => d.data.sex === 'm' ? '#3498db' : (d.data.sex === 'f' ? '#e83e8c' : '#999'));
+
+  mmG.append('g')
+    .selectAll('circle')
+    .data(root.descendants().filter(d => d.data.is_family))
+    .join('circle')
+      .attr('cx', d => d.y)
+      .attr('cy', d => d.x)
+      .attr('r', 4 / mmScale)
+      .attr('fill', 'none')
+      .attr('stroke', d => {
+        const sex = d.data.partner?.sex;
+        return sex === 'm' ? '#3498db' : (sex === 'f' ? '#e83e8c' : '#999');
+      })
+      .attr('stroke-width', 1.5 / mmScale);
 
   // Viewport rectangle, drawn on top of the minimap content.
   const viewport = mm.append('rect')
