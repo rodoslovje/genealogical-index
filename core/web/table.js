@@ -8,56 +8,38 @@ import siteConfig from '@site-config';
 export function exportToCSV(data, columns, filename) {
   if (!data || !data.length) return;
   const headers = columns.map(col => `"${t('col_' + col).replace(/"/g, '""')}"`).join(',');
+  // Renders a parent pair as plain text, optionally prefixed with a side label
+  // (husband/wife) when both pairs are concatenated into one cell.
+  const formatParentPair = (jsonOrArr, label) => {
+    const arr = parseList(jsonOrArr);
+    if (!arr.length) return '';
+    const parts = [arr[0], arr[1]].filter(Boolean).map(p => personInlineText(p, '')).filter(Boolean);
+    if (!parts.length) return '';
+    const inner = parts.join(', ');
+    return label ? `${label}: ${inner}` : inner;
+  };
+
   const rows = data.map(row => {
     return columns.map(col => {
       let val = '';
       if (col === 'parents') {
-        const parseP = (jsonStr, label) => {
-          if (!jsonStr) return '';
-          try {
-            const arr = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
-            if (!arr.length) return '';
-            const f = arr[0] || {}; const m = arr[1] || {};
-            const fy = childYearOf(f); const my = childYearOf(m);
-            const fStr = `${f.name||''} ${f.surname||''} ${fy ? '*'+fy : ''}`.trim();
-            const mStr = `${m.name||''} ${m.surname||''} ${my ? '*'+my : ''}`.trim();
-            const inner = [fStr, mStr].filter(Boolean).join(', ');
-            return label ? `${label}: ${inner}` : inner;
-          } catch(e) { return ''; }
-        };
         if (row.parents_list) {
-          val = parseP(row.parents_list, '');
+          val = formatParentPair(row.parents_list);
         } else {
-          const hp = parseP(row.husband_parents, t('label_husband'));
-          const wp = parseP(row.wife_parents, t('label_wife'));
+          const hp = formatParentPair(row.husband_parents, t('label_husband'));
+          const wp = formatParentPair(row.wife_parents,    t('label_wife'));
           val = [hp, wp].filter(Boolean).join(' | ');
         }
       } else if (col === 'children' && row.children_list) {
-        try {
-          const arr = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
-          val = arr.map(c => {
-             if (isPrivate(c.name)) return c.name;
-             let d = c.name || '';
-             if (c.surname && c.surname !== row.husband_surname) d += ' ' + c.surname;
-             const childYear = childYearOf(c);
-             if (childYear) d += ' *' + childYear;
-             return d;
-          }).join(', ');
-        } catch(e) { val = row[col] || ''; }
+        val = parseList(row.children_list)
+          .map(c => personInlineText(c, row.husband_surname))
+          .join(', ');
       } else if (col === 'partners' && row.partners_list) {
-        const parts = [];
-        try {
-          const arr = typeof row.partners_list === 'string' ? JSON.parse(row.partners_list) : row.partners_list;
-          arr.forEach(p => {
-            let d = p.name || '';
-            if (p.surname) d += ' ' + p.surname;
-            const py = childYearOf(p);
-            if (py) d += ' *' + py;
-            const label = p.sex === 'm' ? t('label_husband') : p.sex === 'f' ? t('label_wife') : '';
-            parts.push(label ? `${label}: ${d.trim()}` : d.trim());
-          });
-        } catch(e) {}
-        val = parts.join(' | ');
+        val = parseList(row.partners_list).map(p => {
+          const text = personInlineText(p, '').trim();
+          const label = p.sex === 'm' ? t('label_husband') : p.sex === 'f' ? t('label_wife') : '';
+          return label ? `${label}: ${text}` : text;
+        }).join(' | ');
       } else if (col === 'matches') {
         val = row.matches_count || '';
         if (Number(val) === 0) val = '';
@@ -191,62 +173,26 @@ function renderPersonNameCell(col, row, namePrefix, altField) {
   return `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
 }
 
+// A parent-pair has up to two entries (father, mother). Each "filled" if any
+// identifying field is set.
+function countParentPair(jsonOrArr) {
+  const arr = parseList(jsonOrArr);
+  if (!arr.length) return 0;
+  const isFilled = (p) => !!(p && (p.name || p.surname || p.date_of_birth || p.year));
+  return (isFilled(arr[0]) ? 1 : 0) + (isFilled(arr[1]) ? 1 : 0);
+}
+
 function getValue(row, col) {
   if (col === 'parents') {
-    if (row._parents_count !== undefined) return row._parents_count;
-    const countPair = (v) => {
-      if (!v) return 0;
-      try {
-        const arr = typeof v === 'string' ? JSON.parse(v) : v;
-        const f = arr[0] || {};
-        const m = arr[1] || {};
-        let c = 0;
-        if (f.name || f.surname || f.date_of_birth || f.year) c++;
-        if (m.name || m.surname || m.date_of_birth || m.year) c++;
-        return c;
-      } catch(e) { return 0; }
-    };
-    let count = 0;
-    if (row.husband_parents || row.wife_parents) {
-      count = countPair(row.husband_parents) + countPair(row.wife_parents);
-    } else if (row.parents_list) {
-      count = countPair(row.parents_list);
-    }
-    row._parents_count = count;
-    return count;
+    return memoCount(row, 'parents', () => (row.husband_parents || row.wife_parents)
+      ? countParentPair(row.husband_parents) + countParentPair(row.wife_parents)
+      : countParentPair(row.parents_list));
   }
-  if (col === 'partners') {
-    if (row._partners_count !== undefined) return row._partners_count;
-    const countList = (v) => {
-      if (!v) return 0;
-      try {
-        const arr = typeof v === 'string' ? JSON.parse(v) : v;
-        return arr.length;
-      } catch(e) { return 0; }
-    };
-    const count = countList(row.partners_list);
-    row._partners_count = count;
-    return count;
-  }
-  if (col === 'children') {
-    if (row._children_count !== undefined) return row._children_count;
-    let count = 0;
-    if (row.children_list) {
-      try {
-        const arr = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
-        count = arr.length;
-      } catch(e) { }
-    }
-    row._children_count = count;
-    return count;
-  }
-  if (col === 'links') {
-    if (!row.links) return 0;
-    if (Array.isArray(row.links)) return row.links.length;
-    try { return JSON.parse(row.links).length; } catch { return 0; }
-  }
-  if (col === 'matches') return Number(row.matches_count || 0);
-  if (RIGHT_COLUMNS.has(col)) return parseDateForSort(row[col]);
+  if (col === 'partners') return memoCount(row, 'partners', () => parseList(row.partners_list).length);
+  if (col === 'children') return memoCount(row, 'children', () => parseList(row.children_list).length);
+  if (col === 'links')    return parseList(row.links).length;
+  if (col === 'matches')  return Number(row.matches_count || 0);
+  if (RIGHT_COLUMNS.has(col))   return parseDateForSort(row[col]);
   if (NUMERIC_COLUMNS.has(col)) return Number(row[col] || 0);
   return String(row[col] || '').toLowerCase();
 }
@@ -314,6 +260,39 @@ function parseList(jsonOrArr) {
     const v = typeof jsonOrArr === 'string' ? JSON.parse(jsonOrArr) : jsonOrArr;
     return Array.isArray(v) ? v : [];
   } catch { return []; }
+}
+
+// Counts derived from children/parents/partners lists are looked up many times
+// per sort. Cache off-row so we don't mutate caller-owned data with `_*_count`
+// fields.
+const rowCountCache = new WeakMap();
+function memoCount(row, key, compute) {
+  let cache = rowCountCache.get(row);
+  if (cache && key in cache) return cache[key];
+  if (!cache) { cache = {}; rowCountCache.set(row, cache); }
+  cache[key] = compute();
+  return cache[key];
+}
+
+// Plain-text "Name Surname *Year" rendering used by CSV export and any other
+// non-HTML consumer. Mirrors the display format so exports stay in sync.
+function personInlineText(p, hideSurnameIfEquals) {
+  if (isPrivate(p.name) || isPrivate(p.surname)) return p.name || p.surname || '';
+  let text = p.name || '';
+  if (p.surname && p.surname !== hideSurnameIfEquals) text += ` ${p.surname}`;
+  const year = childYearOf(p);
+  if (year) text += ` *${year}`;
+  return text;
+}
+
+// Wraps the count + tree button + body in the standard <details> shell used
+// for parents/children/partners cells.
+function wrapExpandable(count, treeBtn, innerHtml) {
+  if (!count) return '';
+  return `<details class="expandable-cell">
+            <summary>${count}${treeBtn || ''}</summary>
+            <div class="expanded-content">${innerHtml}</div>
+          </details>`;
 }
 
 const diffWrap = (html) => `<span class="match-diff">${html}</span>`;
@@ -436,15 +415,10 @@ export function formatSpecialCell(col, row, otherRow) {
   const diffMode = otherRow !== undefined;
 
   if (col === 'children' && row.children_list) {
-    let formattedList = [];
-    let count = 0;
-
     const otherChildren = diffMode ? parseList(otherRow?.children_list) : [];
-
-    try {
-      const pList = typeof row.children_list === 'string' ? JSON.parse(row.children_list) : row.children_list;
-      count = pList.length;
-      formattedList = pList.map(c => {
+    const pList = parseList(row.children_list);
+    const count = pList.length;
+    const formattedList = pList.map(c => {
         const cPriv = isPrivate(c.name) || isPrivate(c.surname);
         const showSurname = !cPriv && c.surname && c.surname !== row.husband_surname;
         const cy = childYearOf(c);
@@ -484,9 +458,6 @@ export function formatSpecialCell(col, row, otherRow) {
         if (noMatch) entry = diffWrap(entry);
         return entry;
       });
-    } catch (e) {
-      console.error("Failed to parse JSON for children", e);
-    }
 
     // Seed the descendants tree from whichever spouse has a usable name.
     let treeBtn = '';
@@ -505,31 +476,21 @@ export function formatSpecialCell(col, row, otherRow) {
       }
     }
 
-    if (count === 0) return '';
-    return `<details class="expandable-cell">
-            <summary>${count}${treeBtn}</summary>
-            <div class="expanded-content">${formattedList.join('<br>')}</div>
-          </details>`;
+    return wrapExpandable(count, treeBtn, formattedList.join('<br>'));
   }
 
   if (col === 'parents' && row.parents_list) {
     const otherParents = diffMode ? (otherRow?.parents_list ?? null) : undefined;
     const { html, count } = renderParentPair(row.parents_list, null, null, otherParents);
-    if (count > 0) {
-      const treeBtn = row.id ? treeButton({
-        kind: 'ancestors',
-        n: row.name,
-        sn: row.surname,
-        dob: row.date_of_birth || childYearOf(row),
-        contributor: row.contributor,
-        extId: row.ext_id,
-      }) : '';
-      return `<details class="expandable-cell">
-            <summary>${count}${treeBtn}</summary>
-            <div class="expanded-content">${html}</div>
-          </details>`;
-    }
-    return '';
+    const treeBtn = (count > 0 && row.id) ? treeButton({
+      kind: 'ancestors',
+      n: row.name,
+      sn: row.surname,
+      dob: row.date_of_birth || childYearOf(row),
+      contributor: row.contributor,
+      extId: row.ext_id,
+    }) : '';
+    return wrapExpandable(count, treeBtn, html);
   }
 
   if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
@@ -547,19 +508,10 @@ export function formatSpecialCell(col, row, otherRow) {
       date_of_birth: row.wife_birth,
       contributor: row.contributor
     }, otherWifeParents);
-    const count = husband.count + wife.count;
-    if (count > 0) {
-      return `<details class="expandable-cell">
-            <summary>${count}</summary>
-            <div class="expanded-content">${husband.html}${wife.html}</div>
-          </details>`;
-    }
-    return '';
+    return wrapExpandable(husband.count + wife.count, '', husband.html + wife.html);
   }
 
   if (col === 'partners' && row.partners_list) {
-    let formattedList = [];
-    let count = 0;
     const treeBtn = row.id ? treeButton({
       kind: 'descendants',
       n: row.name,
@@ -569,10 +521,8 @@ export function formatSpecialCell(col, row, otherRow) {
       extId: row.ext_id,
     }) : '';
     const otherPartners = diffMode ? parseList(otherRow?.partners_list) : [];
-    try {
-      const pList = typeof row.partners_list === 'string' ? JSON.parse(row.partners_list) : row.partners_list;
-      pList.forEach(p => {
-        count++;
+    const pList = parseList(row.partners_list);
+    const formattedList = pList.map(p => {
         const isHusband = p.sex === 'm';
         const famParams = new URLSearchParams();
         famParams.set('t', 'family');
@@ -611,18 +561,9 @@ export function formatSpecialCell(col, row, otherRow) {
         const label = isHusband ? t('label_husband') : (p.sex === 'f' ? t('label_wife') : '');
         let entry = `<a href="${toUnicodeHref(famParams)}" data-spa-nav${label ? ` title="${label}"` : ''}>${innerHtml}</a>`;
         if (noMatch) entry = diffWrap(entry);
-        formattedList.push(entry);
-      });
-    } catch (e) {
-      console.error("Failed to parse JSON for partners", e);
-    }
-    if (count > 0) {
-      return `<details class="expandable-cell">
-            <summary>${count}${treeBtn}</summary>
-            <div class="expanded-content">${formattedList.join('<br>')}</div>
-          </details>`;
-    }
-    return '';
+        return entry;
+    });
+    return wrapExpandable(pList.length, treeBtn, formattedList.join('<br>'));
   }
 
   return null;
@@ -634,75 +575,72 @@ function buildArrowIndicator(col, state) {
   return '';
 }
 
+// Renders a single `<td>` for one (col, row) pair. Extracted from
+// renderRowsHtml so cell behavior can be reasoned about in isolation.
+function renderCellHtml(col, row) {
+  if (col === 'links') {
+    const icons = formatLinks(row.links);
+    return icons ? `<td class="link-cell">${icons}</td>` : '<td></td>';
+  }
+  if (col === 'matches') {
+    const count = row.matches_count || 0;
+    return `<td class="col-center">${count > 0 ? count : ''}</td>`;
+  }
+  if (col === 'confidence') {
+    return `<td class="col-center">${row[col] != null ? `${row[col]}%` : '—'}</td>`;
+  }
+  if (col === 'contributor_ID') {
+    const name = row[col] || '';
+    const display = baseContributorName(name);
+    const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index'));
+    const internalHref = row._match_href || row._contributor_href || '';
+    const externalUrl = row._url || '';
+    if (internalHref) return `<td class="col-center"><a href="${internalHref}" data-spa-nav>${display}</a>${indicator}</td>`;
+    if (externalUrl)  return `<td class="col-center"><a href="${externalUrl}" target="_blank" rel="noopener">${display}</a>${indicator}</td>`;
+    return `<td class="col-center">${display}${indicator}</td>`;
+  }
+  if (col === 'contributor') {
+    const name = row[col] || '';
+    if (!name) return `<td></td>`;
+    const display = baseContributorName(name);
+    const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index'));
+    return `<td><a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
+  }
+  if (CENTERED_COLUMNS.has(col)) {
+    let val = NUMERIC_COLUMNS.has(col) && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
+    if (col === 'total_links' && Number(row[col] || 0) === 0) val = '';
+    return `<td class="col-center">${val}</td>`;
+  }
+  if (RIGHT_COLUMNS.has(col)) {
+    const raw = escapeHtml(row[col]);
+    const extra = col === 'date_of_birth'
+      ? baptismIconHtml(row.date_of_baptism, row.place_of_baptism, t('icon_baptism'))
+      : '';
+    return `<td class="col-right">${raw}${extra}</td>`;
+  }
+  if (col === 'husband_name' || col === 'husband_surname') return renderPersonNameCell(col, row, 'husband', 'husband_alt_surname');
+  if (col === 'wife_name'    || col === 'wife_surname')    return renderPersonNameCell(col, row, 'wife',    'wife_alt_surname');
+  // 'name'/'surname' only when this isn't a family row (which uses husband_/wife_ columns).
+  if ((col === 'name' || col === 'surname') && row.husband_name === undefined) {
+    return renderPersonNameCell(col, row, '', 'alt_surname');
+  }
+  if (col === 'children' || col === 'parents' || col === 'partners') {
+    return `<td>${formatSpecialCell(col, row) || ''}</td>`;
+  }
+  const raw = escapeHtml(row[col]);
+  const extra = (col === 'place_of_birth' || col === 'place_of_marriage')
+    ? notesIconHtml(row.notes, t('icon_notes'))
+    : '';
+  return `<td>${raw}${extra}</td>`;
+}
+
 // Builds the per-row `<tr>` HTML. Used both for initial render and for the
 // in-place sort re-render (which replaces only `<tbody>` so the surrounding
 // `<thead>` listeners and toolbar buttons survive).
 function renderRowsHtml(data, columns) {
-  let html = '';
-  data.forEach(row => {
-    html += '<tr>';
-    columns.forEach(col => {
-      if (col === 'links') {
-        const icons = formatLinks(row.links);
-        html += icons ? `<td class="link-cell">${icons}</td>` : '<td></td>';
-      } else if (col === 'matches') {
-        const count = row.matches_count || 0;
-        html += `<td class="col-center">${count > 0 ? count : ''}</td>`;
-      } else if (col === 'confidence') {
-        const val = row[col] != null ? `${row[col]}%` : '—';
-        html += `<td class="col-center">${val}</td>`;
-      } else if (col === 'contributor_ID') {
-        const name = row[col] || '';
-        const display = baseContributorName(name);
-        const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index'));
-        const internalHref = row._match_href || row._contributor_href || '';
-        const externalUrl = row._url || '';
-        if (internalHref) {
-          html += `<td class="col-center"><a href="${internalHref}" data-spa-nav>${display}</a>${indicator}</td>`;
-        } else if (externalUrl) {
-          html += `<td class="col-center"><a href="${externalUrl}" target="_blank" rel="noopener">${display}</a>${indicator}</td>`;
-        } else {
-          html += `<td class="col-center">${display}${indicator}</td>`;
-        }
-      } else if (col === 'contributor') {
-        const name = row[col] || '';
-        if (name) {
-          const display = baseContributorName(name);
-          const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index'));
-          html += `<td><a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
-        } else {
-          html += `<td></td>`;
-        }
-      } else if (CENTERED_COLUMNS.has(col)) {
-        let val = NUMERIC_COLUMNS.has(col) && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');
-        if (col === 'total_links' && Number(row[col] || 0) === 0) val = '';
-        html += `<td class="col-center">${val}</td>`;
-      } else if (RIGHT_COLUMNS.has(col)) {
-        const raw = escapeHtml(row[col]);
-        const extra = col === 'date_of_birth'
-          ? baptismIconHtml(row.date_of_baptism, row.place_of_baptism, t('icon_baptism'))
-          : '';
-        html += `<td class="col-right">${raw}${extra}</td>`;
-      } else if (col === 'husband_name' || col === 'husband_surname') {
-        html += renderPersonNameCell(col, row, 'husband', 'husband_alt_surname');
-      } else if (col === 'wife_name' || col === 'wife_surname') {
-        html += renderPersonNameCell(col, row, 'wife', 'wife_alt_surname');
-      } else if ((col === 'name' || col === 'surname') && row.husband_name === undefined) {
-        html += renderPersonNameCell(col, row, '', 'alt_surname');
-      } else if (col === 'children' || col === 'parents' || col === 'partners') {
-        const inner = formatSpecialCell(col, row);
-        html += `<td>${inner || ''}</td>`;
-      } else {
-        const raw = escapeHtml(row[col]);
-        const extra = (col === 'place_of_birth' || col === 'place_of_marriage')
-          ? notesIconHtml(row.notes, t('icon_notes'))
-          : '';
-        html += `<td>${raw}${extra}</td>`;
-      }
-    });
-    html += '</tr>';
-  });
-  return html;
+  return data.map(row =>
+    '<tr>' + columns.map(col => renderCellHtml(col, row)).join('') + '</tr>'
+  ).join('');
 }
 
 export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
@@ -735,7 +673,9 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   const { primary, secondary } = container._sortState;
   if (primary) sortData(data, primary, secondary);
 
-  const isFamilyTable = containerId.includes('famil');
+  // Detect family vs. person table by the presence of husband-side columns;
+  // the matches-summary table is identified by its container id.
+  const isFamilyTable = columns.includes('husband_name') || columns.includes('husband_surname');
   const isMatchesSummary = containerId === 'matches-summary';
 
   let theadHtml = '<thead><tr>';
