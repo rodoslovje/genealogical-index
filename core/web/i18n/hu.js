@@ -140,6 +140,20 @@ export default {
     matches_persons: 'Személyek',
     matches_families: 'Családok',
 
+    // Authentication
+    account: 'Fiók',
+    login: 'Bejelentkezés',
+    logout: 'Kijelentkezés',
+    logout_confirm: 'Biztosan ki szeretne jelentkezni?',
+    login_title: 'Csak tagoknak',
+    login_desc: 'Jelentkezzen be a {society} webhely hitelesítő adataival.',
+    premium_gated_desc: 'Ez a funkció csak bejelentkezett tagok számára érhető el. Kérjük, jelentkezzen be a fanézetek és az egyezési funkciók eléréséhez.',
+    username: 'Felhasználónév vagy e-mail',
+    password: 'Jelszó',
+    login_submit: 'Bejelentkezés',
+    login_error: 'A bejelentkezés sikertelen. Kérjük, ellenőrizze felhasználónevét és jelszavát.',
+    login_loading: 'Bejelentkezés folyamatban...',
+
     // Footer
     footer_version: 'Verzió',
     footer_data_update: 'Adatok',

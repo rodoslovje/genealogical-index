@@ -1,6 +1,7 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import siteConfig from '@site-config';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
+import { initAuth, isLoggedIn, requireLogin } from './auth.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
 import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams, getParam } from './url.js';
@@ -190,8 +191,6 @@ if (window.ResizeObserver && navbarEl) {
 onLanguageChange(checkNavOverflow);
 
 hamburgerBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-
   if (document.getElementById('tab-ancestors').classList.contains('active') ||
       document.getElementById('tab-descendants').classList.contains('active')) {
     return;
@@ -244,8 +243,16 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 export function activateTab(targetTab) {
-  if (targetTab === 'tab-ancestors'   && siteConfig.gatedFeatures?.includes('ancestors'))   targetTab = 'tab-general';
-  if (targetTab === 'tab-descendants' && siteConfig.gatedFeatures?.includes('descendants')) targetTab = 'tab-general';
+  // Intercept click if trying to open a premium tab without being logged in
+  const isPremium = targetTab === 'tab-ancestors' || targetTab === 'tab-descendants';
+  if (isPremium && !isLoggedIn()) {
+    if (!isInitializing) {
+      requireLogin('premium_gated_desc');
+      return; // Do not switch tab
+    }
+    targetTab = 'tab-general'; // Fallback to general if accessing via direct URL
+  }
+
   const tabTypeMap = {
     'tab-general':      'general',
     'tab-person':       'person',
@@ -357,6 +364,8 @@ async function init() {
     // of the UI starts calling t(). Without this, a Slovenian user would see a
     // brief English flash before the locale chunk arrived.
     await initI18n();
+
+    initAuth();
 
     setupClearableInput(document.getElementById('contributors-query'), () => {
       sidebar.classList.remove('open');

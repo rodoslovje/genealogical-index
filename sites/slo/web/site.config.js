@@ -23,6 +23,7 @@ const siteConfig = {
   contactEmail: 'indeks@rodoslovje.si',
 
   apiHost: 'indeks-api.rodoslovje.si',
+  authUrl: 'https://rodoslovje.si/wp-json/jwt-auth/v1/token',
   filePrefix: 'sgi',
 
   // Runtime view of which features are HIDDEN in this build. In the base

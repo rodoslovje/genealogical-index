@@ -140,6 +140,20 @@ export default {
     matches_persons: 'Osobe',
     matches_families: 'Obitelji',
 
+    // Authentication
+    account: 'Račun',
+    login: 'Prijava',
+    logout: 'Odjava',
+    logout_confirm: 'Jeste li sigurni da se želite odjaviti?',
+    login_title: 'Samo za članove',
+    login_desc: 'Prijavite se pomoću svojih vjerodajnica s web stranice {society}.',
+    premium_gated_desc: 'Ova je značajka dostupna samo prijavljenim članovima. Prijavite se za pristup prikazima stabla i značajkama podudaranja.',
+    username: 'Korisničko ime ili e-pošta',
+    password: 'Lozinka',
+    login_submit: 'Prijavi se',
+    login_error: 'Prijava nije uspjela. Provjerite korisničko ime i lozinku.',
+    login_loading: 'Prijavljivanje...',
+
     // Footer
     footer_version: 'Verzija',
     footer_data_update: 'Podaci',

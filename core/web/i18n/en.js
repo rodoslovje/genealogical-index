@@ -140,6 +140,20 @@ export default {
     matches_persons: 'Persons',
     matches_families: 'Families',
 
+    // Authentication
+    account: 'Account',
+    login: 'Log in',
+    logout: 'Log out',
+    logout_confirm: 'Are you sure you want to log out?',
+    login_title: 'Members Only',
+    login_desc: 'Log in using your {society} website credentials.',
+    premium_gated_desc: 'This feature is available only to logged-in members. Please log in to access the tree views and matching features.',
+    username: 'Username or Email',
+    password: 'Password',
+    login_submit: 'Log in',
+    login_error: 'Login failed. Please check your username and password.',
+    login_loading: 'Logging in...',
+
     // Footer
     footer_version: 'Version',
     footer_data_update: 'Data',

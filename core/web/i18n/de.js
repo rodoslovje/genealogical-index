@@ -140,6 +140,20 @@ export default {
     matches_persons: 'Personen',
     matches_families: 'Familien',
 
+    // Authentication
+    account: 'Konto',
+    login: 'Anmelden',
+    logout: 'Abmelden',
+    logout_confirm: 'Möchten Sie sich wirklich abmelden?',
+    login_title: 'Nur für Mitglieder',
+    login_desc: 'Melden Sie sich mit Ihren Anmeldedaten der {society}-Website an.',
+    premium_gated_desc: 'Diese Funktion ist nur für angemeldete Mitglieder verfügbar. Bitte melden Sie sich an, um auf die Baumansichten und die Übereinstimmungsfunktionen zuzugreifen.',
+    username: 'Benutzername oder E-Mail',
+    password: 'Passwort',
+    login_submit: 'Anmelden',
+    login_error: 'Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihren Benutzernamen und Ihr Passwort.',
+    login_loading: 'Anmeldung läuft...',
+
     // Footer
     footer_version: 'Version',
     footer_data_update: 'Daten',

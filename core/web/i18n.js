@@ -155,11 +155,15 @@ export async function initI18n() {
   if (!toggle || !dropdown) return;
 
   toggle.addEventListener('click', (e) => {
-    e.stopPropagation();
+    e.preventDefault();
     dropdown.classList.toggle('open');
   });
 
-  document.addEventListener('click', () => dropdown.classList.remove('open'));
+  document.addEventListener('click', (e) => {
+    if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('open');
+    }
+  });
 
   dropdown.addEventListener('click', (e) => {
     const btn = e.target.closest('.lang-option');

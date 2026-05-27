@@ -868,3 +868,113 @@ body.compact-nav .mobile-nav-section { display: flex; }
   white-space: nowrap;
 }
 .row-icon:hover { opacity: 1; }
+
+/* =============================================================
+ * Authentication / Modals
+ * ============================================================= */
+.srd-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 34, 64, 0.4);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.srd-modal-overlay.open {
+  display: flex;
+}
+.srd-modal {
+  background: var(--srd-surface);
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+  border-radius: var(--srd-radius);
+  box-shadow: var(--srd-shadow-1);
+  position: relative;
+}
+.srd-modal-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: none; border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--srd-ink-subtle);
+}
+.srd-modal-close:hover {
+  color: var(--srd-ink);
+}
+.srd-modal h3 {
+  margin-top: 0;
+  font-family: var(--srd-font-serif);
+  color: var(--srd-brand);
+  font-size: 1.5rem;
+}
+.srd-modal p {
+  color: var(--srd-ink-muted);
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.login-error {
+  background: var(--srd-warn-bg);
+  color: #5a3e00;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  border-left: 3px solid var(--srd-warn);
+}
+#auth-toggle-btn {
+  position: relative;
+}
+#auth-toggle-btn.logged-in {
+  color: var(--srd-brand);
+}
+.logged-in-indicator {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  background-color: #28a745;
+  border-radius: 50%;
+  border: 2px solid var(--srd-surface);
+  display: none;
+}
+#auth-toggle-btn.logged-in .logged-in-indicator {
+  display: block;
+}
+#auth-dropdown {
+  min-width: 220px;
+}
+.auth-user-info {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--srd-line);
+}
+.auth-user-name {
+  font-weight: 600;
+  color: var(--srd-ink);
+}
+.auth-user-id {
+  font-size: 0.85rem;
+  color: var(--srd-ink-muted);
+  margin-top: 2px;
+}
+.auth-dropdown-action {
+  display: block;
+  padding: 10px 16px;
+  color: var(--srd-ink-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.auth-dropdown-action:hover {
+  background-color: var(--srd-brand-tint);
+  border-left-color: var(--srd-brand);
+  color: var(--srd-brand);
+  font-weight: 600;
+}

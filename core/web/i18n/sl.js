@@ -140,6 +140,20 @@ export default {
     matches_persons: 'Osebe',
     matches_families: 'Družine',
 
+    // Authentication
+    account: 'Račun',
+    login: 'Prijava',
+    logout: 'Odjava',
+    logout_confirm: 'Ali ste prepričani, da se želite odjaviti?',
+    login_title: 'Samo za člane',
+    login_desc: 'Prijavite se z uporabniškimi podatki spletne strani {society}.',
+    premium_gated_desc: 'Ta funkcionalnost je na voljo samo prijavljenim članom. Za dostop do dreves in funkcij ujemanja se prijavite.',
+    username: 'Uporabniško ime ali e-pošta',
+    password: 'Geslo',
+    login_submit: 'Prijava',
+    login_error: 'Prijava ni uspela. Preverite uporabniško ime in geslo.',
+    login_loading: 'Prijavljanje...',
+
     // Footer
     footer_version: 'Različica',
     footer_data_update: 'Podatki',
