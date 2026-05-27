@@ -147,7 +147,7 @@ export default {
     logout_confirm: 'Biztosan ki szeretne jelentkezni?',
     login_title: 'Csak tagoknak',
     login_desc: 'Jelentkezzen be a {society} webhely hitelesítő adataival.',
-    premium_gated_desc: 'Ez a funkció csak bejelentkezett tagok számára érhető el. Kérjük, jelentkezzen be a fanézetek és az egyezési funkciók eléréséhez.',
+    premium_gated_desc: 'Ez a funkció csak bejelentkezett tagok számára érhető el. A fanézetek és az egyezési funkciók eléréséhez jelentkezzen be a {society} webhely hitelesítő adataival.',
     username: 'Felhasználónév vagy e-mail',
     password: 'Jelszó',
     login_submit: 'Bejelentkezés',

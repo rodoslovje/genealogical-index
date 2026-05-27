@@ -127,7 +127,8 @@ export function initAuth() {
   if (dropdown) dropdown.addEventListener('click', (e) => e.stopPropagation());
 
   // 2. Inject the Login Modal into the DOM
-  const loginDescText = String(t('login_desc') || '').replace('{society}', String(t('society_name') || ''));
+  const societyNameStr = escapeHtml(String(t('society_name') || ''));
+  const loginDescText = String(t('login_desc') || '').replace('{society}', `<strong>${societyNameStr}</strong>`);
   const modalHtml = `
     <div id="login-modal" class="srd-modal-overlay">
       <div class="srd-modal">
@@ -196,7 +197,8 @@ export function requireLogin(messageKey = 'login_desc') {
   const modal = document.getElementById('login-modal');
   const desc = document.getElementById('login-desc');
   if (modal && desc) {
-    desc.textContent = String(t(messageKey) || '').replace('{society}', String(t('society_name') || ''));
+    const societyNameStr = escapeHtml(String(t('society_name') || ''));
+    desc.innerHTML = String(t(messageKey) || '').replace('{society}', `<strong>${societyNameStr}</strong>`);
     modal.classList.add('open');
   }
 }

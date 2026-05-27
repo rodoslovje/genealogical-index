@@ -6,7 +6,8 @@
 import { t } from './i18n.js';
 import siteConfig from '@site-config';
 import { renderTable } from './table.js';
-import { toUnicodeHref, currentParams } from './url.js';
+import { toUnicodeHref, toUnicodeSearch, currentParams } from './url.js';
+import { isLoggedIn, requireLogin } from './auth.js';
 
 import {
   ensureData, ensureTimelineData, ensureMatchCounts,
@@ -70,7 +71,16 @@ export async function renderContributors() {
   // Per-pair drill-in is a premium feature: ignore ?w= when 'matches' is
   // gated, so a shared per-pair URL still resolves to the contributor
   // summary page.
-  const withPartner = siteConfig.gatedFeatures?.includes('matches') ? null : readWithParam(urlParams);
+  let withPartner = siteConfig.gatedFeatures?.includes('matches') ? null : readWithParam(urlParams);
+
+  if (withPartner && !isLoggedIn()) {
+    requireLogin('premium_gated_desc');
+    withPartner = null;
+    urlParams.delete('w');
+    urlParams.delete('with');
+    const newSearch = toUnicodeSearch(urlParams);
+    history.replaceState(null, '', window.location.pathname + (newSearch ? '?' + newSearch : ''));
+  }
 
   const chartsContainer = document.getElementById('charts-container');
   const surnameCloudSection = document.getElementById('surname-cloud-section');

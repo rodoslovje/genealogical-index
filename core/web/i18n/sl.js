@@ -147,7 +147,7 @@ export default {
     logout_confirm: 'Ali ste prepričani, da se želite odjaviti?',
     login_title: 'Samo za člane',
     login_desc: 'Prijavite se z uporabniškimi podatki spletne strani {society}.',
-    premium_gated_desc: 'Ta funkcionalnost je na voljo samo prijavljenim članom. Za dostop do dreves in funkcij ujemanja se prijavite.',
+    premium_gated_desc: 'Ta funkcionalnost je na voljo samo prijavljenim članom. Za dostop do dreves in funkcij ujemanja se prijavite z uporabniškimi podatki spletne strani {society}.',
     username: 'Uporabniško ime ali e-pošta',
     password: 'Geslo',
     login_submit: 'Prijava',

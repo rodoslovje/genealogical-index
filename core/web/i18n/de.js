@@ -147,7 +147,7 @@ export default {
     logout_confirm: 'Möchten Sie sich wirklich abmelden?',
     login_title: 'Nur für Mitglieder',
     login_desc: 'Melden Sie sich mit Ihren Anmeldedaten der {society}-Website an.',
-    premium_gated_desc: 'Diese Funktion ist nur für angemeldete Mitglieder verfügbar. Bitte melden Sie sich an, um auf die Baumansichten und die Übereinstimmungsfunktionen zuzugreifen.',
+    premium_gated_desc: 'Diese Funktion ist nur für angemeldete Mitglieder verfügbar. Um auf die Baumansichten und die Übereinstimmungsfunktionen zuzugreifen, melden Sie sich mit Ihren Anmeldedaten der {society}-Website an.',
     username: 'Benutzername oder E-Mail',
     password: 'Passwort',
     login_submit: 'Anmelden',

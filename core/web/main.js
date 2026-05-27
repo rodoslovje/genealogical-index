@@ -242,13 +242,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-export function activateTab(targetTab) {
+export function activateTab(targetTab, { skipHistory = false } = {}) {
   // Intercept click if trying to open a premium tab without being logged in
   const isPremium = targetTab === 'tab-ancestors' || targetTab === 'tab-descendants';
   if (isPremium && !isLoggedIn()) {
     if (!isInitializing) {
       requireLogin('premium_gated_desc');
-      return; // Do not switch tab
+      return false; // Do not switch tab
     }
     targetTab = 'tab-general'; // Fallback to general if accessing via direct URL
   }
@@ -262,7 +262,7 @@ export function activateTab(targetTab) {
     'tab-descendants':  'descendants',
   };
   const urlT = tabTypeMap[targetTab];
-  if (urlT && !isInitializing) {
+  if (urlT && !isInitializing && !skipHistory) {
     const params = urlT === 'contributors' || urlT === 'ancestors' || urlT === 'descendants' ? { t: urlT } : getTabURLParams(urlT);
     const url = new URL(window.location);
     url.search = '';
@@ -351,6 +351,8 @@ export function activateTab(targetTab) {
   document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));
   const tabEl = document.getElementById(targetTab);
   if (tabEl) tabEl.classList.add('active');
+
+  return true;
 }
 
 // --- Init ---
@@ -439,9 +441,10 @@ function navigateToURL(urlSearch, { triggerSearch = true } = {}) {
   const urlT = urlParams.get('t') || 'general';
   const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors', ancestors: 'tab-ancestors', descendants: 'tab-descendants' };
   const targetTab = tabMap[urlT] || 'tab-general';
-  isInitializing = true;
-  activateTab(targetTab);
-  isInitializing = false;
+
+  if (!activateTab(targetTab, { skipHistory: true })) {
+    return;
+  }
   clearAllSearchForms();
   restoreFromURL({ triggerSearch });
 }
@@ -454,6 +457,14 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   const href = typeof link.href === 'string' ? link.href : link.getAttribute('href');
   const url = new URL(href, window.location.href);
+
+  const urlT = url.searchParams.get('t');
+  const hasWith = url.searchParams.has('w') || url.searchParams.has('with');
+  if ((urlT === 'ancestors' || urlT === 'descendants' || (urlT === 'contributors' && hasWith)) && !isLoggedIn()) {
+    requireLogin('premium_gated_desc');
+    return;
+  }
+
   const newUrlStr = url.pathname + (url.searchParams.toString() ? '?' + toUnicodeSearch(url.searchParams) : '');
   history.pushState(null, '', newUrlStr);
   navigateToURL(url.search);

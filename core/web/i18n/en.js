@@ -147,7 +147,7 @@ export default {
     logout_confirm: 'Are you sure you want to log out?',
     login_title: 'Members Only',
     login_desc: 'Log in using your {society} website credentials.',
-    premium_gated_desc: 'This feature is available only to logged-in members. Please log in to access the tree views and matching features.',
+    premium_gated_desc: 'This feature is available only to logged-in members. To access the tree views and matching features, log in using your {society} website credentials.',
     username: 'Username or Email',
     password: 'Password',
     login_submit: 'Log in',

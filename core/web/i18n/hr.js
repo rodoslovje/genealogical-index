@@ -147,7 +147,7 @@ export default {
     logout_confirm: 'Jeste li sigurni da se želite odjaviti?',
     login_title: 'Samo za članove',
     login_desc: 'Prijavite se pomoću svojih vjerodajnica s web stranice {society}.',
-    premium_gated_desc: 'Ova je značajka dostupna samo prijavljenim članovima. Prijavite se za pristup prikazima stabla i značajkama podudaranja.',
+    premium_gated_desc: 'Ova je značajka dostupna samo prijavljenim članovima. Za pristup prikazima stabla i značajkama podudaranja prijavite se pomoću svojih vjerodajnica s web stranice {society}.',
     username: 'Korisničko ime ili e-pošta',
     password: 'Lozinka',
     login_submit: 'Prijavi se',

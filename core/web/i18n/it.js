@@ -147,7 +147,7 @@ export default {
     logout_confirm: 'Sei sicuro di voler uscire?',
     login_title: 'Solo per i membri',
     login_desc: 'Accedi utilizzando le credenziali del tuo sito web {society}.',
-    premium_gated_desc: 'Questa funzione è disponibile solo per i membri che hanno effettuato l\'accesso. Accedi per accedere alle visualizzazioni ad albero e alle funzioni di corrispondenza.',
+    premium_gated_desc: 'Questa funzione è disponibile solo per i membri che hanno effettuato l\'accesso. Per accedere alle visualizzazioni ad albero e alle funzioni di corrispondenza, accedi utilizzando le credenziali del tuo sito web {society}.',
     username: 'Nome utente o e-mail',
     password: 'Password',
     login_submit: 'Accedi',
