@@ -12,7 +12,7 @@ const siteConfig = {
   contactEmail: 'indeks@rodoslovje.si',
 
   apiHost: 'tgi-api.renko.fyi',
-  authUrl: null,
+  authUrl: 'https://rodoslovje.si/wp-json/jwt-auth/v1/token',
   filePrefix: 'tgi',
 
   // Languages shown in the dropdown, ordered alphabetically by language name

@@ -9,6 +9,7 @@ import {
 } from '../utils.js';
 import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref } from '../url.js';
+import { authFetch } from '../auth.js';
 import siteConfig from '@site-config';
 
 import { ensureData, getCachedData, getContributorUrlMap } from './data.js';
@@ -316,7 +317,7 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
   try {
     let records;
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}`
       );
       if (!res.ok) throw new Error('API failed');

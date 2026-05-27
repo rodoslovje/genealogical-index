@@ -1,12 +1,21 @@
+import os
 from typing import List, Optional
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
+import jwt
 from sqlalchemy import text
 
 from . import crud, models, schemas
 from .database import SessionLocal, engine
+
+# Optional JWT auth. When JWT_SECRET is unset (test/cro deployments) the
+# `require_user` dependency is a no-op so the API stays open. On the Slovenia
+# deployment we set JWT_SECRET to the WordPress `JWT_AUTH_SECRET_KEY` so tokens
+# issued by the JWT Authentication for WP REST API plugin can be verified here.
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_ALGORITHM = "HS256"
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -41,6 +50,23 @@ def get_db():
         db.close()
 
 
+def require_user(authorization: Optional[str] = Header(None)):
+    if not JWT_SECRET:
+        return None
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        return jwt.decode(
+            token,
+            JWT_SECRET,
+            algorithms=[JWT_ALGORITHM],
+            options={"verify_aud": False},
+        )
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
 @app.post("/api/cache/clear")
 def clear_cache():
     """
@@ -66,7 +92,12 @@ def get_contributor_matches(name: str, db: Session = Depends(get_db)):
 
 
 @app.get("/api/contributors/{name}/matches/{other}")
-def get_contributor_match_detail(name: str, other: str, db: Session = Depends(get_db)):
+def get_contributor_match_detail(
+    name: str,
+    other: str,
+    db: Session = Depends(get_db),
+    user: Optional[dict] = Depends(require_user),
+):
     return crud.get_contributor_match_detail(db, name, other)
 
 
@@ -160,14 +191,20 @@ def search_advanced_persons(
 
 @app.get("/api/persons/{person_id}/ancestors")
 def get_person_ancestors(
-    person_id: int, max_generations: int = 5, db: Session = Depends(get_db)
+    person_id: int,
+    max_generations: int = 5,
+    db: Session = Depends(get_db),
+    user: Optional[dict] = Depends(require_user),
 ):
     return crud.get_ancestors_tree(db, person_id, max_generations)
 
 
 @app.get("/api/persons/{person_id}/descendants")
 def get_person_descendants(
-    person_id: int, max_generations: int = 5, db: Session = Depends(get_db)
+    person_id: int,
+    max_generations: int = 5,
+    db: Session = Depends(get_db),
+    user: Optional[dict] = Depends(require_user),
 ):
     return crud.get_descendants_tree(db, person_id, max_generations)
 
@@ -181,6 +218,7 @@ def get_descendants_by_params(
     id: Optional[str] = None,
     max_generations: int = 5,
     db: Session = Depends(get_db),
+    user: Optional[dict] = Depends(require_user),
 ):
     if not c:
         return None
@@ -252,6 +290,7 @@ def get_ancestors_by_params(
     id: Optional[str] = None,
     max_generations: int = 5,
     db: Session = Depends(get_db),
+    user: Optional[dict] = Depends(require_user),
 ):
     if not c:
         return None

@@ -35,6 +35,27 @@ export function getLoggedInUser() {
   return { id, name, nicename };
 }
 
+/** Wrap `fetch` so the request carries the JWT (when present) and a 401
+ *  response automatically prompts the user to log in. Use for any API call
+ *  whose endpoint is auth-gated on the server. */
+export async function authFetch(input, init = {}) {
+  const token = getToken();
+  const headers = new Headers(init.headers || {});
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const res = await fetch(input, { ...init, headers });
+  if (res.status === 401) {
+    // Token missing/expired/invalid — clear it and surface the login modal.
+    if (token) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('sgi_user_name');
+      localStorage.removeItem('sgi_user_nicename');
+      updateUserIconState();
+    }
+    requireLogin('login_desc');
+  }
+  return res;
+}
+
 export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem('sgi_user_name');
