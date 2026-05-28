@@ -95,14 +95,23 @@ export async function renderContributors() {
   let tableHeader = document.getElementById('table-contributors-header');
   const statsHeading = document.getElementById('contributors-stats-heading');
 
+  const tableContainer = document.getElementById('table-contributors');
+
   if (contributor) {
     if (statsHeading) statsHeading.style.display = 'none';
     if (chartsContainer) chartsContainer.style.display = 'none';
     if (surnameCloudSection) surnameCloudSection.style.display = 'none';
     if (tableHeader) tableHeader.style.display = 'none';
+    // Detail view fills the container with multiple sections (heading, stats,
+    // clouds, matches table). Drop the .table-responsive card chrome so the
+    // page styling matches the main contributors list, where only the inner
+    // tables wear that chrome.
+    if (tableContainer) tableContainer.classList.add('contributor-detail');
     await renderMatchesPage(contributor, withPartner);
     return;
   }
+
+  if (tableContainer) tableContainer.classList.remove('contributor-detail');
 
   document.title = t('site_title');
 

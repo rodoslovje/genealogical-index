@@ -140,6 +140,19 @@ h2 .export-btn {
   box-shadow: var(--srd-shadow-1);
   border-radius: var(--srd-radius);
 }
+
+/* On the per-contributor detail page, #table-contributors holds many sections
+   (heading, stats grid, surname clouds, matches summary) rather than a single
+   table. Strip the card-style chrome that .table-responsive adds, so the page
+   layout matches the main contributors list — only the nested table-responsive
+   inside the matches summary keeps its card look. */
+#table-contributors.contributor-detail {
+  overflow: visible;
+  margin-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
 table {
   width: 100%;
   border-collapse: collapse;
