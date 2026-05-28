@@ -50,13 +50,14 @@ export function initHelp() {
       </div>
     </div>
     <style>
-      .help-content { padding-top: 10px; line-height: 1.6; }
-      .help-content h2 { margin-top: 0; font-size: 1.5rem; }
-      .help-content h3 { margin-top: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px; font-size: 1.2rem; }
-      .help-content h4 { margin-top: 1rem; margin-bottom: 0.5rem; font-size: 1.05rem; }
-      .help-content p, .help-content ul { margin-bottom: 1rem; }
-      .help-content li { margin-bottom: 0.5rem; }
-      .help-content strong { font-weight: 600; }
+      .help-content { padding-top: 5px; }
+      .help-content p, .help-content ul, .help-content li { font-size: 1rem; line-height: 1.7; color: var(--srd-ink-muted); }
+      .help-content p, .help-content ul { margin-bottom: 1.2rem; }
+      .help-content li { margin-bottom: 0.4rem; }
+      .help-content h2 { margin-top: 0; margin-bottom: 1.2rem; font-size: 1.6rem; font-family: var(--srd-font-serif); font-weight: 500; color: var(--srd-brand); }
+      .help-content h3 { margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 6px; font-size: 1.3rem; font-family: var(--srd-font-serif); font-weight: 500; color: var(--srd-ink); border-bottom: 1px solid var(--srd-line); }
+      .help-content h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.05rem; font-weight: 600; color: var(--srd-ink); }
+      .help-content strong { color: var(--srd-ink); font-weight: 600; }
     </style>
   `;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
