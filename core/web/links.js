@@ -9,12 +9,22 @@ function parseLinksList(links) {
   } catch(e) { return [links]; }
 }
 
+// Matricula URLs only differ by their UI-language segment (the first path
+// component: /de/, /en/, /sl/, …) when the underlying record is the same —
+// strip it for cross-contributor diffing.
+const MATRICULA_LANG_RE = /^(https?:\/\/[^/]+)\/[a-z]{2}\//;
+function diffKey(url) {
+  return url.includes('matricula-online.eu')
+    ? url.replace(MATRICULA_LANG_RE, '$1/')
+    : url;
+}
+
 export function formatLinks(links, diffAgainst) {
   const linksList = parseLinksList(links);
   if (!linksList.length) return '';
 
   const otherSet = diffAgainst !== undefined
-    ? new Set(parseLinksList(diffAgainst))
+    ? new Set(parseLinksList(diffAgainst).map(diffKey))
     : null;
 
   return linksList.map(url => {
@@ -44,10 +54,10 @@ export function formatLinks(links, diffAgainst) {
     } catch (e) {}
 
     const href = url.includes('matricula-online.eu')
-      ? url.replace(/\/(en|sl)\//, `/${getCurrentLang()}/`)
+      ? url.replace(MATRICULA_LANG_RE, `$1/${getCurrentLang()}/`)
       : url;
     const anchor = `<a href="${href}" target="_blank" rel="noopener" title="${titleText}">${icon}</a>`;
-    if (otherSet && !otherSet.has(url)) {
+    if (otherSet && !otherSet.has(diffKey(url))) {
       return `<span class="match-diff">${anchor}</span>`;
     }
     return anchor;
