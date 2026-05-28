@@ -201,14 +201,19 @@ export async function renderMatchesPage(contributor, withPartner) {
     const q = getContributorFilter();
     const filteredPartners = q ? partners.filter(p => p.contributor.toLowerCase().includes(q)) : partners;
 
-    const tableData = filteredPartners.map(p => ({
-      contributor_ID: p.contributor,
-      _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor }),
-      total_persons:  p.persons_count  || 0,
-      total_families: p.families_count || 0,
-      total:          p.total_count,
-      confidence:     Math.round((p.max_confidence || 0) * 100),
-    }));
+    const tableData = filteredPartners.map(p => {
+      const partnerData = cached.find(d => d.contributor_ID === p.contributor);
+      const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
+      return {
+        contributor_ID: p.contributor,
+        _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor }),
+        total_persons:  p.persons_count  || 0,
+        total_families: p.families_count || 0,
+        total:          p.total_count,
+        confidence:     Math.round((p.max_confidence || 0) * 100),
+        _is_matricula_only: isMatOnly,
+      };
+    });
 
     container.innerHTML = heading +
       `<div class="matches-summary-section">
@@ -528,16 +533,16 @@ async function renderMatchDetail(contributor, partner, contribData, container) {
         else if (state.secondary?.column === 'confidence') confIndicator = state.secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
 
         const groupRows = group.map((r, idx) => {
-          r.record_a.contributor = contributor;
-          r.record_b.contributor = partner;
           const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
           const aCells = fields.map(({ f }) => makeCell(r.record_a, r.record_b, f)).join('');
           const bCells = fields.map(({ f }) => makeCell(r.record_b, r.record_a, f)).join('');
           const conf = Math.round((r.confidence || 0) * 100);
-          const contribBaseL = baseContributorName(contributor);
-          const partnerBaseL = baseContributorName(partner);
-          const contribIndicator = matriculaIndicatorHtml(contributor, t('icon_matricula_index'));
-          const partnerIndicator = matriculaIndicatorHtml(partner, t('icon_matricula_index'));
+          const aContrib = r.record_a.contributor || contributor;
+          const bContrib = r.record_b.contributor || partner;
+          const contribBaseL = baseContributorName(aContrib);
+          const partnerBaseL = baseContributorName(bContrib);
+          const contribIndicator = matriculaIndicatorHtml(aContrib, t('icon_matricula_index'));
+          const partnerIndicator = matriculaIndicatorHtml(bContrib, t('icon_matricula_index'));
           const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', c: contribBaseL })}" data-spa-nav>${contribBaseL}</a>${contribIndicator}`;
           const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', c: partnerBaseL })}" data-spa-nav>${partnerBaseL}</a>${partnerIndicator}`;
           return `<tr class="match-pair-row ${pairCls}" data-row-key="${keyFor(r.record_a)}">

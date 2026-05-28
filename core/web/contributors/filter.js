@@ -109,14 +109,20 @@ export function bindFilterInput() {
     if (activeContributor && !withPartner && currentMatchesData && currentMatchesContributor === activeBase) {
       // Single-contributor view: re-filter the partner list table.
       const filtered = q ? currentMatchesData.filter(p => p.contributor.toLowerCase().includes(q)) : currentMatchesData;
-      const tableData = filtered.map(p => ({
-        contributor_ID: p.contributor,
-        _match_href: toUnicodeHref({ t: 'contributors', c: activeBase, w: p.contributor }),
-        total_persons:  p.persons_count  || 0,
-        total_families: p.families_count || 0,
-        total:          p.total_count,
-        confidence:     Math.round((p.max_confidence || 0) * 100),
-      }));
+      const cached = getCachedData();
+      const tableData = filtered.map(p => {
+        const partnerData = cached ? cached.find(d => d.contributor_ID === p.contributor) : null;
+        const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
+        return {
+          contributor_ID: p.contributor,
+          _match_href: toUnicodeHref({ t: 'contributors', c: activeBase, w: p.contributor }),
+          total_persons:  p.persons_count  || 0,
+          total_families: p.families_count || 0,
+          total:          p.total_count,
+          confidence:     Math.round((p.max_confidence || 0) * 100),
+          _is_matricula_only: isMatOnly,
+        };
+      });
       renderTable(tableData, 'matches-summary', ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'], 'total', false);
     } else if (activeContributor && withPartner && currentDetailRefilter) {
       // Matches detail view: delegate to renderTables closure from matches.js.
