@@ -223,7 +223,7 @@ export default {
       <ul>
         <li><strong>Ordinamento:</strong> Cliccando sull'intestazione di una colonna, si ordinano i risultati in ordine alfabetico o cronologico. Un nuovo clic sulla stessa colonna inverte la direzione di ordinamento (<strong>▲</strong> ↔ <strong>▼</strong>). Se poi si clicca su un'altra colonna, questa diventa il criterio primario e la precedente diventa secondario (contrassegnato da <strong>△</strong> o <strong>▽</strong>).</li>
         <li><strong>Campi espandibili:</strong> Colonne come <em>Genitori</em>, <em>Partner</em> e <em>Figli</em> visualizzano il numero di persone. Cliccando sul numero si espande l'elenco. Per espanderli tutti in una volta, è possibile utilizzare il pulsante <strong>⤢ Espandi</strong> sopra la tabella e per nasconderli il pulsante <strong>⤡ Comprimi</strong>.</li>
-        <li><strong>Dettagli di persone e famiglie:</strong> Cliccando su un nome colorato in blu nella tabella, si esegue una nuova ricerca e si visualizzano tutti i record solo per la persona o famiglia selezionata. Cliccando su un partner, si cerca la sua famiglia. Allo stesso modo, quando si visualizzano i genitori, cliccando sull'etichetta (<em>Genitori</em>, <em>Marito</em> o <em>Moglie</em>) si visualizza la loro famiglia, mentre cliccando sul nome di un singolo genitore si cerca solo lui.</li>
+        <li><strong>Dettagli di persone e famiglie:</strong> Cliccando su un nome colorato in blu nella tabella, si esegue una nuova ricerca e si visualizzano tutti i record solo per la persona o famiglia selezionata. Cliccando su un partner, si cerca la sua famiglia. Allo stesso modo, quando si visualizzano i genitori, cliccando sull'etichetta (<em>Genitori</em>, <em>Marito</em> o <em>Moglie</em>) si visualizza la loro famiglia, mentre cliccando sul nome di un singolo genitore si cerca solo quella persona.</li>
         <li><strong>Record privati:</strong> Per alcune persone viene visualizzata l'etichetta <em>&lt;private&gt;</em> al posto del nome o del cognome. Tali record non hanno collegamenti per ulteriori ricerche.</li>
         <li><strong>Albero:</strong> Accanto ad alcune persone (genitori, figli, partner), noterete l'icona di un albero (<strong>🌳</strong> per gli antenati, <strong>🌿</strong> per i discendenti). Cliccando sull'icona, si visualizza un albero genealogico grafico e interattivo della persona selezionata.{auth_tree}</li>
         <li><strong>Esportazione dei dati:</strong> Cliccando sul pulsante <strong>CSV</strong> sopra la tabella, si scaricano i risultati correnti sul computer in formato tabellare.</li>
@@ -239,7 +239,7 @@ export default {
         <li><strong>📋</strong> – censimenti (SIstory)</li>
         <li><strong>📰</strong> – Biblioteca digitale della Slovenia (dLib)</li>
       </ul>
-      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome, il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
+      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome (ad esempio il cognome acquisito con il matrimonio), il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
       <h4>Albero degli antenati e dei discendenti</h4>
       <p>La pagina dell'albero visualizza un albero genealogico grafico e interattivo della persona selezionata. Sono disponibili le seguenti funzioni:</p>
       <ul>
@@ -251,10 +251,10 @@ export default {
       <p>La scheda <strong>Genealogisti</strong> mostra le statistiche generali dell'indice e un elenco di tutti i ricercatori che hanno contribuito con i loro dati.</p>
       <ul>
         <li><strong>Statistiche:</strong> In alto sono presenti grafici con i contributi per genealogista e la cronologia dei record.</li>
-        <li><strong>Cognomi più frequenti:</strong> Una nuvola di parole mostra i cognomi più frequenti. Cliccando sul pulsante <strong>CSV</strong> o <strong>SVG</strong>, è possibile esportare questi dati.</li>
+        <li><strong>Cognomi più frequenti:</strong> Una nuvola di parole mostra i cognomi più frequenti. Cliccando sul pulsante <strong>CSV</strong> o <strong>SVG</strong>, è possibile scaricare questi dati sul proprio computer.</li>
         <li><strong>Elenco dei genealogisti:</strong> La tabella visualizza tutti i collaboratori e il numero di persone, famiglie, collegamenti e possibili corrispondenze con altri genealogisti. Cliccando sul pulsante <strong>CSV</strong> si esporta la tabella e cliccando sul nome del genealogista si apre la sua pagina dettagliata.</li>
-        <li><strong>Filtrare l'elenco:</strong> Nel campo di ricerca nella barra laterale (<strong>☰</strong>) è possibile restringere rapidamente l'elenco in base al cognome del genealogista.</li>
-        <li><strong>Indicatore Matricula ⛪:</strong> L'icona accanto al nome del genealogista indica che i dati provengono dall'indice Matricula Online e non dall'albero genealogico personale del genealogista.</li>
+        <li><strong>Filtrare l'elenco:</strong> Nel campo di ricerca nella barra laterale (<strong>☰</strong>) è possibile restringere rapidamente l'elenco in base al cognome del genealogista. La nuvola dei cognomi più frequenti mostrerà allora soltanto i cognomi dagli alberi dei genealogisti trovati.</li>
+        <li><strong>Indicatore Matricula ⛪:</strong> L'icona accanto al nome del genealogista indica che i dati provengono dall'indice Matricula Online, a cui questo genealogista ha contribuito, e non dal suo albero genealogico personale.</li>
       </ul>
       <h4>Dettagli del genealogista</h4>
       <p>La pagina del singolo genealogista raccoglie informazioni sul suo contributo:</p>

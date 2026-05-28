@@ -223,7 +223,7 @@ export default {
       <ul>
         <li><strong>Rendezés:</strong> Egy oszlopfejlécre kattintva betűrendben vagy időrendben rendezheti az eredményeket. Ugyanazon oszlopra való ismételt kattintás megfordítja a rendezés irányát (<strong>▲</strong> ↔ <strong>▼</strong>). Ha ezután egy másik oszlopra kattint, az lesz az elsődleges szempont, a korábbi pedig a másodlagos (<strong>△</strong> vagy <strong>▽</strong> jellel jelölve).</li>
         <li><strong>Kibontható mezők:</strong> Olyan oszlopok, mint a <em>Szülők</em>, <em>Partnerek</em> és <em>Gyermekek</em>, a személyek számát mutatják. A számra kattintva kibonthatja a listát. Az összes egyszerre történő kibontásához használhatja a táblázat feletti <strong>⤢ Kibontás</strong> gombot, az elrejtéshez pedig az <strong>⤡ Összecsukás</strong> gombot.</li>
-        <li><strong>Személy és család részletei:</strong> Ha a táblázatban egy kék színű névre kattint, új keresést hajt végre, és megjeleníti az adott személyhez vagy családhoz tartozó összes rekordot. Partnerre kattintva megkeresi az ő családját. Hasonlóképpen, a szülők megtekintésekor a címkére (<em>Szülők</em>, <em>Férj</em> vagy <em>Feleség</em>) kattintva megjelenik az ő családjuk, míg egy adott szülő nevére kattintva csak rá keres.</li>
+        <li><strong>Személy és család részletei:</strong> Ha a táblázatban egy kék színű névre kattint, új keresést hajt végre, és megjeleníti az adott személyhez vagy családhoz tartozó összes rekordot. Partnerre kattintva megkeresi az ő családját. Hasonlóképpen, a szülők megtekintésekor a címkére (<em>Szülők</em>, <em>Férj</em> vagy <em>Feleség</em>) kattintva megjelenik az ő családjuk, míg egy adott szülő nevére kattintva csak arra a személyre keres.</li>
         <li><strong>Privát rekordok:</strong> Egyes személyeknél a név vagy vezetéknév helyett a <em>&lt;private&gt;</em> címke jelenik meg. Ezek a rekordok nem tartalmaznak linket a további kereséshez.</li>
         <li><strong>Családfa:</strong> Bizonyos személyek (szülők, gyerekek, partnerek) mellett egy fa ikont fog látni (<strong>🌳</strong> ősök, <strong>🌿</strong> leszármazottak). Az ikonra kattintva megjeleníti a kiválasztott személy interaktív grafikus családfáját.{auth_tree}</li>
         <li><strong>Adat exportálása:</strong> A táblázat feletti <strong>CSV</strong> gombra kattintva letöltheti az aktuális eredményeket a számítógépére táblázatos formátumban.</li>
@@ -239,7 +239,7 @@ export default {
         <li><strong>📋</strong> – népszámlálások (SIstory)</li>
         <li><strong>📰</strong> – Szlovénia Digitális Könyvtára (dLib)</li>
       </ul>
-      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja, a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
+      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
       <h4>Ősök és leszármazottak családfája</h4>
       <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
       <ul>
@@ -251,10 +251,10 @@ export default {
       <p>A <strong>Genealógusok</strong> fül megmutatja az index általános statisztikáit és az adataikat beküldő kutatók listáját.</p>
       <ul>
         <li><strong>Statisztika:</strong> Felül diagramok találhatók a genealógusonkénti hozzájárulásokkal és a rekordok időrendjével.</li>
-        <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő mutatja a leggyakoribb vezetékneveket. A <strong>CSV</strong> vagy <strong>SVG</strong> gombra kattintva exportálhatja ezeket az adatokat.</li>
+        <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő mutatja a leggyakoribb vezetékneveket. A <strong>CSV</strong> vagy <strong>SVG</strong> gombra kattintva letöltheti ezeket az adatokat a számítógépére.</li>
         <li><strong>Genealógusok listája:</strong> A táblázat megjeleníti az összes közreműködőt és a személyeik, családjaik, hivatkozásaik és más genealógusokkal való lehetséges egyezéseik számát. A <strong>CSV</strong> gombra kattintva exportálhatja a táblázatot, egy genealógus nevére kattintva pedig megnyitja a részletes oldalát.</li>
-        <li><strong>A lista szűrése:</strong> Az oldalsávban található keresőmezőben (<strong>☰</strong>) gyorsan szűkítheti a listát a genealógus vezetékneve alapján.</li>
-        <li><strong>Matricula indikátor ⛪:</strong> A genealógus neve melletti ikon azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig a genealógus személyes családfájából.</li>
+        <li><strong>A lista szűrése:</strong> Az oldalsávban található keresőmezőben (<strong>☰</strong>) gyorsan szűkítheti a listát a genealógus vezetékneve alapján. A leggyakoribb vezetéknevek szófelhője ezután csak a megtalált genealógusok családfáiból származó vezetékneveket jeleníti meg.</li>
+        <li><strong>Matricula indikátor ⛪:</strong> A genealógus neve melletti ikon azt jelenti, hogy az adatok a Matricula Online indexből származnak, amelyhez ez a genealógus járult hozzá, és nem a személyes családfájából.</li>
       </ul>
       <h4>Genealógus részletei</h4>
       <p>Az egyes genealógusok oldala összegyűjti a hozzájárulásukkal kapcsolatos információkat:</p>

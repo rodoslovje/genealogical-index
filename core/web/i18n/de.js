@@ -223,7 +223,7 @@ export default {
       <ul>
         <li><strong>Sortierung:</strong> Durch Klicken auf eine Spaltenüberschrift sortieren Sie die Ergebnisse alphabetisch oder chronologisch. Erneutes Klicken auf dieselbe Spalte kehrt die Sortierrichtung um (<strong>▲</strong> ↔ <strong>▼</strong>). Wenn Sie dann auf eine andere Spalte klicken, wird diese zum primären Kriterium und die vorherige zum sekundären (gekennzeichnet durch <strong>△</strong> oder <strong>▽</strong>).</li>
         <li><strong>Erweiterbare Felder:</strong> Spalten wie <em>Eltern</em>, <em>Partner</em> und <em>Kinder</em> zeigen die Anzahl der Personen an. Durch Klicken auf die Zahl erweitern Sie die Liste. Um alle auf einmal anzuzeigen, können Sie die Schaltfläche <strong>⤢ Ausklappen</strong> über der Tabelle verwenden, zum Ausblenden die Schaltfläche <strong>⤡ Einklappen</strong>.</li>
-        <li><strong>Personen- und Familiendetails:</strong> Durch Klicken auf einen blau markierten Namen in der Tabelle führen Sie eine neue Suche aus und zeigen alle Datensätze nur für diese ausgewählte Person oder Familie an. Durch Klicken auf einen Partner suchen Sie nach dessen Familie. Ähnlich verhält es sich bei der Anzeige der Eltern: Ein Klick auf die Bezeichnung (<em>Eltern</em>, <em>Mann</em> oder <em>Frau</em>) zeigt deren Familie an, während ein Klick auf den Namen eines einzelnen Elternteils nur nach diesem sucht.</li>
+        <li><strong>Personen- und Familiendetails:</strong> Durch Klicken auf einen blau markierten Namen in der Tabelle führen Sie eine neue Suche aus und zeigen alle Datensätze nur für diese ausgewählte Person oder Familie an. Durch Klicken auf einen Partner suchen Sie nach dessen Familie. Ähnlich verhält es sich bei der Anzeige der Eltern: Ein Klick auf die Bezeichnung (<em>Eltern</em>, <em>Mann</em> oder <em>Frau</em>) zeigt deren Familie an, während ein Klick auf den Namen eines einzelnen Elternteils nur nach dieser Person sucht.</li>
         <li><strong>Private Datensätze:</strong> Bei einigen Personen wird anstelle von Vor- oder Nachname die Bezeichnung <em>&lt;private&gt;</em> angezeigt. Solche Datensätze haben keinen Link für die weitere Suche.</li>
         <li><strong>Stammbaum:</strong> Neben bestimmten Personen (Eltern, Kinder, Partner) sehen Sie ein Baumsymbol (<strong>🌳</strong> für Vorfahren, <strong>🌿</strong> für Nachkommen). Durch Klicken auf das Symbol zeigen Sie einen interaktiven grafischen Stammbaum der ausgewählten Person an.{auth_tree}</li>
         <li><strong>Datenexport:</strong> Durch Klicken auf die Schaltfläche <strong>CSV</strong> über der Tabelle laden Sie die aktuellen Ergebnisse im Tabellenformat auf Ihren Computer herunter.</li>
@@ -239,7 +239,7 @@ export default {
         <li><strong>📋</strong> – Volkszählungen (SIstory)</li>
         <li><strong>📰</strong> – Digitale Bibliothek Sloweniens (dLib)</li>
       </ul>
-      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: Das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an, das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
+      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: Das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
       <h4>Vorfahren- und Nachkommenbaum</h4>
       <p>Die Stammbaum-Seite zeigt einen grafischen, interaktiven Stammbaum der ausgewählten Person an. Folgende Funktionen stehen zur Verfügung:</p>
       <ul>
@@ -251,10 +251,10 @@ export default {
       <p>Der Reiter <strong>Genealogen</strong> zeigt die Gesamtstatistik des Index und eine Liste aller Forscher, die ihre Daten beigesteuert haben.</p>
       <ul>
         <li><strong>Statistik:</strong> Oben befinden sich Diagramme mit den Beiträgen pro Genealoge und dem zeitlichen Verlauf der Einträge.</li>
-        <li><strong>Häufigste Nachnamen:</strong> Eine Wortwolke zeigt die häufigsten Nachnamen an. Durch Klicken auf die Schaltfläche <strong>CSV</strong> oder <strong>SVG</strong> können Sie diese Daten exportieren.</li>
+        <li><strong>Häufigste Nachnamen:</strong> Eine Wortwolke zeigt die häufigsten Nachnamen an. Durch Klicken auf die Schaltfläche <strong>CSV</strong> oder <strong>SVG</strong> können Sie diese Daten auf Ihren Computer herunterladen.</li>
         <li><strong>Liste der Genealogen:</strong> Die Tabelle zeigt alle Beitragenden und die Anzahl ihrer Personen, Familien, Links und möglicher Übereinstimmungen mit anderen Genealogen an. Durch Klicken auf die Schaltfläche <strong>CSV</strong> exportieren Sie die Tabelle, und durch Klicken auf den Namen eines Genealogen öffnen Sie seine Detailseite.</li>
-        <li><strong>Liste filtern:</strong> Im Suchfeld in der Seitenleiste (<strong>☰</strong>) können Sie die Liste schnell nach dem Nachnamen des Genealogen eingrenzen.</li>
-        <li><strong>Matricula-Indikator ⛪:</strong> Das Symbol neben dem Namen des Genealogen bedeutet, dass die Daten aus dem Matricula Online-Index stammen und nicht aus dem persönlichen Stammbaum des Genealogen.</li>
+        <li><strong>Liste filtern:</strong> Im Suchfeld in der Seitenleiste (<strong>☰</strong>) können Sie die Liste schnell nach dem Nachnamen des Genealogen eingrenzen. Die Wortwolke der häufigsten Nachnamen zeigt dann nur Nachnamen aus den Stammbäumen der gefundenen Genealogen an.</li>
+        <li><strong>Matricula-Indikator ⛪:</strong> Das Symbol neben dem Namen des Genealogen bedeutet, dass die Daten aus dem Matricula Online-Index stammen, den dieser Genealoge beigesteuert hat, und nicht aus seinem persönlichen Stammbaum.</li>
       </ul>
       <h4>Details zum Genealogen</h4>
       <p>Die Seite des einzelnen Genealogen enthält Informationen über seinen Beitrag:</p>

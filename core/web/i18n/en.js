@@ -223,7 +223,7 @@ export default {
       <ul>
         <li><strong>Sorting:</strong> By clicking on a column header, you sort the results alphabetically or chronologically. Clicking the same column again reverses the sorting direction (<strong>▲</strong> ↔ <strong>▼</strong>). If you then click another column, it becomes the primary criterion, while the previous one becomes secondary (marked with <strong>△</strong> or <strong>▽</strong>).</li>
         <li><strong>Expandable Fields:</strong> Columns such as <em>Parents</em>, <em>Partners</em>, and <em>Children</em> display the number of persons. By clicking the number, you expand the list. To expand all at once, you can use the <strong>⤢ Expand</strong> button above the table, and for hiding the <strong>⤡ Collapse</strong> button.</li>
-        <li><strong>Person and Family Details:</strong> By clicking a blue colored name in the table, you perform a new search and display all records for that specific person or family. By clicking a partner, you search for their family. Similarly, when viewing parents, clicking the label (<em>Parents</em>, <em>Husband</em>, or <em>Wife</em>) displays their family, while clicking an individual parent's name searches only for them.</li>
+        <li><strong>Person and Family Details:</strong> By clicking a blue colored name in the table, you perform a new search and display all records for that specific person or family. By clicking a partner, you search for their family. Similarly, when viewing parents, clicking the label (<em>Parents</em>, <em>Husband</em>, or <em>Wife</em>) displays their family, while clicking an individual parent's name searches only for that person.</li>
         <li><strong>Private Records:</strong> For some individuals, the label <em>&lt;private&gt;</em> is displayed instead of a name or surname. Such records have no link for further search.</li>
         <li><strong>Tree:</strong> Next to certain people (parents, children, partners), you will notice a tree icon (<strong>🌳</strong> for ancestors, <strong>🌿</strong> for descendants). By clicking the icon, you display an interactive graphical family tree of the selected person.{auth_tree}</li>
         <li><strong>Data Export:</strong> By clicking the <strong>CSV</strong> button above the table, you download the current results to your computer in a tabular format.</li>
@@ -239,7 +239,7 @@ export default {
         <li><strong>📋</strong> – censuses (SIstory)</li>
         <li><strong>📰</strong> – Digital Library of Slovenia (dLib)</li>
       </ul>
-      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>🏷</strong> mark next to a surname shows alternate surname forms, the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
+      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
       <h4>Ancestors and Descendants Tree</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>
@@ -251,10 +251,10 @@ export default {
       <p>The <strong>Genealogists</strong> tab shows the overall statistics of the index and a list of all researchers who contributed their data.</p>
       <ul>
         <li><strong>Statistics:</strong> At the top, there are graphs with contributions by genealogist and the timeline of records.</li>
-        <li><strong>Top surnames:</strong> A cloud displays the most frequent surnames. By clicking the <strong>CSV</strong> or <strong>SVG</strong> button, you can export this data.</li>
+        <li><strong>Top surnames:</strong> A cloud displays the most frequent surnames. By clicking the <strong>CSV</strong> or <strong>SVG</strong> button, you can download this data to your computer.</li>
         <li><strong>List of genealogists:</strong> The table displays all contributors and the number of their persons, families, links, and possible matches with other genealogists. By clicking the <strong>CSV</strong> button, you export the table, and by clicking a genealogist's name, you open their detailed page.</li>
-        <li><strong>Filtering the list:</strong> In the search field in the sidebar (<strong>☰</strong>) you can quickly narrow down the list by the genealogist's surname.</li>
-        <li><strong>Matricula indicator ⛪:</strong> The icon next to the genealogist's name indicates that the data comes from the Matricula Online index, rather than from the genealogist's personal family tree.</li>
+        <li><strong>Filtering the list:</strong> In the search field in the sidebar (<strong>☰</strong>) you can quickly narrow down the list by the genealogist's surname. The cloud of top surnames will then display only the surnames from the trees of the matched genealogists.</li>
+        <li><strong>Matricula indicator ⛪:</strong> The icon next to the genealogist's name indicates that the data comes from the Matricula Online index, which this genealogist contributed, rather than from their personal family tree.</li>
       </ul>
       <h4>Genealogist Details</h4>
       <p>The individual genealogist's page gathers information about their contribution:</p>

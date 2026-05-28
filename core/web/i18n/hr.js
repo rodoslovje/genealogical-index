@@ -223,7 +223,7 @@ export default {
       <ul>
         <li><strong>Sortiranje:</strong> Klikom na naslov stupca rezultate sortirate abecedno ili kronološki. Ponovni klik na isti stupac preokreće smjer sortiranja (<strong>▲</strong> ↔ <strong>▼</strong>). Ako zatim kliknete na drugi stupac, on postaje primarni kriterij, a prethodni sekundarni (označeno s <strong>△</strong> ili <strong>▽</strong>).</li>
         <li><strong>Proširiva polja:</strong> Stupci poput <em>Roditelji</em>, <em>Partneri</em> i <em>Djeca</em> prikazuju broj osoba. Klikom na broj proširujete popis. Za prikaz svih odjednom možete upotrijebiti gumb <strong>⤢ Proširi</strong> iznad tablice, a za skrivanje gumb <strong>⤡ Sažmi</strong>.</li>
-        <li><strong>Detalji osoba i obitelji:</strong> Klikom na plavo obojeno ime u tablici izvodite novu pretragu i prikazujete sve zapise samo za tu odabranu osobu ili obitelj. Klikom na partnera tražite njihovu obitelj. Slično tome, pri prikazu roditelja klikom na oznaku (<em>Roditelji</em>, <em>Muž</em> ili <em>Žena</em>) prikazujete njihovu obitelj, a klikom na ime pojedinog roditelja pretražujete samo njega.</li>
+        <li><strong>Detalji osoba i obitelji:</strong> Klikom na plavo obojeno ime u tablici izvodite novu pretragu i prikazujete sve zapise samo za tu odabranu osobu ili obitelj. Klikom na partnera tražite njihovu obitelj. Slično tome, pri prikazu roditelja klikom na oznaku (<em>Roditelji</em>, <em>Muž</em> ili <em>Žena</em>) prikazujete njihovu obitelj, a klikom na ime pojedinog roditelja pretražujete samo tu osobu.</li>
         <li><strong>Privatni zapisi:</strong> Kod nekih osoba umjesto imena ili prezimena prikazana je oznaka <em>&lt;private&gt;</em>. Takvi zapisi nemaju poveznicu za daljnju pretragu.</li>
         <li><strong>Stablo:</strong> Pored određenih osoba (roditelja, djece, partnera) primijetit ćete ikonu stabla (<strong>🌳</strong> za pretke, <strong>🌿</strong> za potomke). Klikom na ikonu prikazujete grafičko i interaktivno rodoslovno stablo odabrane osobe.{auth_tree}</li>
         <li><strong>Izvoz podataka:</strong> Klikom na gumb <strong>CSV</strong> iznad tablice preuzimate trenutne rezultate na svoje računalo u tabličnom obliku.</li>
@@ -239,7 +239,7 @@ export default {
         <li><strong>📋</strong> – popisi stanovništva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
       </ul>
-      <p>Pored nekih drugih podataka pojavljuju se manje rubne ikone s dodatnim informacijama: oznaka <strong>🏷</strong> pored prezimena prikazuje druge oblike prezimena, oznaka <strong>✝</strong> pored datuma rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> pored mjesta rođenja ili vjenčanja upozorava na zabilježene bilješke. Prelaskom miša preko njih prikazuju se detalji.</p>
+      <p>Pored nekih drugih podataka pojavljuju se manje rubne ikone s dodatnim informacijama: oznaka <strong>🏷</strong> pored prezimena prikazuje druge oblike prezimena (na primjer prezime nakon udaje), oznaka <strong>✝</strong> pored datuma rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> pored mjesta rođenja ili vjenčanja upozorava na zabilježene bilješke. Prelaskom miša preko njih prikazuju se detalji.</p>
       <h4>Stablo predaka i potomaka</h4>
       <p>Stranica sa stablom prikazuje grafičko, interaktivno rodoslovno stablo odabrane osobe. Dostupne su sljedeće mogućnosti:</p>
       <ul>
@@ -251,10 +251,10 @@ export default {
       <p>Kartica <strong>Rodoslovci</strong> prikazuje ukupnu statistiku indeksa i popis svih istraživača koji su doprinijeli svojim podacima.</p>
       <ul>
         <li><strong>Statistika:</strong> Na vrhu su prikazani grafovi s doprinosima po rodoslovcu i s vremenskom raspodjelom zapisa.</li>
-        <li><strong>Najčešća prezimena:</strong> Prikazan je oblak najčešćih prezimena. Klikom na gumb <strong>CSV</strong> ili <strong>SVG</strong> možete izvesti te podatke.</li>
+        <li><strong>Najčešća prezimena:</strong> Prikazan je oblak najčešćih prezimena. Klikom na gumb <strong>CSV</strong> ili <strong>SVG</strong> možete te podatke preuzeti na svoje računalo.</li>
         <li><strong>Popis rodoslovaca:</strong> Tablica prikazuje sve suradnike te broj njihovih osoba, obitelji, poveznica i potencijalnih podudaranja s drugim rodoslovcima. Klikom na gumb <strong>CSV</strong> izvozite tablicu, a klikom na ime rodoslovca otvarate njegovu detaljnu stranicu.</li>
-        <li><strong>Filtriranje popisa:</strong> U polju za pretragu u bočnoj traci (<strong>☰</strong>) možete brzo suziti popis prema prezimenu rodoslovca.</li>
-        <li><strong>Indikator Matricula ⛪:</strong> Ikona pored imena rodoslovca znači da podaci proizlaze iz indeksa Matricula Online, a ne iz osobnog obiteljskog stabla rodoslovca.</li>
+        <li><strong>Filtriranje popisa:</strong> U polju za pretragu u bočnoj traci (<strong>☰</strong>) možete brzo suziti popis prema prezimenu rodoslovca. Oblak najčešćih prezimena tada prikazuje samo prezimena iz stabala pronađenih rodoslovaca.</li>
+        <li><strong>Indikator Matricula ⛪:</strong> Ikona pored imena rodoslovca znači da podaci proizlaze iz indeksa Matricula Online, koji je doprinio ovaj rodoslovac, a ne iz njegovog osobnog obiteljskog stabla.</li>
       </ul>
       <h4>Detalji o rodoslovcu</h4>
       <p>Na stranici pojedinog rodoslovca okupljene su informacije o njegovom doprinosu:</p>

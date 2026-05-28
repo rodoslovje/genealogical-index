@@ -223,7 +223,7 @@ export default {
       <ul>
         <li><strong>Razvrščanje:</strong> S klikom na naslov stolpca razvrstite rezultate abecedno ali kronološko. Ponoven klik na isti stolpec obrne smer razvrščanja (<strong>▲</strong> ↔ <strong>▼</strong>). Če nato kliknete drug stolpec, ta postane primarno merilo, prejšnji pa sekundarno (označeno z <strong>△</strong> ali <strong>▽</strong>).</li>
         <li><strong>Razširljiva polja:</strong> Stolpci <em>Starši</em>, <em>Partnerji</em> in <em>Otroci</em> prikazujejo število oseb. S klikom na številko razširite seznam. Za hkratni prikaz vseh uporabite gumb <strong>⤢ Razširi</strong> nad tabelo, za skrivanje pa gumb <strong>⤡ Skrči</strong>.</li>
-        <li><strong>Podrobnosti oseb in družin:</strong> S klikom na modro obarvano ime v tabeli izvedete novo iskanje in prikažete vse zapise le za to izbrano osebo ali družino. S klikom na partnerja poiščete njuno družino. Podobno pri prikazu staršev s klikom na oznako (<em>Starši</em>, <em>Mož</em> ali <em>Žena</em>) prikažete njuno družino, s klikom na ime posameznega starša pa poiščete le njega.</li>
+        <li><strong>Podrobnosti oseb in družin:</strong> S klikom na modro obarvano ime v tabeli izvedete novo iskanje in prikažete vse zapise le za to izbrano osebo ali družino. S klikom na partnerja poiščete njuno družino. Podobno pri prikazu staršev s klikom na oznako (<em>Starši</em>, <em>Mož</em> ali <em>Žena</em>) prikažete njuno družino, s klikom na ime posameznega starša pa poiščete samo to osebo.</li>
         <li><strong>Zasebni zapisi:</strong> Pri nekaterih osebah je namesto imena ali priimka prikazana oznaka <em>&lt;private&gt;</em>. Takšni zapisi nimajo povezave za nadaljnje iskanje.</li>
         <li><strong>Drevo:</strong> Ob določenih osebah (starših, otrocih, partnerjih) boste opazili ikono drevesa (<strong>🌳</strong> za prednike, <strong>🌿</strong> za potomce). S klikom na ikono prikažete grafično in interaktivno rodovniško drevo izbrane osebe.{auth_tree}</li>
         <li><strong>Izvoz podatkov:</strong> S klikom na gumb <strong>CSV</strong> nad tabelo prenesete trenutne rezultate na svoj računalnik v tabelarični obliki.</li>
@@ -239,7 +239,7 @@ export default {
         <li><strong>📋</strong> – popisi prebivalstva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
       </ul>
-      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka, oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
+      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
       <h4>Drevo prednikov in potomcev</h4>
       <p>Stran z drevesom prikazuje grafično, interaktivno rodovniško drevo izbrane osebe. Na voljo so:</p>
       <ul>
@@ -251,10 +251,10 @@ export default {
       <p>V zavihku <strong>Rodoslovci</strong> je prikazana skupna statistika indeksa in seznam vseh rodoslovcev, ki so prispevali svoje podatke.</p>
       <ul>
         <li><strong>Statistika:</strong> Na vrhu sta prikazana grafa s prispevki po rodoslovcih in s časovnico zapisov.</li>
-        <li><strong>Najpogostejši priimki:</strong> Prikazan je oblak najpogostejših priimkov. S klikom na gumb <strong>CSV</strong> ali <strong>SVG</strong> lahko te podatke izvozite.</li>
+        <li><strong>Najpogostejši priimki:</strong> Prikazan je oblak najpogostejših priimkov. S klikom na gumb <strong>CSV</strong> ali <strong>SVG</strong> lahko te podatke prenesete na svoj računalnik.</li>
         <li><strong>Seznam rodoslovcev:</strong> Tabela prikazuje vse sodelujoče ter število njihovih oseb, družin, povezav in morebitnih ujemanj z drugimi rodoslovci. S klikom na gumb <strong>CSV</strong> izvozite tabelo, s klikom na ime rodoslovca pa odprete njegovo podrobno stran.</li>
-        <li><strong>Filtriranje seznama:</strong> V iskalnem polju v stranski vrstici (<strong>☰</strong>) lahko seznam hitro zožite po priimku rodoslovca.</li>
-        <li><strong>Indikator Matricula ⛪:</strong> Ikona ob imenu rodoslovca pomeni, da podatki izhajajo iz indeksa Matricula Online, in ne iz osebnega družinskega drevesa rodoslovca.</li>
+        <li><strong>Filtriranje seznama:</strong> V iskalnem polju v stranski vrstici (<strong>☰</strong>) lahko seznam hitro zožite po priimku rodoslovca. Oblak najpogostejših priimkov bo prikazal samo priimke iz dreves najdenih rodoslovcev.</li>
+        <li><strong>Indikator Matricula ⛪:</strong> Ikona ob imenu rodoslovca pomeni, da gre za podatke iz indeksa Matricula Online, ki ga je ta rodoslovec prispeval, in ne za podatke iz njegovega osebnega družinskega drevesa.</li>
       </ul>
       <h4>Podrobnosti rodoslovca</h4>
       <p>Na strani posameznega rodoslovca so zbrane informacije o njegovem prispevku:</p>
