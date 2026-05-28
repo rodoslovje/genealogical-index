@@ -35,8 +35,8 @@ export function initHelp() {
   const openHelp = () => {
     const modal = document.getElementById('help-modal');
     modal.classList.add('open');
-    const innerModal = modal.querySelector('.srd-modal');
-    if (innerModal) innerModal.scrollTop = 0;
+    const scrollArea = modal.querySelector('#help-scroll');
+    if (scrollArea) scrollArea.scrollTop = 0;
     setHelpParam(true);
   };
 
@@ -68,9 +68,11 @@ export function initHelp() {
   // 2. Inject Help Modal
   const modalHtml = `
     <div id="help-modal" class="srd-modal-overlay">
-      <div class="srd-modal" style="max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; text-align: left;">
-        <button type="button" class="srd-modal-close" aria-label="Close" style="position: sticky; top: 0; float: right; background: var(--surface-color, var(--bg-color, #ffffff)); z-index: 10; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin-left: 15px; margin-bottom: 5px;">&times;</button>
-        <div id="help-content" class="help-content intro-text"></div>
+      <div class="srd-modal" style="max-width: 800px; width: 90%; max-height: 90vh; padding: 0; text-align: left;">
+        <button type="button" class="srd-modal-close" aria-label="Close" style="position: absolute; top: 16px; right: 16px; background: var(--srd-surface); z-index: 10; border: 1px solid var(--srd-line-strong); border-radius: var(--srd-radius); box-shadow: var(--srd-shadow-1); padding: 2px 12px; line-height: 1;">&times;</button>
+        <div id="help-scroll" style="max-height: 90vh; overflow-y: auto; padding: 24px;">
+          <div id="help-content" class="help-content intro-text"></div>
+        </div>
       </div>
     </div>
     <style>
@@ -82,6 +84,24 @@ export function initHelp() {
       .help-content h3 { margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 6px; font-size: 1.3rem; font-family: var(--srd-font-serif); font-weight: 500; color: var(--srd-ink); border-bottom: 1px solid var(--srd-line); }
       .help-content h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.05rem; font-weight: 600; color: var(--srd-ink); }
       .help-content strong { color: var(--srd-ink); font-weight: 600; }
+      @media (max-width: 768px) {
+        #help-modal .srd-modal {
+          max-width: 100vw !important;
+          width: 100vw !important;
+          max-height: 100vh !important;
+          height: 100vh !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+        #help-modal #help-scroll {
+          max-height: 100vh !important;
+          padding: 44px 8px 8px 8px !important;
+        }
+        #help-modal .srd-modal-close {
+          top: 8px !important;
+          right: 8px !important;
+        }
+      }
     </style>
   `;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
