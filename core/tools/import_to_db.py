@@ -570,7 +570,7 @@ def import_contributor(
                     """),
                     rows,
                 )
-        else:
+        elif persons_count > 0:
             visible = [
                 f
                 for f in os.listdir(DATA_DIR)
@@ -615,7 +615,7 @@ def import_contributor(
                     """),
                     rows,
                 )
-        else:
+        elif families_count > 0:
             visible = [
                 f
                 for f in os.listdir(DATA_DIR)
