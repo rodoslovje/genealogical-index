@@ -93,7 +93,7 @@ export function initHelp() {
 
   // 3. Update localized content
   const updateHelpContent = () => {
-    const authNav = hasAuth ? t('help_auth_nav') : '';
+    const authNav = hasAuth ? (t('help_auth_nav') || '').replace('{USER_ICON}', USER_ICON) : '';
     const authTree = hasAuth ? t('help_auth_tree') : '';
     const authMatch = hasAuth ? t('help_auth_match') : '';
     const authSection = hasAuth ? (t('help_auth_section') || '').replace('{USER_ICON}', USER_ICON) : '';

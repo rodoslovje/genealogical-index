@@ -182,7 +182,7 @@ export default {
     tree_created: 'Létrehozva',
 
     // Help manual
-    help_auth_nav: ' és a rendszerbe való bejelentkezést',
+    help_auth_nav: ', a rendszerbe való bejelentkezést (<strong>{USER_ICON}</strong>)',
     help_auth_tree: ' Ez a funkció csak bejelentkezett tagok számára érhető el.',
     help_auth_match: ' (ez a funkció csak bejelentkezett tagok számára érhető el)',
     help_auth_section: `
@@ -199,44 +199,69 @@ export default {
         <li><strong>Család:</strong> Részletes keresést tesz lehetővé adott családokra (férj, feleség és gyermekek szerint).</li>
         <li><strong>Genealógusok:</strong> Megjeleníti az összes adatszolgáltató kutató listáját és az összesített statisztikákat.</li>
       </ul>
-      <p>A navigációs sáv jobb oldalán található a menüikon (<strong>☰</strong>) a kereső megnyitásához, valamint a súgót, a nyelvválasztást{auth_nav} szolgáló gombok.</p>
-      <h3>2. Hogyan keressen?</h3>
-      <p>Az index rugalmas keresőt kínál a képernyő jobb oldalán. Nyissa meg a jobb felső sarokban található menüikonra (<strong>☰</strong>) kattintva.</p>
+      <p>A navigációs sáv jobb oldalán található a menüikon (<strong>☰</strong>) a kereső megnyitásához, valamint a súgót (<strong>?</strong>){auth_nav} és a nyelvválasztást szolgáló gombok. Az oldal alján található a lábléc az alkalmazás verziójával és az adatok utolsó frissítésének dátumával.</p>
+      <p><strong>Megosztható hivatkozások:</strong> Minden keresés és minden megnyitott oldal mentésre kerül a böngésző címsorában (URL), így az aktuális nézetet könnyedén lemásolhatja, könyvjelzők közé mentheti vagy továbbíthatja másoknak.</p>
+      <h3>2. Hogyan keressen az indexben?</h3>
+      <p>Az index rugalmas keresőt kínál a képernyő jobb oldalán. Nyissa meg a jobb felső sarokban található menüikonra (<strong>☰</strong>) kattintva. A kereső tartalma a kiválasztott laphoz igazodik:</p>
       <ul>
-        <li><strong>Keresés:</strong> Lehetővé teszi a keresést az összes személy és család között egyszerre. A keresőmezőkbe bármilyen név, vezetéknév, dátum és hely kombinációját beírhatja. A kereső két külön táblázatot ad vissza az eredményekkel: talált személyek és talált családok.</li>
+        <li><strong>Keresés:</strong> A legáltalánosabb kereső – a keresőmezőkbe bármilyen név, vezetéknév, dátum és hely kombinációját beírhatja, a kereső pedig két külön táblázatot ad vissza az eredményekkel: talált személyek és talált családok.</li>
         <li><strong>Személy:</strong> Pontos keresést tesz lehetővé egyedi életesemények (a születés és a halál pontos dátuma és helye) alapján.</li>
         <li><strong>Család:</strong> Lehetővé teszi a férj és a feleség adatainak (nevek, vezetéknevek, születési dátumok) egyidejű keresését, a házasságkötés dátumát és helyét, valamint a gyermekek neveinek keresését.</li>
       </ul>
       <h4>Adatbeviteli szabályok</h4>
       <ul>
-        <li><strong>Több érték:</strong> A szövegmezőkbe (nevek, vezetéknevek, helyek, genealógus) több szót is beírhat vesszővel elválasztva (pl. <em>Janez, Ivan</em> vagy <em>Mali, Mally</em>). A rendszer azokat a rekordokat adja vissza, amelyek bármelyiket tartalmazzák.</li>
-        <li><strong>Dátumok és évek:</strong> A dátummezőkbe beírhat pontos dátumokat (pl. <em>1850. 4. 15.</em>), csak éveket (pl. <em>1850</em>), vagy használhat közelítéseket (pl. <em>ABT 1850</em>). A dátummezők lehetővé teszik a tartomány megadását is (tól - ig), de ez <strong>csak az évekre vonatkozik</strong>.</li>
+        <li><strong>Több érték egyszerre:</strong> A szövegmezőkbe (nevek, vezetéknevek, helyek, genealógus) több szót is beírhat vesszővel elválasztva (pl. <em>Janez, Ivan</em> vagy <em>Mali, Mally</em>). A rendszer azokat a rekordokat fogja megkeresni, amelyek bármelyiket tartalmazzák.</li>
+        <li><strong>Dátumok és évek:</strong> A dátummezőkbe beírhat pontos dátumokat (pl. <em>1850. 4. 15.</em>) vagy csak éveket (pl. <em>1850</em>). A dátummezők lehetővé teszik a tartomány megadását is (tól - ig), de ez <strong>csak az évekre vonatkozik</strong>.</li>
+        <li><strong>Mező törlése:</strong> Minden beviteli mező jobb szélén található egy <strong>×</strong> gomb, amellyel gyorsan törölheti a beírt értéket.</li>
       </ul>
       <h4>Speciális keresési beállítások</h4>
       <ul>
-        <li><strong>Pontos / Közelítő:</strong> A "Pontos" beállítás a teljes szavak pontos egyezését keresi (pl. a "Mali" keresése nem találja meg a "Malic" szót). A "Közelítő" beállítás algoritmusokat használ a szórészletek (részkarakterláncok) és hasonló névvariációk keresésére is.</li>
-        <li><strong>Hivatkozással:</strong> Ez a beállítás csak azokat az eredményeket jeleníti meg, amelyek külső hivatkozást tartalmaznak az eredeti forrásokra (pl. Matricula).</li>
+        <li><strong>Pontos / Közelítő:</strong> A <strong>Pontos</strong> beállítás a teljes szavak pontos egyezését keresi (pl. a <em>Mali</em> keresése nem találja meg a <em>Malic</em> szót). A <strong>Közelítő</strong> beállítás algoritmusokat használ a szórészletek (részkarakterláncok) és hasonló névvariációk keresésére is.</li>
+        <li><strong>Hivatkozással:</strong> Csak azokat a találatokat jeleníti meg, amelyek külső hivatkozást tartalmaznak az eredeti forrásokra (pl. Matricula Online, FamilySearch, Geneanet).</li>
       </ul>
-      <h3>3. Az eredmények olvasása</h3>
+      <h3>3. Az eredmények megtekintése</h3>
       <ul>
-        <li><strong>Rendezés:</strong> Egy oszlopfejlécre kattintva betűrendben vagy időrendben rendezheti az eredményeket.</li>
-        <li><strong>Kibontható mezők:</strong> Olyan oszlopok, mint a <em>Szülők</em>, <em>Partnerek</em> és <em>Gyermekek</em>, a személyek számát mutatják. A számra kattintva kibonthatja a listát. Az összes egyszerre történő kibontásához használhatja a táblázat feletti <strong>Kibontás</strong> gombot.</li>
-        <li><strong>Személy és család részletei:</strong> Ha a táblázatban egy színes névre kattint, új keresést hajt végre, és megjeleníti az adott személyhez vagy családhoz tartozó összes rekordot. Partnerre kattintva megkeresi az ő családját. Hasonlóképpen, a szülők megtekintésekor a címkére (<em>Szülők</em>, <em>Férj</em> vagy <em>Feleség</em>) kattintva megjelenik az ő családjuk, míg egy adott szülő nevére kattintva csak rá keres.</li>
-        <li><strong>Családfa:</strong> Bizonyos személyek mellett egy fa ikont fog látni (🌳 ősök, 🌿 leszármazottak). Az ikonra kattintva megjeleníti a kiválasztott személy interaktív grafikus családfáját.{auth_tree}</li>
+        <li><strong>Rendezés:</strong> Egy oszlopfejlécre kattintva betűrendben vagy időrendben rendezheti az eredményeket. Ugyanazon oszlopra való ismételt kattintás megfordítja a rendezés irányát (<strong>▲</strong> ↔ <strong>▼</strong>). Ha ezután egy másik oszlopra kattint, az lesz az elsődleges szempont, a korábbi pedig a másodlagos (<strong>△</strong> vagy <strong>▽</strong> jellel jelölve).</li>
+        <li><strong>Kibontható mezők:</strong> Olyan oszlopok, mint a <em>Szülők</em>, <em>Partnerek</em> és <em>Gyermekek</em>, a személyek számát mutatják. A számra kattintva kibonthatja a listát. Az összes egyszerre történő kibontásához használhatja a táblázat feletti <strong>⤢ Kibontás</strong> gombot, az elrejtéshez pedig az <strong>⤡ Összecsukás</strong> gombot.</li>
+        <li><strong>Személy és család részletei:</strong> Ha a táblázatban egy kék színű névre kattint, új keresést hajt végre, és megjeleníti az adott személyhez vagy családhoz tartozó összes rekordot. Partnerre kattintva megkeresi az ő családját. Hasonlóképpen, a szülők megtekintésekor a címkére (<em>Szülők</em>, <em>Férj</em> vagy <em>Feleség</em>) kattintva megjelenik az ő családjuk, míg egy adott szülő nevére kattintva csak rá keres.</li>
+        <li><strong>Privát rekordok:</strong> Egyes személyeknél a név vagy vezetéknév helyett a <em>&lt;private&gt;</em> címke jelenik meg. Ezek a rekordok nem tartalmaznak linket a további kereséshez.</li>
+        <li><strong>Családfa:</strong> Bizonyos személyek (szülők, gyerekek, partnerek) mellett egy fa ikont fog látni (<strong>🌳</strong> ősök, <strong>🌿</strong> leszármazottak). Az ikonra kattintva megjeleníti a kiválasztott személy interaktív grafikus családfáját.{auth_tree}</li>
         <li><strong>Adat exportálása:</strong> A táblázat feletti <strong>CSV</strong> gombra kattintva letöltheti az aktuális eredményeket a számítógépére táblázatos formátumban.</li>
+        <li><strong>Összecsukható táblázatok és szakaszok:</strong> Egy táblázat vagy szakasz címére (pl. <em>Személyek</em>, <em>Családok</em> vagy <em>Egyezések</em>) kattintva ideiglenesen elrejtheti a tartalmát, és a következő kattintással újra megjelenítheti.</li>
+      </ul>
+      <h4>Ikonok a sorokban</h4>
+      <p>A <em>Hivatkozások</em> oszlopban lévő ikonok az eredeti forrás típusát jelzik:</p>
+      <ul>
+        <li><strong>📜</strong> – Matricula Online (anyakönyvek)</li>
+        <li><strong>🌳</strong> – FamilySearch (anyakönyvek, családfák és egyéb források)</li>
+        <li><strong>🪦</strong> – sírok (Geneanet, Find a Grave, BillionGraves)</li>
+        <li><strong>🎖</strong> – háborús áldozatok (SIstory)</li>
+        <li><strong>📋</strong> – népszámlálások (SIstory)</li>
+        <li><strong>📰</strong> – Szlovénia Digitális Könyvtára (dLib)</li>
+      </ul>
+      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja, a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
+      <h4>Ősök és leszármazottak családfája</h4>
+      <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
+      <ul>
+        <li><strong>Nagyítás és kicsinyítés:</strong> a jobb alsó sarokban található <strong>➕</strong> és <strong>➖</strong> gombokkal vagy az egér görgőjével.</li>
+        <li><strong>Pásztázás:</strong> a fát az egérrel (vagy érintőképernyőn az ujjával) húzhatja.</li>
+        <li><strong>Exportálás:</strong> a jobb felső sarokban található <strong>SVG</strong> gombbal letöltheti a fa képét a számítógépére.</li>
       </ul>
       <h3>4. Genealógusok</h3>
       <p>A <strong>Genealógusok</strong> fül megmutatja az index általános statisztikáit és az adataikat beküldő kutatók listáját.</p>
       <ul>
-        <li><strong>Statisztika:</strong> Felül diagramok találhatók a rekordok időrendjével.</li>
+        <li><strong>Statisztika:</strong> Felül diagramok találhatók a genealógusonkénti hozzájárulásokkal és a rekordok időrendjével.</li>
         <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő mutatja a leggyakoribb vezetékneveket. A <strong>CSV</strong> vagy <strong>SVG</strong> gombra kattintva exportálhatja ezeket az adatokat.</li>
-        <li><strong>Genealógusok listája:</strong> A táblázat megjeleníti az összes közreműködőt és a rekordjaik számát. A <strong>CSV</strong> gombra kattintva exportálhatja a táblázatot, egy genealógus nevére kattintva pedig megnyitja a részletes oldalát további információkkal.</li>
+        <li><strong>Genealógusok listája:</strong> A táblázat megjeleníti az összes közreműködőt és a személyeik, családjaik, hivatkozásaik és más genealógusokkal való lehetséges egyezéseik számát. A <strong>CSV</strong> gombra kattintva exportálhatja a táblázatot, egy genealógus nevére kattintva pedig megnyitja a részletes oldalát.</li>
+        <li><strong>A lista szűrése:</strong> Az oldalsávban található keresőmezőben (<strong>☰</strong>) gyorsan szűkítheti a listát a genealógus vezetékneve alapján.</li>
+        <li><strong>Matricula indikátor ⛪:</strong> A genealógus neve melletti ikon azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig a genealógus személyes családfájából.</li>
       </ul>
       <h4>Genealógus részletei</h4>
       <p>Az egyes genealógusok oldala összegyűjti a hozzájárulásukkal kapcsolatos információkat:</p>
       <ul>
+        <li><strong>Hozzájárulási statisztika:</strong> Egy rács a személyek, családok és hivatkozások számával, valamint az utolsó frissítés dátumával. Ha a genealógus a saját fájából és a Matricula indexből is szolgáltat adatokat, az értékek három oszlopra oszlanak: <em>Összesen</em>, <em>Családfa</em> és <em>Matricula</em>.</li>
         <li><strong>Hivatkozás:</strong> Ha a genealógus megadott személyes weboldalt, az a neve alatt jelenik meg.</li>
-        <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő mutatja az adatbázisában leggyakrabban előforduló vezetékneveket.</li>
+        <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő és egy lista mutatja az adatbázisában leggyakrabban előforduló vezetékneveket.</li>
         <li><strong>Lehetséges egyezések:</strong> Azoknak a többi genealógusoknak a listája, akik egyező történelmi személyeket vagy családokat osztanak meg ezzel a genealógussal.</li>
       </ul>
       <h4>Egyezések a genealógusok között</h4>
@@ -245,6 +270,7 @@ export default {
         <li>A <strong>felső sor</strong> az első genealógus rekordját, az <strong>alsó sor</strong> pedig a második rekordját mutatja.</li>
         <li><strong>Megbízhatóság:</strong> Minden egyezéshez tartozik egy százalékos pontszám, amely jelzi, hogy mekkora valószínűséggel ugyanarról a személyről vagy családról van szó.</li>
         <li><strong>Kiemelt különbségek:</strong> A két genealógus között eltérő szavak vagy adatok automatikusan kiemelésre kerülnek (sárgával) a táblázatban, így könnyen észrevehetők az eltérések vagy új információk.</li>
+        <li><strong>Egyezések szűrése:</strong> Az oldalsávban található keresőmezőben tovább szűkítheti a megjelenített egyezéseket név, vezetéknév, dátum vagy hely alapján.</li>
       </ul>
       {auth_section}
     `,

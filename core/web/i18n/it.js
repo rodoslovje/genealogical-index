@@ -182,7 +182,7 @@ export default {
     tree_created: 'Creato',
 
     // Help manual
-    help_auth_nav: " e l'accesso al sistema",
+    help_auth_nav: ", l'accesso al sistema (<strong>{USER_ICON}</strong>)",
     help_auth_tree: " Questa funzione è disponibile solo per i membri che hanno effettuato l'accesso.",
     help_auth_match: " (questa funzione è disponibile solo per i membri che hanno effettuato l'accesso)",
     help_auth_section: `
@@ -199,52 +199,78 @@ export default {
         <li><strong>Famiglia:</strong> Consente la ricerca dettagliata per famiglie specifiche (per marito, moglie e figli).</li>
         <li><strong>Genealogisti:</strong> Visualizza un elenco di tutti i ricercatori che hanno contribuito e le statistiche generali.</li>
       </ul>
-      <p>Sul lato destro della barra di navigazione si trova l'icona del menu (<strong>☰</strong>) per aprire il motore di ricerca, oltre a pulsanti per l'aiuto, la selezione della lingua{auth_nav}.</p>
-      <h3>2. Come cercare?</h3>
-      <p>L'indice offre un motore di ricerca flessibile sul lato destro dello schermo. Per aprirlo, fare clic sull'icona del menu (<strong>☰</strong>) nell'angolo in alto a destra.</p>
+      <p>Sul lato destro della barra di navigazione si trova l'icona del menu (<strong>☰</strong>) per aprire il motore di ricerca, oltre ai pulsanti per l'aiuto (<strong>?</strong>){auth_nav} e la selezione della lingua. In fondo alla pagina si trova un piè di pagina con la versione dell'applicazione e la data dell'ultimo aggiornamento dei dati.</p>
+      <p><strong>Collegamenti condivisibili:</strong> Ogni ricerca e ogni pagina aperta viene salvata nella barra degli indirizzi del browser (URL), in modo da poter facilmente copiare la visualizzazione corrente, salvarla nei segnalibri o condividerla con altri.</p>
+      <h3>2. Come cercare nell'indice?</h3>
+      <p>L'indice offre un motore di ricerca flessibile sul lato destro dello schermo. Per aprirlo, fare clic sull'icona del menu (<strong>☰</strong>) nell'angolo in alto a destra. Il contenuto del motore di ricerca si adatta alla scheda selezionata:</p>
       <ul>
-        <li><strong>Ricerca:</strong> Consente la ricerca su tutte le persone e le famiglie contemporaneamente. È possibile inserire qualsiasi combinazione di nome, cognome, data e luogo nei campi di ricerca. Il motore di ricerca restituirà due tabelle separate con i risultati: persone trovate e famiglie trovate.</li>
+        <li><strong>Ricerca:</strong> Il motore di ricerca più generale: è possibile inserire qualsiasi combinazione di nome, cognome, data e luogo nei campi di ricerca e il motore di ricerca restituirà due tabelle separate con i risultati: persone trovate e famiglie trovate.</li>
         <li><strong>Persona:</strong> Consente la ricerca precisa in base a singoli eventi della vita (data esatta e luogo di nascita e morte).</li>
         <li><strong>Famiglia:</strong> Consente la ricerca simultanea sui dati del marito e della moglie (nomi, cognomi, date di nascita), data e luogo del matrimonio e la ricerca per nomi dei figli.</li>
       </ul>
       <h4>Regole di inserimento dati</h4>
       <ul>
-        <li><strong>Valori multipli:</strong> Nei campi di testo (nomi, cognomi, luoghi, genealogista) è possibile inserire più parole separate da virgole (es. <em>Janez, Ivan</em> o <em>Mali, Mally</em>). Il sistema restituirà i record che contengono una qualsiasi di esse.</li>
-        <li><strong>Date e anni:</strong> Nei campi della data, è possibile inserire date esatte (es. <em>15. 4. 1850</em>), solo anni (es. <em>1850</em>) o utilizzare approssimazioni (es. <em>ABT 1850</em>). I campi data consentono anche l'inserimento di un intervallo (da - a), ma questo si applica <strong>solo agli anni</strong>.</li>
+        <li><strong>Più valori contemporaneamente:</strong> Nei campi di testo (nomi, cognomi, luoghi, genealogista) è possibile inserire più parole separate da virgole (es. <em>Janez, Ivan</em> o <em>Mali, Mally</em>). Il sistema cercherà i record che contengono una qualsiasi di esse.</li>
+        <li><strong>Date e anni:</strong> Nei campi della data, è possibile inserire date esatte (es. <em>15. 4. 1850</em>) o solo anni (es. <em>1850</em>). I campi data consentono anche la ricerca per intervallo (da - a), ma questo si applica <strong>solo agli anni</strong>.</li>
+        <li><strong>Cancellare un campo:</strong> Ogni campo di input ha un pulsante <strong>×</strong> sul bordo destro per cancellare rapidamente il valore inserito.</li>
       </ul>
       <h4>Impostazioni di ricerca avanzate</h4>
       <ul>
-        <li><strong>Esatto / Approssimato:</strong> L'impostazione "Esatto" cerca corrispondenze esatte di parole intere (es. cercare "Mali" non troverà "Malic"). L'impostazione "Approssimato" utilizza algoritmi per cercare anche parti di parole (sottostringhe) e simili varianti di nome.</li>
-        <li><strong>Con collegamento:</strong> Questa impostazione visualizza solo i risultati che contengono un collegamento esterno alle fonti originali (es. Matricula).</li>
+        <li><strong>Esatto / Approssimato:</strong> L'impostazione <strong>Esatto</strong> cerca corrispondenze esatte di parole intere (es. cercare <em>Mali</em> non troverà <em>Malic</em>). L'impostazione <strong>Approssimato</strong> utilizza algoritmi per cercare anche parti di parole (sottostringhe) e simili varianti di nome.</li>
+        <li><strong>Con collegamento:</strong> Visualizza solo i risultati che contengono un collegamento esterno alle fonti originali (es. Matricula Online, FamilySearch, Geneanet).</li>
       </ul>
-      <h3>3. Lettura dei risultati</h3>
+      <h3>3. Visualizzazione dei risultati</h3>
       <ul>
-        <li><strong>Ordinamento:</strong> Cliccando sull'intestazione di una colonna, si ordinano i risultati in ordine alfabetico o cronologico.</li>
-        <li><strong>Campi espandibili:</strong> Colonne come <em>Genitori</em>, <em>Partner</em> e <em>Figli</em> visualizzano il numero di persone. Cliccando sul numero si espande l'elenco. Per espanderli tutti in una volta, è possibile utilizzare il pulsante <strong>Espandi</strong> sopra la tabella.</li>
-        <li><strong>Dettagli su persone e famiglie:</strong> Cliccando su un nome colorato nella tabella, si esegue una nuova ricerca e si visualizzano tutti i record per quella specifica persona o famiglia. Cliccando su un partner, si cerca la sua famiglia. Allo stesso modo, quando si visualizzano i genitori, cliccando sull'etichetta (<em>Genitori</em>, <em>Marito</em> o <em>Moglie</em>) si visualizza la loro famiglia, mentre cliccando sul nome di un singolo genitore si cerca solo per quest'ultimo.</li>
-        <li><strong>Albero:</strong> Accanto ad alcune persone, noterete l'icona di un albero (🌳 per gli antenati, 🌿 per i discendenti). Cliccando sull'icona, si visualizza un albero grafico interattivo della persona selezionata.{auth_tree}</li>
+        <li><strong>Ordinamento:</strong> Cliccando sull'intestazione di una colonna, si ordinano i risultati in ordine alfabetico o cronologico. Un nuovo clic sulla stessa colonna inverte la direzione di ordinamento (<strong>▲</strong> ↔ <strong>▼</strong>). Se poi si clicca su un'altra colonna, questa diventa il criterio primario e la precedente diventa secondario (contrassegnato da <strong>△</strong> o <strong>▽</strong>).</li>
+        <li><strong>Campi espandibili:</strong> Colonne come <em>Genitori</em>, <em>Partner</em> e <em>Figli</em> visualizzano il numero di persone. Cliccando sul numero si espande l'elenco. Per espanderli tutti in una volta, è possibile utilizzare il pulsante <strong>⤢ Espandi</strong> sopra la tabella e per nasconderli il pulsante <strong>⤡ Comprimi</strong>.</li>
+        <li><strong>Dettagli di persone e famiglie:</strong> Cliccando su un nome colorato in blu nella tabella, si esegue una nuova ricerca e si visualizzano tutti i record solo per la persona o famiglia selezionata. Cliccando su un partner, si cerca la sua famiglia. Allo stesso modo, quando si visualizzano i genitori, cliccando sull'etichetta (<em>Genitori</em>, <em>Marito</em> o <em>Moglie</em>) si visualizza la loro famiglia, mentre cliccando sul nome di un singolo genitore si cerca solo lui.</li>
+        <li><strong>Record privati:</strong> Per alcune persone viene visualizzata l'etichetta <em>&lt;private&gt;</em> al posto del nome o del cognome. Tali record non hanno collegamenti per ulteriori ricerche.</li>
+        <li><strong>Albero:</strong> Accanto ad alcune persone (genitori, figli, partner), noterete l'icona di un albero (<strong>🌳</strong> per gli antenati, <strong>🌿</strong> per i discendenti). Cliccando sull'icona, si visualizza un albero genealogico grafico e interattivo della persona selezionata.{auth_tree}</li>
         <li><strong>Esportazione dei dati:</strong> Cliccando sul pulsante <strong>CSV</strong> sopra la tabella, si scaricano i risultati correnti sul computer in formato tabellare.</li>
+        <li><strong>Tabelle e sezioni comprimibili:</strong> Cliccando sul titolo di una tabella o sezione (es. <em>Persone</em>, <em>Famiglie</em> o <em>Corrispondenze</em>) è possibile nascondere temporaneamente il contenuto e rivelarlo di nuovo con il clic successivo.</li>
+      </ul>
+      <h4>Icone nelle righe</h4>
+      <p>Nella colonna <em>Collegamenti</em>, le icone indicano il tipo di fonte originale a cui puntano:</p>
+      <ul>
+        <li><strong>📜</strong> – Matricula Online (registri parrocchiali)</li>
+        <li><strong>🌳</strong> – FamilySearch (registri parrocchiali, alberi genealogici e altre fonti)</li>
+        <li><strong>🪦</strong> – tombe (Geneanet, Find a Grave, BillionGraves)</li>
+        <li><strong>🎖</strong> – vittime di guerra (SIstory)</li>
+        <li><strong>📋</strong> – censimenti (SIstory)</li>
+        <li><strong>📰</strong> – Biblioteca digitale della Slovenia (dLib)</li>
+      </ul>
+      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome, il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
+      <h4>Albero degli antenati e dei discendenti</h4>
+      <p>La pagina dell'albero visualizza un albero genealogico grafico e interattivo della persona selezionata. Sono disponibili le seguenti funzioni:</p>
+      <ul>
+        <li><strong>Ingrandimento e rimpicciolimento:</strong> con i pulsanti <strong>➕</strong> e <strong>➖</strong> nell'angolo in basso a destra o con la rotellina del mouse.</li>
+        <li><strong>Spostamento:</strong> è possibile trascinare l'albero con il mouse (o con il dito sui touchscreen).</li>
+        <li><strong>Esportazione:</strong> con il pulsante <strong>SVG</strong> nell'angolo in alto a destra, è possibile scaricare l'immagine dell'albero sul computer.</li>
       </ul>
       <h3>4. Genealogisti</h3>
       <p>La scheda <strong>Genealogisti</strong> mostra le statistiche generali dell'indice e un elenco di tutti i ricercatori che hanno contribuito con i loro dati.</p>
       <ul>
-        <li><strong>Statistiche:</strong> In alto, sono presenti grafici con la cronologia dei record.</li>
+        <li><strong>Statistiche:</strong> In alto sono presenti grafici con i contributi per genealogista e la cronologia dei record.</li>
         <li><strong>Cognomi più frequenti:</strong> Una nuvola di parole mostra i cognomi più frequenti. Cliccando sul pulsante <strong>CSV</strong> o <strong>SVG</strong>, è possibile esportare questi dati.</li>
-        <li><strong>Elenco dei genealogisti:</strong> La tabella visualizza tutti i collaboratori e il numero dei loro record. Cliccando sul pulsante <strong>CSV</strong>, è possibile esportare la tabella, e cliccando sul nome di un genealogista, si apre la sua pagina dettagliata con ulteriori informazioni.</li>
+        <li><strong>Elenco dei genealogisti:</strong> La tabella visualizza tutti i collaboratori e il numero di persone, famiglie, collegamenti e possibili corrispondenze con altri genealogisti. Cliccando sul pulsante <strong>CSV</strong> si esporta la tabella e cliccando sul nome del genealogista si apre la sua pagina dettagliata.</li>
+        <li><strong>Filtrare l'elenco:</strong> Nel campo di ricerca nella barra laterale (<strong>☰</strong>) è possibile restringere rapidamente l'elenco in base al cognome del genealogista.</li>
+        <li><strong>Indicatore Matricula ⛪:</strong> L'icona accanto al nome del genealogista indica che i dati provengono dall'indice Matricula Online e non dall'albero genealogico personale del genealogista.</li>
       </ul>
       <h4>Dettagli del genealogista</h4>
       <p>La pagina del singolo genealogista raccoglie informazioni sul suo contributo:</p>
       <ul>
+        <li><strong>Statistiche del contributo:</strong> Una griglia con il numero di persone, famiglie, collegamenti e la data dell'ultimo aggiornamento. Se il genealogista contribuisce con dati provenienti sia dal proprio albero che dall'indice Matricula, i valori sono divisi in tre colonne: <em>Totale</em>, <em>Albero</em> e <em>Matricula</em>.</li>
         <li><strong>Collegamento:</strong> Se il genealogista ha fornito un sito web personale, viene visualizzato sotto il suo nome.</li>
-        <li><strong>Cognomi più frequenti:</strong> Una nuvola di parole mostra i cognomi più frequenti nel suo database.</li>
+        <li><strong>Cognomi più frequenti:</strong> Una nuvola di parole e un elenco mostrano i cognomi che compaiono più frequentemente nel suo database.</li>
         <li><strong>Possibili corrispondenze:</strong> Un elenco di altri genealogisti che condividono persone o famiglie storiche corrispondenti con questo genealogista.</li>
       </ul>
       <h4>Corrispondenze tra genealogisti</h4>
       <p>Cliccando su una delle corrispondenze suggerite nella pagina di un genealogista, si visualizza un confronto dettagliato dei loro dati{auth_match}. I risultati sono visualizzati in modo che ogni corrispondenza occupi due righe adiacenti:</p>
       <ul>
         <li>La <strong>riga superiore</strong> mostra il record del primo genealogista e la <strong>riga inferiore</strong> mostra il record del secondo.</li>
-        <li><strong>Confidenza:</strong> Ogni corrispondenza ha un punteggio percentuale che indica quanto è probabile che si tratti della stessa persona o famiglia.</li>
+        <li><strong>Punteggio di confidenza:</strong> Ogni corrispondenza ha un punteggio in percentuale che indica quanto è probabile che si tratti della stessa persona o famiglia.</li>
         <li><strong>Differenze evidenziate:</strong> Parole o dati che differiscono tra i due genealogisti vengono automaticamente evidenziati (in giallo) nella tabella, rendendo facile individuare discrepanze o nuove informazioni.</li>
+        <li><strong>Filtrare le corrispondenze:</strong> Nel campo di ricerca nella barra laterale è possibile restringere ulteriormente le corrispondenze visualizzate per nome, cognome, data o luogo.</li>
       </ul>
       {auth_section}
     `,
