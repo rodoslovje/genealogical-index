@@ -221,8 +221,9 @@ export default {
       </ul>
       <h4>Napredne nastavitve iskanja</h4>
       <ul>
-        <li><strong>Točno / Približno:</strong> Nastavitev <strong>Točno</strong> išče natančna ujemanja celih besed (npr. iskanje <em>Kovač</em> ne bo našlo <em>Kovačič</em>). Nastavitev <strong>Približno</strong> pa s pomočjo algoritmov išče tudi dele besed (podnize) in podobne različice imen ter priimkov.</li>
+        <li><strong>Vir:</strong> V iskalno polje lahko vnesete priimek enega ali več rodoslovcev, ločenih z vejico. Iskanje privzeto vključuje tako osebna družinska drevesa kot indeks Matricula. S spustnim menijem lahko iskanje omejite samo na enega od teh virov.</li>
         <li><strong>S povezavo:</strong> Prikaže samo tiste zadetke, ki vsebujejo zunanjo povezavo do izvirnih dokumentov (npr. Matricula Online, FamilySearch, Geneanet).</li>
+        <li><strong>Točno / Približno:</strong> Nastavitev <strong>Točno</strong> išče natančna ujemanja celih besed (npr. iskanje <em>Kovač</em> ne bo našlo <em>Kovačič</em>). Nastavitev <strong>Približno</strong> pa s pomočjo algoritmov išče tudi dele besed (podnize) in podobne različice imen ter priimkov.</li>
       </ul>
       <h3>3. Pregledovanje rezultatov</h3>
       <ul>

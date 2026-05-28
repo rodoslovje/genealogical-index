@@ -221,8 +221,9 @@ export default {
       </ul>
       <h4>Advanced Search Settings</h4>
       <ul>
-        <li><strong>Exact / Approximate:</strong> The <strong>Exact</strong> setting searches for exact whole-word matches (e.g. searching for <em>Smith</em> will not find <em>Smithson</em>). The <strong>Approximate</strong> setting uses algorithms to search for partial words (substrings) and similar name variations.</li>
+        <li><strong>Source:</strong> In the search field, you can enter the surname of one or more genealogists, separated by commas. By default, the search includes both personal family trees and the Matricula Index. Using the dropdown menu, you can restrict your search to only one of these sources.</li>
         <li><strong>With link:</strong> Displays only those results that contain an external link to original sources (e.g. Matricula Online, FamilySearch, Geneanet).</li>
+        <li><strong>Exact / Approximate:</strong> The <strong>Exact</strong> setting searches for exact whole-word matches (e.g. searching for <em>Smith</em> will not find <em>Smithson</em>). The <strong>Approximate</strong> setting uses algorithms to search for partial words (substrings) and similar name variations.</li>
       </ul>
       <h3>3. Viewing the Results</h3>
       <ul>

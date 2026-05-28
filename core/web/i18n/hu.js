@@ -221,8 +221,9 @@ export default {
       </ul>
       <h4>Speciális keresési beállítások</h4>
       <ul>
-        <li><strong>Pontos / Közelítő:</strong> A <strong>Pontos</strong> beállítás a teljes szavak pontos egyezését keresi (pl. a <em>Mali</em> keresése nem találja meg a <em>Malic</em> szót). A <strong>Közelítő</strong> beállítás algoritmusokat használ a szórészletek (részkarakterláncok) és hasonló névvariációk keresésére is.</li>
+        <li><strong>Forrás:</strong> A keresőmezőbe egy vagy több genealógus vezetéknevét is beírhatja, vesszővel elválasztva. Alapértelmezés szerint a keresés magában foglalja a személyes családfákat és a Matricula indexet is. A legördülő menü segítségével a keresést csak ezen források egyikére korlátozhatja.</li>
         <li><strong>Hivatkozással:</strong> Csak azokat a találatokat jeleníti meg, amelyek külső hivatkozást tartalmaznak az eredeti forrásokra (pl. Matricula Online, FamilySearch, Geneanet).</li>
+        <li><strong>Pontos / Közelítő:</strong> A <strong>Pontos</strong> beállítás a teljes szavak pontos egyezését keresi (pl. a <em>Mali</em> keresése nem találja meg a <em>Malic</em> szót). A <strong>Közelítő</strong> beállítás algoritmusokat használ a szórészletek (részkarakterláncok) és hasonló névvariációk keresésére is.</li>
       </ul>
       <h3>3. Az eredmények megtekintése</h3>
       <ul>

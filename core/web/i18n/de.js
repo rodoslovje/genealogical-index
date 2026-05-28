@@ -221,8 +221,9 @@ export default {
       </ul>
       <h4>Erweiterte Sucheinstellungen</h4>
       <ul>
-        <li><strong>Genau / Ungefähr:</strong> Die Einstellung <strong>Genau</strong> sucht nach exakten Übereinstimmungen ganzer Wörter (z. B. findet die Suche nach <em>Mali</em> nicht <em>Malic</em>). Die Einstellung <strong>Ungefähr</strong> verwendet Algorithmen, um auch nach Wortteilen (Teilzeichenfolgen) und ähnlichen Namensvarianten zu suchen.</li>
+        <li><strong>Quelle:</strong> In das Suchfeld können Sie den Nachnamen eines oder mehrerer Genealogen eingeben, getrennt durch Kommas. Standardmäßig umfasst die Suche sowohl persönliche Stammbäume als auch den Matricula-Index. Über das Dropdown-Menü können Sie die Suche auf eine dieser Quellen beschränken.</li>
         <li><strong>Mit Link:</strong> Zeigt nur Ergebnisse an, die einen externen Link zu Originalquellen (z. B. Matricula Online, FamilySearch, Geneanet) enthalten.</li>
+        <li><strong>Genau / Ungefähr:</strong> Die Einstellung <strong>Genau</strong> sucht nach exakten Übereinstimmungen ganzer Wörter (z. B. findet die Suche nach <em>Mali</em> nicht <em>Malic</em>). Die Einstellung <strong>Ungefähr</strong> verwendet Algorithmen, um auch nach Wortteilen (Teilzeichenfolgen) und ähnlichen Namensvarianten zu suchen.</li>
       </ul>
       <h3>3. Anzeigen der Ergebnisse</h3>
       <ul>

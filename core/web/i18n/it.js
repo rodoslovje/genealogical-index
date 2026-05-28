@@ -221,8 +221,9 @@ export default {
       </ul>
       <h4>Impostazioni di ricerca avanzate</h4>
       <ul>
-        <li><strong>Esatto / Approssimato:</strong> L'impostazione <strong>Esatto</strong> cerca corrispondenze esatte di parole intere (es. cercare <em>Mali</em> non troverà <em>Malic</em>). L'impostazione <strong>Approssimato</strong> utilizza algoritmi per cercare anche parti di parole (sottostringhe) e simili varianti di nome.</li>
+        <li><strong>Fonte:</strong> Nel campo di ricerca è possibile inserire il cognome di uno o più genealogisti, separati da virgole. Per impostazione predefinita, la ricerca include sia gli alberi genealogici personali che l'Indice Matricula. Utilizzando il menu a discesa, è possibile limitare la ricerca a una sola di queste fonti.</li>
         <li><strong>Con collegamento:</strong> Visualizza solo i risultati che contengono un collegamento esterno alle fonti originali (es. Matricula Online, FamilySearch, Geneanet).</li>
+        <li><strong>Esatto / Approssimato:</strong> L'impostazione <strong>Esatto</strong> cerca corrispondenze esatte di parole intere (es. cercare <em>Mali</em> non troverà <em>Malic</em>). L'impostazione <strong>Approssimato</strong> utilizza algoritmi per cercare anche parti di parole (sottostringhe) e simili varianti di nome.</li>
       </ul>
       <h3>3. Visualizzazione dei risultati</h3>
       <ul>

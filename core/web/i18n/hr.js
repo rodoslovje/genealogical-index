@@ -221,8 +221,9 @@ export default {
       </ul>
       <h4>Napredne postavke pretrage</h4>
       <ul>
-        <li><strong>Točno / Približno:</strong> Postavka <strong>Točno</strong> traži precizna podudaranja cijelih riječi (npr. pretraga <em>Kovač</em> neće pronaći <em>Kovačič</em>). Postavka <strong>Približno</strong> pomoću algoritama pretražuje i dijelove riječi (podnizove) te slične inačice imena i prezimena.</li>
+        <li><strong>Izvor:</strong> U polje za pretragu možete unijeti prezime jednog ili više rodoslovaca odvojenih zarezom. Prema zadanim postavkama pretraga uključuje osobna obiteljska stabla i Matricula indeks. Pomoću padajućeg izbornika možete ograničiti pretragu na samo jedan od tih izvora.</li>
         <li><strong>S poveznicom:</strong> Prikazuje samo rezultate koji sadrže vanjsku poveznicu na izvorne dokumente (npr. Matricula Online, FamilySearch, Geneanet).</li>
+        <li><strong>Točno / Približno:</strong> Postavka <strong>Točno</strong> traži precizna podudaranja cijelih riječi (npr. pretraga <em>Kovač</em> neće pronaći <em>Kovačič</em>). Postavka <strong>Približno</strong> pomoću algoritama pretražuje i dijelove riječi (podnizove) te slične inačice imena i prezimena.</li>
       </ul>
       <h3>3. Pregled rezultata</h3>
       <ul>

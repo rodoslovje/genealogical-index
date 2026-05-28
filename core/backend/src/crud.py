@@ -588,13 +588,11 @@ def _apply_source_and_contributor(
 
         conds = []
         for part in parts:
-            base = _base_contributor_name(part)
-            if source in ("all", "tree"):
-                conds.append(_text_filter(column, base, exact, split_comma=False))
-            if source in ("all", "matricula"):
+            conds.append(_text_filter(column, part, exact, split_comma=False))
+            if not part.lower().endswith(MATRICULA_SUFFIX):
                 conds.append(
                     _text_filter(
-                        column, base + MATRICULA_SUFFIX, exact, split_comma=False
+                        column, part + MATRICULA_SUFFIX, exact, split_comma=False
                     )
                 )
 
