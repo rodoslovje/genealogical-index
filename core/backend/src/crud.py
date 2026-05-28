@@ -449,9 +449,18 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
     if contributors:
         expanded = []
         for c in contributors:
-            expanded.append(c)
-            if not c.endswith(MATRICULA_SUFFIX):
-                expanded.append(c + MATRICULA_SUFFIX)
+            c_nfc = unicodedata.normalize("NFC", c)
+            c_nfd = unicodedata.normalize("NFD", c)
+            for form in (c_nfc, c_nfd):
+                if form not in expanded:
+                    expanded.append(form)
+                mat_form = (
+                    form + MATRICULA_SUFFIX
+                    if not form.endswith(MATRICULA_SUFFIX)
+                    else form
+                )
+                if mat_form not in expanded:
+                    expanded.append(mat_form)
 
         if len(expanded) == 1:
             q = q.filter(models.Person.contributor == expanded[0])
@@ -641,13 +650,20 @@ def _apply_source_and_contributor(
 
         conds = []
         for part in parts:
-            conds.append(_text_filter(column, part, exact, split_comma=False))
-            if not part.lower().endswith(MATRICULA_SUFFIX):
-                conds.append(
-                    _text_filter(
-                        column, part + MATRICULA_SUFFIX, exact, split_comma=False
+            part_nfc = unicodedata.normalize("NFC", part)
+            part_nfd = unicodedata.normalize("NFD", part)
+            forms = [part_nfc]
+            if part_nfd != part_nfc:
+                forms.append(part_nfd)
+
+            for form in forms:
+                conds.append(_text_filter(column, form, exact, split_comma=False))
+                if not form.lower().endswith(MATRICULA_SUFFIX):
+                    conds.append(
+                        _text_filter(
+                            column, form + MATRICULA_SUFFIX, exact, split_comma=False
+                        )
                     )
-                )
 
         if len(conds) == 1:
             query = query.filter(conds[0])
