@@ -57,11 +57,6 @@ function renderTreePage(kind) {
   const container = document.getElementById(config.ids.container);
   const controls = document.getElementById(config.ids.controls);
   const sourceEl = document.getElementById(config.ids.source);
-  const wrapper = document.getElementById(config.ids.wrapper);
-
-  if (wrapper) {
-    wrapper.style.height = `${Math.max(window.innerHeight - 165, 400)}px`;
-  }
 
   const zoomInBtn = document.getElementById(config.ids.zoomIn);
   if (zoomInBtn) { zoomInBtn.innerHTML = '➕'; zoomInBtn.title = t('tree_zoom_in'); }
@@ -130,13 +125,6 @@ function computeBounds(root, dx, dy) {
   const maxX = y1 + 250;
   const maxY = x1 + dx;
   return { minX, minY, maxX, maxY, treeWidth: maxX - minX, treeHeight: maxY - minY };
-}
-
-function sizeContainerToViewport(container, wrapperId) {
-  const availableHeight = Math.max(window.innerHeight - 165, 400);
-  const wrapper = document.getElementById(wrapperId);
-  if (wrapper) wrapper.style.height = `${availableHeight}px`;
-  else container.style.height = `${availableHeight}px`;
 }
 
 function createSvgWithZoom(container, bounds, root, ids) {
@@ -590,7 +578,6 @@ function renderD3AncestorsTree(data, container, personName, contributorName, ids
   }));
 
   const bounds = computeBounds(root, dx, dy);
-  sizeContainerToViewport(container, ids.wrapper);
   const { svg, g } = createSvgWithZoom(container, bounds, root, ids);
 
   attachSvgExport({
@@ -737,7 +724,6 @@ function renderD3DescendantsTree(data, container, personName, contributorName, i
   });
 
   const bounds = computeBounds(root, dx, dy);
-  sizeContainerToViewport(container, ids.wrapper);
   const { svg, g } = createSvgWithZoom(container, bounds, root, ids);
 
   attachSvgExport({

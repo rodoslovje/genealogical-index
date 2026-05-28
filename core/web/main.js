@@ -357,6 +357,9 @@ export function activateTab(targetTab, { skipHistory = false } = {}) {
     document.body.classList.remove('contributors-view');
   }
 
+  const isTreeTab = targetTab === 'tab-ancestors' || targetTab === 'tab-descendants';
+  document.body.classList.toggle('tree-view', isTreeTab);
+
   if (targetTab === 'tab-ancestors') {
     renderAncestorsPage();
   } else if (targetTab === 'tab-descendants') {
@@ -384,7 +387,9 @@ export function activateTab(targetTab, { skipHistory = false } = {}) {
   };
   if (tabsWithResults.has(targetTab) || targetTab === 'tab-ancestors' || targetTab === 'tab-descendants') {
     const resEl = document.getElementById(resultsMap[targetTab]);
-    if (resEl) resEl.style.display = 'block';
+    // Tree tabs let the CSS flex layout decide (`body.tree-view .results-container`);
+    // other tabs need explicit display:block to override the initial inline display:none.
+    if (resEl) resEl.style.display = isTreeTab ? '' : 'block';
     if (introMap[targetTab]) hideIntro(introMap[targetTab]);
   } else {
     showIntros(introMap[targetTab]);

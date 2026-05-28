@@ -212,6 +212,14 @@ h2 {
   margin-top: 1.6rem;
 }
 
+/* Search-result section headings sit right under the navbar (the intro is
+   hidden as soon as a search runs), so the default h2 spacing leaves an
+   awkward gap. Tighten top/bottom to match the tree-page section bar. */
+.results-container > h2 {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .loading {
   text-align: center;
   font-size: 1.05rem;
@@ -482,6 +490,38 @@ h2 {
 #main-content {
   padding: 0 20px;
   min-width: 0;
+}
+
+/* Tree pages (Ancestors / Descendants): the tree wrapper grows to fill all
+   remaining space between the title and the footer via a flex chain rooted
+   at <body>. Replaces the prior `window.innerHeight - 165` magic number,
+   which under-counted chrome and pushed the footer below the viewport.
+   The body's height (not just min-height) must be definite for `flex: 1`
+   to propagate down the chain — without this, Safari/Firefox leave the
+   wrapper at its content height. */
+body.tree-view {
+  height: 100vh;
+  overflow: hidden;
+}
+body.tree-view .container,
+body.tree-view .content-area,
+body.tree-view #main-content,
+body.tree-view .tab-content.active,
+body.tree-view .results-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+body.tree-view #ancestor-tree-wrapper,
+body.tree-view #descendant-tree-wrapper {
+  flex: 1;
+  min-height: 0 !important;   /* override inline min-height: 60vh */
+  height: auto !important;     /* defensive: clear any stale JS-set height */
+}
+body.tree-view .section-bar {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 #sidebar {
