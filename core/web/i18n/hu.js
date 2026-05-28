@@ -27,6 +27,7 @@ export default {
     chart_surnames_all: 'Összes genealógus',
     chart_surnames_select: 'Válasszon genealógust…',
     chart_surnames_loading: 'Betöltés…',
+    section_statistics: 'Statisztika',
     section_surnames: 'Leggyakoribb vezetéknevek',
 
     // Result section headings

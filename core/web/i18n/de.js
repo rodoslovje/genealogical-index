@@ -27,6 +27,7 @@ export default {
     chart_surnames_all: 'Alle Genealogen',
     chart_surnames_select: 'Genealogen auswählen…',
     chart_surnames_loading: 'Laden…',
+    section_statistics: 'Statistik',
     section_surnames: 'Häufigste Nachnamen',
 
     // Result section headings

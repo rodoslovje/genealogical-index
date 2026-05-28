@@ -93,8 +93,10 @@ export async function renderContributors() {
   const chartsContainer = document.getElementById('charts-container');
   const surnameCloudSection = document.getElementById('surname-cloud-section');
   let tableHeader = document.getElementById('table-contributors-header');
+  const statsHeading = document.getElementById('contributors-stats-heading');
 
   if (contributor) {
+    if (statsHeading) statsHeading.style.display = 'none';
     if (chartsContainer) chartsContainer.style.display = 'none';
     if (surnameCloudSection) surnameCloudSection.style.display = 'none';
     if (tableHeader) tableHeader.style.display = 'none';
@@ -104,9 +106,28 @@ export async function renderContributors() {
 
   document.title = t('site_title');
 
-  if (chartsContainer) chartsContainer.style.display = 'grid';
+  const totalsBar = document.getElementById('totals-bar');
+  const statsCollapsed = statsHeading?.classList.contains('collapsed');
+
+  if (statsHeading) statsHeading.style.display = '';
+  if (chartsContainer) chartsContainer.style.display = statsCollapsed ? 'none' : 'grid';
+  if (totalsBar && !readContributorParam(urlParams)) totalsBar.style.display = statsCollapsed ? 'none' : '';
   if (surnameCloudSection) surnameCloudSection.style.display = '';
   if (tableHeader) tableHeader.style.display = '';
+
+  // Wire the Statistika heading to collapse the totals bar + charts (its two
+  // visual children). One-time attach guarded via the .collapsible-header class.
+  if (statsHeading && !statsHeading.classList.contains('collapsible-header')) {
+    statsHeading.classList.add('collapsible-header');
+    statsHeading.addEventListener('click', () => {
+      const willCollapse = !statsHeading.classList.contains('collapsed');
+      statsHeading.classList.toggle('collapsed', willCollapse);
+      const tb = document.getElementById('totals-bar');
+      const cc = document.getElementById('charts-container');
+      if (tb) tb.style.display = willCollapse ? 'none' : '';
+      if (cc) cc.style.display = willCollapse ? 'none' : 'grid';
+    });
+  }
 
   const container = document.getElementById('table-contributors');
 
@@ -114,7 +135,7 @@ export async function renderContributors() {
     tableHeader = document.createElement('h2');
     tableHeader.id = 'table-contributors-header';
     tableHeader.className = 'section-heading';
-    tableHeader.style.marginTop = '2rem';
+    tableHeader.style.marginTop = '1rem';
     tableHeader.style.borderBottom = '1px solid var(--border)';
     tableHeader.style.paddingBottom = '5px';
     tableHeader.style.marginBottom = '10px';

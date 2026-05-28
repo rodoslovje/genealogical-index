@@ -220,6 +220,13 @@ h2 {
   margin-bottom: 0.5rem;
 }
 
+/* Contributors-page Statistika heading: explicit margin-bottom so the gap
+   to the next section (Najpogostejši priimki) matches the gap before
+   tableHeader (Rodoslovci) when all three are collapsed. */
+#contributors-stats-heading {
+  margin-bottom: 0;
+}
+
 .loading {
   text-align: center;
   font-size: 1.05rem;
@@ -846,7 +853,7 @@ body.compact-nav .mobile-nav-section { display: flex; }
 }
 
 /* --- Surname Word Cloud --- */
-.surname-cloud-section { margin: 1rem 0 2rem; }
+.surname-cloud-section { margin: 1rem 0; }
 .surname-cloud {
   display: flex;
   flex-wrap: wrap;

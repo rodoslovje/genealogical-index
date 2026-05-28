@@ -27,6 +27,7 @@ export default {
     chart_surnames_all: 'Svi rodoslovci',
     chart_surnames_select: 'Odaberi rodoslovca…',
     chart_surnames_loading: 'Učitavanje…',
+    section_statistics: 'Statistika',
     section_surnames: 'Najčešća prezimena',
 
     // Result section headings

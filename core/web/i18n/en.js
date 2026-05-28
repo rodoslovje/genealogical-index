@@ -27,6 +27,7 @@ export default {
     chart_surnames_all: 'All genealogists',
     chart_surnames_select: 'Select genealogist…',
     chart_surnames_loading: 'Loading…',
+    section_statistics: 'Statistics',
     section_surnames: 'Top Surnames',
 
     // Result section headings
