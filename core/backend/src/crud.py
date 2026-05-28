@@ -80,8 +80,8 @@ def get_match_counts(db: Session):
 
     counts = {}
     for r in rows:
-        c_base = unicodedata.normalize("NFC", r.contributor) if r.contributor else ""
-        p_base = unicodedata.normalize("NFC", r.partner) if r.partner else ""
+        c_base = r.contributor or ""
+        p_base = r.partner or ""
         if c_base not in counts:
             counts[c_base] = set()
         counts[c_base].add(p_base)
@@ -95,13 +95,10 @@ def get_match_counts(db: Session):
 def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b: str):
     results = []
 
-    a_nfc = unicodedata.normalize("NFC", contributor_a)
-    a_nfd = unicodedata.normalize("NFD", contributor_a)
-    a_forms = [a_nfc, a_nfd, a_nfc + MATRICULA_SUFFIX, a_nfd + MATRICULA_SUFFIX]
+    a_norm = unicodedata.normalize("NFC", contributor_a)
+    a_forms = [a_norm, a_norm + MATRICULA_SUFFIX]
 
-    b_nfc = unicodedata.normalize("NFC", contributor_b)
-    b_nfd = unicodedata.normalize("NFD", contributor_b)
-    b_forms = [b_nfc, b_nfd]
+    b_forms = [unicodedata.normalize("NFC", contributor_b)]
 
     person_rows = db.execute(
         text("""
@@ -261,13 +258,10 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
 
 
 def get_contributor_matches(db: Session, contributor: str):
-    contrib_nfc = unicodedata.normalize("NFC", contributor)
-    contrib_nfd = unicodedata.normalize("NFD", contributor)
+    contrib_norm = unicodedata.normalize("NFC", contributor)
     c_forms = [
-        contrib_nfc,
-        contrib_nfd,
-        contrib_nfc + MATRICULA_SUFFIX,
-        contrib_nfd + MATRICULA_SUFFIX,
+        contrib_norm,
+        contrib_norm + MATRICULA_SUFFIX,
     ]
 
     rows = db.execute(
@@ -286,40 +280,13 @@ def get_contributor_matches(db: Session, contributor: str):
         {"c_forms": c_forms},
     ).fetchall()
 
-    merged = {}
-    for r in rows:
-        base = unicodedata.normalize("NFC", r.contributor) if r.contributor else ""
-        if base not in merged:
-            merged[base] = {
-                "contributor": base,
-                "persons_count": int(r.persons_count or 0),
-                "families_count": int(r.families_count or 0),
-                "total_count": int(r.total_count or 0),
-                "max_confidence": float(r.max_confidence or 0.0),
-                "computed_at": r.computed_at,
-            }
-        else:
-            m = merged[base]
-            m["persons_count"] += int(r.persons_count or 0)
-            m["families_count"] += int(r.families_count or 0)
-            m["total_count"] += int(r.total_count or 0)
-            m["max_confidence"] = max(
-                m["max_confidence"], float(r.max_confidence or 0.0)
-            )
-            if r.computed_at and (
-                not m["computed_at"] or r.computed_at > m["computed_at"]
-            ):
-                m["computed_at"] = r.computed_at
-
-    return sorted(merged.values(), key=lambda x: x["total_count"], reverse=True)
+    return [dict(r._mapping) for r in rows]
 
 
 def _base_contributor_name(name: str) -> str:
     if name and name.endswith(MATRICULA_SUFFIX):
         name = name[: -len(MATRICULA_SUFFIX)]
-    # Imported contributor names may have inconsistent unicode forms
-    # (e.g. "Kovačič" stored as NFC vs NFD); normalize so they group together.
-    return unicodedata.normalize("NFC", name) if name else name
+    return name
 
 
 def get_contributors(db: Session):
@@ -449,18 +416,12 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
     if contributors:
         expanded = []
         for c in contributors:
-            c_nfc = unicodedata.normalize("NFC", c)
-            c_nfd = unicodedata.normalize("NFD", c)
-            for form in (c_nfc, c_nfd):
-                if form not in expanded:
-                    expanded.append(form)
-                mat_form = (
-                    form + MATRICULA_SUFFIX
-                    if not form.endswith(MATRICULA_SUFFIX)
-                    else form
-                )
-                if mat_form not in expanded:
-                    expanded.append(mat_form)
+            norm_c = unicodedata.normalize("NFC", c)
+            if norm_c not in expanded:
+                expanded.append(norm_c)
+            mat_form = norm_c + MATRICULA_SUFFIX
+            if not norm_c.endswith(MATRICULA_SUFFIX) and mat_form not in expanded:
+                expanded.append(mat_form)
 
         if len(expanded) == 1:
             q = q.filter(models.Person.contributor == expanded[0])
@@ -494,6 +455,11 @@ def _date_filter(
     exact: bool = False,
     year_column=None,
 ):
+    if isinstance(from_val, str):
+        from_val = unicodedata.normalize("NFC", from_val)
+    if isinstance(to_val, str):
+        to_val = unicodedata.normalize("NFC", to_val)
+
     """
     If only from_val is given: existing fuzzy/exact string match.
     If to_val is given: year-range comparison, handling three date formats:
@@ -586,6 +552,10 @@ def _date_filter(
 
 
 def _text_filter(column, value, exact: bool, split_comma: bool = False):
+    if not value:
+        return None
+    if isinstance(value, str):
+        value = unicodedata.normalize("NFC", value)
     if split_comma and "," in value:
         parts = [p.strip() for p in value.split(",") if p.strip()]
     else:
@@ -643,6 +613,8 @@ def _apply_source_and_contributor(
         query = query.filter(column.like(f"%{MATRICULA_SUFFIX}"))
 
     if contributor:
+        if isinstance(contributor, str):
+            contributor = unicodedata.normalize("NFC", contributor)
         if "," in contributor:
             parts = [p.strip() for p in contributor.split(",") if p.strip()]
         else:
@@ -650,21 +622,14 @@ def _apply_source_and_contributor(
 
         conds = []
         for part in parts:
-            part_nfc = unicodedata.normalize("NFC", part)
-            part_nfd = unicodedata.normalize("NFD", part)
-            forms = [part_nfc]
-            if part_nfd != part_nfc:
-                forms.append(part_nfd)
-
-            for form in forms:
-                conds.append(_text_filter(column, form, exact, split_comma=False))
-                if not form.lower().endswith(MATRICULA_SUFFIX):
-                    conds.append(
-                        _text_filter(
-                            column, form + MATRICULA_SUFFIX, exact, split_comma=False
-                        )
+            norm_part = unicodedata.normalize("NFC", part)
+            conds.append(_text_filter(column, norm_part, exact, split_comma=False))
+            if not norm_part.lower().endswith(MATRICULA_SUFFIX):
+                conds.append(
+                    _text_filter(
+                        column, norm_part + MATRICULA_SUFFIX, exact, split_comma=False
                     )
-
+                )
         if len(conds) == 1:
             query = query.filter(conds[0])
         elif len(conds) > 1:
@@ -690,6 +655,9 @@ def search_all(
     record_type: str = None,
 ):
     _set_trgm(db, exact)
+
+    if isinstance(ext_id, str):
+        ext_id = unicodedata.normalize("NFC", ext_id)
 
     persons = []
     if record_type in (None, "persons"):
@@ -823,6 +791,7 @@ def search_advanced_persons(
     query = db.query(models.Person)
 
     if ext_id:
+        ext_id = unicodedata.normalize("NFC", ext_id)
         query = query.filter(models.Person.ext_id == ext_id)
     if name:
         query = query.filter(
@@ -947,6 +916,8 @@ def search_advanced_families(
             )
         )
     if children:
+        if isinstance(children, str):
+            children = unicodedata.normalize("NFC", children)
         v = children.replace("%", r"\%").replace("_", r"\_")
         # children_list is JSONB; trgm/ILIKE need its text serialization. The
         # matching trgm expression index `idx_family_children_list_trgm`
@@ -996,6 +967,11 @@ def find_parent_record(db: Session, parent_info: dict, contributor: str):
     re-import differences) we fall back to the name/year heuristic.
     """
     ext_id = parent_info.get("id")
+    if isinstance(ext_id, str):
+        ext_id = unicodedata.normalize("NFC", ext_id)
+    if isinstance(contributor, str):
+        contributor = unicodedata.normalize("NFC", contributor)
+
     if ext_id and contributor:
         match = (
             db.query(models.Person)
@@ -1009,7 +985,11 @@ def find_parent_record(db: Session, parent_info: dict, contributor: str):
             return match
 
     name = parent_info.get("name")
+    if isinstance(name, str):
+        name = unicodedata.normalize("NFC", name)
     surname = parent_info.get("surname")
+    if isinstance(surname, str):
+        surname = unicodedata.normalize("NFC", surname)
 
     date_of_birth = parent_info.get("date_of_birth")
     if (
@@ -1025,6 +1005,9 @@ def find_parent_record(db: Session, parent_info: dict, contributor: str):
             birth_year = int(parent_info.get("year"))
         except ValueError:
             pass
+
+    if isinstance(date_of_birth, str):
+        date_of_birth = unicodedata.normalize("NFC", date_of_birth)
 
     if not name and not surname:
         return None

@@ -422,7 +422,7 @@ _nul_stripped_count = 0
 
 
 def _strip_nul(v):
-    """Recursively strip NUL bytes (PostgreSQL TEXT can't store them).
+    """Recursively strip NUL bytes (PostgreSQL TEXT can't store them) and normalize strings.
     Counts strips into _nul_stripped_count for end-of-contributor reporting.
     """
     global _nul_stripped_count
@@ -431,8 +431,8 @@ def _strip_nul(v):
     if isinstance(v, str):
         if "\x00" in v:
             _nul_stripped_count += 1
-            return v.replace("\x00", "")
-        return v
+            v = v.replace("\x00", "")
+        return unicodedata.normalize("NFC", v)
     if isinstance(v, list):
         return [_strip_nul(x) for x in v]
     if isinstance(v, dict):
@@ -443,14 +443,12 @@ def _strip_nul(v):
 def _to_json_or_none(v):
     if v is None:
         return None
-    if isinstance(v, str):
-        return v.replace("\x00", "") if "\x00" in v else v
     cleaned = _strip_nul(v)
     return json.dumps(cleaned, ensure_ascii=False)
 
 
 def _s(v):
-    """Coerce to string, strip NULs."""
+    """Coerce to string, strip NULs, and normalize to NFC."""
     if v is None:
         return ""
     s = str(v)
@@ -458,7 +456,7 @@ def _s(v):
         global _nul_stripped_count
         _nul_stripped_count += 1
         return s.replace("\x00", "")
-    return s
+    return unicodedata.normalize("NFC", s)
 
 
 def _flatten_person(p, contributor_id):
