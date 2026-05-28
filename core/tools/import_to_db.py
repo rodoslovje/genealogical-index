@@ -742,8 +742,14 @@ def main():
                 )
         db.commit()
 
-    forced_contributors = set(args.force_contributor)
-    unknown_forced = forced_contributors - {m["contributor"] for m in metadata}
+    # NFC-normalize so users can paste/type names that arrive in NFD form
+    # (common on macOS), and still match metadata which is stored as NFC.
+    forced_contributors = {
+        unicodedata.normalize("NFC", n) for n in args.force_contributor
+    }
+    unknown_forced = forced_contributors - {
+        unicodedata.normalize("NFC", m["contributor"]) for m in metadata
+    }
     if unknown_forced:
         print(
             f"Warning: --force-contributor names not in metadata: {sorted(unknown_forced)}"
