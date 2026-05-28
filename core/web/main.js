@@ -3,6 +3,7 @@ import siteConfig from '@site-config';
 import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
 import { initAuth, isLoggedIn, requireLogin } from './auth.js';
 import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
+import { initHelp } from './help.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
 import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams, getParam } from './url.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree.js';
@@ -163,24 +164,83 @@ function updateSidebarTop() {
 updateSidebarTop();
 window.addEventListener('resize', updateSidebarTop);
 
-// Collapse inline navbar tabs into the sidebar when the navbar would overflow.
-// Measures by temporarily un-compacting and comparing scrollWidth — the
-// synchronous read/write keeps the browser from painting an intermediate state.
+// Navbar overflow handling has two stages:
+//   compact-nav   → primary nav tabs move into the sidebar
+//   compact-utils → help / language / login icons also move into the sidebar
+// `compact-utils` only kicks in when the navbar still doesn't fit after the
+// tabs have already collapsed — so on a phone with a short site title the
+// utility icons stay visible in the navbar, and only on really tight layouts
+// (long title or many tabs) do they move out of the way.
 const navbarEl = document.querySelector('.srd-navbar');
-function checkNavOverflow() {
-  if (!navbarEl) return;
-  // Phones are always compact (tabs in sidebar) — at ≤480px the brand can
-  // shrink, so an overflow measurement would never fire and tabs would stay
-  // stuck in the navbar. At larger widths, .srd-brand is flex-shrink: 0 and
-  // the navbar genuinely overflows when content doesn't fit.
-  if (window.innerWidth <= 480) {
-    document.body.classList.add('compact-nav');
+
+// Re-parents help / login / lang between .srd-nav-right (desktop) and the
+// .mobile-utils-section slot inside the sidebar header (compact-utils mode).
+// Single source of truth per control — listeners and dropdowns stay attached.
+function applyCompactNav() {
+  const utilsSlot = document.querySelector('.mobile-utils-section');
+  const navRight = document.querySelector('.srd-nav-right');
+  if (!utilsSlot || !navRight) return;
+
+  const collapseUtils = document.body.classList.contains('compact-utils');
+  const helpBtn = document.getElementById('help-toggle-btn');
+  const langSwitcher = document.getElementById('lang-switcher');
+  const authWrapper = document.querySelector('.auth-nav-wrapper');
+  const hamburger = navRight.querySelector('.hamburger-btn');
+
+  if (collapseUtils) {
+    // Sidebar slot order top-to-bottom: lang, auth, help — reversed from the
+    // navbar so the rightmost-in-navbar (language) ends up on top once stacked
+    // vertically, matching the mental model that the dropdown opens downward.
+    if (langSwitcher && langSwitcher.parentElement !== utilsSlot) utilsSlot.appendChild(langSwitcher);
+    if (authWrapper && authWrapper.parentElement !== utilsSlot) utilsSlot.appendChild(authWrapper);
+    if (helpBtn && helpBtn.parentElement !== utilsSlot) utilsSlot.appendChild(helpBtn);
   } else {
-    document.body.classList.remove('compact-nav');
-    if (navbarEl.scrollWidth > navbarEl.clientWidth + 1) {
-      document.body.classList.add('compact-nav');
+    // Restore right-to-left: lang first (anchored on hamburger which never
+    // moves), then auth (anchored on the now-restored lang), then help. This
+    // guarantees the anchor is always already a child of navRight, so
+    // insertBefore can't hit a NotFoundError when an anchor still happens
+    // to live in the sidebar slot.
+    if (langSwitcher && langSwitcher.parentElement !== navRight) {
+      navRight.insertBefore(langSwitcher, hamburger);
+    }
+    if (authWrapper && authWrapper.parentElement !== navRight) {
+      navRight.insertBefore(authWrapper, langSwitcher || hamburger);
+    }
+    if (helpBtn && helpBtn.parentElement !== navRight) {
+      navRight.insertBefore(helpBtn, authWrapper || langSwitcher || hamburger);
     }
   }
+}
+
+function checkNavOverflow() {
+  if (!navbarEl) return;
+
+  // Reset to the "everything visible in the navbar" baseline before measuring.
+  // Physically restore the icons too — without this the navbar's scrollWidth
+  // would miss whichever icons were previously moved to the sidebar slot, so
+  // the overflow detection (and the subsequent restore on a wider window)
+  // would not behave symmetrically.
+  document.body.classList.remove('compact-nav');
+  document.body.classList.remove('compact-utils');
+  applyCompactNav();
+
+  if (window.innerWidth <= 480) {
+    // Phones: the title gets the screen; everything else lives in the menu.
+    // Driven by viewport, not overflow — even with a short title, the icons
+    // should sit next to the tabs inside the sidebar at this size.
+    document.body.classList.add('compact-nav');
+    document.body.classList.add('compact-utils');
+  } else if (navbarEl.scrollWidth > navbarEl.clientWidth + 1) {
+    // Wider screens: tabs collapse first; icons follow only if there's still
+    // not enough room for the title (which never shrinks — .srd-brand stays
+    // flex-shrink: 0 at every size).
+    document.body.classList.add('compact-nav');
+    if (navbarEl.scrollWidth > navbarEl.clientWidth + 1) {
+      document.body.classList.add('compact-utils');
+    }
+  }
+
+  applyCompactNav();
   updateSidebarTop();
 }
 checkNavOverflow();
@@ -191,8 +251,12 @@ if (window.ResizeObserver && navbarEl) {
 onLanguageChange(checkNavOverflow);
 
 hamburgerBtn.addEventListener('click', (e) => {
-  if (document.getElementById('tab-ancestors').classList.contains('active') ||
-      document.getElementById('tab-descendants').classList.contains('active')) {
+  // Tree pages have no search controls. The sidebar is normally a no-op there,
+  // but in compact-nav mode it also hosts the help / language / login utilities
+  // collapsed out of the navbar, so we still want it reachable.
+  const isTreePage = document.getElementById('tab-ancestors').classList.contains('active') ||
+                     document.getElementById('tab-descendants').classList.contains('active');
+  if (isTreePage && !document.body.classList.contains('compact-nav')) {
     return;
   }
 
@@ -368,6 +432,11 @@ async function init() {
     await initI18n();
 
     initAuth();
+    initHelp();
+
+    // help-btn and auth-wrapper now exist; re-evaluate so they land in the
+    // sidebar slot if we're already in compact-nav mode.
+    checkNavOverflow();
 
     setupClearableInput(document.getElementById('contributors-query'), () => {
       sidebar.classList.remove('open');

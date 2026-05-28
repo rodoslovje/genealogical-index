@@ -497,9 +497,6 @@ h2 {
   display: none;
   flex-direction: column;
   gap: 5px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--srd-line);
-  padding-bottom: 15px;
 }
 
 .mobile-nav-section .tab-btn {

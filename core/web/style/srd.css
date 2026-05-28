@@ -165,15 +165,25 @@ body {
   margin-left: auto;
 }
 
-/* Language switcher button */
+/* Position context for the lang dropdown — keeps it anchored to the toggle
+   wherever the .lang-switcher lives (navbar on desktop, sidebar in compact). */
+.lang-switcher {
+  position: relative;
+}
+
+/* Language switcher button — height matches .srd-icon-btn (help, login) so
+   all three sit on the same baseline in the navbar (and stack flush in the
+   sidebar under compact-utils). */
 .srd-lang-btn {
+  height: 34px;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   background: var(--srd-surface);
   border: 1px solid var(--srd-line);
   border-radius: 6px;
-  padding: 5px 9px;
+  padding: 0 9px;
   font-family: var(--srd-font-sans);
   font-size: 12.5px;
   font-weight: 600;
@@ -289,31 +299,56 @@ body {
     padding: 0 12px;
     gap: 10px;
   }
-  .srd-brand { flex-shrink: 1; } /* allow ellipsis fallback on narrow phones */
   .srd-brand-mark { height: 32px; }
   /* .app keeps its desktop 18px size — with .org hidden, there's room for it. */
   .srd-brand-title .org { display: none; } /* one-line brand on phone */
   .srd-nav-sep { display: none; }
-  .srd-lang-btn { padding: 4px 7px; font-size: 11.5px; gap: 4px; }
+  .srd-lang-btn { height: 32px; padding: 0 7px; font-size: 11.5px; gap: 4px; }
   .srd-lang-btn img { width: 14px; }
   .srd-icon-btn { width: 32px; height: 32px; }
 }
 
-/* ---- Compact / mobile mode (driven by host JS adding .compact-nav to <body>) ---- */
-/* When the navbar overflows, hide inline tabs; they reappear inside the sidebar's
-   mobile-nav-section. The hamburger stays visible at all sizes — it's the toggle
-   for the persistent right-side panel (search, lineage filters, etc.). */
+/* ---- Compact / mobile mode (driven by JS adding .compact-nav / .compact-utils
+   to <body>; see checkNavOverflow() in main.js). Two stages:
+     .compact-nav   — inline navbar tabs collapse into the sidebar
+     .compact-utils — help / language / login icons also collapse there
+   The hamburger stays visible at all sizes — it's the toggle for the sidebar. */
 body.compact-nav .srd-nav-tabs,
 body.compact-nav .srd-nav-sep {
   display: none;
 }
 
-/* Sidebar nav mirrors the navbar tabs only when those tabs are hidden. */
-.mobile-nav-section {
+/* Sidebar header — tabs on the left, navbar utility icons on the right.
+   Visible whenever either stage is active so its contents have a home. */
+.sidebar-header-row {
   display: none;
 }
-body.compact-nav .mobile-nav-section {
-  display: block;
+body.compact-nav .sidebar-header-row,
+body.compact-utils .sidebar-header-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--srd-line);
+}
+.sidebar-header-row .mobile-nav-section {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* .mobile-utils-section only has children when applyCompactNav() has moved
+   them in (compact-utils mode). Keep it out of layout otherwise so it doesn't
+   reserve a column when there's nothing inside. */
+.mobile-utils-section {
+  display: none;
+}
+body.compact-utils .mobile-utils-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* =============================================================

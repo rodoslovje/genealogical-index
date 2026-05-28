@@ -16,6 +16,9 @@ export default {
     expand_all: 'Proširi',
     collapse_all: 'Sažmi',
     general_search_label: 'Opće',
+    help: 'Pomoć',
+    language: 'Jezik',
+    menu: 'Izbornik',
     chart_others: 'Ostali',
     chart_timeline: 'Vremenski pregled zapisa',
     chart_surnames_title: 'Najčešća prezimena po rodoslovcu',
@@ -177,4 +180,72 @@ export default {
     tree_descendants_title: 'Potomci',
     tree_source: 'Izvor',
     tree_created: 'Izrađeno',
+
+    // Help manual
+    help_auth_nav: ' i prijavu u sustav',
+    help_auth_tree: ' Ova je funkcija dostupna samo prijavljenim članovima.',
+    help_auth_match: ' (ova je funkcija dostupna samo prijavljenim članovima)',
+    help_auth_section: `
+      <h3>5. Prijava u sustav</h3>
+      <p>Za potpuni pristup stablima i podudaranjima morate se prijaviti. Otvorite prozor za prijavu klikom na ikonu osobe (<strong>{USER_ICON}</strong>) gore desno. U prozor upišite korisničko ime i lozinku koju inače koristite za pristup matičnom portalu društva.</p>`,
+    help_manual: `
+      <h2>Upute za korištenje</h2>
+      <p>Dobrodošli u Rodoslovni indeks, arhivsku zbirku podataka o osobama i obiteljima. Ovaj će vam priručnik pomoći u pretraživanju i pregledu rodoslovnih podataka.</p>
+      <h3>1. Osnovni pregled i navigacija</h3>
+      <p>Na vrhu zaslona nalazi se glavni navigacijski izbornik. Klikom na naslov stranice uvijek se vraćate na početnu stranicu. Izbornik sadrži četiri glavne kartice:</p>
+      <ul>
+        <li><strong>Pretraga:</strong> Omogućuje opću pretraga po svim osobama i obiteljima istovremeno.</li>
+        <li><strong>Osoba:</strong> Omogućuje detaljnu pretragu samo po pojedincima.</li>
+        <li><strong>Obitelj:</strong> Omogućuje detaljnu pretragu specifičnih obitelji (po mužu, ženi i djeci).</li>
+        <li><strong>Rodoslovci:</strong> Prikazuje popis svih istraživača koji su doprinijeli podacima i ukupnu statistiku.</li>
+      </ul>
+      <p>Na desnoj strani navigacijske trake pronaći ćete ikonu izbornika (<strong>☰</strong>) za otvaranje tražilice te gumbe za pomoć, odabir jezika{auth_nav}.</p>
+      <h3>2. Kako pretraživati indeks?</h3>
+      <p>Indeks nudi prilagodljivu tražilicu na desnoj strani zaslona. Otvarate ju klikom na ikonu izbornika (<strong>☰</strong>) u gornjem desnom kutu.</p>
+      <ul>
+        <li><strong>Pretraga:</strong> Omogućuje pretragu svih osoba i obitelji istovremeno. U polja za pretragu možete unijeti bilo koju kombinaciju imena, prezimena, datuma i mjesta. Tražilica će vam vratiti dvije odvojene tablice s rezultatima: pronađene osobe i pronađene obitelji.</li>
+        <li><strong>Osoba:</strong> Omogućuje preciznu pretragu po pojedinačnim životnim događajima (točan datum i mjesto rođenja te smrti).</li>
+        <li><strong>Obitelj:</strong> Omogućuje pretragu po podacima muža i žene istovremeno (imena, prezimena, datumi rođenja), datumu i mjestu vjenčanja te pretragu po imenima djece.</li>
+      </ul>
+      <h4>Pravila za unos podataka</h4>
+      <ul>
+        <li><strong>Više vrijednosti:</strong> U tekstualna polja (imena, prezimena, mjesta, rodoslovac) možete unijeti više riječi odvojenih zarezom (npr. <em>Janez, Ivan</em> ili <em>Kovač, Kovačić</em>). Sustav će pronaći zapise koji sadrže bilo koju od njih.</li>
+        <li><strong>Datumi i godine:</strong> U datumska polja možete unijeti točne datume (npr. <em>15. 4. 1850.</em>), samo godine (npr. <em>1850</em>) ili upotrijebiti približne vrijednosti (npr. <em>ABT 1850</em>). Datumska polja omogućuju i pretragu po rasponu (od - do), no pri tome se u obzir uzimaju <strong>samo godine</strong>.</li>
+      </ul>
+      <h4>Napredne postavke pretrage</h4>
+      <ul>
+        <li><strong>Točno / Približno:</strong> Postavka "Točno" traži precizna podudaranja cijelih riječi (npr. pretraga "Kovač" neće pronaći "Kovačič"). Postavka "Približno" pomoću algoritama pretražuje i dijelove riječi (podnizove) te slične inačice imena i prezimena.</li>
+        <li><strong>S poveznicom:</strong> Postavka prikazuje samo rezultate koji sadrže vanjsku poveznicu na izvorne dokumente (npr. Matricula).</li>
+      </ul>
+      <h3>3. Čitanje rezultata</h3>
+      <ul>
+        <li><strong>Sortiranje:</strong> Klikom na naslov stupca rezultate sortirate abecedno ili kronološki.</li>
+        <li><strong>Proširiva polja:</strong> Stupci poput <em>Roditelji</em>, <em>Partneri</em> i <em>Djeca</em> prikazuju broj osoba. Klikom na broj proširujete popis. Za prikaz svih odjednom možete upotrijebiti gumb <strong>Proširi</strong> iznad tablice.</li>
+        <li><strong>Detalji osoba i obitelji:</strong> Klikom na obojeno ime u tablici izvodite novu pretragu i prikazujete sve zapise samo za tu odabranu osobu ili obitelj. Klikom na partnera tražite njihovu obitelj. Slično tome, pri prikazu roditelja klikom na oznaku (<em>Roditelji</em>, <em>Muž</em> ili <em>Žena</em>) prikazujete njihovu obitelj, a klikom na ime pojedinog roditelja pretražujete samo njega.</li>
+        <li><strong>Stablo:</strong> Pored određenih osoba primijetit ćete ikonu stabla (🌳 za pretke, 🌿 za potomke). Klikom na ikonu prikazujete grafičko i interaktivno rodoslovno stablo odabrane osobe.{auth_tree}</li>
+        <li><strong>Izvoz podataka:</strong> Klikom na gumb <strong>CSV</strong> iznad tablice preuzimate trenutne rezultate na svoje računalo u tabličnom obliku.</li>
+      </ul>
+      <h3>4. Rodoslovci</h3>
+      <p>Kartica <strong>Rodoslovci</strong> prikazuje ukupnu statistiku indeksa i popis svih istraživača koji su doprinijeli svojim podacima.</p>
+      <ul>
+        <li><strong>Statistika:</strong> Na vrhu su prikazani grafovi s vremenskom raspodjelom zapisa.</li>
+        <li><strong>Najčešća prezimena:</strong> Prikazan je oblak najčešćih prezimena. Klikom na gumb <strong>CSV</strong> ili <strong>SVG</strong> možete izvesti te podatke.</li>
+        <li><strong>Popis rodoslovaca:</strong> Tablica prikazuje sve suradnike i broj njihovih zapisa. Klikom na gumb <strong>CSV</strong> možete izvesti tablicu, a klikom na ime rodoslovca otvarate njegovu detaljnu stranicu s više informacija.</li>
+      </ul>
+      <h4>Detalji o rodoslovcu</h4>
+      <p>Na stranici pojedinog rodoslovca okupljene su informacije o njegovom doprinosu:</p>
+      <ul>
+        <li><strong>Poveznica:</strong> Ako je rodoslovac naveo svoju web stranicu, ona se prikazuje ispod njegovog imena.</li>
+        <li><strong>Najčešća prezimena:</strong> Oblak riječi prikazuje prezimena koja se najčešće pojavljuju u njegovoj bazi.</li>
+        <li><strong>Moguća podudaranja:</strong> Popis drugih rodoslovaca s kojima ovaj rodoslovac dijeli zajedničke (podudarne) povijesne osobe ili obitelji.</li>
+      </ul>
+      <h4>Podudaranja između rodoslovaca</h4>
+      <p>Klikom na jedno od predloženih podudaranja na stranici rodoslovca prikazujete detaljnu usporedbu njihovih podataka{auth_match}. Rezultati su prikazani tako da svako podudaranje zauzima dva susjedna retka:</p>
+      <ul>
+        <li><strong>Gornji redak</strong> prikazuje zapis prvog rodoslovca, a <strong>donji</strong> zapis drugog.</li>
+        <li><strong>Ocjena pouzdanosti:</strong> Svako podudaranje ima ocjenu u postocima koja govori koliko je vjerojatno da se radi o istoj osobi ili obitelji.</li>
+        <li><strong>Označene razlike:</strong> Riječi ili podaci koji se razlikuju između dvaju rodoslovaca automatski su označeni (obojeni žutom bojom) u tablici, što olakšava brzo uočavanje razlika ili novih informacija.</li>
+      </ul>
+      {auth_section}
+    `,
 };

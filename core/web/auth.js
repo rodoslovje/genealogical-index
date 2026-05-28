@@ -115,7 +115,9 @@ export function initAuth() {
       }
     });
 
-    // Insert it safely before the hamburger menu
+    // Insert before the lang switcher (which sits between us and the
+    // hamburger). Falls back to the hamburger when no lang switcher exists.
+    const langSwitcher = navRight.querySelector('#lang-switcher');
     const hamburger = navRight.querySelector('.hamburger-btn');
 
     // Wrap the button and the dropdown to anchor the standard popover correctly
@@ -129,7 +131,7 @@ export function initAuth() {
     const dropdownHtml = `<div id="auth-dropdown" class="srd-popover" style="top: calc(100% + 4px); right: 0;"></div>`;
     wrapper.insertAdjacentHTML('beforeend', dropdownHtml);
 
-    navRight.insertBefore(wrapper, hamburger);
+    navRight.insertBefore(wrapper, langSwitcher || hamburger);
   }
 
   // Close dropdown on outside click

@@ -64,7 +64,7 @@
 
           <div class="srd-nav-right">
             <div class="lang-switcher" id="lang-switcher">
-              <button class="lang-toggle srd-lang-btn" id="lang-toggle" aria-label="Select language">
+              <button class="lang-toggle srd-lang-btn" id="lang-toggle" aria-label="Select language" data-i18n-title="language">
                 <span class="lang-flag">🇬🇧</span>
                 <span class="lang-code">EN</span>
                 <span class="lang-arrow" aria-hidden="true">▾</span>
@@ -73,7 +73,7 @@
                 <!-- Buttons generated dynamically by initI18n() from site config -->
               </div>
             </div>
-            <button class="hamburger-btn srd-icon-btn" aria-label="Toggle sidebar">
+            <button class="hamburger-btn srd-icon-btn" aria-label="Toggle sidebar" data-i18n-title="menu">
               <span class="srd-hamburger"><span></span></span>
             </button>
           </div>
@@ -169,11 +169,18 @@
         </main>
 
         <aside id="sidebar">
-          <div class="mobile-nav-section">
-            <a class="tab-btn active" data-target="tab-general" href="?t=general" data-i18n="tab_search">Search</a>
-            <a class="tab-btn" data-target="tab-person" href="?t=person" data-i18n="tab_person">Person</a>
-            <a class="tab-btn" data-target="tab-family" href="?t=family" data-i18n="tab_family">Family</a>
-            <a class="tab-btn" data-target="tab-contributors" href="?t=contributors" data-i18n="tab_contributors">Genealogists</a>
+          <!-- Sidebar header — tabs on the left, navbar utility icons (help,
+               login, lang) on the right in compact-nav mode. The utility
+               buttons are re-parented from .srd-nav-right by applyCompactNav()
+               in main.js, so there's a single source of truth for each. -->
+          <div class="sidebar-header-row">
+            <div class="mobile-nav-section">
+              <a class="tab-btn active" data-target="tab-general" href="?t=general" data-i18n="tab_search">Search</a>
+              <a class="tab-btn" data-target="tab-person" href="?t=person" data-i18n="tab_person">Person</a>
+              <a class="tab-btn" data-target="tab-family" href="?t=family" data-i18n="tab_family">Family</a>
+              <a class="tab-btn" data-target="tab-contributors" href="?t=contributors" data-i18n="tab_contributors">Genealogists</a>
+            </div>
+            <div class="mobile-utils-section"></div>
           </div>
 
           <div id="general-search-sidebar" class="sidebar-section active">

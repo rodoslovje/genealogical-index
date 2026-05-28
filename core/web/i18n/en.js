@@ -16,6 +16,9 @@ export default {
     expand_all: 'Expand',
     collapse_all: 'Collapse',
     general_search_label: 'General',
+    help: 'Help',
+    language: 'Language',
+    menu: 'Menu',
     chart_others: 'Others',
     chart_timeline: 'Records Timeline',
     chart_surnames_title: 'Top Surnames by Genealogist',
@@ -97,7 +100,7 @@ export default {
     tip_total_contributors: 'Total number of genealogists.',
     tip_last_update: 'Date of the most recent data import.',
     tip_total_links: 'Number of links to source documents (e.g. Matricula Online, Geneanet Cemeteries, FamilySearch.org…).',
-    tip_last_modified: 'Date this genealogist\'s data was last imported into the index.',
+    tip_last_modified: "Date this genealogist's data was last imported into the index.",
     tip_links: 'Links to source documents (e.g. Matricula Online, Geneanet Cemeteries, FamilySearch.org…).',
     tip_parents_person: 'Parents of this person, with search links to their family and to each parent.',
     tip_partners: 'Partners (married or unmarried) of this person, with a search link to their family.',
@@ -177,4 +180,72 @@ export default {
     tree_descendants_title: 'Descendants',
     tree_source: 'Source',
     tree_created: 'Created',
+
+    // Help manual
+    help_auth_nav: ', and system login',
+    help_auth_tree: ' This feature is only available to logged-in members.',
+    help_auth_match: ' (this feature is only available to logged-in members)',
+    help_auth_section: `
+      <h3>5. System Login</h3>
+      <p>To get full access to trees and matches, you need to log in. Open the login window by clicking the user icon (<strong>{USER_ICON}</strong>) in the top right corner. Enter the username and password you use to access the society's main portal.</p>`,
+    help_manual: `
+      <h2>User Manual</h2>
+      <p>Welcome to the Genealogical Index, an archival database of persons and families. This manual will help you search and browse genealogical data.</p>
+      <h3>1. Overview and Navigation</h3>
+      <p>At the top of the screen is the main navigation menu. By clicking on the site title, you always return to the start page. The menu contains four main tabs:</p>
+      <ul>
+        <li><strong>Search:</strong> Enables general search across all persons and families simultaneously.</li>
+        <li><strong>Person:</strong> Enables detailed search for individuals only.</li>
+        <li><strong>Family:</strong> Enables detailed search for specific families (by husband, wife, and children).</li>
+        <li><strong>Genealogists:</strong> Displays a list of all contributing researchers and overall statistics.</li>
+      </ul>
+      <p>On the right side of the navigation bar, you will find the menu icon (<strong>☰</strong>) to open the search engine, as well as buttons for help, language selection{auth_nav}.</p>
+      <h3>2. How to search?</h3>
+      <p>The index offers a flexible search engine on the right side of the screen. Open it by clicking the menu icon (<strong>☰</strong>) in the top right corner.</p>
+      <ul>
+        <li><strong>Search:</strong> Enables searching across all persons and families simultaneously. You can enter any combination of name, surname, date, and place into the search fields. The search engine will return two separate tables with results: found persons and found families.</li>
+        <li><strong>Person:</strong> Enables precise searching by individual life events (exact date and place of birth and death).</li>
+        <li><strong>Family:</strong> Enables searching by husband's and wife's data simultaneously (names, surnames, birth dates), date and place of marriage, and searching by children's names.</li>
+      </ul>
+      <h4>Data Input Rules</h4>
+      <ul>
+        <li><strong>Multiple values:</strong> In text fields (names, surnames, places, genealogist), you can enter multiple words separated by commas (e.g. <em>Janez, Ivan</em> or <em>Smith, Smithson</em>). The system will return records containing any of them.</li>
+        <li><strong>Dates and years:</strong> In date fields, you can enter exact dates (e.g. <em>15. 4. 1850</em>), just years (e.g. <em>1850</em>), or use approximations (e.g. <em>ABT 1850</em>). Date fields also allow entering a range (from - to), but this applies <strong>only to years</strong>.</li>
+      </ul>
+      <h4>Advanced Search Settings</h4>
+      <ul>
+        <li><strong>Exact / Approximate:</strong> The "Exact" setting searches for exact whole-word matches (e.g. searching for "Smith" will not find "Smithson"). The "Approximate" setting uses algorithms to search for partial words (substrings) and similar name variations.</li>
+        <li><strong>With link:</strong> This setting displays only results that contain an external link to original sources (e.g. Matricula).</li>
+      </ul>
+      <h3>3. Reading the Results</h3>
+      <ul>
+        <li><strong>Sorting:</strong> By clicking on a column header, you sort the results alphabetically or chronologically.</li>
+        <li><strong>Expandable Fields:</strong> Columns such as <em>Parents</em>, <em>Partners</em>, and <em>Children</em> display the number of persons. By clicking the number, you expand the list. To expand all at once, you can use the <strong>Expand</strong> button above the table.</li>
+        <li><strong>Person and Family Details:</strong> By clicking a colored name in the table, you perform a new search and display all records for that specific person or family. By clicking a partner, you search for their family. Similarly, when viewing parents, clicking the label (<em>Parents</em>, <em>Husband</em>, or <em>Wife</em>) displays their family, while clicking an individual parent's name searches only for them.</li>
+        <li><strong>Tree:</strong> Next to certain people, you will notice a tree icon (🌳 for ancestors, 🌿 for descendants). By clicking the icon, you display an interactive graphical tree of the selected person.{auth_tree}</li>
+        <li><strong>Data Export:</strong> By clicking the <strong>CSV</strong> button above the table, you download the current results to your computer in a tabular format.</li>
+      </ul>
+      <h3>4. Genealogists</h3>
+      <p>The <strong>Genealogists</strong> tab shows the overall statistics of the index and a list of all researchers who contributed their data.</p>
+      <ul>
+        <li><strong>Statistics:</strong> At the top, there are graphs with the timeline of records.</li>
+        <li><strong>Top surnames:</strong> A cloud displays the most frequent surnames. By clicking the <strong>CSV</strong> or <strong>SVG</strong> button, you can export this data.</li>
+        <li><strong>List of genealogists:</strong> The table displays all contributors and the number of their records. By clicking the <strong>CSV</strong> button, you can export the table, and by clicking a genealogist's name, you open their detailed page with more information.</li>
+      </ul>
+      <h4>Genealogist Details</h4>
+      <p>The individual genealogist's page gathers information about their contribution:</p>
+      <ul>
+        <li><strong>Link:</strong> If the genealogist provided a personal website, it is displayed under their name.</li>
+        <li><strong>Top surnames:</strong> A word cloud shows the most frequent surnames in their database.</li>
+        <li><strong>Possible matches:</strong> A list of other genealogists who share matching historical persons or families with this genealogist.</li>
+      </ul>
+      <h4>Matches between Genealogists</h4>
+      <p>By clicking one of the suggested matches on a genealogist's page, you display a detailed comparison of their data{auth_match}. The results are displayed so that each match occupies two adjacent rows:</p>
+      <ul>
+        <li>The <strong>top row</strong> shows the record from the first genealogist, and the <strong>bottom row</strong> shows the record from the second.</li>
+        <li><strong>Confidence score:</strong> Each match has a percentage score indicating how likely it is to be the same person or family.</li>
+        <li><strong>Highlighted differences:</strong> Words or data that differ between the two genealogists are automatically highlighted (in yellow) in the table, making it easy to spot discrepancies or new information.</li>
+      </ul>
+      {auth_section}
+    `,
 };
