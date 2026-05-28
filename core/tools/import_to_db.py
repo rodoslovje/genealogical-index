@@ -773,7 +773,7 @@ def main():
             print(
                 f"\nProcessing contributor {index}/{total_contributors}: {contributor_id}"
             )
-        elif contributor_id in forced_contributors:
+        elif unicodedata.normalize("NFC", contributor_id) in forced_contributors:
             do_import = True
             imp_persons = imp_families = True
             print(
