@@ -285,7 +285,14 @@ hamburgerBtn.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-  if (window.innerWidth > 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+  // Click-outside auto-close on desktop. Don't close when the click lands on
+  // any navbar control — the help / login / language icons open modals or
+  // popovers that shouldn't disturb the search sidebar behind them.
+  if (window.innerWidth > 768
+      && sidebar.classList.contains('open')
+      && !sidebar.contains(e.target)
+      && !hamburgerBtn.contains(e.target)
+      && !navbarEl?.contains(e.target)) {
     sidebar.classList.remove('open');
   }
 });

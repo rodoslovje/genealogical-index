@@ -1,4 +1,5 @@
 import { t, onLanguageChange } from './i18n.js';
+import { currentParams, toUnicodeSearch } from './url.js';
 import siteConfig from '@site-config';
 
 const hasAuth = !!siteConfig.authUrl;
@@ -16,15 +17,38 @@ export function initHelp() {
   helpBtn.title = t('help');
   helpBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
-  helpBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    // In compact-nav the help button lives inside the sidebar; closing the
-    // sidebar first keeps the modal from being layered over the open panel.
-    document.getElementById('sidebar')?.classList.remove('open');
+  // Keep the URL in sync with the modal's open state so the address bar can
+  // be copied/shared at any time and `?help=1` deep-links work both ways.
+  const setHelpParam = (open) => {
+    const params = currentParams();
+    if (open) {
+      if (params.get('help') === '1') return;
+      params.set('help', '1');
+    } else {
+      if (!params.has('help')) return;
+      params.delete('help');
+    }
+    const search = toUnicodeSearch(params);
+    history.replaceState(null, '', window.location.pathname + (search ? '?' + search : ''));
+  };
+
+  const openHelp = () => {
     const modal = document.getElementById('help-modal');
     modal.classList.add('open');
     const innerModal = modal.querySelector('.srd-modal');
     if (innerModal) innerModal.scrollTop = 0;
+    setHelpParam(true);
+  };
+
+  const closeHelp = () => {
+    const modal = document.getElementById('help-modal');
+    modal.classList.remove('open');
+    setHelpParam(false);
+  };
+
+  helpBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    openHelp();
   });
 
   // Navbar order: help, auth, lang, hamburger. We anchor on the leftmost of
@@ -64,8 +88,8 @@ export function initHelp() {
 
   const modal = document.getElementById('help-modal');
   const closeBtn = modal.querySelector('.srd-modal-close');
-  closeBtn.addEventListener('click', () => modal.classList.remove('open'));
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('open'); });
+  closeBtn.addEventListener('click', closeHelp);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeHelp(); });
 
   // 3. Update localized content
   const updateHelpContent = () => {
@@ -87,4 +111,9 @@ export function initHelp() {
     updateHelpContent();
     helpBtn.title = t('help');
   });
+
+  // `?help=1` (or just `?help`) auto-opens the user guide on page load. The
+  // param stays in the URL while the modal is open and is cleared by closeHelp
+  // when the user dismisses it — so the URL always mirrors the modal state.
+  if (currentParams().has('help')) openHelp();
 }
