@@ -620,6 +620,97 @@ npm run build:slo && npm run preview:slo
 
 ---
 
+## 7. Authentication (Optional)
+
+The tree-walking endpoints — `/api/ancestors`, `/api/descendants`, `/api/persons/{id}/ancestors`, `/api/persons/{id}/descendants`, and `/api/contributors/{name}/matches/{other}` — can be gated behind a JWT issued by a WordPress site running the [JWT Authentication for WP REST API](https://wordpress.org/plugins/jwt-authentication-for-wp-rest-api/) plugin. Auth is **opt-in per site**:
+
+- When `JWT_SECRET` is unset on the API backend, the endpoints are public (default).
+- When `JWT_SECRET` is set, requests must carry an `Authorization: Bearer <token>` header signed by the matching WordPress secret.
+
+The same JWT is reused for the optional login UI in the frontend (`authUrl` in `site.config.js`). All other endpoints (search, contributor lists, stats) remain public regardless of auth state.
+
+### 7.1 WordPress side
+
+Install the [JWT Authentication for WP REST API](https://wordpress.org/plugins/jwt-authentication-for-wp-rest-api/) plugin and add to `wp-config.php`:
+
+```php
+define('JWT_AUTH_SECRET_KEY', 'a-long-random-string');
+define('JWT_AUTH_CORS_ENABLE', true);
+```
+
+> **Secret choice matters.** Avoid `$` (PHP interpolates variables inside double-quoted strings), backticks (shell command substitution if the value ever passes through bash), and `#` (starts a comment in `.env`). Always single-quote the value in PHP — `'...'` is taken literally; `"..."` is not. WordPress's own [salt generator](https://api.wordpress.org/secret-key/1.1/salt/) emits values in the right format.
+
+The plugin exposes a token endpoint at `https://yoursite.example/wp-json/jwt-auth/v1/token`. Tokens are valid for 7 days by default and signed with HS256.
+
+### 7.2 API backend side
+
+Set `JWT_SECRET` in the site's `.env` to the **exact same string** as `JWT_AUTH_SECRET_KEY` in `wp-config.php`. Single-quote it so docker-compose preserves `$`, `#`, backticks, and spaces:
+
+```env
+JWT_SECRET='a-long-random-string'
+```
+
+Restart the API container so the new env var is loaded:
+
+```bash
+cd sites/slo
+docker compose up -d
+```
+
+Verify the value reaching the container matches WordPress byte-for-byte:
+
+```bash
+docker exec sgi_api printenv JWT_SECRET | xxd
+```
+
+### 7.3 Frontend side
+
+In `sites/<name>/web/site.config.js`, set `authUrl` to the WordPress token endpoint:
+
+```js
+authUrl: 'https://yoursite.example/wp-json/jwt-auth/v1/token',
+```
+
+When `authUrl` is set, the frontend shows a login button in the top-right nav. After successful login, the JWT is stored in `localStorage` and automatically attached to protected API calls. On a 401 response, the stored token is wiped and the login modal is re-opened.
+
+When `authUrl` is `null` (default for `test` and `cro`), no login UI is rendered and no `Authorization` header is ever sent — so `JWT_SECRET` should also remain unset on the API backend for those sites, otherwise all gated calls will return 401.
+
+Rebuild and redeploy the frontend after changing `authUrl`:
+
+```bash
+npm run build:slo
+rsync -avz --delete sites/slo/dist/base/ user@yourserver:/var/www/sites/sgi/
+```
+
+### 7.4 Troubleshooting
+
+| Symptom                                                                  | Likely cause                                                                                                                                              |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Protected calls succeed without a token                                  | `JWT_SECRET` not visible to the container. Run `docker exec sgi_api printenv JWT_SECRET` — if empty, recreate the container after editing `.env`          |
+| `import jwt` error on API startup                                        | Image needs a rebuild after the `PyJWT` dependency was added: `docker compose up -d --build api`                                                          |
+| 401 even when logged in, with `InvalidSignatureError` in `docker logs`   | Backend `JWT_SECRET` doesn't match WordPress's `JWT_AUTH_SECRET_KEY`. Common cause: PHP variable interpolation in a double-quoted `wp-config.php` literal |
+| 401 with `ExpiredSignatureError`                                         | Token aged past 7 days. Log out and back in for a fresh one                                                                                               |
+| Authorization header missing in `docker logs sgi_api`                    | Caddy or another proxy stripping it. Default Caddy `reverse_proxy` forwards all headers; check for custom `header_up` rules                               |
+
+To inspect a token by hand:
+
+```bash
+docker exec -it sgi_api python -c '
+import os, jwt
+token = "PASTE_TOKEN_HERE"
+print("header:", jwt.get_unverified_header(token))
+print("payload:", jwt.decode(token, options={"verify_signature": False}))
+try:
+    jwt.decode(token, os.environ["JWT_SECRET"], algorithms=["HS256"],
+               options={"verify_aud": False})
+    print("OK — signature valid")
+except jwt.PyJWTError as e:
+    print("REJECTED:", type(e).__name__, e)
+'
+```
+
+---
+
 ## License
 
 This project is released under the [MIT License](LICENSE).
