@@ -22,8 +22,18 @@
 
 /* srd.css already sets body font/color/background and `* { box-sizing }`. */
 
+/* Sticky footer: body is a full-viewport flex column so the footer can be
+   pushed to the bottom with margin-top: auto. On short pages (e.g. the intro
+   tab) the footer sits at the viewport edge; on long pages it follows the
+   content as usual. */
 body {
   color: var(--srd-ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.app-footer {
+  margin-top: auto;
 }
 
 header {
