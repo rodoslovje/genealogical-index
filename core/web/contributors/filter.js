@@ -111,7 +111,7 @@ export function bindFilterInput() {
       const filtered = q ? currentMatchesData.filter(p => p.contributor.toLowerCase().includes(q)) : currentMatchesData;
       const cached = getCachedData();
       const tableData = filtered.map(p => {
-        const partnerData = cached ? cached.find(d => d.contributor_ID === p.contributor) : null;
+        const partnerData = cached ? cached.find(d => d.contributor_ID === baseContributorName(p.contributor)) : null;
         const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
         return {
           contributor_ID: p.contributor,

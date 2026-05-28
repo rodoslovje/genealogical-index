@@ -72,11 +72,21 @@ def get_match_counts(db: Session):
     ):
         return _match_counts_cache["data"]
     rows = db.execute(text("""
-        SELECT REPLACE(contributor_a, '-matricula', '') AS contributor, COUNT(DISTINCT REPLACE(contributor_b, '-matricula', '')) AS partners_count
+        SELECT REPLACE(contributor_a, '-matricula', '') AS contributor,
+               REPLACE(contributor_b, '-matricula', '') AS partner
         FROM matches
-        GROUP BY REPLACE(contributor_a, '-matricula', '')
+        GROUP BY REPLACE(contributor_a, '-matricula', ''), REPLACE(contributor_b, '-matricula', '')
     """)).fetchall()
-    result = [dict(r._mapping) for r in rows]
+
+    counts = {}
+    for r in rows:
+        c_base = unicodedata.normalize("NFC", r.contributor) if r.contributor else ""
+        p_base = unicodedata.normalize("NFC", r.partner) if r.partner else ""
+        if c_base not in counts:
+            counts[c_base] = set()
+        counts[c_base].add(p_base)
+
+    result = [{"contributor": k, "partners_count": len(v)} for k, v in counts.items()]
     _match_counts_cache["data"] = result
     _match_counts_cache["time"] = now
     return result
@@ -84,8 +94,14 @@ def get_match_counts(db: Session):
 
 def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b: str):
     results = []
-    a_mat = contributor_a + MATRICULA_SUFFIX
-    b_mat = contributor_b + MATRICULA_SUFFIX
+
+    a_nfc = unicodedata.normalize("NFC", contributor_a)
+    a_nfd = unicodedata.normalize("NFD", contributor_a)
+    a_forms = [a_nfc, a_nfd, a_nfc + MATRICULA_SUFFIX, a_nfd + MATRICULA_SUFFIX]
+
+    b_nfc = unicodedata.normalize("NFC", contributor_b)
+    b_nfd = unicodedata.normalize("NFD", contributor_b)
+    b_forms = [b_nfc, b_nfd]
 
     person_rows = db.execute(
         text("""
@@ -107,10 +123,10 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
         FROM matches m
         JOIN persons p1 ON m.record_a_id = p1.id
         JOIN persons p2 ON m.record_b_id = p2.id
-        WHERE m.contributor_a IN (:a, :a_mat) AND m.contributor_b IN (:b, :b_mat) AND m.record_type = 'person'
+        WHERE m.contributor_a = ANY(:a_forms) AND m.contributor_b = ANY(:b_forms) AND m.record_type = 'person'
         ORDER BY m.confidence DESC
     """),
-        {"a": contributor_a, "a_mat": a_mat, "b": contributor_b, "b_mat": b_mat},
+        {"a_forms": a_forms, "b_forms": b_forms},
     ).fetchall()
     for r in person_rows:
         results.append(
@@ -185,10 +201,10 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
         FROM matches m
         JOIN families f1 ON m.record_a_id = f1.id
         JOIN families f2 ON m.record_b_id = f2.id
-        WHERE m.contributor_a IN (:a, :a_mat) AND m.contributor_b IN (:b, :b_mat) AND m.record_type = 'family'
+        WHERE m.contributor_a = ANY(:a_forms) AND m.contributor_b = ANY(:b_forms) AND m.record_type = 'family'
         ORDER BY m.confidence DESC
     """),
-        {"a": contributor_a, "a_mat": a_mat, "b": contributor_b, "b_mat": b_mat},
+        {"a_forms": a_forms, "b_forms": b_forms},
     ).fetchall()
     for r in family_rows:
         results.append(
@@ -245,24 +261,57 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
 
 
 def get_contributor_matches(db: Session, contributor: str):
-    contrib_mat = contributor + MATRICULA_SUFFIX
+    contrib_nfc = unicodedata.normalize("NFC", contributor)
+    contrib_nfd = unicodedata.normalize("NFD", contributor)
+    c_forms = [
+        contrib_nfc,
+        contrib_nfd,
+        contrib_nfc + MATRICULA_SUFFIX,
+        contrib_nfd + MATRICULA_SUFFIX,
+    ]
+
     rows = db.execute(
         text("""
             SELECT
-                REPLACE(contributor_b, '-matricula', '')                    AS contributor,
+                contributor_b                                             AS contributor,
                 SUM(CASE WHEN record_type = 'person' THEN 1 ELSE 0 END)   AS persons_count,
                 SUM(CASE WHEN record_type = 'family' THEN 1 ELSE 0 END)   AS families_count,
                 COUNT(*)                                                    AS total_count,
                 MAX(confidence)                                             AS max_confidence,
                 MAX(computed_at)::text                                      AS computed_at
             FROM matches
-            WHERE contributor_a IN (:contrib, :contrib_mat)
-            GROUP BY REPLACE(contributor_b, '-matricula', '')
-            ORDER BY total_count DESC
+            WHERE contributor_a = ANY(:c_forms)
+            GROUP BY contributor_b
         """),
-        {"contrib": contributor, "contrib_mat": contrib_mat},
+        {"c_forms": c_forms},
     ).fetchall()
-    return [dict(r._mapping) for r in rows]
+
+    merged = {}
+    for r in rows:
+        base = unicodedata.normalize("NFC", r.contributor) if r.contributor else ""
+        if base not in merged:
+            merged[base] = {
+                "contributor": base,
+                "persons_count": int(r.persons_count or 0),
+                "families_count": int(r.families_count or 0),
+                "total_count": int(r.total_count or 0),
+                "max_confidence": float(r.max_confidence or 0.0),
+                "computed_at": r.computed_at,
+            }
+        else:
+            m = merged[base]
+            m["persons_count"] += int(r.persons_count or 0)
+            m["families_count"] += int(r.families_count or 0)
+            m["total_count"] += int(r.total_count or 0)
+            m["max_confidence"] = max(
+                m["max_confidence"], float(r.max_confidence or 0.0)
+            )
+            if r.computed_at and (
+                not m["computed_at"] or r.computed_at > m["computed_at"]
+            ):
+                m["computed_at"] = r.computed_at
+
+    return sorted(merged.values(), key=lambda x: x["total_count"], reverse=True)
 
 
 def _base_contributor_name(name: str) -> str:

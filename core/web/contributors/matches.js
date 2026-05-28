@@ -202,7 +202,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     const filteredPartners = q ? partners.filter(p => p.contributor.toLowerCase().includes(q)) : partners;
 
     const tableData = filteredPartners.map(p => {
-      const partnerData = cached.find(d => d.contributor_ID === p.contributor);
+      const partnerData = cached.find(d => d.contributor_ID === baseContributorName(p.contributor));
       const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
       return {
         contributor_ID: p.contributor,
