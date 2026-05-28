@@ -658,6 +658,14 @@ def main():
         help="Force re-import of family records for all contributors.",
     )
     parser.add_argument(
+        "--force-contributor",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="Force full re-import (persons + families) for the named contributor. "
+        "Repeat to force several.",
+    )
+    parser.add_argument(
         "--workers",
         type=int,
         default=4,
@@ -734,6 +742,13 @@ def main():
                 )
         db.commit()
 
+    forced_contributors = set(args.force_contributor)
+    unknown_forced = forced_contributors - {m["contributor"] for m in metadata}
+    if unknown_forced:
+        print(
+            f"Warning: --force-contributor names not in metadata: {sorted(unknown_forced)}"
+        )
+
     total_contributors = len(metadata)
     updated_contributors = []
     for index, meta in enumerate(metadata, start=1):
@@ -751,6 +766,12 @@ def main():
             imp_persons = imp_families = True
             print(
                 f"\nProcessing contributor {index}/{total_contributors}: {contributor_id}"
+            )
+        elif contributor_id in forced_contributors:
+            do_import = True
+            imp_persons = imp_families = True
+            print(
+                f"\nProcessing contributor {index}/{total_contributors}: {contributor_id} (forced)"
             )
         else:
             (
