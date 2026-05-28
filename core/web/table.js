@@ -44,8 +44,24 @@ export function exportToCSV(data, columns, filename) {
         val = row.matches_count || '';
         if (Number(val) === 0) val = '';
       } else {
-        val = row[col] != null ? row[col] : '';
-        if (col === 'total_links' && Number(val) === 0) val = '';
+        let cellVal = row[col] != null ? row[col] : '';
+        if (col === 'total_links' && Number(cellVal) === 0) cellVal = '';
+
+        // Append optional fields to match HTML table display
+        if (col === 'surname' && row.alt_surname) {
+          cellVal = `${cellVal} (${row.alt_surname})`.trim();
+        } else if (col === 'husband_surname' && row.husband_alt_surname) {
+          cellVal = `${cellVal} (${row.husband_alt_surname})`.trim();
+        } else if (col === 'wife_surname' && row.wife_alt_surname) {
+          cellVal = `${cellVal} (${row.wife_alt_surname})`.trim();
+        } else if (col === 'date_of_birth' && (row.date_of_baptism || row.place_of_baptism)) {
+          const b = [row.date_of_baptism, row.place_of_baptism].filter(Boolean).join(', ');
+          cellVal = `${cellVal} (✝ ${b})`.trim();
+        } else if ((col === 'place_of_birth' || col === 'place_of_marriage') && row.notes) {
+          cellVal = `${cellVal} (🗒 ${row.notes})`.trim();
+        }
+
+        val = cellVal;
       }
       val = String(val).replace(/"/g, '""');
       return `"${val}"`;
@@ -159,11 +175,12 @@ function renderPersonNameCell(col, row, namePrefix, altField) {
   const nameField = namePrefix ? `${namePrefix}_name`    : 'name';
   const surField  = namePrefix ? `${namePrefix}_surname` : 'surname';
   const extField  = namePrefix ? `${namePrefix}_ext_id`  : 'ext_id';
-  const altIcon = col === surField ? altSurnameIconHtml(row[altField], t('icon_alt_surname')) : '';
+  const isPriv    = isPrivate(row[nameField]) || isPrivate(row[surField]);
+  const altIcon   = (col === surField && !isPriv) ? altSurnameIconHtml(row[altField], t('icon_alt_surname')) : '';
   const val = row[col];
   if (!val) return `<td>${altIcon}</td>`;
   const safeDisplay = escapeHtml(val);
-  if (isPrivate(row[nameField]) || isPrivate(row[surField])) {
+  if (isPriv) {
     return `<td>${safeDisplay}${altIcon}</td>`;
   }
   const params = new URLSearchParams();
@@ -637,8 +654,7 @@ function renderCellHtml(col, row) {
   }
   if (col === 'husband_name' || col === 'husband_surname') return renderPersonNameCell(col, row, 'husband', 'husband_alt_surname');
   if (col === 'wife_name'    || col === 'wife_surname')    return renderPersonNameCell(col, row, 'wife',    'wife_alt_surname');
-  // 'name'/'surname' only when this isn't a family row (which uses husband_/wife_ columns).
-  if ((col === 'name' || col === 'surname') && row.husband_name === undefined) {
+  if (col === 'name' || col === 'surname') {
     return renderPersonNameCell(col, row, '', 'alt_surname');
   }
   if (col === 'children' || col === 'parents' || col === 'partners') {

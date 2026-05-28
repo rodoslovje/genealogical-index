@@ -52,6 +52,7 @@ export function setupGeneralSearch() {
   function renderFields() {
     if (!container) return;
     const valOf = (id) => document.getElementById(id)?.value || '';
+    const sourceVal = document.getElementById('general-source')?.value || 'all';
     const approxExists = document.getElementById('general-exact-approx');
     const exactChecked = approxExists ? document.getElementById('general-exact')?.checked : true;
     const hasLinkChecked = document.getElementById('general-has_link')?.checked || false;
@@ -67,7 +68,15 @@ export function setupGeneralSearch() {
         ${inputWithClear({ id: 'general-date_to',   placeholder: t('date_to'),  value: valOf('general-date_to') })}
       </div>
       ${inputWithClear({ id: 'general-place',       placeholder: t('col_place'),       value: valOf('general-place'),       title: t('tip_comma_separated_place')       })}
-      ${inputWithClear({ id: 'general-contributor', placeholder: t('col_contributor'), value: valOf('general-contributor'), title: t('tip_comma_separated_contributor') })}
+      <div class="field-group">
+        <div class="field-group-label">${t('label_source')}</div>
+        ${inputWithClear({ id: 'general-contributor', placeholder: t('col_contributor'), value: valOf('general-contributor'), title: t('tip_comma_separated_contributor') })}
+        <select id="general-source" style="margin-top: 4px;">
+          <option value="all"${sourceVal === 'all' ? ' selected' : ''}>${t('source_all')}</option>
+          <option value="tree"${sourceVal === 'tree' ? ' selected' : ''}>${t('source_tree')}</option>
+          <option value="matricula"${sourceVal === 'matricula' ? ' selected' : ''}>${t('source_matricula')}</option>
+        </select>
+      </div>
       <label class="exact-toggle">
         <input type="checkbox" id="general-has_link"${hasLinkChecked ? ' checked' : ''} />
         <span>${t('has_link')}</span>
@@ -117,12 +126,14 @@ function performGeneralSearch() {
     if (val) params[f] = val;
   });
 
+  const sourceVal = document.getElementById('general-source')?.value || 'all';
   const hasLink = document.getElementById('general-has_link')?.checked || false;
   if (!Object.keys(params).length && !hasLink) return;
 
   const exact = document.getElementById('general-exact')?.checked ?? true;
   if (exact) params.exact = 'true';
   if (hasLink) params.has_link = 'true';
+  if (sourceVal !== 'all') params.source = sourceVal;
 
   const shortParams = {};
   for (const [key, value] of Object.entries(params)) {
@@ -131,6 +142,7 @@ function performGeneralSearch() {
   }
   if (!exact) shortParams.ex = '0';
   if (hasLink) shortParams.hl = '1';
+  if (sourceVal !== 'all') shortParams.src = sourceVal;
 
   pushOrReplaceURL(shortParams);
   hideIntro('intro-general');
@@ -235,9 +247,10 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
   function renderFields() {
     const approxExists = document.getElementById(`${prefix}exact-approx`);
+    const sourceVal = document.getElementById(`${prefix}source`)?.value || 'all';
     const exactChecked = approxExists ? document.getElementById(exactId)?.checked : true;
     const hasLinkChecked = document.getElementById(hasLinkId)?.checked || false;
-    const visibleColumns = columns.filter(col => !DISPLAY_ONLY_COLUMNS.has(col));
+    const visibleColumns = columns.filter(col => !DISPLAY_ONLY_COLUMNS.has(col) && col !== 'contributor');
     let html = '';
     let i = 0;
     while (i < visibleColumns.length) {
@@ -263,6 +276,15 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
         i++;
       }
     }
+    html += `<div class="field-group">
+               <div class="field-group-label">${t('label_source')}</div>
+               ${renderInput('contributor')}
+               <select id="${prefix}source" style="margin-top: 4px;">
+                 <option value="all"${sourceVal === 'all' ? ' selected' : ''}>${t('source_all')}</option>
+                 <option value="tree"${sourceVal === 'tree' ? ' selected' : ''}>${t('source_tree')}</option>
+                 <option value="matricula"${sourceVal === 'matricula' ? ' selected' : ''}>${t('source_matricula')}</option>
+               </select>
+             </div>`;
     html += `<label class="exact-toggle">
                <input type="checkbox" id="${hasLinkId}"${hasLinkChecked ? ' checked' : ''} />
                <span>${t('has_link')}</span>
@@ -305,8 +327,9 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
       return;
     }
 
+    const sourceVal = document.getElementById(`${prefix}source`)?.value || 'all';
     const exact = document.getElementById(exactId)?.checked ?? true;
-    const shortParams = { t: urlType, ...(!exact ? { ex: '0' } : {}), ...(hasLink ? { hl: '1' } : {}) };
+    const shortParams = { t: urlType, ...(!exact ? { ex: '0' } : {}), ...(hasLink ? { hl: '1' } : {}), ...(sourceVal !== 'all' ? { src: sourceVal } : {}) };
     for (const [field, val] of Object.entries(fieldParams)) {
       shortParams[PARAM_MAP[field] || field] = val;
     }
@@ -314,7 +337,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
     document.getElementById(countId).textContent = '0';
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
-    const apiParams = new URLSearchParams({ ...fieldParams, ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}) });
+    const apiParams = new URLSearchParams({ ...fieldParams, ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}), ...(sourceVal !== 'all' ? { source: sourceVal } : {}) });
 
     const overlay = document.getElementById('search-overlay');
     if (overlay) {
@@ -399,6 +422,8 @@ export function getTabURLParams(tabType) {
     });
     if (!document.getElementById('general-exact')?.checked) out.ex = '0';
     if (document.getElementById('general-has_link')?.checked) out.hl = '1';
+    const genSource = document.getElementById('general-source')?.value;
+    if (genSource && genSource !== 'all') out.src = genSource;
   } else if (tabType === 'person' || tabType === 'family') {
     const columns = tabType === 'person' ? personColumns : familyColumns;
     const prefix = `adv-${tabType}-`;
@@ -414,6 +439,8 @@ export function getTabURLParams(tabType) {
     });
     if (!document.getElementById(`${prefix}exact`)?.checked) out.ex = '0';
     if (document.getElementById(`${prefix}has_link`)?.checked) out.hl = '1';
+    const advSource = document.getElementById(`${prefix}source`)?.value;
+    if (advSource && advSource !== 'all') out.src = advSource;
   }
   return out;
 }
@@ -425,12 +452,17 @@ export function clearAllSearchForms() {
   });
   const genHasLink = document.getElementById('general-has_link'); if (genHasLink) genHasLink.checked = false;
   const genExact = document.getElementById('general-exact'); if (genExact) genExact.checked = true;
+  const genSrcSelect = document.getElementById('general-source'); if (genSrcSelect) genSrcSelect.value = 'all';
   ['person', 'family'].forEach(type => {
     document.querySelectorAll(`#${type}-search-controls input`).forEach(el => {
       if (el.type === 'checkbox') el.checked = false;
-      if (el.type === 'radio' && el.value === 'exact') el.checked = true;
+      if (el.type === 'radio') {
+          if (el.value === 'exact') el.checked = true;
+          else el.checked = false;
+      }
       else { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
     });
+    const advSrcSelect = document.getElementById(`adv-${type}-source`); if (advSrcSelect) advSrcSelect.value = 'all';
   });
 }
 
@@ -454,6 +486,9 @@ export function restoreFromURL({ triggerSearch = true } = {}) {
         }
       }
     });
+    const srcVal = params.get('src') || params.get('source') || 'all';
+    const srcSelect = document.getElementById('general-source');
+    if (srcSelect) srcSelect.value = srcVal;
     const exactRadio = document.getElementById('general-exact');
     const approxRadio = document.getElementById('general-exact-approx');
     if (params.get('ex') === '0') { if (approxRadio) approxRadio.checked = true; }
@@ -492,6 +527,9 @@ export function restoreFromURL({ triggerSearch = true } = {}) {
         }
       }
     });
+    const srcVal = params.get('src') || params.get('source') || 'all';
+    const srcSelect = document.getElementById(`${prefix}source`);
+    if (srcSelect) srcSelect.value = srcVal;
     const exactRadio = document.getElementById(`${prefix}exact`);
     const approxRadio = document.getElementById(`${prefix}exact-approx`);
     if (params.get('ex') === '0') { if (approxRadio) approxRadio.checked = true; }

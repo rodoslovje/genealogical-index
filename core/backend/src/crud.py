@@ -49,6 +49,7 @@ def _load_contributor_links():
 
 CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
 MATCH_COUNTS_TTL = 60  # shorter TTL — counts change during match computation
+MATRICULA_SUFFIX = "-matricula"
 _timeline_cache = {"data": None, "time": 0}
 _surnames_cache = {}  # keyed by contributor name (or "" for all)
 _match_counts_cache = {"data": None, "time": 0}
@@ -71,9 +72,9 @@ def get_match_counts(db: Session):
     ):
         return _match_counts_cache["data"]
     rows = db.execute(text("""
-        SELECT contributor_a AS contributor, COUNT(DISTINCT contributor_b) AS partners_count
+        SELECT REPLACE(contributor_a, '-matricula', '') AS contributor, COUNT(DISTINCT REPLACE(contributor_b, '-matricula', '')) AS partners_count
         FROM matches
-        GROUP BY contributor_a
+        GROUP BY REPLACE(contributor_a, '-matricula', '')
     """)).fetchall()
     result = [dict(r._mapping) for r in rows]
     _match_counts_cache["data"] = result
@@ -83,6 +84,8 @@ def get_match_counts(db: Session):
 
 def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b: str):
     results = []
+    a_mat = contributor_a + MATRICULA_SUFFIX
+    b_mat = contributor_b + MATRICULA_SUFFIX
 
     person_rows = db.execute(
         text("""
@@ -104,10 +107,10 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
         FROM matches m
         JOIN persons p1 ON m.record_a_id = p1.id
         JOIN persons p2 ON m.record_b_id = p2.id
-        WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'person'
+        WHERE m.contributor_a IN (:a, :a_mat) AND m.contributor_b IN (:b, :b_mat) AND m.record_type = 'person'
         ORDER BY m.confidence DESC
     """),
-        {"a": contributor_a, "b": contributor_b},
+        {"a": contributor_a, "a_mat": a_mat, "b": contributor_b, "b_mat": b_mat},
     ).fetchall()
     for r in person_rows:
         results.append(
@@ -180,10 +183,10 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
         FROM matches m
         JOIN families f1 ON m.record_a_id = f1.id
         JOIN families f2 ON m.record_b_id = f2.id
-        WHERE m.contributor_a = :a AND m.contributor_b = :b AND m.record_type = 'family'
+        WHERE m.contributor_a IN (:a, :a_mat) AND m.contributor_b IN (:b, :b_mat) AND m.record_type = 'family'
         ORDER BY m.confidence DESC
     """),
-        {"a": contributor_a, "b": contributor_b},
+        {"a": contributor_a, "a_mat": a_mat, "b": contributor_b, "b_mat": b_mat},
     ).fetchall()
     for r in family_rows:
         results.append(
@@ -238,26 +241,24 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
 
 
 def get_contributor_matches(db: Session, contributor: str):
+    contrib_mat = contributor + MATRICULA_SUFFIX
     rows = db.execute(
         text("""
             SELECT
-                contributor_b                                               AS contributor,
+                REPLACE(contributor_b, '-matricula', '')                    AS contributor,
                 SUM(CASE WHEN record_type = 'person' THEN 1 ELSE 0 END)   AS persons_count,
                 SUM(CASE WHEN record_type = 'family' THEN 1 ELSE 0 END)   AS families_count,
                 COUNT(*)                                                    AS total_count,
                 MAX(confidence)                                             AS max_confidence,
                 MAX(computed_at)::text                                      AS computed_at
             FROM matches
-            WHERE contributor_a = :contrib
-            GROUP BY contributor_b
+            WHERE contributor_a IN (:contrib, :contrib_mat)
+            GROUP BY REPLACE(contributor_b, '-matricula', '')
             ORDER BY total_count DESC
         """),
-        {"contrib": contributor},
+        {"contrib": contributor, "contrib_mat": contrib_mat},
     ).fetchall()
     return [dict(r._mapping) for r in rows]
-
-
-MATRICULA_SUFFIX = "-matricula"
 
 
 def _base_contributor_name(name: str) -> str:
@@ -393,10 +394,16 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
         models.Person.surname
     )
     if contributors:
-        if len(contributors) == 1:
-            q = q.filter(models.Person.contributor == contributors[0])
+        expanded = []
+        for c in contributors:
+            expanded.append(c)
+            if not c.endswith(MATRICULA_SUFFIX):
+                expanded.append(c + MATRICULA_SUFFIX)
+
+        if len(expanded) == 1:
+            q = q.filter(models.Person.contributor == expanded[0])
         else:
-            q = q.filter(models.Person.contributor.in_(contributors))
+            q = q.filter(models.Person.contributor.in_(expanded))
 
     counts = {}
     for surname, c in q.all():
@@ -565,6 +572,40 @@ def _set_trgm(db: Session, exact: bool):
     db.execute(text(f"SET LOCAL pg_trgm.word_similarity_threshold = {threshold};"))
 
 
+def _apply_source_and_contributor(
+    query, column, contributor: str, source: str, exact: bool
+):
+    if source == "tree":
+        query = query.filter(~column.like(f"%{MATRICULA_SUFFIX}"))
+    elif source == "matricula":
+        query = query.filter(column.like(f"%{MATRICULA_SUFFIX}"))
+
+    if contributor:
+        if "," in contributor:
+            parts = [p.strip() for p in contributor.split(",") if p.strip()]
+        else:
+            parts = [contributor.strip()]
+
+        conds = []
+        for part in parts:
+            base = _base_contributor_name(part)
+            if source in ("all", "tree"):
+                conds.append(_text_filter(column, base, exact, split_comma=False))
+            if source in ("all", "matricula"):
+                conds.append(
+                    _text_filter(
+                        column, base + MATRICULA_SUFFIX, exact, split_comma=False
+                    )
+                )
+
+        if len(conds) == 1:
+            query = query.filter(conds[0])
+        elif len(conds) > 1:
+            query = query.filter(or_(*conds))
+
+    return query
+
+
 def search_all(
     db: Session,
     name: str = None,
@@ -573,6 +614,7 @@ def search_all(
     date_to: str = None,
     place: str = None,
     contributor: str = None,
+    source: str = "all",
     has_link: bool = False,
     ext_id: str = None,
     skip: int = 0,
@@ -627,12 +669,9 @@ def search_all(
             q = q.filter(or_(date_cond_b, date_cond_d))
         elif date_cond_b is not None:
             q = q.filter(date_cond_b)
-        if contributor:
-            q = q.filter(
-                _text_filter(
-                    models.Person.contributor, contributor, exact, split_comma=True
-                )
-            )
+        q = _apply_source_and_contributor(
+            q, models.Person.contributor, contributor, source, exact
+        )
         if has_link:
             q = q.filter(_has_links_clause(models.Person.links))
         persons = q.offset(skip).limit(limit).all()
@@ -684,12 +723,9 @@ def search_all(
         )
         if date_cond_f is not None:
             families_q = families_q.filter(date_cond_f)
-        if contributor:
-            families_q = families_q.filter(
-                _text_filter(
-                    models.Family.contributor, contributor, exact, split_comma=True
-                )
-            )
+        families_q = _apply_source_and_contributor(
+            families_q, models.Family.contributor, contributor, source, exact
+        )
         if has_link:
             families_q = families_q.filter(_has_links_clause(models.Family.links))
         families = families_q.offset(skip).limit(limit).all()
@@ -708,6 +744,7 @@ def search_advanced_persons(
     date_of_death_to: str = None,
     place_of_death: str = None,
     contributor: str = None,
+    source: str = "all",
     has_link: bool = False,
     ext_id: str = None,
     skip: int = 0,
@@ -760,12 +797,9 @@ def search_advanced_persons(
     )
     if dcond is not None:
         query = query.filter(dcond)
-    if contributor:
-        query = query.filter(
-            _text_filter(
-                models.Person.contributor, contributor, exact, split_comma=True
-            )
-        )
+    query = _apply_source_and_contributor(
+        query, models.Person.contributor, contributor, source, exact
+    )
     if has_link:
         query = query.filter(_has_links_clause(models.Person.links))
 
@@ -787,6 +821,7 @@ def search_advanced_families(
     date_of_marriage_to: str = None,
     place_of_marriage: str = None,
     contributor: str = None,
+    source: str = "all",
     has_link: bool = False,
     skip: int = 0,
     limit: int = 100,
@@ -876,12 +911,9 @@ def search_advanced_families(
     )
     if date_cond is not None:
         query = query.filter(date_cond)
-    if contributor:
-        query = query.filter(
-            _text_filter(
-                models.Family.contributor, contributor, exact, split_comma=True
-            )
-        )
+    query = _apply_source_and_contributor(
+        query, models.Family.contributor, contributor, source, exact
+    )
     if has_link:
         query = query.filter(_has_links_clause(models.Family.links))
 
@@ -1206,9 +1238,7 @@ def _attach_parents_marriage(db: Session, root_node: dict, contributor: str):
                     name_terms.append(surname_col == role["surname"])
                 empty = or_(ext_col.is_(None), ext_col == "")
                 if name_terms:
-                    conds.append(
-                        or_(ext_col == role_ext, and_(empty, *name_terms))
-                    )
+                    conds.append(or_(ext_col == role_ext, and_(empty, *name_terms)))
                 else:
                     conds.append(ext_col == role_ext)
                 # ext_id is a strong, unique constraint on its own.
@@ -1245,9 +1275,7 @@ def _attach_parents_marriage(db: Session, root_node: dict, contributor: str):
                 h, fam.husband_ext_id, fam.husband_name, fam.husband_surname
             ):
                 continue
-            if not _side_matches(
-                w, fam.wife_ext_id, fam.wife_name, fam.wife_surname
-            ):
+            if not _side_matches(w, fam.wife_ext_id, fam.wife_name, fam.wife_surname):
                 continue
             if fam.date_of_marriage or fam.place_of_marriage:
                 node["parents_marriage"] = {

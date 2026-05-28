@@ -32,6 +32,7 @@ export const PARAM_MAP = {
   // being compared with; `filter` is the per-view filter input.
   with:             'w',
   filter:           'f',
+  source:           'src',
 };
 
 /** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point at the unified person tab. */
