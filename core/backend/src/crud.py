@@ -1536,7 +1536,7 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
             break
 
         # 4) Batch-resolve every child across this level in a single query
-        #    (with the ext_id partial index this is a cheap PK probe).
+        #    (uses the partial (contributor, ext_id) btree from migration 006).
         resolved = _batch_resolve_persons(
             db, [c[1] for c in pending_children], contributor
         )
