@@ -52,6 +52,17 @@ export async function renderTotalsBar() {
   } catch { /* silently skip if API unavailable */ }
 }
 
+/** Populate the footer's "Data update" date from the API so it tracks the
+ *  server's latest contributor import rather than the static build time.
+ *  Uses the same cached /api/contributors/ payload as the Genealogists page. */
+export async function updateFooterDataDate() {
+  try {
+    const data = await ensureData();
+    const lastUpdate = data.reduce((max, r) => r.last_modified > max ? r.last_modified : max, '');
+    setEl('data-updated', lastUpdate);
+  } catch { /* silently skip if API unavailable */ }
+}
+
 export async function renderContributors() {
   // Reset per-view state; matches.js will reinstall the detail refilter.
   resetViewState();

@@ -8,14 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const coreWeb = path.resolve(__dirname, '../../core/web');
 
 function buildInfoPlugin() {
+  // Only BUILD_TIME is baked into the bundle. The data-update date used in the
+  // footer is fetched at runtime from /api/contributors/ so an older deployed
+  // build still reflects the server's latest contributor import.
   function generate() {
     const buildTime = new Date().toISOString();
-    let dataUpdated = buildTime;
-    try {
-      const metaPath = path.resolve(__dirname, '../../data/metadata.json');
-      dataUpdated = fs.statSync(metaPath).mtime.toISOString();
-    } catch { /* fall back to build time */ }
-    return `export const BUILD_TIME = ${JSON.stringify(buildTime)};\nexport const DATA_UPDATED = ${JSON.stringify(dataUpdated)};\n`;
+    return `export const BUILD_TIME = ${JSON.stringify(buildTime)};\n`;
   }
 
   return {

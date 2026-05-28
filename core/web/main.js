@@ -1,8 +1,8 @@
 import { t, initI18n, onLanguageChange, getIntro } from './i18n.js';
 import siteConfig from '@site-config';
-import { BUILD_TIME, DATA_UPDATED } from './build-info.js';
+import { BUILD_TIME } from './build-info.js';
 import { initAuth, isLoggedIn, requireLogin } from './auth.js';
-import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors } from './contributors.js';
+import { renderContributors, refreshContributorsIfVisible, renderTotalsBar, prefetchContributors, updateFooterDataDate } from './contributors.js';
 import { initHelp } from './help.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
 import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams, getParam } from './url.js';
@@ -450,9 +450,10 @@ async function init() {
     prefetchContributors();
 
     const buildEl = document.getElementById('build-time');
-    const dataEl = document.getElementById('data-updated');
     if (buildEl) buildEl.textContent = BUILD_TIME.slice(0, 10);
-    if (dataEl) dataEl.textContent = DATA_UPDATED.slice(0, 10);
+    // Data-update date is fetched from the API (latest contributor import on
+    // the server), so an older deployed build still shows fresh data dates.
+    updateFooterDataDate();
 
     sidebar.classList.add('open');
 
