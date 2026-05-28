@@ -123,6 +123,35 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/005_misc_trgm_gin.sql
 ```
 
+### 006 — `ext_id_btree`
+
+Adds partial composite btree indexes on `(contributor, ext_id)` for the
+three columns the ancestors / descendants endpoints probe by ext_id:
+
+- `persons (contributor, ext_id)`
+- `families (contributor, husband_ext_id)`
+- `families (contributor, wife_ext_id)`
+
+After the ext_id pivot in commit `8fed381`, every tree-traversal hop ran
+`WHERE contributor=? AND ext_id=?`, but only the single-column
+`(contributor)` btree existed. The planner therefore fetched all rows for
+the contributor and filtered ext_id in memory — for the largest
+contributors that was tens of thousands of rows per probe. The new
+indexes turn each probe into a direct B-tree lookup.
+
+Indexes are partial (`WHERE ext_id IS NOT NULL AND ext_id <> ''`) so
+legacy / matricula rows with empty ext_id don't bloat them; those rows
+still resolve via the name/year fallback path in `_batch_resolve_persons`.
+
+- `CREATE INDEX CONCURRENTLY` — online; no table lock.
+- Must run **outside** a transaction block.
+- Re-runnable (`IF NOT EXISTS`).
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/006_ext_id_btree.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the
