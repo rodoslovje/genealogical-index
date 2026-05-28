@@ -245,7 +245,7 @@ export default {
         <li><strong>📋</strong> – Volkszählungen (SIstory)</li>
         <li><strong>📰</strong> – Digitale Bibliothek Sloweniens (dLib)</li>
       </ul>
-      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: Das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
+      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: Das <strong>⛪</strong>-Zeichen neben dem Namen des Genealogen bedeutet, dass die Daten aus dem Matricula Online-Index stammen und nicht aus einem persönlichen Stammbaum, das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
       <h4>Vorfahren- und Nachkommenbaum</h4>
       <p>Die Stammbaum-Seite zeigt einen grafischen, interaktiven Stammbaum der ausgewählten Person an. Folgende Funktionen stehen zur Verfügung:</p>
       <ul>
@@ -260,7 +260,6 @@ export default {
         <li><strong>Häufigste Nachnamen:</strong> Eine Wortwolke zeigt die häufigsten Nachnamen an. Durch Klicken auf die Schaltfläche <strong>CSV</strong> oder <strong>SVG</strong> können Sie diese Daten auf Ihren Computer herunterladen.</li>
         <li><strong>Liste der Genealogen:</strong> Die Tabelle zeigt alle Beitragenden und die Anzahl ihrer Personen, Familien, Links und möglicher Übereinstimmungen mit anderen Genealogen an. Durch Klicken auf die Schaltfläche <strong>CSV</strong> exportieren Sie die Tabelle, und durch Klicken auf den Namen eines Genealogen öffnen Sie seine Detailseite.</li>
         <li><strong>Liste filtern:</strong> Im Suchfeld in der Seitenleiste (<strong>☰</strong>) können Sie die Liste schnell nach dem Nachnamen des Genealogen eingrenzen. Die Wortwolke der häufigsten Nachnamen zeigt dann nur Nachnamen aus den Stammbäumen der gefundenen Genealogen an.</li>
-        <li><strong>Matricula-Indikator ⛪:</strong> Das Symbol neben dem Namen des Genealogen bedeutet, dass die Daten aus dem Matricula Online-Index stammen, den dieser Genealoge beigesteuert hat, und nicht aus seinem persönlichen Stammbaum.</li>
       </ul>
       <h4>Details zum Genealogen</h4>
       <p>Die Seite des einzelnen Genealogen enthält Informationen über seinen Beitrag:</p>

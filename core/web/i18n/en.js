@@ -245,7 +245,7 @@ export default {
         <li><strong>📋</strong> – censuses (SIstory)</li>
         <li><strong>📰</strong> – Digital Library of Slovenia (dLib)</li>
       </ul>
-      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
+      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>⛪</strong> mark next to the genealogist's name indicates that the data comes from the Matricula Online index rather than from a personal family tree, the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
       <h4>Ancestors and Descendants Tree</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>
@@ -260,7 +260,6 @@ export default {
         <li><strong>Top surnames:</strong> A cloud displays the most frequent surnames. By clicking the <strong>CSV</strong> or <strong>SVG</strong> button, you can download this data to your computer.</li>
         <li><strong>List of genealogists:</strong> The table displays all contributors and the number of their persons, families, links, and possible matches with other genealogists. By clicking the <strong>CSV</strong> button, you export the table, and by clicking a genealogist's name, you open their detailed page.</li>
         <li><strong>Filtering the list:</strong> In the search field in the sidebar (<strong>☰</strong>) you can quickly narrow down the list by the genealogist's surname. The cloud of top surnames will then display only the surnames from the trees of the matched genealogists.</li>
-        <li><strong>Matricula indicator ⛪:</strong> The icon next to the genealogist's name indicates that the data comes from the Matricula Online index, which this genealogist contributed, rather than from their personal family tree.</li>
       </ul>
       <h4>Genealogist Details</h4>
       <p>The individual genealogist's page gathers information about their contribution:</p>

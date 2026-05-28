@@ -245,7 +245,7 @@ export default {
         <li><strong>📋</strong> – censimenti (SIstory)</li>
         <li><strong>📰</strong> – Biblioteca digitale della Slovenia (dLib)</li>
       </ul>
-      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome (ad esempio il cognome acquisito con il matrimonio), il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
+      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: il segno <strong>⛪</strong> accanto al nome del genealogista indica che i dati provengono dall'indice Matricula Online piuttosto che da un albero genealogico personale, il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome (ad esempio il cognome acquisito con il matrimonio), il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
       <h4>Albero degli antenati e dei discendenti</h4>
       <p>La pagina dell'albero visualizza un albero genealogico grafico e interattivo della persona selezionata. Sono disponibili le seguenti funzioni:</p>
       <ul>
@@ -260,7 +260,6 @@ export default {
         <li><strong>Cognomi più frequenti:</strong> Una nuvola di parole mostra i cognomi più frequenti. Cliccando sul pulsante <strong>CSV</strong> o <strong>SVG</strong>, è possibile scaricare questi dati sul proprio computer.</li>
         <li><strong>Elenco dei genealogisti:</strong> La tabella visualizza tutti i collaboratori e il numero di persone, famiglie, collegamenti e possibili corrispondenze con altri genealogisti. Cliccando sul pulsante <strong>CSV</strong> si esporta la tabella e cliccando sul nome del genealogista si apre la sua pagina dettagliata.</li>
         <li><strong>Filtrare l'elenco:</strong> Nel campo di ricerca nella barra laterale (<strong>☰</strong>) è possibile restringere rapidamente l'elenco in base al cognome del genealogista. La nuvola dei cognomi più frequenti mostrerà allora soltanto i cognomi dagli alberi dei genealogisti trovati.</li>
-        <li><strong>Indicatore Matricula ⛪:</strong> L'icona accanto al nome del genealogista indica che i dati provengono dall'indice Matricula Online, a cui questo genealogista ha contribuito, e non dal suo albero genealogico personale.</li>
       </ul>
       <h4>Dettagli del genealogista</h4>
       <p>La pagina del singolo genealogista raccoglie informazioni sul suo contributo:</p>

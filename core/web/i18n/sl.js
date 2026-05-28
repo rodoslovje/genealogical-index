@@ -245,7 +245,7 @@ export default {
         <li><strong>📋</strong> – popisi prebivalstva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
       </ul>
-      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
+      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>⛪</strong> ob imenu rodoslovca pomeni, da gre za podatke iz indeksa Matricula Online in ne za osebno družinsko drevo, oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
       <h4>Drevo prednikov in potomcev</h4>
       <p>Stran z drevesom prikazuje grafično, interaktivno rodovniško drevo izbrane osebe. Na voljo so:</p>
       <ul>
@@ -260,7 +260,6 @@ export default {
         <li><strong>Najpogostejši priimki:</strong> Prikazan je oblak najpogostejših priimkov. S klikom na gumb <strong>CSV</strong> ali <strong>SVG</strong> lahko te podatke prenesete na svoj računalnik.</li>
         <li><strong>Seznam rodoslovcev:</strong> Tabela prikazuje vse sodelujoče ter število njihovih oseb, družin, povezav in morebitnih ujemanj z drugimi rodoslovci. S klikom na gumb <strong>CSV</strong> izvozite tabelo, s klikom na ime rodoslovca pa odprete njegovo podrobno stran.</li>
         <li><strong>Filtriranje seznama:</strong> V iskalnem polju v stranski vrstici (<strong>☰</strong>) lahko seznam hitro zožite po priimku rodoslovca. Oblak najpogostejših priimkov bo prikazal samo priimke iz dreves najdenih rodoslovcev.</li>
-        <li><strong>Indikator Matricula ⛪:</strong> Ikona ob imenu rodoslovca pomeni, da gre za podatke iz indeksa Matricula Online, ki ga je ta rodoslovec prispeval, in ne za podatke iz njegovega osebnega družinskega drevesa.</li>
       </ul>
       <h4>Podrobnosti rodoslovca</h4>
       <p>Na strani posameznega rodoslovca so zbrane informacije o njegovem prispevku:</p>

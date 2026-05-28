@@ -626,16 +626,8 @@ function renderCellHtml(col, row) {
   if (col === 'contributor_ID') {
     const name = row[col] || '';
     const display = baseContributorName(name);
-    let isMatOnly = false;
-    if ('_tree' in row || '_matricula' in row) {
-      isMatOnly = !row._tree && !!row._matricula;
-    } else if ('_is_matricula_only' in row) {
-      isMatOnly = row._is_matricula_only;
-    } else {
-      isMatOnly = isMatriculaContributor(name);
-    }
-    const syntheticName = isMatOnly && !isMatriculaContributor(name) ? name + '-matricula' : name;
-    const indicator = matriculaIndicatorHtml(syntheticName, t('icon_matricula_index'));
+    const showIndicator = !row.hasOwnProperty('_tree');
+    const indicator = showIndicator ? matriculaIndicatorHtml(name, t('icon_matricula_index')) : '';
     const internalHref = row._match_href || row._contributor_href || '';
     const externalUrl = row._url || '';
     if (internalHref) return `<td class="col-center"><a href="${internalHref}" data-spa-nav>${display}</a>${indicator}</td>`;

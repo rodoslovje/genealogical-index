@@ -245,7 +245,7 @@ export default {
         <li><strong>📋</strong> – népszámlálások (SIstory)</li>
         <li><strong>📰</strong> – Szlovénia Digitális Könyvtára (dLib)</li>
       </ul>
-      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
+      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a genealógus neve melletti <strong>⛪</strong> jel azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig személyes családfából, a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
       <h4>Ősök és leszármazottak családfája</h4>
       <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
       <ul>
@@ -260,7 +260,6 @@ export default {
         <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő mutatja a leggyakoribb vezetékneveket. A <strong>CSV</strong> vagy <strong>SVG</strong> gombra kattintva letöltheti ezeket az adatokat a számítógépére.</li>
         <li><strong>Genealógusok listája:</strong> A táblázat megjeleníti az összes közreműködőt és a személyeik, családjaik, hivatkozásaik és más genealógusokkal való lehetséges egyezéseik számát. A <strong>CSV</strong> gombra kattintva exportálhatja a táblázatot, egy genealógus nevére kattintva pedig megnyitja a részletes oldalát.</li>
         <li><strong>A lista szűrése:</strong> Az oldalsávban található keresőmezőben (<strong>☰</strong>) gyorsan szűkítheti a listát a genealógus vezetékneve alapján. A leggyakoribb vezetéknevek szófelhője ezután csak a megtalált genealógusok családfáiból származó vezetékneveket jeleníti meg.</li>
-        <li><strong>Matricula indikátor ⛪:</strong> A genealógus neve melletti ikon azt jelenti, hogy az adatok a Matricula Online indexből származnak, amelyhez ez a genealógus járult hozzá, és nem a személyes családfájából.</li>
       </ul>
       <h4>Genealógus részletei</h4>
       <p>Az egyes genealógusok oldala összegyűjti a hozzájárulásukkal kapcsolatos információkat:</p>
