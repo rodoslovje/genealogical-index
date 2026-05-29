@@ -117,6 +117,7 @@ class MatriculaBook(BaseModel):
     name: str
     parish: Optional[str] = None
     type: str
+    date: Optional[str] = None
     count: int = 0
     url: Optional[str] = None
     last_modified: Optional[str] = None

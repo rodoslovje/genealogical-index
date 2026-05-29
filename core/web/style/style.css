@@ -767,8 +767,17 @@ body.tree-view .section-bar {
 @media (min-width: 900px) {
   .charts-container { grid-template-columns: 1fr 1.5fr; }
 }
+/* Two paired doughnuts with right-side legends need ~500px each to render
+   comfortably. Below that, stack vertically (still right legend per chart). */
+@media (min-width: 1000px) {
+  .matricula-charts-container { grid-template-columns: 1fr 1fr; }
+}
 .chart-wrapper {
   width: 100%;
+  /* CSS grid items default to `min-width: auto`, which lets the inner
+     Chart.js canvas force the track wider than the viewport on smaller
+     screens. `min-width: 0` lets the wrapper actually shrink with the grid. */
+  min-width: 0;
   height: 320px;
 }
 @media (max-width: 600px) {

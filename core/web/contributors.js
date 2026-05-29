@@ -97,9 +97,12 @@ export async function renderContributors() {
 
   const tableContainer = document.getElementById('table-contributors');
 
+  const matriculaLink = document.getElementById('matricula-stats-link');
+
   if (contributor) {
     if (statsHeading) statsHeading.style.display = 'none';
     if (chartsContainer) chartsContainer.style.display = 'none';
+    if (matriculaLink) matriculaLink.style.display = 'none';
     if (surnameCloudSection) surnameCloudSection.style.display = 'none';
     if (tableHeader) tableHeader.style.display = 'none';
     // Detail view fills the container with multiple sections (heading, stats,
@@ -121,6 +124,11 @@ export async function renderContributors() {
   if (statsHeading) statsHeading.style.display = '';
   if (chartsContainer) chartsContainer.style.display = statsCollapsed ? 'none' : 'grid';
   if (totalsBar && !readContributorParam(urlParams)) totalsBar.style.display = statsCollapsed ? 'none' : '';
+  if (matriculaLink) {
+    const linkHtml = `<a href="${toUnicodeHref({ t: 'matricula' })}" data-spa-nav>${t('matricula_page_title')}</a>`;
+    matriculaLink.innerHTML = t('contributors_matricula_link_intro').replace('{0}', linkHtml);
+    matriculaLink.style.display = statsCollapsed ? 'none' : '';
+  }
   if (surnameCloudSection) surnameCloudSection.style.display = '';
   if (tableHeader) tableHeader.style.display = '';
 
@@ -133,8 +141,10 @@ export async function renderContributors() {
       statsHeading.classList.toggle('collapsed', willCollapse);
       const tb = document.getElementById('totals-bar');
       const cc = document.getElementById('charts-container');
+      const ml = document.getElementById('matricula-stats-link');
       if (tb) tb.style.display = willCollapse ? 'none' : '';
       if (cc) cc.style.display = willCollapse ? 'none' : 'grid';
+      if (ml) ml.style.display = willCollapse ? 'none' : '';
     });
   }
 

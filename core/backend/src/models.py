@@ -99,6 +99,7 @@ class MatriculaBook(Base):
     name = Column(Text)
     parish = Column(Text)
     type = Column(Text)
+    date = Column(Text)
     count = Column(Integer, default=0)
     url = Column(Text)
     last_modified = Column(Text)
