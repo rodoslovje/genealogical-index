@@ -161,8 +161,44 @@ export async function renderMatchesPage(contributor, withPartner) {
     // matricula-suffixed index data — these are public Matricula Online
     // sources they helped digitise).
     const matriculaBooks = await fetchMatriculaBooks(displayName);
+    const booksSortState = { column: 'parish', ascending: true };
+    const booksCols = [
+      { f: 'parish',        h: t('col_book_parish'),    cls: '' },
+      { f: 'name',          h: t('col_book_name'),      cls: '' },
+      { f: 'type',          h: t('col_book_type'),      cls: '' },
+      { f: 'count',         h: t('col_book_count'),     cls: ' col-right' },
+      { f: 'last_modified', h: t('col_last_modified'),  cls: '' },
+    ];
     let booksSectionHtml = '';
     if (matriculaBooks.length) {
+      const fmt = (n) => Number(n || 0).toLocaleString();
+      const totalRecords = matriculaBooks.reduce((s, b) => s + (b.count || 0), 0);
+
+      const theadHtml = booksCols.map(({ f, h, cls }) =>
+        `<th data-col="${f}" class="sortable${cls}">${h}</th>`
+      ).join('');
+
+      booksSectionHtml = `<div class="matricula-books-section" style="margin-bottom: 24px;">
+        <div class="matricula-books-header section-bar section-bar--top">
+          <h3 class="section-heading" data-i18n="section_matricula_books" style="margin: 0; padding: 0; border: none;">${t('section_matricula_books')}</h3>
+        </div>
+        <div class="matricula-books-content">
+          <p>${t('matricula_books_intro')} <strong>${displayName}</strong> ${t('matricula_books_outro')} (${fmt(matriculaBooks.length)} / ${fmt(totalRecords)})</p>
+          <div class="table-responsive">
+            <table class="matricula-books-table">
+              <thead><tr>${theadHtml}</tr></thead>
+              <tbody id="matricula-books-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    const setupBooksSection = () => {
+      if (!matriculaBooks.length) return;
+      const tbody = document.getElementById('matricula-books-tbody');
+      if (!tbody) return;
+
       const typeLabel = (type) => {
         if (type === 'birth')    return t('book_type_birth');
         if (type === 'marriage') return t('book_type_marriage');
@@ -170,40 +206,81 @@ export async function renderMatchesPage(contributor, withPartner) {
         return escapeHtml(type || '');
       };
       const fmt = (n) => Number(n || 0).toLocaleString();
-      const bookRows = matriculaBooks.map(b => {
-        const name = escapeHtml(b.name || '');
-        const nameCell = b.url
-          ? `<a href="${b.url}" target="_blank" rel="noopener">${name}</a>`
-          : name;
-        const lastMod = (b.last_modified || '').slice(0, 10);
-        return `<tr>
-          <td>${escapeHtml(b.parish || '')}</td>
-          <td>${nameCell}</td>
-          <td>${typeLabel(b.type)}</td>
-          <td class="col-right">${fmt(b.count)}</td>
-          <td>${escapeHtml(lastMod)}</td>
-        </tr>`;
-      }).join('');
-      const totalRecords = matriculaBooks.reduce((s, b) => s + (b.count || 0), 0);
-      booksSectionHtml = `<div class="matricula-books-section" style="margin-bottom: 24px;">
-        <div class="section-bar section-bar--top">
-          <h3 class="section-heading" data-i18n="section_matricula_books" style="margin: 0; padding: 0; border: none;">${t('section_matricula_books')}</h3>
-        </div>
-        <p>${t('matricula_books_intro')} <strong>${displayName}</strong> ${t('matricula_books_outro')} (${fmt(matriculaBooks.length)} / ${fmt(totalRecords)})</p>
-        <div class="table-responsive">
-          <table class="matricula-books-table">
-            <thead><tr>
-              <th>${t('col_book_parish')}</th>
-              <th>${t('col_book_name')}</th>
-              <th>${t('col_book_type')}</th>
-              <th class="col-right">${t('col_book_count')}</th>
-              <th>${t('col_last_modified')}</th>
-            </tr></thead>
-            <tbody>${bookRows}</tbody>
-          </table>
-        </div>
-      </div>`;
-    }
+      const collator = new Intl.Collator('sl', { sensitivity: 'base' });
+      const sortVal = (b, col) => {
+        if (col === 'count') return Number(b.count || 0);
+        if (col === 'type')  return typeLabel(b.type).toLowerCase();
+        return String(b[col] || '').toLowerCase();
+      };
+      const cmp = (a, b) => (typeof a === 'number' && typeof b === 'number')
+        ? a - b
+        : collator.compare(String(a ?? ''), String(b ?? ''));
+
+      const sorted = matriculaBooks.slice();
+      const renderRows = () => {
+        const { column, ascending } = booksSortState;
+        const dir = ascending ? 1 : -1;
+        sorted.sort((a, b) => {
+          const r = cmp(sortVal(a, column), sortVal(b, column)) * dir;
+          if (r !== 0) return r;
+          if (column !== 'parish') return collator.compare(a.parish || '', b.parish || '');
+          return collator.compare(a.name || '', b.name || '');
+        });
+
+        tbody.innerHTML = sorted.map(b => {
+          const name = escapeHtml(b.name || '');
+          const nameCell = b.url
+            ? `<a href="${b.url}" target="_blank" rel="noopener">${name}</a>`
+            : name;
+          const lastMod = (b.last_modified || '').slice(0, 10);
+          return `<tr>
+            <td>${escapeHtml(b.parish || '')}</td>
+            <td>${nameCell}</td>
+            <td>${typeLabel(b.type)}</td>
+            <td class="col-right">${fmt(b.count)}</td>
+            <td>${escapeHtml(lastMod)}</td>
+          </tr>`;
+        }).join('');
+
+        // Refresh sort indicators on the header row.
+        document.querySelectorAll('.matricula-books-table thead th.sortable').forEach(th => {
+          const colDef = booksCols.find(c => c.f === th.dataset.col);
+          const baseLabel = colDef ? colDef.h : th.textContent;
+          const indicator = th.dataset.col === booksSortState.column
+            ? (booksSortState.ascending ? '&nbsp;▲' : '&nbsp;▼')
+            : '';
+          th.innerHTML = `${baseLabel}${indicator}`;
+        });
+      };
+
+      renderRows();
+
+      document.querySelectorAll('.matricula-books-table thead th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+          const col = th.dataset.col;
+          if (booksSortState.column === col) {
+            booksSortState.ascending = !booksSortState.ascending;
+          } else {
+            booksSortState.column = col;
+            booksSortState.ascending = true;
+          }
+          renderRows();
+        });
+      });
+
+      // Collapsible header — mirrors the matches-summary section pattern.
+      const booksHeader = document.querySelector('.matricula-books-header h3');
+      const booksContent = document.querySelector('.matricula-books-content');
+      if (booksHeader && booksContent) {
+        booksHeader.classList.add('collapsible-header');
+        booksHeader.addEventListener('click', (e) => {
+          if (e.target.closest('button') || e.target.closest('a')) return;
+          const isCollapsed = booksHeader.classList.contains('collapsed');
+          booksContent.style.display = isCollapsed ? '' : 'none';
+          booksHeader.classList.toggle('collapsed', !isCollapsed);
+        });
+      }
+    };
 
     const heading = `<div class="matches-page-header">
       <h2 class="matches-page-title">${displayName} - ${formatTitleSuffix(t('col_contributor'))}</h2>
@@ -221,6 +298,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     if (!showMatchesSection) {
       container.innerHTML = heading;
       loadDetailClouds();
+      setupBooksSection();
       return;
     }
 
@@ -235,6 +313,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     } catch {
       container.innerHTML = heading + `<p>${t('search_failed')}</p>`;
       loadDetailClouds();
+      setupBooksSection();
       return;
     }
 
@@ -243,6 +322,7 @@ export async function renderMatchesPage(contributor, withPartner) {
         `<h3 class="section-heading" style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${t('col_matches')}</h3>` +
         `<p>${t('matches_none')}</p>`;
       loadDetailClouds();
+      setupBooksSection();
       return;
     }
 
@@ -279,6 +359,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       </div>`;
 
     loadDetailClouds();
+    setupBooksSection();
 
     const summaryHeader = container.querySelector('.matches-summary-header h3');
     const summaryContent = container.querySelector('.matches-summary-content');
