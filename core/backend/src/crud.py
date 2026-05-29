@@ -257,6 +257,22 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
     return results
 
 
+def get_matricula_books(db: Session, contributor: str):
+    """Return the Matricula books transcribed by the given contributor, keyed
+    by the base name (matricula-index.json stores entries under the base
+    name, not the ``-matricula`` suffix). Ordered by name."""
+    contrib_norm = unicodedata.normalize("NFC", contributor or "")
+    contrib_base = _base_contributor_name(contrib_norm)
+
+    rows = (
+        db.query(models.MatriculaBook)
+        .filter(models.MatriculaBook.contributor == contrib_base)
+        .order_by(models.MatriculaBook.parish, models.MatriculaBook.name)
+        .all()
+    )
+    return rows
+
+
 def get_contributor_matches(db: Session, contributor: str):
     contrib_norm = unicodedata.normalize("NFC", contributor)
     c_forms = [

@@ -153,6 +153,18 @@ def setup_full(db):
         CREATE INDEX idx_matches_b  ON matches(contributor_b);
         CREATE INDEX idx_matches_ab ON matches(contributor_a, contributor_b);
 
+        CREATE TABLE matricula_books (
+            id SERIAL PRIMARY KEY,
+            contributor TEXT NOT NULL,
+            name TEXT,
+            parish TEXT,
+            type TEXT,
+            count INTEGER DEFAULT 0,
+            url TEXT,
+            last_modified TEXT
+        );
+        CREATE INDEX idx_matricula_books_contributor ON matricula_books(contributor);
+
         -- Strips the GEDCOM xref `id` field from every element of a JSONB
         -- array of person-info objects. compute_matches uses this to compare
         -- parents_list / partners_list / children_list across contributors —
@@ -264,6 +276,19 @@ def setup_update(db):
             completed_at TIMESTAMPTZ,
             PRIMARY KEY (contributor_a, contributor_b)
         );
+        CREATE TABLE IF NOT EXISTS matricula_books (
+            id SERIAL PRIMARY KEY,
+            contributor TEXT NOT NULL,
+            name TEXT,
+            parish TEXT,
+            type TEXT,
+            count INTEGER DEFAULT 0,
+            url TEXT,
+            last_modified TEXT
+        );
+        ALTER TABLE matricula_books ADD COLUMN IF NOT EXISTS parish        TEXT;
+        ALTER TABLE matricula_books ADD COLUMN IF NOT EXISTS last_modified TEXT;
+        CREATE INDEX IF NOT EXISTS idx_matricula_books_contributor ON matricula_books(contributor);
     """))
     db.commit()
 
@@ -633,6 +658,52 @@ def import_contributor(
         )
 
 
+def import_matricula_index(db):
+    """Replace the matricula_books table with the contents of
+    data/output/matricula-index.json. The file is a compact map of
+    contributor -> [{name, type, count, url}, ...] so wholesale re-import
+    is simpler than diff'ing and stays fast.
+    """
+    path = os.path.join(DATA_DIR, "matricula-index.json")
+    if not os.path.exists(path):
+        print(f"\nSkipping matricula-index: '{path}' not found.")
+        return
+
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    rows = []
+    for contributor, books in data.items():
+        contrib_nfc = unicodedata.normalize("NFC", contributor)
+        for b in books or []:
+            rows.append(
+                {
+                    "contributor": contrib_nfc,
+                    "name": _s(b.get("name")),
+                    "parish": _s(b.get("parish")),
+                    "type": _s(b.get("type")),
+                    "count": int(b.get("count") or 0),
+                    "url": _s(b.get("url")),
+                    "last_modified": _s(b.get("last_modified")),
+                }
+            )
+
+    db.execute(text("TRUNCATE matricula_books;"))
+    if rows:
+        db.execute(
+            text("""
+                INSERT INTO matricula_books (contributor, name, parish, type, count, url, last_modified)
+                VALUES (:contributor, :name, :parish, :type, :count, :url, :last_modified)
+            """),
+            rows,
+        )
+    db.commit()
+    print(
+        f"\nImported {len(rows)} matricula book entries "
+        f"for {len(data)} contributor(s)."
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Import JSON data into the database.")
     parser.add_argument(
@@ -858,6 +929,8 @@ def main():
                 imp_families,
             )
             updated_contributors.append(contributor_id)
+
+    import_matricula_index(db)
 
     print("\nData import finished successfully.")
 

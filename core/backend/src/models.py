@@ -89,3 +89,16 @@ class Match(Base):
     computed_at = Column(
         DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc)
     )
+
+
+class MatriculaBook(Base):
+    __tablename__ = "matricula_books"
+
+    id = Column(Integer, primary_key=True, index=True)
+    contributor = Column(Text, index=True)
+    name = Column(Text)
+    parish = Column(Text)
+    type = Column(Text)
+    count = Column(Integer, default=0)
+    url = Column(Text)
+    last_modified = Column(Text)

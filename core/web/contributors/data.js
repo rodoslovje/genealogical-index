@@ -123,3 +123,10 @@ export function prefetchContributors() {
   ensureTimelineData().catch(() => {});
   ensureMatchCounts().catch(() => {});
 }
+
+/** Fetch the Matricula books transcribed by `contributor`. Returns [] on error. */
+export function fetchMatriculaBooks(contributor) {
+  return fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matricula`)
+    .then(r => (r.ok ? r.json() : []))
+    .catch(() => []);
+}

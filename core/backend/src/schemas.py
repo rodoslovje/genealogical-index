@@ -111,3 +111,15 @@ class MatchPartner(BaseModel):
 class MatchCount(BaseModel):
     contributor: str
     partners_count: int = 0
+
+
+class MatriculaBook(BaseModel):
+    name: str
+    parish: Optional[str] = None
+    type: str
+    count: int = 0
+    url: Optional[str] = None
+    last_modified: Optional[str] = None
+
+    class Config:
+        from_attributes = True

@@ -12,7 +12,7 @@ import { toUnicodeHref } from '../url.js';
 import { authFetch } from '../auth.js';
 import siteConfig from '@site-config';
 
-import { ensureData, getCachedData, getContributorUrlMap } from './data.js';
+import { ensureData, getCachedData, getContributorUrlMap, fetchMatriculaBooks } from './data.js';
 import { loadSurnameCloud } from './cloud.js';
 import {
   getContributorFilter, setCurrentMatches, setDetailRefilter,
@@ -157,12 +157,61 @@ export async function renderMatchesPage(contributor, withPartner) {
       </div>`;
     }
 
+    // Matricula books transcribed by this contributor (separate from
+    // matricula-suffixed index data — these are public Matricula Online
+    // sources they helped digitise).
+    const matriculaBooks = await fetchMatriculaBooks(displayName);
+    let booksSectionHtml = '';
+    if (matriculaBooks.length) {
+      const typeLabel = (type) => {
+        if (type === 'birth')    return t('book_type_birth');
+        if (type === 'marriage') return t('book_type_marriage');
+        if (type === 'death')    return t('book_type_death');
+        return escapeHtml(type || '');
+      };
+      const fmt = (n) => Number(n || 0).toLocaleString();
+      const bookRows = matriculaBooks.map(b => {
+        const name = escapeHtml(b.name || '');
+        const nameCell = b.url
+          ? `<a href="${b.url}" target="_blank" rel="noopener">${name}</a>`
+          : name;
+        const lastMod = (b.last_modified || '').slice(0, 10);
+        return `<tr>
+          <td>${escapeHtml(b.parish || '')}</td>
+          <td>${nameCell}</td>
+          <td>${typeLabel(b.type)}</td>
+          <td class="col-right">${fmt(b.count)}</td>
+          <td>${escapeHtml(lastMod)}</td>
+        </tr>`;
+      }).join('');
+      const totalRecords = matriculaBooks.reduce((s, b) => s + (b.count || 0), 0);
+      booksSectionHtml = `<div class="matricula-books-section" style="margin-bottom: 24px;">
+        <div class="section-bar section-bar--top">
+          <h3 class="section-heading" data-i18n="section_matricula_books" style="margin: 0; padding: 0; border: none;">${t('section_matricula_books')}</h3>
+        </div>
+        <p>${t('matricula_books_intro')} <strong>${displayName}</strong> ${t('matricula_books_outro')} (${fmt(matriculaBooks.length)} / ${fmt(totalRecords)})</p>
+        <div class="table-responsive">
+          <table class="matricula-books-table">
+            <thead><tr>
+              <th>${t('col_book_parish')}</th>
+              <th>${t('col_book_name')}</th>
+              <th>${t('col_book_type')}</th>
+              <th class="col-right">${t('col_book_count')}</th>
+              <th>${t('col_last_modified')}</th>
+            </tr></thead>
+            <tbody>${bookRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }
+
     const heading = `<div class="matches-page-header">
       <h2 class="matches-page-title">${displayName} - ${formatTitleSuffix(t('col_contributor'))}</h2>
     </div>
     ${statsHtml}
     ${urlHtml}
-    ${cloudSectionsHtml}`;
+    ${cloudSectionsHtml}
+    ${booksSectionHtml}`;
 
     const loadDetailClouds = () => {
       if (hasTree)      loadSurnameCloud([contribData._tree.contributor_ID],      'contributor-surname-cloud');
