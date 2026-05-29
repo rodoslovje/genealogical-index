@@ -37,12 +37,12 @@ function typeLabel(type) {
  *  and toggles content visibility from the header inside `headerSelector`. */
 function setupSortableTable({ tableId, headerSelector, contentSelector, columns, data, initialSort, renderRow, fallbackSort }) {
   const tableEl = document.getElementById(tableId);
-  if (!tableEl) return;
+  if (!tableEl) return null;
   const tbody = tableEl.querySelector('tbody');
-  if (!tbody) return;
+  if (!tbody) return null;
 
   const state = { ...initialSort };
-  const sorted = data.slice();
+  let sorted = data.slice();
 
   const renderRows = () => {
     const dir = state.ascending ? 1 : -1;
@@ -92,6 +92,13 @@ function setupSortableTable({ tableId, headerSelector, contentSelector, columns,
       header.classList.toggle('collapsed', !isCollapsed);
     });
   }
+
+  return {
+    updateData: (newData) => {
+      sorted = newData.slice();
+      renderRows();
+    }
+  };
 }
 
 function buildThead(columns) {
@@ -102,12 +109,12 @@ function buildThead(columns) {
 
 function renderBooksSection(books) {
   const columns = [
-    { f: 'parish',        h: t('col_book_parish') },
-    { f: 'type',          h: t('col_book_type'),     sortVal: (b) => typeLabel(b.type).toLowerCase() },
-    { f: 'date',          h: t('col_book_period') },
-    { f: 'count',         h: t('col_book_count'),    cls: ' col-right', sortVal: (b) => Number(b.count || 0), defaultDesc: true },
-    { f: 'contributor',   h: t('col_contributor') },
-    { f: 'last_modified', h: t('col_last_modified') },
+    { f: 'parish',        h: t('col_book_parish'),   cls: ' col-center' },
+    { f: 'type',          h: t('col_book_type'),     cls: ' col-center', sortVal: (b) => typeLabel(b.type).toLowerCase() },
+    { f: 'date',          h: t('col_book_period'),   cls: ' col-center' },
+    { f: 'count',         h: t('col_book_count'),    cls: ' col-center', sortVal: (b) => Number(b.count || 0), defaultDesc: true },
+    { f: 'contributor',   h: t('col_contributor'),   cls: ' col-center' },
+    { f: 'last_modified', h: t('col_last_modified'), cls: ' col-center' },
   ];
 
   const renderRow = (b) => {
@@ -121,19 +128,19 @@ function renderBooksSection(books) {
       : '';
     const lastMod = (b.last_modified || '').slice(0, 10);
     return `<tr>
-      <td>${escapeHtml(b.parish || '')}</td>
-      <td>${typeLabel(b.type)}</td>
-      <td>${dateCell}</td>
-      <td class="col-right">${fmt(b.count)}</td>
-      <td>${contribCell}</td>
-      <td>${escapeHtml(lastMod)}</td>
+      <td class="col-center">${escapeHtml(b.parish || '')}</td>
+      <td class="col-center">${typeLabel(b.type)}</td>
+      <td class="col-center">${dateCell}</td>
+      <td class="col-center">${fmt(b.count)}</td>
+      <td class="col-center">${contribCell}</td>
+      <td class="col-center">${escapeHtml(lastMod)}</td>
     </tr>`;
   };
 
   return {
     html: `<div class="matricula-stats-section" style="margin-bottom: 24px;">
       <div class="matricula-allbooks-header section-bar section-bar--top">
-        <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('matricula_section_books')} (${fmt(books.length)})</h3>
+        <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('matricula_section_books')} (<span id="matricula-books-count">${fmt(books.length)}</span>)</h3>
         <button class="export-btn matricula-allbooks-csv-btn" title="${t('download_csv')}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
         </button>
@@ -148,7 +155,9 @@ function renderBooksSection(books) {
       </div>
     </div>`,
     setup: () => {
-      setupSortableTable({
+      let filteredBooks = books;
+
+      const tableApi = setupSortableTable({
         tableId: 'matricula-allbooks-table',
         headerSelector: '.matricula-allbooks-header h3',
         contentSelector: '.matricula-allbooks-content',
@@ -158,11 +167,35 @@ function renderBooksSection(books) {
         fallbackSort: (a, b) => collator.compare(a.name || '', b.name || ''),
       });
 
+      const applyFilters = () => {
+        const query = document.getElementById('filter-matricula-books')?.value.toLowerCase().trim() || '';
+
+        filteredBooks = books.filter(b => {
+          if (!query) return true;
+          const parish = (b.parish || '').toLowerCase();
+          const type = typeLabel(b.type).toLowerCase();
+          const date = (b.date || '').toLowerCase();
+          const contrib = (baseContributorName(b.contributor) || '').toLowerCase();
+          return parish.includes(query) || type.includes(query) || date.includes(query) || contrib.includes(query);
+        });
+
+        const countEl = document.getElementById('matricula-books-count');
+        if (countEl) countEl.textContent = fmt(filteredBooks.length);
+        if (tableApi) tableApi.updateData(filteredBooks);
+      };
+
+      const filterInput = document.getElementById('filter-matricula-books');
+      if (filterInput) {
+        filterInput.oninput = applyFilters;
+        filterInput.onchange = applyFilters;
+        if (filterInput.value) applyFilters();
+      }
+
       const csvBtn = document.querySelector('.matricula-allbooks-csv-btn');
       if (csvBtn) {
         csvBtn.addEventListener('click', () => {
           const prefix = siteConfig.filePrefix || 'sgi';
-          exportBooksToCSV(books, columns, `${prefix}-matricula-books.csv`);
+          exportBooksToCSV(filteredBooks, columns, `${prefix}-matricula-books.csv`);
         });
       }
     },
@@ -171,7 +204,7 @@ function renderBooksSection(books) {
 
 /** CSV export tailored to the matricula books table — its columns don't map
  *  to the generic `t('col_X')` keys used by the shared exportToCSV. */
-function exportBooksToCSV(books, columns, filename) {
+export function exportBooksToCSV(books, columns, filename) {
   if (!books?.length) return;
   const header = columns.map(c => `"${(c.h || '').replace(/"/g, '""')}"`).join(',');
   const rows = books.map(b => columns.map(c => {

@@ -17,6 +17,7 @@ import { loadSurnameCloud } from './cloud.js';
 import {
   getContributorFilter, setCurrentMatches, setDetailRefilter,
 } from './filter.js';
+import { exportBooksToCSV } from './matricula-stats.js';
 
 /** Renders the per-contributor stats grid (single column or 3-column Sum/Tree/Matricula). */
 function renderContributorStats(contribData) {
@@ -147,58 +148,114 @@ export async function renderMatchesPage(contributor, withPartner) {
         <div class="surname-cloud" id="contributor-surname-cloud" data-i18n-title="chart_surnames_title"></div>
       </div>`;
     }
-    if (hasMatricula) {
-      cloudSectionsHtml += `<div class="surname-cloud-section" style="margin-bottom: 24px;">
-        <div class="surname-cloud-header section-bar">
-          <h3 class="section-heading" data-i18n="section_surnames_matricula" style="margin: 0; padding: 0; border: none;">${t('section_surnames_matricula')}</h3>
-        </div>
-        <p>${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_matricula_outro')}</p>
-        <div class="surname-cloud" id="contributor-matricula-surname-cloud" data-i18n-title="chart_surnames_title"></div>
-      </div>`;
-    }
 
-    // Matricula books transcribed by this contributor (separate from
-    // matricula-suffixed index data — these are public Matricula Online
-    // sources they helped digitise).
+    // Combined Matricula section: top surnames followed by the transcribed
+    // books table. Shown whenever the contributor has either matricula-suffixed
+    // index data or transcribed Matricula Online books.
     const matriculaBooks = await fetchMatriculaBooks(displayName);
     const booksSortState = { column: 'parish', ascending: true };
     const booksCols = [
-      { f: 'parish',        h: t('col_book_parish'),    cls: '' },
-      { f: 'type',          h: t('col_book_type'),      cls: '' },
-      { f: 'date',          h: t('col_book_period'),    cls: '' },
-      { f: 'count',         h: t('col_book_count'),     cls: ' col-right' },
-      { f: 'last_modified', h: t('col_last_modified'),  cls: '' },
+      { f: 'parish',        h: t('col_book_parish'),    cls: ' col-center' },
+      { f: 'type',          h: t('col_book_type'),      cls: ' col-center' },
+      { f: 'date',          h: t('col_book_period'),    cls: ' col-center' },
+      { f: 'count',         h: t('col_book_count'),     cls: ' col-center' },
+      { f: 'last_modified', h: t('col_last_modified'),  cls: ' col-center' },
     ];
-    let booksSectionHtml = '';
-    if (matriculaBooks.length) {
+    let matriculaSectionHtml = '';
+    if (hasMatricula || matriculaBooks.length) {
       const fmt = (n) => Number(n || 0).toLocaleString();
       const totalRecords = matriculaBooks.reduce((s, b) => s + (b.count || 0), 0);
 
-      const theadHtml = booksCols.map(({ f, h, cls }) =>
-        `<th data-col="${f}" class="sortable${cls}">${h}</th>`
-      ).join('');
+      const matriculaUrl = toUnicodeHref({ t: 'matricula' });
+      const summaryHtml = matriculaBooks.length
+        ? `<p>${t('matricula_books_summary')
+            .replace('{0}', `<strong>${displayName}</strong>`)
+            .replace('{1}', `<strong>${fmt(matriculaBooks.length)}</strong>`)
+            .replace('{2}', `<strong>${fmt(totalRecords)}</strong>`)
+            .replace('{3}', matriculaUrl)}</p>`
+        : '';
 
-      const statsLink = `<a href="${toUnicodeHref({ t: 'matricula' })}" data-spa-nav>${t('matricula_more_stats')}</a>`;
-      booksSectionHtml = `<div class="matricula-books-section" style="margin-bottom: 24px;">
-        <div class="matricula-books-header section-bar section-bar--top">
-          <h3 class="section-heading" data-i18n="section_matricula_books" style="margin: 0; padding: 0; border: none;">${t('section_matricula_books')}</h3>
-        </div>
-        <div class="matricula-books-content">
-          <p>${t('matricula_books_intro')} <strong>${displayName}</strong> ${t('matricula_books_outro')} (${fmt(matriculaBooks.length)} / ${fmt(totalRecords)}) — ${statsLink}</p>
+      const cloudHtml = hasMatricula
+        ? `<div class="surname-cloud-section" style="margin-top: 1.5rem;">
+            <div class="surname-cloud-header section-bar section-bar--top" style="margin-bottom: 8px;">
+              <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_surnames')}</h4>
+            </div>
+            <p style="margin-bottom: 12px;">${t('contributor_matricula_surnames_intro')}</p>
+            <div class="surname-cloud" id="contributor-matricula-surname-cloud" data-i18n-title="chart_surnames_title"></div>
+          </div>`
+        : '';
+
+      let booksHtml = '';
+      if (matriculaBooks.length) {
+        const theadHtml = booksCols.map(({ f, h, cls }) =>
+          `<th data-col="${f}" class="sortable${cls}">${h}</th>`
+        ).join('');
+        booksHtml = `<div class="matricula-books-subsection" style="margin-top: 1.5rem;">
+          <div class="matricula-books-header section-bar section-bar--top" style="margin-bottom: 8px;">
+            <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_matricula_books')}</h4>
+            <button class="export-btn export-matricula-books-btn" title="${t('download_csv')}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
+            </button>
+          </div>
           <div class="table-responsive">
             <table class="matricula-books-table">
               <thead><tr>${theadHtml}</tr></thead>
               <tbody id="matricula-books-tbody"></tbody>
             </table>
           </div>
+        </div>`;
+      }
+
+      matriculaSectionHtml = `<div class="matricula-section" style="margin-bottom: 24px;">
+        <div class="matricula-section-header section-bar section-bar--top">
+          <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('matricula_page_title')}</h3>
+        </div>
+        <div class="matricula-section-content">
+          ${summaryHtml}
+          ${booksHtml}
+          ${cloudHtml}
         </div>
       </div>`;
     }
 
     const setupBooksSection = () => {
+      // Wire up the parent Matricula section's collapsible behavior first —
+      // it's present whenever there's matricula data, even with no books.
+      const matriculaHeader = document.querySelector('.matricula-section-header h3');
+      const matriculaContent = document.querySelector('.matricula-section-content');
+      if (matriculaHeader && matriculaContent) {
+        matriculaHeader.classList.add('collapsible-header');
+        matriculaHeader.addEventListener('click', (e) => {
+          if (e.target.closest('button') || e.target.closest('a')) return;
+          const isCollapsed = matriculaHeader.classList.contains('collapsed');
+          matriculaContent.style.display = isCollapsed ? '' : 'none';
+          matriculaHeader.classList.toggle('collapsed', !isCollapsed);
+        });
+      }
+
+      const booksHeader = container.querySelector('.matricula-books-header h4');
+      const booksContent = container.querySelector('.matricula-books-subsection .table-responsive');
+      if (booksHeader && booksContent) {
+        booksHeader.classList.add('collapsible-header');
+        booksHeader.addEventListener('click', (e) => {
+          if (e.target.closest('button') || e.target.closest('a')) return;
+          const isCollapsed = booksHeader.classList.contains('collapsed');
+          booksContent.style.display = isCollapsed ? '' : 'none';
+          booksHeader.classList.toggle('collapsed', !isCollapsed);
+        });
+      }
+
       if (!matriculaBooks.length) return;
       const tbody = document.getElementById('matricula-books-tbody');
       if (!tbody) return;
+
+      const csvBtn = container.querySelector('.export-matricula-books-btn');
+      if (csvBtn) {
+        csvBtn.addEventListener('click', () => {
+          const prefix = siteConfig.filePrefix || 'sgi';
+          exportBooksToCSV(matriculaBooks, booksCols, `${prefix}-matricula-books-${displayName}.csv`);
+        });
+      }
 
       const typeLabel = (type) => {
         if (type === 'birth')    return t('book_type_birth');
@@ -235,11 +292,11 @@ export async function renderMatchesPage(contributor, withPartner) {
             : date;
           const lastMod = (b.last_modified || '').slice(0, 10);
           return `<tr>
-            <td>${escapeHtml(b.parish || '')}</td>
-            <td>${typeLabel(b.type)}</td>
-            <td>${dateCell}</td>
-            <td class="col-right">${fmt(b.count)}</td>
-            <td>${escapeHtml(lastMod)}</td>
+            <td class="col-center">${escapeHtml(b.parish || '')}</td>
+            <td class="col-center">${typeLabel(b.type)}</td>
+            <td class="col-center">${dateCell}</td>
+            <td class="col-center">${fmt(b.count)}</td>
+            <td class="col-center">${escapeHtml(lastMod)}</td>
           </tr>`;
         }).join('');
 
@@ -269,18 +326,6 @@ export async function renderMatchesPage(contributor, withPartner) {
         });
       });
 
-      // Collapsible header — mirrors the matches-summary section pattern.
-      const booksHeader = document.querySelector('.matricula-books-header h3');
-      const booksContent = document.querySelector('.matricula-books-content');
-      if (booksHeader && booksContent) {
-        booksHeader.classList.add('collapsible-header');
-        booksHeader.addEventListener('click', (e) => {
-          if (e.target.closest('button') || e.target.closest('a')) return;
-          const isCollapsed = booksHeader.classList.contains('collapsed');
-          booksContent.style.display = isCollapsed ? '' : 'none';
-          booksHeader.classList.toggle('collapsed', !isCollapsed);
-        });
-      }
     };
 
     const heading = `<div class="matches-page-header">
@@ -289,7 +334,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     ${statsHtml}
     ${urlHtml}
     ${cloudSectionsHtml}
-    ${booksSectionHtml}`;
+    ${matriculaSectionHtml}`;
 
     const loadDetailClouds = () => {
       if (hasTree)      loadSurnameCloud([contribData._tree.contributor_ID],      'contributor-surname-cloud');

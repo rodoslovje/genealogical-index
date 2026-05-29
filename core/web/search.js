@@ -446,7 +446,7 @@ export function getTabURLParams(tabType) {
 }
 
 export function clearAllSearchForms() {
-  ['general-name', 'general-surname', 'general-date_from', 'general-date_to', 'general-place', 'general-contributor', 'contributors-query'].forEach(id => {
+  ['general-name', 'general-surname', 'general-date_from', 'general-date_to', 'general-place', 'general-contributor', 'contributors-query', 'filter-matricula-books'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
   });

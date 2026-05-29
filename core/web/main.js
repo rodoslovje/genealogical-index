@@ -317,7 +317,18 @@ function maybeRouteMatricula(urlParams) {
   const sectionEl = document.getElementById('tab-matricula');
   if (sectionEl) sectionEl.classList.add('active');
 
-  sidebar?.classList.remove('open');
+  const sidebarSection = document.getElementById('matricula-search-sidebar');
+  if (sidebarSection) {
+    sidebarSection.classList.add('active');
+    const input = document.getElementById('filter-matricula-books');
+    if (input && window.innerWidth > 768) setTimeout(() => input.focus(), 0);
+  }
+
+  if (window.innerWidth <= 768) {
+    sidebar?.classList.remove('open');
+  } else {
+    sidebar?.classList.add('open');
+  }
 
   renderMatriculaStatsPage();
   return true;
@@ -473,6 +484,11 @@ async function init() {
     checkNavOverflow();
 
     setupClearableInput(document.getElementById('contributors-query'), () => {
+      sidebar.classList.remove('open');
+      document.activeElement?.blur();
+    });
+
+    setupClearableInput(document.getElementById('filter-matricula-books'), () => {
       sidebar.classList.remove('open');
       document.activeElement?.blur();
     });
