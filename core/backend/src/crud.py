@@ -257,6 +257,84 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
     return results
 
 
+def get_matricula_stats(db: Session):
+    """Return aggregate stats over the matricula_books table for the global
+    Matricula index page (`?p=matricula`):
+      - `books`: full table — one row per book.
+      - `top_contributors`: per-contributor counts (books, records).
+      - `top_parishes`: per-parish counts (books, records, contributors).
+    Returned as a dict so a single endpoint covers all three sections.
+    """
+    book_rows = (
+        db.query(models.MatriculaBook)
+        .order_by(
+            models.MatriculaBook.parish,
+            models.MatriculaBook.contributor,
+            models.MatriculaBook.name,
+        )
+        .all()
+    )
+    books = [
+        {
+            "contributor": b.contributor,
+            "name": b.name,
+            "parish": b.parish,
+            "type": b.type,
+            "count": b.count or 0,
+            "url": b.url,
+            "last_modified": b.last_modified,
+        }
+        for b in book_rows
+    ]
+
+    contrib_rows = db.execute(
+        text("""
+            SELECT contributor,
+                   COUNT(*)                 AS books_count,
+                   COALESCE(SUM(count), 0)  AS total_records
+            FROM matricula_books
+            GROUP BY contributor
+            ORDER BY total_records DESC, contributor
+        """)
+    ).fetchall()
+    top_contributors = [
+        {
+            "contributor": r.contributor,
+            "books_count": int(r.books_count or 0),
+            "total_records": int(r.total_records or 0),
+        }
+        for r in contrib_rows
+    ]
+
+    parish_rows = db.execute(
+        text("""
+            SELECT parish,
+                   COUNT(*)                         AS books_count,
+                   COALESCE(SUM(count), 0)          AS total_records,
+                   COUNT(DISTINCT contributor)      AS contributors_count
+            FROM matricula_books
+            WHERE parish IS NOT NULL AND parish <> ''
+            GROUP BY parish
+            ORDER BY total_records DESC, parish
+        """)
+    ).fetchall()
+    top_parishes = [
+        {
+            "parish": r.parish,
+            "books_count": int(r.books_count or 0),
+            "total_records": int(r.total_records or 0),
+            "contributors_count": int(r.contributors_count or 0),
+        }
+        for r in parish_rows
+    ]
+
+    return {
+        "books": books,
+        "top_contributors": top_contributors,
+        "top_parishes": top_parishes,
+    }
+
+
 def get_matricula_books(db: Session, contributor: str):
     """Return the Matricula books transcribed by the given contributor, keyed
     by the base name (matricula-index.json stores entries under the base

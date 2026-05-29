@@ -178,12 +178,13 @@ export async function renderMatchesPage(contributor, withPartner) {
         `<th data-col="${f}" class="sortable${cls}">${h}</th>`
       ).join('');
 
+      const statsLink = `<a href="${toUnicodeHref({ t: 'matricula' })}" data-spa-nav>${t('matricula_more_stats')}</a>`;
       booksSectionHtml = `<div class="matricula-books-section" style="margin-bottom: 24px;">
         <div class="matricula-books-header section-bar section-bar--top">
           <h3 class="section-heading" data-i18n="section_matricula_books" style="margin: 0; padding: 0; border: none;">${t('section_matricula_books')}</h3>
         </div>
         <div class="matricula-books-content">
-          <p>${t('matricula_books_intro')} <strong>${displayName}</strong> ${t('matricula_books_outro')} (${fmt(matriculaBooks.length)} / ${fmt(totalRecords)})</p>
+          <p>${t('matricula_books_intro')} <strong>${displayName}</strong> ${t('matricula_books_outro')} (${fmt(matriculaBooks.length)} / ${fmt(totalRecords)}) — ${statsLink}</p>
           <div class="table-responsive">
             <table class="matricula-books-table">
               <thead><tr>${theadHtml}</tr></thead>

@@ -99,6 +99,11 @@ def get_contributor_matricula(name: str, db: Session = Depends(get_db)):
     return crud.get_matricula_books(db, name)
 
 
+@app.get("/api/matricula/stats")
+def get_matricula_stats(db: Session = Depends(get_db)):
+    return crud.get_matricula_stats(db)
+
+
 @app.get("/api/contributors/{name}/matches/{other}")
 def get_contributor_match_detail(
     name: str,

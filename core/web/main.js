@@ -7,6 +7,7 @@ import { initHelp } from './help.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL, clearAllSearchForms, getTabURLParams } from './search.js';
 import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams, getParam } from './url.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree.js';
+import { renderMatriculaStatsPage } from './contributors/matricula-stats.js';
 
 // --- Global Link Styles ---
 // (Anchor color/underline is handled per-area in style.css — `.intro-text a`,
@@ -301,6 +302,27 @@ document.addEventListener('click', (e) => {
 
 let isInitializing = false;
 
+/** Side route: ?p=matricula renders the global Matricula stats page outside
+ *  of the regular tab system (no nav entry, no sidebar search). Returns true
+ *  when handled so the caller can skip the normal tab routing. */
+function maybeRouteMatricula(urlParams) {
+  if (urlParams.get('t') !== 'matricula') return false;
+
+  document.body.classList.remove('contributors-view', 'tree-view');
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
+
+  const sectionEl = document.getElementById('tab-matricula');
+  if (sectionEl) sectionEl.classList.add('active');
+
+  sidebar?.classList.remove('open');
+
+  renderMatriculaStatsPage();
+  return true;
+}
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     // .tab-btn is now an <a href="?t=X"> — middle/ctrl/cmd-click should keep
@@ -475,6 +497,9 @@ async function init() {
 
     // Infer active tab from the (now-normalized) URL.
     const urlParams = currentParams();
+    if (maybeRouteMatricula(urlParams)) {
+      return;
+    }
     const urlT = urlParams.get('t');
     let urlTab = 'general';
     if (urlT === 'contributors') urlTab = 'contributors';
@@ -520,6 +545,7 @@ function navigateToURL(urlSearch, { triggerSearch = true } = {}) {
   // If the user followed a legacy ?t=birth / ?t=death link, rewrite it before doing anything.
   normalizeLegacyURL();
   const urlParams = currentParams();
+  if (maybeRouteMatricula(urlParams)) return;
   const urlT = urlParams.get('t') || 'general';
   const tabMap = { general: 'tab-general', person: 'tab-person', family: 'tab-family', contributors: 'tab-contributors', ancestors: 'tab-ancestors', descendants: 'tab-descendants' };
   const targetTab = tabMap[urlT] || 'tab-general';
