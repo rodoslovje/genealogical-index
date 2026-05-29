@@ -104,17 +104,17 @@ function renderBooksSection(books) {
   const columns = [
     { f: 'parish',        h: t('col_book_parish') },
     { f: 'type',          h: t('col_book_type'),     sortVal: (b) => typeLabel(b.type).toLowerCase() },
-    { f: 'name',          h: t('col_book_name') },
+    { f: 'date',          h: t('col_book_period') },
     { f: 'count',         h: t('col_book_count'),    cls: ' col-right', sortVal: (b) => Number(b.count || 0), defaultDesc: true },
     { f: 'contributor',   h: t('col_contributor') },
     { f: 'last_modified', h: t('col_last_modified') },
   ];
 
   const renderRow = (b) => {
-    const name = escapeHtml(b.name || '');
-    const nameCell = b.url
-      ? `<a href="${b.url}" target="_blank" rel="noopener">${name}</a>`
-      : name;
+    const date = escapeHtml(b.date || '');
+    const dateCell = b.url
+      ? `<a href="${b.url}" target="_blank" rel="noopener" title="${escapeHtml(b.name || '')}">${date}</a>`
+      : date;
     const contrib = b.contributor ? baseContributorName(b.contributor) : '';
     const contribCell = contrib
       ? `<a href="${toUnicodeHref({ t: 'contributors', c: contrib })}" data-spa-nav>${escapeHtml(contrib)}</a>`
@@ -123,7 +123,7 @@ function renderBooksSection(books) {
     return `<tr>
       <td>${escapeHtml(b.parish || '')}</td>
       <td>${typeLabel(b.type)}</td>
-      <td>${nameCell}</td>
+      <td>${dateCell}</td>
       <td class="col-right">${fmt(b.count)}</td>
       <td>${contribCell}</td>
       <td>${escapeHtml(lastMod)}</td>

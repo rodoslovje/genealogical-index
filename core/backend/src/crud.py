@@ -280,6 +280,7 @@ def get_matricula_stats(db: Session):
             "name": b.name,
             "parish": b.parish,
             "type": b.type,
+            "date": b.date,
             "count": b.count or 0,
             "url": b.url,
             "last_modified": b.last_modified,

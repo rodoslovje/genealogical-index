@@ -164,8 +164,8 @@ export async function renderMatchesPage(contributor, withPartner) {
     const booksSortState = { column: 'parish', ascending: true };
     const booksCols = [
       { f: 'parish',        h: t('col_book_parish'),    cls: '' },
-      { f: 'name',          h: t('col_book_name'),      cls: '' },
       { f: 'type',          h: t('col_book_type'),      cls: '' },
+      { f: 'date',          h: t('col_book_period'),    cls: '' },
       { f: 'count',         h: t('col_book_count'),     cls: ' col-right' },
       { f: 'last_modified', h: t('col_last_modified'),  cls: '' },
     ];
@@ -229,15 +229,15 @@ export async function renderMatchesPage(contributor, withPartner) {
         });
 
         tbody.innerHTML = sorted.map(b => {
-          const name = escapeHtml(b.name || '');
-          const nameCell = b.url
-            ? `<a href="${b.url}" target="_blank" rel="noopener">${name}</a>`
-            : name;
+          const date = escapeHtml(b.date || '');
+          const dateCell = b.url
+            ? `<a href="${b.url}" target="_blank" rel="noopener" title="${escapeHtml(b.name || '')}">${date}</a>`
+            : date;
           const lastMod = (b.last_modified || '').slice(0, 10);
           return `<tr>
             <td>${escapeHtml(b.parish || '')}</td>
-            <td>${nameCell}</td>
             <td>${typeLabel(b.type)}</td>
+            <td>${dateCell}</td>
             <td class="col-right">${fmt(b.count)}</td>
             <td>${escapeHtml(lastMod)}</td>
           </tr>`;

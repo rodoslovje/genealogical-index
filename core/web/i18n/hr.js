@@ -146,7 +146,7 @@ export default {
     matricula_books_intro: 'Knjige koje je transkribirao/la',
     matricula_books_outro: 'na Matricula Online:',
     col_book_parish: 'Župa',
-    col_book_name: 'Knjiga',
+    col_book_period: 'Razdoblje',
     col_book_type: 'Vrsta',
     col_book_count: 'Zapisi',
     col_books_count: 'Knjige',

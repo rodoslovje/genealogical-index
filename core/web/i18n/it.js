@@ -146,7 +146,7 @@ export default {
     matricula_books_intro: 'Registri trascritti da',
     matricula_books_outro: 'su Matricula Online:',
     col_book_parish: 'Parrocchia',
-    col_book_name: 'Registro',
+    col_book_period: 'Periodo',
     col_book_type: 'Tipo',
     col_book_count: 'Voci',
     col_books_count: 'Registri',

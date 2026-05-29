@@ -159,6 +159,7 @@ def setup_full(db):
             name TEXT,
             parish TEXT,
             type TEXT,
+            date TEXT,
             count INTEGER DEFAULT 0,
             url TEXT,
             last_modified TEXT
@@ -282,11 +283,13 @@ def setup_update(db):
             name TEXT,
             parish TEXT,
             type TEXT,
+            date TEXT,
             count INTEGER DEFAULT 0,
             url TEXT,
             last_modified TEXT
         );
         ALTER TABLE matricula_books ADD COLUMN IF NOT EXISTS parish        TEXT;
+        ALTER TABLE matricula_books ADD COLUMN IF NOT EXISTS date          TEXT;
         ALTER TABLE matricula_books ADD COLUMN IF NOT EXISTS last_modified TEXT;
         CREATE INDEX IF NOT EXISTS idx_matricula_books_contributor ON matricula_books(contributor);
     """))
@@ -682,6 +685,7 @@ def import_matricula_index(db):
                     "name": _s(b.get("name")),
                     "parish": _s(b.get("parish")),
                     "type": _s(b.get("type")),
+                    "date": _s(b.get("date")),
                     "count": int(b.get("count") or 0),
                     "url": _s(b.get("url")),
                     "last_modified": _s(b.get("last_modified")),
@@ -692,8 +696,8 @@ def import_matricula_index(db):
     if rows:
         db.execute(
             text("""
-                INSERT INTO matricula_books (contributor, name, parish, type, count, url, last_modified)
-                VALUES (:contributor, :name, :parish, :type, :count, :url, :last_modified)
+                INSERT INTO matricula_books (contributor, name, parish, type, date, count, url, last_modified)
+                VALUES (:contributor, :name, :parish, :type, :date, :count, :url, :last_modified)
             """),
             rows,
         )

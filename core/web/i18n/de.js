@@ -146,7 +146,7 @@ export default {
     matricula_books_intro: 'Bücher transkribiert von',
     matricula_books_outro: 'auf Matricula Online:',
     col_book_parish: 'Pfarrei',
-    col_book_name: 'Buch',
+    col_book_period: 'Zeitraum',
     col_book_type: 'Typ',
     col_book_count: 'Einträge',
     col_books_count: 'Bücher',

@@ -146,7 +146,7 @@ export default {
     matricula_books_intro: 'A Matricula Online-on átírt könyvek:',
     matricula_books_outro: '',
     col_book_parish: 'Plébánia',
-    col_book_name: 'Könyv',
+    col_book_period: 'Időszak',
     col_book_type: 'Típus',
     col_book_count: 'Bejegyzések',
     col_books_count: 'Könyvek',
