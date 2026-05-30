@@ -73,6 +73,82 @@ function toApiParams(fieldParams, { exact, hasLink, sourceVal } = {}) {
   return out;
 }
 
+// --- Shared form-state helpers (prefix-driven, used by both forms) ---
+
+// Fields shown in the general (cross-type) search form, in render order.
+const GENERAL_FIELDS = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
+
+// Date-typed fields (incl. range "_to" companions) that get date normalization.
+const DATE_FIELDS = new Set(['date_from', 'date_to', 'date_of_birth', 'date_of_birth_to', 'date_of_marriage', 'date_of_marriage_to', 'date_of_death', 'date_of_death_to', 'husband_birth', 'husband_birth_to', 'wife_birth', 'wife_birth_to']);
+
+/** Searchable input names for an advanced form's column set: every non
+ *  display-only column, each date-range column followed by its "_to" partner. */
+function searchFields(columns) {
+  const out = [];
+  columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(c => {
+    out.push(c);
+    if (DATE_RANGE_COLUMNS.has(c)) out.push(`${c}_to`);
+  });
+  return out;
+}
+
+/** Reads a form's field inputs into an API-field → value map: trims, normalizes
+ *  comma lists for name/place/contributor fields and (optionally) dates. */
+function collectFieldParams(prefix, fields, { normalizeDates = true } = {}) {
+  const out = {};
+  fields.forEach(f => {
+    let val = document.getElementById(`${prefix}${f}`)?.value.trim();
+    if (normalizeDates && DATE_FIELDS.has(f)) val = normalizeSearchDate(val);
+    if (f.includes('name') || f.includes('place') || f === 'contributor') val = normalizeNameList(val);
+    if (val) out[f] = val;
+  });
+  return out;
+}
+
+/** Reads the exact / has-link / source toggle state for a form. Defaults to
+ *  exact search when the radio is absent (the rendered default). */
+function readToggles(prefix) {
+  return {
+    exact: document.getElementById(`${prefix}exact`)?.checked ?? true,
+    hasLink: document.getElementById(`${prefix}has_link`)?.checked || false,
+    sourceVal: document.getElementById(`${prefix}source`)?.value || 'all',
+  };
+}
+
+/** Restores field inputs from URL params (short or long key). Returns true if
+ *  any field was filled. */
+function restoreFields(prefix, fields, params) {
+  let any = false;
+  fields.forEach(f => {
+    const val = params.get(PARAM_MAP[f] || f) || params.get(f);
+    if (val) { setInputValue(document.getElementById(`${prefix}${f}`), val); any = true; }
+  });
+  return any;
+}
+
+/** Restores the exact / has-link / source toggles from URL params. Returns true
+ *  if has-link was set (a standalone search criterion). */
+function restoreToggles(prefix, params) {
+  const srcSelect = document.getElementById(`${prefix}source`);
+  if (srcSelect) srcSelect.value = params.get('src') || params.get('source') || 'all';
+  const approxRadio = document.getElementById(`${prefix}exact-approx`);
+  const exactRadio = document.getElementById(`${prefix}exact`);
+  if (params.get('ex') === '0') { if (approxRadio) approxRadio.checked = true; }
+  else { if (exactRadio) exactRadio.checked = true; }
+  const hasLink = params.get('hl') === '1';
+  if (hasLink) { const cb = document.getElementById(`${prefix}has_link`); if (cb) cb.checked = true; }
+  return hasLink;
+}
+
+/** Resets a form's field inputs and toggles to their defaults. */
+function clearForm(prefix, fields) {
+  fields.forEach(f => setInputValue(document.getElementById(`${prefix}${f}`), ''));
+  const hasLink = document.getElementById(`${prefix}has_link`); if (hasLink) hasLink.checked = false;
+  const exact = document.getElementById(`${prefix}exact`); if (exact) exact.checked = true;
+  const approx = document.getElementById(`${prefix}exact-approx`); if (approx) approx.checked = false;
+  const src = document.getElementById(`${prefix}source`); if (src) src.value = 'all';
+}
+
 function pushOrReplaceURL(params) {
   const current = currentParams();
   current.delete('t');
@@ -152,21 +228,9 @@ export function setupGeneralSearch() {
   });
 }
 
-const DATE_FIELDS = new Set(['date_from', 'date_to', 'date_of_birth', 'date_of_birth_to', 'date_of_marriage', 'date_of_marriage_to', 'date_of_death', 'date_of_death_to', 'husband_birth', 'husband_birth_to', 'wife_birth', 'wife_birth_to']);
-
 async function performGeneralSearch() {
-  const fieldParams = {};
-  const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
-  fields.forEach(f => {
-    let val = document.getElementById(`general-${f}`)?.value.trim();
-    if (DATE_FIELDS.has(f)) val = normalizeSearchDate(val);
-    if (f === 'name' || f === 'surname' || f === 'place' || f === 'contributor') val = normalizeNameList(val);
-    if (val) fieldParams[f] = val;
-  });
-
-  const sourceVal = document.getElementById('general-source')?.value || 'all';
-  const hasLink = document.getElementById('general-has_link')?.checked || false;
-  const exact = document.getElementById('general-exact')?.checked ?? true;
+  const fieldParams = collectFieldParams('general-', GENERAL_FIELDS);
+  const { exact, hasLink, sourceVal } = readToggles('general-');
 
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
@@ -330,34 +394,21 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
   }
 
   async function performSearch() {
-    const fieldParams = {};
-    columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(c => {
-      let val = document.getElementById(`${prefix}${c}`)?.value.trim();
-      if (DATE_FIELDS.has(c)) val = normalizeSearchDate(val);
-      if (c.includes('name') || c.includes('surname') || c.includes('place') || c === 'contributor') val = normalizeNameList(val);
-      if (val) fieldParams[c] = val;
-      if (DATE_RANGE_COLUMNS.has(c)) {
-        let toVal = document.getElementById(`${prefix}${c}_to`)?.value.trim();
-        toVal = normalizeSearchDate(toVal);
-        if (toVal) fieldParams[`${c}_to`] = toVal;
-      }
-    });
+    const fieldParams = collectFieldParams(prefix, searchFields(columns));
+    const { exact, hasLink, sourceVal } = readToggles(prefix);
 
     hideIntro(introId);
     document.getElementById(resultsId).style.display = 'block';
 
-    const hasLink = document.getElementById(hasLinkId)?.checked || false;
     if (!Object.keys(fieldParams).length && !hasLink) {
       document.getElementById(tableId).innerHTML = `<p>${t('enter_criterion')}</p>`;
       document.getElementById(countId).textContent = '0';
       return;
     }
 
-    const sourceVal = document.getElementById(`${prefix}source`)?.value || 'all';
-    const exact = document.getElementById(exactId)?.checked ?? true;
     pushOrReplaceURL({ t: urlType, ...toShortParams(fieldParams, { exact, hasLink, sourceVal }) });
 
-    document.getElementById(countId).textContent = '0';
+    document.getElementById(countId).textContent = '…';
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
     const apiParams = new URLSearchParams(toApiParams(fieldParams, { exact, hasLink, sourceVal }));
 
@@ -435,58 +486,26 @@ function resolveTabType(rawT) {
 
 export function getTabURLParams(tabType) {
   const out = { t: tabType };
+  // normalizeDates:false — preserve whatever the user typed when serializing
+  // current form state on a tab switch; searches normalize at fetch time.
   if (tabType === 'general') {
-    const fieldParams = {};
-    ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].forEach(f => {
-      let val = document.getElementById(`general-${f}`)?.value.trim();
-      if (f === 'name' || f === 'surname' || f === 'place' || f === 'contributor') val = normalizeNameList(val);
-      if (val) fieldParams[f] = val;
-    });
-    Object.assign(out, toShortParams(fieldParams, {
-      exact: !!document.getElementById('general-exact')?.checked,
-      hasLink: document.getElementById('general-has_link')?.checked,
-      sourceVal: document.getElementById('general-source')?.value,
-    }));
+    const fieldParams = collectFieldParams('general-', GENERAL_FIELDS, { normalizeDates: false });
+    Object.assign(out, toShortParams(fieldParams, readToggles('general-')));
   } else if (tabType === 'person' || tabType === 'family') {
     const columns = tabType === 'person' ? personColumns : familyColumns;
     const prefix = `adv-${tabType}-`;
-    const fieldParams = {};
-    columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(col => {
-      let val = document.getElementById(`${prefix}${col}`)?.value.trim();
-      if (col.includes('name') || col.includes('surname') || col.includes('place') || col === 'contributor') val = normalizeNameList(val);
-      if (val) fieldParams[col] = val;
-      if (DATE_RANGE_COLUMNS.has(col)) {
-        const toVal = document.getElementById(`${prefix}${col}_to`)?.value.trim();
-        if (toVal) fieldParams[`${col}_to`] = toVal;
-      }
-    });
-    Object.assign(out, toShortParams(fieldParams, {
-      exact: !!document.getElementById(`${prefix}exact`)?.checked,
-      hasLink: document.getElementById(`${prefix}has_link`)?.checked,
-      sourceVal: document.getElementById(`${prefix}source`)?.value,
-    }));
+    const fieldParams = collectFieldParams(prefix, searchFields(columns), { normalizeDates: false });
+    Object.assign(out, toShortParams(fieldParams, readToggles(prefix)));
   }
   return out;
 }
 
 export function clearAllSearchForms() {
-  ['general-name', 'general-surname', 'general-date_from', 'general-date_to', 'general-place', 'general-contributor', 'contributors-query', 'filter-matricula-books'].forEach(id => {
-    setInputValue(document.getElementById(id), '');
-  });
-  const genHasLink = document.getElementById('general-has_link'); if (genHasLink) genHasLink.checked = false;
-  const genExact = document.getElementById('general-exact'); if (genExact) genExact.checked = true;
-  const genSrcSelect = document.getElementById('general-source'); if (genSrcSelect) genSrcSelect.value = 'all';
-  ['person', 'family'].forEach(type => {
-    document.querySelectorAll(`#${type}-search-controls input`).forEach(el => {
-      if (el.type === 'checkbox') el.checked = false;
-      if (el.type === 'radio') {
-          if (el.value === 'exact') el.checked = true;
-          else el.checked = false;
-      }
-      else { setInputValue(el, ''); }
-    });
-    const advSrcSelect = document.getElementById(`adv-${type}-source`); if (advSrcSelect) advSrcSelect.value = 'all';
-  });
+  clearForm('general-', GENERAL_FIELDS);
+  clearForm('adv-person-', searchFields(personColumns));
+  clearForm('adv-family-', searchFields(familyColumns));
+  // The contributors / matricula sidebars have their own standalone filter inputs.
+  ['contributors-query', 'filter-matricula-books'].forEach(id => setInputValue(document.getElementById(id), ''));
 }
 
 export function restoreFromURL({ triggerSearch = true } = {}) {
@@ -494,57 +513,19 @@ export function restoreFromURL({ triggerSearch = true } = {}) {
   const params = currentParams();
   const tParam = resolveTabType(params.get('t'));
 
-  const hasGenParam = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].some(k => params.has(k) || params.has(PARAM_MAP[k] || k));
+  // `hl=1` (with link) is itself a valid general criterion, so a has-link-only
+  // search URL must restore even with no name/date/place field present.
+  const hasGenParam = GENERAL_FIELDS.some(k => params.has(k) || params.has(PARAM_MAP[k] || k)) || params.get('hl') === '1';
   if ((!tParam || tParam === 'general') && hasGenParam) {
-    const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
-    fields.forEach(f => {
-      const shortKey = PARAM_MAP[f] || f;
-      const val = params.get(shortKey) || params.get(f);
-      if (val) setInputValue(document.getElementById(`general-${f}`), val);
-    });
-    const srcVal = params.get('src') || params.get('source') || 'all';
-    const srcSelect = document.getElementById('general-source');
-    if (srcSelect) srcSelect.value = srcVal;
-    const exactRadio = document.getElementById('general-exact');
-    const approxRadio = document.getElementById('general-exact-approx');
-    if (params.get('ex') === '0') { if (approxRadio) approxRadio.checked = true; }
-    else { if (exactRadio) exactRadio.checked = true; }
-    if (params.get('hl') === '1') {
-      const cb = document.getElementById('general-has_link');
-      if (cb) cb.checked = true;
-    }
+    restoreFields('general-', GENERAL_FIELDS, params);
+    restoreToggles('general-', params);
     if (triggerSearch) document.getElementById('btn-general-search')?.click();
   } else if (tParam === 'person' || tParam === 'family') {
     const columns = tParam === 'person' ? personColumns : familyColumns;
     const prefix = `adv-${tParam}-`;
-    let hasCriteria = false;
-    columns.forEach(col => {
-      const val = params.get(PARAM_MAP[col] || col);
-      if (val) {
-        const input = document.getElementById(`${prefix}${col}`);
-        if (input) { setInputValue(input, val); hasCriteria = true; }
-      }
-      if (DATE_RANGE_COLUMNS.has(col)) {
-        const toKey = `${col}_to`;
-        const toVal = params.get(PARAM_MAP[toKey] || toKey);
-        if (toVal) {
-          const toInput = document.getElementById(`${prefix}${toKey}`);
-          if (toInput) { setInputValue(toInput, toVal); hasCriteria = true; }
-        }
-      }
-    });
-    const srcVal = params.get('src') || params.get('source') || 'all';
-    const srcSelect = document.getElementById(`${prefix}source`);
-    if (srcSelect) srcSelect.value = srcVal;
-    const exactRadio = document.getElementById(`${prefix}exact`);
-    const approxRadio = document.getElementById(`${prefix}exact-approx`);
-    if (params.get('ex') === '0') { if (approxRadio) approxRadio.checked = true; }
-    else { if (exactRadio) exactRadio.checked = true; }
-    if (params.get('hl') === '1') {
-      const cb = document.getElementById(`${prefix}has_link`);
-      if (cb) { cb.checked = true; hasCriteria = true; }
-    }
-    if (hasCriteria && triggerSearch) document.getElementById(`btn-adv-search-${tParam}`)?.click();
+    const fieldsFilled = restoreFields(prefix, searchFields(columns), params);
+    const hasLinkSet = restoreToggles(prefix, params);
+    if ((fieldsFilled || hasLinkSet) && triggerSearch) document.getElementById(`btn-adv-search-${tParam}`)?.click();
   }
   setTimeout(() => { isRestoring = false; }, 0);
 }
