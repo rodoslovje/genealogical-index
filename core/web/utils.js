@@ -43,6 +43,18 @@ export function wireClearableContainer(container, onEnter) {
   }
 }
 
+/**
+ * Sets an input's value and syncs the adjacent `.clear-btn` visibility to match
+ * (shown when non-empty, hidden when empty). Mirrors what the live `input`
+ * listener does, for the cases where we set `.value` programmatically.
+ */
+export function setInputValue(input, value) {
+  if (!input) return;
+  input.value = value;
+  const clearBtn = input.nextElementSibling;
+  if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = value ? 'block' : 'none';
+}
+
 // --- CDN script loaders ------------------------------------------------------
 // Chart.js (~90 kB gzipped) and D3 (~200 kB gzipped) are only needed on the
 // contributors and ancestors/descendants views respectively. Loading them

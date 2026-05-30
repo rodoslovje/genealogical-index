@@ -4,7 +4,7 @@ import { normalizeSearchDate } from './dates.js';
 import { API_BASE_URL, personColumns, familyColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
 import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP, currentParams } from './url.js';
 import { hideIntro, tabsWithResults } from './main.js';
-import { inputWithClear, wireClearableContainer } from './utils.js';
+import { inputWithClear, wireClearableContainer, setInputValue } from './utils.js';
 
 let lastGeneralResults = null;
 const lastAdvResults = { person: null, family: null };
@@ -15,6 +15,62 @@ let isRestoring = false;
 function normalizeNameList(val) {
   if (!val) return val;
   return val.split(',').map(s => s.trim()).filter(Boolean).join(',');
+}
+
+// --- Shared form fragments (used by both the general and advanced forms) ---
+
+/** The source <select> (All / Family Trees / Matricula Index). */
+function renderSourceSelect(id, value) {
+  const opt = (v, key) => `<option value="${v}"${value === v ? ' selected' : ''}>${t(key)}</option>`;
+  return `<select id="${id}" style="margin-top: 4px;">
+            ${opt('all', 'source_all')}
+            ${opt('tree', 'source_tree')}
+            ${opt('matricula', 'source_matricula')}
+          </select>`;
+}
+
+/** The "with link" checkbox, exact/approximate radio group, and submit button —
+ *  identical across both forms apart from the id prefix and button id. */
+function renderSearchOptions({ prefix, hasLinkChecked, exactChecked, buttonId }) {
+  return `<label class="exact-toggle">
+            <input type="checkbox" id="${prefix}has_link"${hasLinkChecked ? ' checked' : ''} />
+            <span>${t('has_link')}</span>
+          </label>
+          <div class="exact-radio-group">
+            <label class="exact-toggle">
+              <input type="radio" name="${prefix}exact-mode" id="${prefix}exact-approx" value="approx"${!exactChecked ? ' checked' : ''} />
+              <span>${t('approximate_search')}</span>
+            </label>
+            <label class="exact-toggle">
+              <input type="radio" name="${prefix}exact-mode" id="${prefix}exact" value="exact"${exactChecked ? ' checked' : ''} />
+              <span>${t('exact_search')}</span>
+            </label>
+          </div>
+          <button id="${buttonId}">${t('search_btn')}</button>`;
+}
+
+// --- Shared param serialization ---
+
+/** Maps API field params + toggle state to compact URL params (PARAM_MAP keys
+ *  plus ex / hl / src flags). */
+function toShortParams(fieldParams, { exact, hasLink, sourceVal } = {}) {
+  const out = {};
+  for (const [field, val] of Object.entries(fieldParams)) {
+    out[PARAM_MAP[field] || field] = val;
+  }
+  if (exact === false) out.ex = '0';
+  if (hasLink) out.hl = '1';
+  if (sourceVal && sourceVal !== 'all') out.src = sourceVal;
+  return out;
+}
+
+/** Maps API field params + toggle state to the long-form params the API expects. */
+function toApiParams(fieldParams, { exact, hasLink, sourceVal } = {}) {
+  const out = { ...fieldParams };
+  if (exact) out.exact = 'true';
+  if (hasLink) out.has_link = 'true';
+  if (sourceVal && sourceVal !== 'all') out.source = sourceVal;
+  return out;
 }
 
 function pushOrReplaceURL(params) {
@@ -71,27 +127,9 @@ export function setupGeneralSearch() {
       <div class="field-group">
         <div class="field-group-label">${t('label_source')}</div>
         ${inputWithClear({ id: 'general-contributor', placeholder: t('col_contributor'), value: valOf('general-contributor'), title: t('tip_comma_separated_contributor') })}
-        <select id="general-source" style="margin-top: 4px;">
-          <option value="all"${sourceVal === 'all' ? ' selected' : ''}>${t('source_all')}</option>
-          <option value="tree"${sourceVal === 'tree' ? ' selected' : ''}>${t('source_tree')}</option>
-          <option value="matricula"${sourceVal === 'matricula' ? ' selected' : ''}>${t('source_matricula')}</option>
-        </select>
+        ${renderSourceSelect('general-source', sourceVal)}
       </div>
-      <label class="exact-toggle">
-        <input type="checkbox" id="general-has_link"${hasLinkChecked ? ' checked' : ''} />
-        <span>${t('has_link')}</span>
-      </label>
-      <div class="exact-radio-group">
-        <label class="exact-toggle">
-          <input type="radio" name="general-exact-mode" id="general-exact-approx" value="approx"${!exactChecked ? ' checked' : ''} />
-          <span>${t('approximate_search')}</span>
-        </label>
-        <label class="exact-toggle">
-          <input type="radio" name="general-exact-mode" id="general-exact" value="exact"${exactChecked ? ' checked' : ''} />
-          <span>${t('exact_search')}</span>
-        </label>
-      </div>
-      <button id="btn-general-search">${t('search_btn')}</button>
+      ${renderSearchOptions({ prefix: 'general-', hasLinkChecked, exactChecked, buttonId: 'btn-general-search' })}
     `;
   }
 
@@ -116,37 +154,34 @@ export function setupGeneralSearch() {
 
 const DATE_FIELDS = new Set(['date_from', 'date_to', 'date_of_birth', 'date_of_birth_to', 'date_of_marriage', 'date_of_marriage_to', 'date_of_death', 'date_of_death_to', 'husband_birth', 'husband_birth_to', 'wife_birth', 'wife_birth_to']);
 
-function performGeneralSearch() {
-  const params = {};
+async function performGeneralSearch() {
+  const fieldParams = {};
   const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
   fields.forEach(f => {
     let val = document.getElementById(`general-${f}`)?.value.trim();
     if (DATE_FIELDS.has(f)) val = normalizeSearchDate(val);
     if (f === 'name' || f === 'surname' || f === 'place' || f === 'contributor') val = normalizeNameList(val);
-    if (val) params[f] = val;
+    if (val) fieldParams[f] = val;
   });
 
   const sourceVal = document.getElementById('general-source')?.value || 'all';
   const hasLink = document.getElementById('general-has_link')?.checked || false;
-  if (!Object.keys(params).length && !hasLink) return;
-
   const exact = document.getElementById('general-exact')?.checked ?? true;
-  if (exact) params.exact = 'true';
-  if (hasLink) params.has_link = 'true';
-  if (sourceVal !== 'all') params.source = sourceVal;
 
-  const shortParams = {};
-  for (const [key, value] of Object.entries(params)) {
-    if (key === 'exact' || key === 'has_link') continue;
-    shortParams[PARAM_MAP[key] || key] = value;
-  }
-  if (!exact) shortParams.ex = '0';
-  if (hasLink) shortParams.hl = '1';
-  if (sourceVal !== 'all') shortParams.src = sourceVal;
-
-  pushOrReplaceURL(shortParams);
   hideIntro('intro-general');
   document.getElementById('general-results').style.display = 'block';
+
+  // No criteria: show the same prompt the advanced forms show, rather than
+  // silently doing nothing.
+  if (!Object.keys(fieldParams).length && !hasLink) {
+    document.getElementById('count-general-persons').textContent = '0';
+    document.getElementById('count-general-families').textContent = '0';
+    document.getElementById('table-general-persons').innerHTML = `<p>${t('enter_criterion')}</p>`;
+    document.getElementById('table-general-families').innerHTML = '';
+    return;
+  }
+
+  pushOrReplaceURL(toShortParams(fieldParams, { exact, hasLink, sourceVal }));
   document.getElementById('count-general-persons').textContent = '…';
   document.getElementById('count-general-families').textContent = '…';
   document.getElementById('table-general-persons').innerHTML = `<p>${t('searching')}</p>`;
@@ -154,12 +189,12 @@ function performGeneralSearch() {
 
   if (!lastGeneralResults) lastGeneralResults = { persons: [], families: [] };
 
-  const baseParams = new URLSearchParams(params);
+  const baseParams = new URLSearchParams(toApiParams(fieldParams, { exact, hasLink, sourceVal }));
 
   const fetchType = (type, tableId, countId, columns, defaultSort, secondarySort) => {
     const p = new URLSearchParams(baseParams);
     p.set('type', type);
-    fetch(`${API_BASE_URL}/api/search/general?${p}`)
+    return fetch(`${API_BASE_URL}/api/search/general?${p}`)
       .then(r => r.json())
       .then(results => {
         const rows = results[type] || [];
@@ -170,14 +205,23 @@ function performGeneralSearch() {
         collapseSidebarOnDesktop();
         dismissKeyboardAndScrollToResults('general-results');
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('Search failed:', error);
         document.getElementById(countId).textContent = '0';
         document.getElementById(tableId).innerHTML = `<p>${t('search_failed')}</p>`;
       });
   };
 
-  fetchType('persons',  'table-general-persons',  'count-general-persons',  personColumns, 'surname',         'name');
-  fetchType('families', 'table-general-families', 'count-general-families', familyColumns, 'husband_surname', 'husband_name');
+  const overlay = document.getElementById('search-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    await new Promise(r => setTimeout(r, 10));
+  }
+  // Hide the overlay as soon as the first set (persons or families) returns —
+  // the user can start inspecting those results while the other set still loads.
+  const hideOverlay = () => { if (overlay) overlay.style.display = 'none'; };
+  fetchType('persons',  'table-general-persons',  'count-general-persons',  personColumns, 'surname',         'name').finally(hideOverlay);
+  fetchType('families', 'table-general-families', 'count-general-families', familyColumns, 'husband_surname', 'husband_name').finally(hideOverlay);
 }
 
 // --- Person / Family advanced search (shared setup) ---
@@ -279,27 +323,9 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     html += `<div class="field-group">
                <div class="field-group-label">${t('label_source')}</div>
                ${renderInput('contributor')}
-               <select id="${prefix}source" style="margin-top: 4px;">
-                 <option value="all"${sourceVal === 'all' ? ' selected' : ''}>${t('source_all')}</option>
-                 <option value="tree"${sourceVal === 'tree' ? ' selected' : ''}>${t('source_tree')}</option>
-                 <option value="matricula"${sourceVal === 'matricula' ? ' selected' : ''}>${t('source_matricula')}</option>
-               </select>
+               ${renderSourceSelect(`${prefix}source`, sourceVal)}
              </div>`;
-    html += `<label class="exact-toggle">
-               <input type="checkbox" id="${hasLinkId}"${hasLinkChecked ? ' checked' : ''} />
-               <span>${t('has_link')}</span>
-             </label>`;
-    html += `<div class="exact-radio-group">
-               <label class="exact-toggle">
-                 <input type="radio" name="${prefix}exact-mode" id="${prefix}exact-approx" value="approx"${!exactChecked ? ' checked' : ''} />
-                 <span>${t('approximate_search')}</span>
-               </label>
-               <label class="exact-toggle">
-                 <input type="radio" name="${prefix}exact-mode" id="${exactId}" value="exact"${exactChecked ? ' checked' : ''} />
-                 <span>${t('exact_search')}</span>
-               </label>
-             </div>`;
-    html += `<button id="btn-adv-search-${urlType}">${t('search_btn')}</button>`;
+    html += renderSearchOptions({ prefix, hasLinkChecked, exactChecked, buttonId: `btn-adv-search-${urlType}` });
     container.innerHTML = html;
   }
 
@@ -329,15 +355,11 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
 
     const sourceVal = document.getElementById(`${prefix}source`)?.value || 'all';
     const exact = document.getElementById(exactId)?.checked ?? true;
-    const shortParams = { t: urlType, ...(!exact ? { ex: '0' } : {}), ...(hasLink ? { hl: '1' } : {}), ...(sourceVal !== 'all' ? { src: sourceVal } : {}) };
-    for (const [field, val] of Object.entries(fieldParams)) {
-      shortParams[PARAM_MAP[field] || field] = val;
-    }
-    pushOrReplaceURL(shortParams);
+    pushOrReplaceURL({ t: urlType, ...toShortParams(fieldParams, { exact, hasLink, sourceVal }) });
 
     document.getElementById(countId).textContent = '0';
     document.getElementById(tableId).innerHTML = `<p>${t('searching')}</p>`;
-    const apiParams = new URLSearchParams({ ...fieldParams, ...(exact ? { exact: 'true' } : {}), ...(hasLink ? { has_link: 'true' } : {}), ...(sourceVal !== 'all' ? { source: sourceVal } : {}) });
+    const apiParams = new URLSearchParams(toApiParams(fieldParams, { exact, hasLink, sourceVal }));
 
     const overlay = document.getElementById('search-overlay');
     if (overlay) {
@@ -414,41 +436,42 @@ function resolveTabType(rawT) {
 export function getTabURLParams(tabType) {
   const out = { t: tabType };
   if (tabType === 'general') {
-    const fields = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
-    fields.forEach(f => {
+    const fieldParams = {};
+    ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'].forEach(f => {
       let val = document.getElementById(`general-${f}`)?.value.trim();
       if (f === 'name' || f === 'surname' || f === 'place' || f === 'contributor') val = normalizeNameList(val);
-      if (val) out[PARAM_MAP[f] || f] = val;
+      if (val) fieldParams[f] = val;
     });
-    if (!document.getElementById('general-exact')?.checked) out.ex = '0';
-    if (document.getElementById('general-has_link')?.checked) out.hl = '1';
-    const genSource = document.getElementById('general-source')?.value;
-    if (genSource && genSource !== 'all') out.src = genSource;
+    Object.assign(out, toShortParams(fieldParams, {
+      exact: !!document.getElementById('general-exact')?.checked,
+      hasLink: document.getElementById('general-has_link')?.checked,
+      sourceVal: document.getElementById('general-source')?.value,
+    }));
   } else if (tabType === 'person' || tabType === 'family') {
     const columns = tabType === 'person' ? personColumns : familyColumns;
     const prefix = `adv-${tabType}-`;
+    const fieldParams = {};
     columns.filter(c => !DISPLAY_ONLY_COLUMNS.has(c)).forEach(col => {
       let val = document.getElementById(`${prefix}${col}`)?.value.trim();
       if (col.includes('name') || col.includes('surname') || col.includes('place') || col === 'contributor') val = normalizeNameList(val);
-      if (val) out[PARAM_MAP[col] || col] = val;
+      if (val) fieldParams[col] = val;
       if (DATE_RANGE_COLUMNS.has(col)) {
         const toVal = document.getElementById(`${prefix}${col}_to`)?.value.trim();
-        const toKey = `${col}_to`;
-        if (toVal) out[PARAM_MAP[toKey] || toKey] = toVal;
+        if (toVal) fieldParams[`${col}_to`] = toVal;
       }
     });
-    if (!document.getElementById(`${prefix}exact`)?.checked) out.ex = '0';
-    if (document.getElementById(`${prefix}has_link`)?.checked) out.hl = '1';
-    const advSource = document.getElementById(`${prefix}source`)?.value;
-    if (advSource && advSource !== 'all') out.src = advSource;
+    Object.assign(out, toShortParams(fieldParams, {
+      exact: !!document.getElementById(`${prefix}exact`)?.checked,
+      hasLink: document.getElementById(`${prefix}has_link`)?.checked,
+      sourceVal: document.getElementById(`${prefix}source`)?.value,
+    }));
   }
   return out;
 }
 
 export function clearAllSearchForms() {
   ['general-name', 'general-surname', 'general-date_from', 'general-date_to', 'general-place', 'general-contributor', 'contributors-query', 'filter-matricula-books'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
+    setInputValue(document.getElementById(id), '');
   });
   const genHasLink = document.getElementById('general-has_link'); if (genHasLink) genHasLink.checked = false;
   const genExact = document.getElementById('general-exact'); if (genExact) genExact.checked = true;
@@ -460,7 +483,7 @@ export function clearAllSearchForms() {
           if (el.value === 'exact') el.checked = true;
           else el.checked = false;
       }
-      else { el.value = ''; const cb = el.nextElementSibling; if (cb?.matches('.clear-btn')) cb.style.display = 'none'; }
+      else { setInputValue(el, ''); }
     });
     const advSrcSelect = document.getElementById(`adv-${type}-source`); if (advSrcSelect) advSrcSelect.value = 'all';
   });
@@ -477,14 +500,7 @@ export function restoreFromURL({ triggerSearch = true } = {}) {
     fields.forEach(f => {
       const shortKey = PARAM_MAP[f] || f;
       const val = params.get(shortKey) || params.get(f);
-      if (val) {
-        const input = document.getElementById(`general-${f}`);
-        if (input) {
-          input.value = val;
-          const clearBtn = input.nextElementSibling;
-          if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = 'block';
-        }
-      }
+      if (val) setInputValue(document.getElementById(`general-${f}`), val);
     });
     const srcVal = params.get('src') || params.get('source') || 'all';
     const srcSelect = document.getElementById('general-source');
@@ -506,24 +522,14 @@ export function restoreFromURL({ triggerSearch = true } = {}) {
       const val = params.get(PARAM_MAP[col] || col);
       if (val) {
         const input = document.getElementById(`${prefix}${col}`);
-        if (input) {
-          input.value = val;
-          const clearBtn = input.nextElementSibling;
-          if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = 'block';
-          hasCriteria = true;
-        }
+        if (input) { setInputValue(input, val); hasCriteria = true; }
       }
       if (DATE_RANGE_COLUMNS.has(col)) {
         const toKey = `${col}_to`;
         const toVal = params.get(PARAM_MAP[toKey] || toKey);
         if (toVal) {
           const toInput = document.getElementById(`${prefix}${toKey}`);
-          if (toInput) {
-            toInput.value = toVal;
-            const clearBtn = toInput.nextElementSibling;
-            if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = 'block';
-            hasCriteria = true;
-          }
+          if (toInput) { setInputValue(toInput, toVal); hasCriteria = true; }
         }
       }
     });
