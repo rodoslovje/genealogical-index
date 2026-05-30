@@ -1,3 +1,5 @@
+import siteConfig from '@site-config';
+
 /**
  * Returns the HTML for an `<input type=text>` paired with a clear (×) button,
  * inside an `.input-wrapper`. Used by every search form input in search.js.
@@ -167,6 +169,17 @@ export function downloadBlob(blob, filename) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/** Formats a consistent filename for CSV and SVG exports */
+export function formatExportFilename(baseName, extension) {
+  const prefix = siteConfig.filePrefix || 'sgi';
+  const safeBase = String(baseName)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // replace non-alphanumeric with hyphen
+    .replace(/(^-|-$)/g, ''); // remove leading/trailing hyphens
+  return `${prefix}-${safeBase}.${extension}`;
 }
 
 export function isPrivate(val) {

@@ -2,8 +2,7 @@ import { t } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
 import { exportToCSV } from '../table.js';
 import { toUnicodeSearch } from '../url.js';
-import { escapeHtml, downloadBlob } from '../utils.js';
-import siteConfig from '@site-config';
+import { escapeHtml, downloadBlob, formatExportFilename } from '../utils.js';
 import { getCachedData } from './data.js';
 
 // One abort controller per target so re-renders cancel stale fetches.
@@ -255,9 +254,8 @@ function decorateCloudHeader(cloud, data, list) {
   btnCsv.title = t('download_csv');
   btnCsv.innerHTML = `${downloadIcon}CSV`;
   btnCsv.addEventListener('click', () => {
-    const prefix = siteConfig.filePrefix || 'sgi';
     const exportData = data.map(d => ({ surname: d.surname, total: d.count })).sort((a, b) => b.total - a.total);
-    const filename = list.length === 1 ? `${prefix}-surnames-${list[0]}.csv` : `${prefix}-surnames.csv`;
+    const filename = formatExportFilename(list.length === 1 ? `surnames-${list[0]}` : 'surnames', 'csv');
     exportToCSV(exportData, ['surname', 'total'], filename);
   });
 
@@ -265,8 +263,7 @@ function decorateCloudHeader(cloud, data, list) {
   btnSvg.className = 'export-btn export-surnames-svg-btn';
   btnSvg.innerHTML = `${imageIcon}SVG`;
   btnSvg.addEventListener('click', () => {
-    const prefix = siteConfig.filePrefix || 'sgi';
-    const filename = list.length === 1 ? `${prefix}-surnames-${list[0]}.svg` : `${prefix}-surnames.svg`;
+    const filename = formatExportFilename(list.length === 1 ? `surnames-${list[0]}` : 'surnames', 'svg');
     downloadCloudAsSVG(cloud, filename, list);
   });
 
