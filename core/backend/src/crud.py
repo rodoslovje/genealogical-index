@@ -498,16 +498,17 @@ def get_timeline_distribution(db: Session):
 
 
 def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
-    """Returns the top surnames by record count, optionally filtered by contributor(s)."""
+    """Returns the top surnames by record count, optionally filtered by contributor(s).
+
+    Counts surnames from persons (births/baptisms) as well as from families
+    (marriages), where both the husband and wife surnames contribute."""
     cache_key = ",".join(sorted(contributors)) if contributors else ""
     now = time.time()
     cached = _surnames_cache.get(cache_key)
     if cached and (now - cached["time"] < CACHE_TTL):
         return cached["data"][:limit]
 
-    q = db.query(models.Person.surname, func.count(models.Person.id)).group_by(
-        models.Person.surname
-    )
+    expanded = None
     if contributors:
         expanded = []
         for c in contributors:
@@ -518,21 +519,44 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
             if not norm_c.endswith(MATRICULA_SUFFIX) and mat_form not in expanded:
                 expanded.append(mat_form)
 
+    def _contributor_filter(q, contributor_col):
+        if not expanded:
+            return q
         if len(expanded) == 1:
-            q = q.filter(models.Person.contributor == expanded[0])
-        else:
-            q = q.filter(models.Person.contributor.in_(expanded))
+            return q.filter(contributor_col == expanded[0])
+        return q.filter(contributor_col.in_(expanded))
 
-    counts = {}
-    for surname, c in q.all():
-        if surname and surname.strip():
-            counts[surname] = c
+    # One aggregation per source, merged in a single SQL statement via UNION ALL.
+    # count(*) (rather than count(<pk>)) lets Postgres satisfy each branch with an
+    # index-only scan on the btree surname index, avoiding heap fetches. The outer
+    # query does the merge, empty/whitespace filtering, and ordering server-side so
+    # only distinct surnames cross the wire.
+    def _source(surname_col, contributor_col):
+        sub = db.query(
+            surname_col.label("surname"), func.count().label("c")
+        ).group_by(surname_col)
+        return _contributor_filter(sub, contributor_col)
 
-    result = sorted(
-        [{"surname": s, "count": c} for s, c in counts.items() if s.strip()],
-        key=lambda x: x["count"],
-        reverse=True,
+    union_sq = (
+        _source(models.Person.surname, models.Person.contributor)
+        .union_all(
+            _source(models.Family.husband_surname, models.Family.contributor),
+            _source(models.Family.wife_surname, models.Family.contributor),
+        )
+        .subquery()
     )
+
+    total = func.sum(union_sq.c.c).label("count")
+    rows = (
+        db.query(union_sq.c.surname, total)
+        .filter(union_sq.c.surname.isnot(None))
+        .filter(func.btrim(union_sq.c.surname) != "")
+        .group_by(union_sq.c.surname)
+        .order_by(total.desc())
+        .all()
+    )
+
+    result = [{"surname": s, "count": int(c)} for s, c in rows]
     _surnames_cache[cache_key] = {"data": result, "time": now}
     return result[:limit]
 
