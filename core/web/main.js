@@ -5,7 +5,7 @@ import { refreshContributorsIfVisible, prefetchContributors, updateFooterDataDat
 import { initHelp } from './help.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL } from './search.js';
 import { currentParams } from './url.js';
-import { renderAncestorsPage, renderDescendantsPage } from './tree.js';
+import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderIntros } from './intros.js';
 import { initNavbar, checkNavOverflow } from './navbar.js';
 import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, tabIdFromParams } from './router.js';

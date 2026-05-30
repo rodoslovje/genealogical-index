@@ -2,7 +2,7 @@ import { t } from './i18n.js';
 import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams } from './url.js';
 import { isLoggedIn, requireLogin } from './auth.js';
 import { renderContributors, renderTotalsBar } from './contributors.js';
-import { renderAncestorsPage, renderDescendantsPage } from './tree.js';
+import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderMatriculaStatsPage } from './contributors/matricula-stats.js';
 import { getTabURLParams, restoreFromURL, clearAllSearchForms } from './search.js';
 import { hideIntro, showIntros } from './intros.js';
