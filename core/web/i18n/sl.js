@@ -138,7 +138,7 @@ export default {
     matches_detail_intro: 'Prikazana so vsa ujemanja med rodoslovcema {1} in {0}.',
     contributor_surnames_intro: 'Rodoslovec',
     contributor_surnames_outro: 'ima v svojem drevesu naslednje najpogostejše priimke:',
-    contributor_matricula_surnames_intro: 'Indeksirane krstne knjige vsebujejo naslednje najpogostejše priimke:',
+    contributor_matricula_surnames_intro: 'Indeksirane matične knjige vsebujejo naslednje najpogostejše priimke:',
     section_matricula_books: 'Indeksirane knjige',
     matricula_books_summary: 'Rodoslovec {0} ima v <a href="{3}" data-spa-nav>Matricula indeksu</a> {1} knjig s skupno {2} zapisi.',
     col_book_parish: 'Župnija',

@@ -138,7 +138,7 @@ export default {
     matches_detail_intro: 'Alle Übereinstimmungen zwischen {1} und {0} werden unten angezeigt.',
     contributor_surnames_intro: 'Der Genealoge',
     contributor_surnames_outro: 'hat die folgenden häufigsten Nachnamen in seinem Stammbaum:',
-    contributor_matricula_surnames_intro: 'Die transkribierten Taufbücher enthalten die folgenden häufigsten Nachnamen:',
+    contributor_matricula_surnames_intro: 'Die transkribierten Kirchenbücher enthalten die folgenden häufigsten Nachnamen:',
     section_matricula_books: 'Transkribierte Bücher',
     matricula_books_summary: 'Der Genealoge {0} hat {1} Bücher mit insgesamt {2} Einträgen im <a href="{3}" data-spa-nav>Matricula-Index</a>.',
     col_book_parish: 'Pfarrei',

@@ -138,7 +138,7 @@ export default {
     matches_detail_intro: 'Prikazana su sva podudaranja između rodoslovaca {1} i {0}.',
     contributor_surnames_intro: 'Rodoslovac',
     contributor_surnames_outro: 'ima u svom stablu sljedeća najčešća prezimena:',
-    contributor_matricula_surnames_intro: 'Transkribirane knjige krštenih sadrže sljedeća najčešća prezimena:',
+    contributor_matricula_surnames_intro: 'Transkribirane matične knjige sadrže sljedeća najčešća prezimena:',
     section_matricula_books: 'Transkribirane knjige',
     matricula_books_summary: 'Rodoslovac {0} ima u <a href="{3}" data-spa-nav>Matricula indeksu</a> {1} knjiga s ukupno {2} zapisa.',
     col_book_parish: 'Župa',

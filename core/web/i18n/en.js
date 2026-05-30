@@ -138,7 +138,7 @@ export default {
     matches_detail_intro: 'All matches between {1} and {0} are shown below.',
     contributor_surnames_intro: 'Genealogist',
     contributor_surnames_outro: 'has the following top surnames in their tree:',
-    contributor_matricula_surnames_intro: 'Transcribed baptism books contain the following top surnames:',
+    contributor_matricula_surnames_intro: 'Transcribed parish registers contain the following top surnames:',
     section_matricula_books: 'Transcribed Books',
     matricula_books_summary: 'Genealogist {0} has {1} books with a total of {2} records in the <a href="{3}" data-spa-nav>Matricula Index</a>.',
     col_book_parish: 'Parish',
