@@ -3,7 +3,8 @@ import { renderTable } from './table.js';
 import { normalizeSearchDate } from './dates.js';
 import { API_BASE_URL, personColumns, familyColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
 import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP, currentParams } from './url.js';
-import { hideIntro, tabsWithResults } from './main.js';
+import { hideIntro } from './intros.js';
+import { tabsWithResults } from './tab-state.js';
 import { inputWithClear, wireClearableContainer, setInputValue } from './utils.js';
 
 let lastGeneralResults = null;
