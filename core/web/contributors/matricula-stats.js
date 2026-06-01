@@ -1,8 +1,7 @@
 import { t, formatTitleSuffix } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
-import { escapeHtml, baseContributorName, ensureChartJs, downloadBlob } from '../utils.js';
+import { escapeHtml, baseContributorName, ensureChartJs, downloadBlob, formatExportFilename } from '../utils.js';
 import { toUnicodeHref } from '../url.js';
-import siteConfig from '@site-config';
 
 let cachedStats = null;
 let fetchPromise = null;
@@ -194,8 +193,7 @@ function renderBooksSection(books) {
       const csvBtn = document.querySelector('.matricula-allbooks-csv-btn');
       if (csvBtn) {
         csvBtn.addEventListener('click', () => {
-          const prefix = siteConfig.filePrefix || 'sgi';
-          exportBooksToCSV(filteredBooks, columns, `${prefix}-matricula-books.csv`);
+          exportBooksToCSV(filteredBooks, columns, formatExportFilename('matricula-books', 'csv'));
         });
       }
     },
