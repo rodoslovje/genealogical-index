@@ -48,6 +48,7 @@ export default {
     no_results: 'Nessun risultato trovato.',
     enter_criterion: 'Inserisci almeno un criterio di ricerca.',
     search_failed: 'Ricerca fallita. Controlla la connessione API.',
+    feature_restricted: 'Questa funzione è limitata e non è disponibile su questo sito.',
     loading_contributors: 'Caricamento genealogisti...',
     contributors_failed: 'Impossibile caricare i dati dei genealogisti.',
     init_error: "Errore durante l'inizializzazione dell'applicazione.",

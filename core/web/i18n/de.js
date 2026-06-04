@@ -48,6 +48,7 @@ export default {
     no_results: 'Keine Ergebnisse gefunden.',
     enter_criterion: 'Bitte mindestens ein Suchkriterium eingeben.',
     search_failed: 'Suche fehlgeschlagen. API-Verbindung prüfen.',
+    feature_restricted: 'Diese Funktion ist eingeschränkt und auf dieser Seite nicht verfügbar.',
     loading_contributors: 'Genealogen werden geladen...',
     contributors_failed: 'Daten der Genealogen konnten nicht geladen werden.',
     init_error: 'Fehler beim Initialisieren der Anwendung.',

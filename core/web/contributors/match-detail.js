@@ -9,7 +9,7 @@ import {
 } from '../utils.js';
 import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref } from '../url.js';
-import { authFetch } from '../auth.js';
+import { authFetch, fetchErrorKey } from '../auth.js';
 import siteConfig from '@site-config';
 
 import { getContributorUrlMap } from './data.js';
@@ -77,14 +77,16 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
   try {
     let records;
+    let status = 0;
     try {
       const res = await authFetch(
         `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}`
       );
+      status = res.status;
       if (!res.ok) throw new Error('API failed');
       records = await res.json();
     } catch {
-      detailEl.innerHTML = baseHtml + `<p>${t('search_failed')}</p>`;
+      detailEl.innerHTML = baseHtml + `<p>${t(fetchErrorKey(status))}</p>`;
       return;
     }
 

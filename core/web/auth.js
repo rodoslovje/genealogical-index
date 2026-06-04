@@ -8,6 +8,21 @@ export function isLoggedIn() {
   return !!localStorage.getItem(TOKEN_KEY);
 }
 
+/** Whether a premium feature should be blocked. Gating only applies when the
+ *  site has auth configured; without an `authUrl` there is no way to log in, so
+ *  premium features are open to everyone. */
+export function isPremiumLocked() {
+  return !!siteConfig.authUrl && !isLoggedIn();
+}
+
+/** Pick the user-facing error message key for a failed request, given its HTTP
+ *  status (0 for a network error). A 401 means the API rejected the call as
+ *  unauthorized — the endpoint is auth-gated server-side — so we explain that
+ *  rather than blaming the connection. */
+export function fetchErrorKey(status) {
+  return status === 401 ? 'feature_restricted' : 'search_failed';
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }

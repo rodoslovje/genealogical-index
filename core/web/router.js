@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams } from './url.js';
-import { isLoggedIn, requireLogin } from './auth.js';
+import { isPremiumLocked, requireLogin } from './auth.js';
 import { renderContributors, renderTotalsBar } from './contributors.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderMatriculaStatsPage } from './contributors/matricula-stats.js';
@@ -80,7 +80,7 @@ export function maybeRouteMatricula(urlParams) {
 export function activateTab(targetTab, { skipHistory = false, initial = false } = {}) {
   // Intercept if trying to open a premium tab without being logged in.
   const isPremium = targetTab === 'tab-ancestors' || targetTab === 'tab-descendants';
-  if (isPremium && !isLoggedIn()) {
+  if (isPremium && isPremiumLocked()) {
     if (!initial) {
       requireLogin('premium_gated_desc');
       return false; // Do not switch tab
@@ -238,7 +238,7 @@ export function initRouter() {
 
     const urlT = url.searchParams.get('t');
     const hasWith = url.searchParams.has('w') || url.searchParams.has('with');
-    if ((urlT === 'ancestors' || urlT === 'descendants' || (urlT === 'contributors' && hasWith)) && !isLoggedIn()) {
+    if ((urlT === 'ancestors' || urlT === 'descendants' || (urlT === 'contributors' && hasWith)) && isPremiumLocked()) {
       requireLogin('premium_gated_desc');
       return;
     }

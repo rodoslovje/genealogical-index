@@ -48,6 +48,7 @@ export default {
     no_results: 'No results found.',
     enter_criterion: 'Please enter at least one search criterion.',
     search_failed: 'Search failed. Check API connection.',
+    feature_restricted: 'This feature is restricted and not available on this site.',
     loading_contributors: 'Loading genealogists...',
     contributors_failed: 'Could not load genealogist data.',
     init_error: 'Error initializing the application.',

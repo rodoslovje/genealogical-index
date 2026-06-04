@@ -48,6 +48,7 @@ export default {
     no_results: 'Nema rezultata.',
     enter_criterion: 'Unesite barem jedan kriterij pretrage.',
     search_failed: 'Pretraga nije uspjela. Provjerite API vezu.',
+    feature_restricted: 'Ova funkcionalnost je ograničena i nije dostupna na ovoj stranici.',
     loading_contributors: 'Učitavanje rodoslovaca...',
     contributors_failed: 'Nije moguće učitati podatke o rodoslovcima.',
     init_error: 'Greška pri inicijalizaciji aplikacije.',

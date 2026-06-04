@@ -7,7 +7,7 @@ import { t } from './i18n.js';
 import siteConfig from '@site-config';
 import { renderTable } from './table.js';
 import { toUnicodeHref, toUnicodeSearch, currentParams } from './url.js';
-import { isLoggedIn, requireLogin } from './auth.js';
+import { isPremiumLocked, requireLogin } from './auth.js';
 
 import {
   ensureData, ensureTimelineData, ensureMatchCounts,
@@ -81,7 +81,7 @@ export async function renderContributors() {
   const contributor = readContributorParam(urlParams);
   let withPartner = readWithParam(urlParams);
 
-  if (withPartner && !isLoggedIn()) {
+  if (withPartner && isPremiumLocked()) {
     requireLogin('premium_gated_desc');
     withPartner = null;
     urlParams.delete('w');

@@ -14,6 +14,7 @@ import {
 } from './filter.js';
 import { exportBooksToCSV } from './matricula-stats.js';
 import { renderMatchDetail } from './match-detail.js';
+import { fetchErrorKey } from '../auth.js';
 
 /** Renders the per-contributor stats grid (single column or 3-column Sum/Tree/Matricula). */
 function renderContributorStats(contribData) {
@@ -345,15 +346,17 @@ export async function renderMatchesPage(contributor, withPartner) {
     }
 
     let partners;
+    let status = 0;
     try {
       // Matches are only computed for Genealogist (tree) data — fetch by the tree name.
       const treeName = contribData._tree.contributor_ID;
       const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(treeName)}/matches`);
+      status = res.status;
       if (!res.ok) throw new Error('API failed');
       partners = await res.json();
       setCurrentMatches(partners, displayName);
     } catch {
-      container.innerHTML = heading + `<p>${t('search_failed')}</p>`;
+      container.innerHTML = heading + `<p>${t(fetchErrorKey(status))}</p>`;
       loadDetailClouds();
       setupBooksSection();
       return;

@@ -48,6 +48,7 @@ export default {
     no_results: 'Ni rezultatov.',
     enter_criterion: 'Vnesite vsaj eno iskalno merilo.',
     search_failed: 'Iskanje ni uspelo. Preverite povezavo z API-jem.',
+    feature_restricted: 'Ta funkcionalnost je omejena in na tej strani ni na voljo.',
     loading_contributors: 'Nalaganje rodoslovcev...',
     contributors_failed: 'Podatkov o rodoslovcih ni mogoče naložiti.',
     init_error: 'Napaka pri inicializaciji aplikacije.',

@@ -48,6 +48,7 @@ export default {
     no_results: 'Nincs találat.',
     enter_criterion: 'Kérjük, adjon meg legalább egy keresési feltételt.',
     search_failed: 'A keresés sikertelen. Ellenőrizze az API-kapcsolatot.',
+    feature_restricted: 'Ez a funkció korlátozott, és ezen az oldalon nem érhető el.',
     loading_contributors: 'Genealógusok betöltése...',
     contributors_failed: 'A genealógusok adatait nem sikerült betölteni.',
     init_error: 'Hiba az alkalmazás inicializálásakor.',
