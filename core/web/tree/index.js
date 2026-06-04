@@ -84,6 +84,10 @@ function renderTreePage(kind) {
   if (dob) apiParams.set('dob', dob);
   if (c) apiParams.set('c', c);
   if (extId) apiParams.set('id', extId);
+  // 0 = all generations (the API stops once the tree is fully expanded). The
+  // tree's zoom/minimap handle the larger result, and the CSV/GEDCOM exports
+  // then cover the complete tree.
+  apiParams.set('max_generations', '0');
 
   // Kick off D3 load alongside the API call so the script lands while the
   // tree data is in flight; both must resolve before we can render.

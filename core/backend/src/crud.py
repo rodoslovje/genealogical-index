@@ -1265,6 +1265,21 @@ def _batch_resolve_persons(db: Session, infos: list, contributor: str) -> list:
     return result
 
 
+# Hard ceiling on how deep the ancestor/descendant walks go. Both walks stop
+# on their own once the frontier is empty (and a `visited` set bounds the total
+# work to the contributor's distinct persons), so this is just a safety net
+# against pathological data. A caller passing max_generations <= 0 means
+# "all generations" and gets capped here.
+_MAX_GENERATIONS_CAP = 100
+
+
+def _resolve_max_generations(max_generations: int) -> int:
+    """0/negative means unlimited; clamp everything to the safety ceiling."""
+    if max_generations <= 0 or max_generations > _MAX_GENERATIONS_CAP:
+        return _MAX_GENERATIONS_CAP
+    return max_generations
+
+
 def _person_full_dict(p):
     """Full set of a Person record's exportable fields. Shared by the ancestor
     and descendant node builders so CSV/GEDCOM exports get birth, baptism,
@@ -1333,6 +1348,7 @@ def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
     batched lookups. Two queries per generation (parents resolution + family
     lookup for parents_marriage) replace what used to be O(N) round-trips.
     """
+    max_generations = _resolve_max_generations(max_generations)
     root_person = db.query(models.Person).filter(models.Person.id == person_id).first()
     if not root_person:
         return None
@@ -1670,6 +1686,7 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
     batched lookups. Two queries per generation (families OR'd across the
     level, then children resolution) replace the previously per-node fetches.
     """
+    max_generations = _resolve_max_generations(max_generations)
     root_person = db.query(models.Person).filter(models.Person.id == person_id).first()
     if not root_person:
         return None
