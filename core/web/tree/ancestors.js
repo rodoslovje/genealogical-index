@@ -1,6 +1,6 @@
 import { isPrivate } from '../utils.js';
 import { toUnicodeSearch } from '../url.js';
-import { computeBounds, createSvgWithZoom, attachSvgExport, attachCsvExport, attachGedExport, createGedcomModel, orderSpouses, marriageRow, appendLinks, decoratePersonNodes } from './shared.js';
+import { computeBounds, createSvgWithZoom, attachSvgExport, attachCsvExport, attachGedExport, createGedcomModel, orderSpouses, personRow, appendLinks, decoratePersonNodes } from './shared.js';
 
 export function renderD3AncestorsTree(data, container, personName, contributorName, ids, exportOpts) {
   const dx = 120, dy = 250;
@@ -53,29 +53,28 @@ export function renderD3AncestorsTree(data, container, personName, contributorNa
   decoratePersonNodes(node, contributorName);
 }
 
-// Flattens the ancestors tree into CSV rows using the husband/wife layout of the
-// families export. Generation 0 is the focus person (a lone row, since their
-// spouse isn't part of an ancestors view); every node with parents then yields
-// one couple row (husband, wife, marriage) at the next generation up. Each
-// ancestor therefore appears exactly once — as a spouse in their child's couple
-// row — without the duplication a per-person layout would produce.
+// Flattens the ancestors tree into one CSV row per person. Generation 0 is the
+// focus person; each step up the tree (parents, grandparents, …) increments it.
+// A person's marriage is their union with their co-parent, so for any node with
+// two parents that node's `parents_marriage` (plus the other parent as partner)
+// is attached to each of the two parent rows.
 function buildAncestorRows(rootData) {
   const rows = [];
-  rows.push(marriageRow({ personA: rootData, personB: null, marriage: null, generation: 0 }));
 
-  const walk = (node, generation) => {
+  // `partner`/`marriage` describe THIS node's union, as determined by its child.
+  const walk = (node, generation, partner, marriage) => {
+    rows.push(personRow(node, generation, partner, marriage));
     const parents = node.parents || [];
-    if (!parents.length) return;
-    rows.push(marriageRow({
-      personA: parents[0],
-      personB: parents[1] || null,
-      marriage: node.parents_marriage,
-      generation: generation + 1,
-    }));
-    parents.forEach(p => walk(p, generation + 1));
+    const m = node.parents_marriage || null;
+    if (parents.length === 2) {
+      walk(parents[0], generation + 1, parents[1], m);
+      walk(parents[1], generation + 1, parents[0], m);
+    } else if (parents.length === 1) {
+      walk(parents[0], generation + 1, null, null);
+    }
   };
 
-  walk(rootData, 0);
+  walk(rootData, 0, null, null);
   return rows;
 }
 

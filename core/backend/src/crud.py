@@ -1265,17 +1265,46 @@ def _batch_resolve_persons(db: Session, infos: list, contributor: str) -> list:
     return result
 
 
-def _make_ancestor_node_from_record(p):
+def _person_full_dict(p):
+    """Full set of a Person record's exportable fields. Shared by the ancestor
+    and descendant node builders so CSV/GEDCOM exports get birth, baptism,
+    death, notes and source links in addition to the basic identity fields."""
     return {
         "id": p.id,
         "ext_id": p.ext_id,
         "name": p.name,
         "surname": p.surname,
+        "alt_surname": p.alt_surname,
         "sex": p.sex,
         "date_of_birth": p.date_of_birth,
         "place_of_birth": p.place_of_birth,
-        "parents": [],
+        "date_of_baptism": p.date_of_baptism,
+        "place_of_baptism": p.place_of_baptism,
+        "date_of_death": p.date_of_death,
+        "place_of_death": p.place_of_death,
+        "notes": p.notes,
+        "links": p.links or [],
     }
+
+
+# Fields present on record-backed nodes but unknown for unresolved JSON entries;
+# spread into the *_from_info builders so every node has a consistent shape.
+_EMPTY_PERSON_EXTRAS = {
+    "alt_surname": None,
+    "place_of_birth": None,
+    "date_of_baptism": None,
+    "place_of_baptism": None,
+    "date_of_death": None,
+    "place_of_death": None,
+    "notes": None,
+    "links": [],
+}
+
+
+def _make_ancestor_node_from_record(p):
+    node = _person_full_dict(p)
+    node["parents"] = []
+    return node
 
 
 def _make_ancestor_node_from_info(info):
@@ -1294,7 +1323,7 @@ def _make_ancestor_node_from_info(info):
                 else None
             )
         ),
-        "place_of_birth": None,
+        **_EMPTY_PERSON_EXTRAS,
         "parents": [],
     }
 
@@ -1455,17 +1484,10 @@ def _attach_parents_marriage(db: Session, root_node: dict, contributor: str):
 
 
 def _make_descendant_node_from_record(p):
-    return {
-        "id": p.id,
-        "ext_id": p.ext_id,
-        "name": p.name,
-        "surname": p.surname,
-        "sex": p.sex,
-        "date_of_birth": p.date_of_birth,
-        "place_of_birth": p.place_of_birth,
-        "children": [],
-        "is_family": False,
-    }
+    node = _person_full_dict(p)
+    node["children"] = []
+    node["is_family"] = False
+    return node
 
 
 def _make_descendant_node_from_info(info):
@@ -1484,10 +1506,29 @@ def _make_descendant_node_from_info(info):
                 else None
             )
         ),
-        "place_of_birth": None,
+        **_EMPTY_PERSON_EXTRAS,
         "children": [],
         "is_family": False,
     }
+
+
+def _enrich_partner_from_record(partner, person):
+    """Fill a family-derived partner dict with the rest of its Person record
+    (baptism, death, notes, links, …) so descendant partners export with the
+    same depth as the bloodline persons. Family rows only carry name/surname/
+    birth, so the extra fields are unavailable until the partner is resolved."""
+    if not person:
+        return
+    partner["alt_surname"] = person.alt_surname
+    partner["place_of_birth"] = person.place_of_birth
+    partner["date_of_baptism"] = person.date_of_baptism
+    partner["place_of_baptism"] = person.place_of_baptism
+    partner["date_of_death"] = person.date_of_death
+    partner["place_of_death"] = person.place_of_death
+    partner["notes"] = person.notes
+    partner["links"] = person.links or []
+    if not partner.get("date_of_birth"):
+        partner["date_of_birth"] = person.date_of_birth
 
 
 def _person_family_filter(record):
@@ -1665,6 +1706,7 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
         # 3) For each owner, filter the families that genuinely belong to them
         #    and collect child-info dicts for batch resolution.
         pending_children = []  # (fam_node, child_info) pairs
+        gen_partners = []  # partner dicts created this generation, to enrich
         for record, node in owners:
             known_partners = None
             if record.partners_list:
@@ -1719,12 +1761,33 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
                     "children": [],
                 }
                 node["children"].append(fam_node)
+                if partner:
+                    gen_partners.append(partner)
 
                 if fam.children_list:
                     for c_info in _as_list(fam.children_list):
                         if not c_info:
                             continue
                         pending_children.append((fam_node, c_info))
+
+        # Enrich this generation's partners with their full Person records in a
+        # single batched lookup (partner dicts only carry name/surname/birth from
+        # the family row). Done before the deepest-generation break below so leaf
+        # families' partners are enriched too.
+        if gen_partners:
+            partner_infos = [
+                {
+                    "id": pt.get("ext_id") or "",
+                    "name": pt.get("name"),
+                    "surname": pt.get("surname"),
+                    "date_of_birth": pt.get("date_of_birth"),
+                }
+                for pt in gen_partners
+            ]
+            for pt, person in zip(
+                gen_partners, _batch_resolve_persons(db, partner_infos, contributor)
+            ):
+                _enrich_partner_from_record(pt, person)
 
         # At the deepest generation we still want the families to appear on
         # the leaf persons, but we don't expand further (their children would

@@ -385,35 +385,54 @@ export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contr
 
 // CSV columns shared by both trees, in output order. Row objects produced by
 // the per-tree row builders use these same keys; headers come from `col_<key>`.
-// The husband/wife layout mirrors the families CSV export so the two downloads
-// line up column-for-column.
+// One row per person, carrying the full set of person fields the API now
+// returns (birth, baptism, death, notes, links) plus that person's partner and
+// marriage for the union represented by the row.
 const CSV_COLUMNS = [
   'generation',
-  'husband_name',
-  'husband_surname',
-  'husband_birth',
-  'wife_name',
-  'wife_surname',
-  'wife_birth',
+  'name',
+  'surname',
+  'alt_surname',
+  'date_of_birth',
+  'place_of_birth',
+  'date_of_baptism',
+  'place_of_baptism',
+  'date_of_death',
+  'place_of_death',
+  'notes',
+  'links',
+  'partner',
   'date_of_marriage',
   'place_of_marriage',
 ];
 
 const csvCell = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
 
-// Builds one CSV row from a couple. `personA`/`personB` are person/partner dicts
-// (either may be null); they're sorted into husband/wife slots by sex, matching
-// the families export. Used for both a marriage and a lone person (partner null).
-export function marriageRow({ personA, personB, marriage, generation }) {
-  const [husband, wife] = orderSpouses(personA, personB);
+// Source links arrive as a JSON array of URLs; flatten to a space-separated
+// string for the single CSV cell (URLs never contain spaces).
+function formatLinksCell(links) {
+  if (Array.isArray(links)) return links.join(' ');
+  return links || '';
+}
+
+// Builds one CSV row for a single person, with their partner (name + surname)
+// and the marriage date/place for the union this row represents. `partner` and
+// `marriage` may be null (a person shown without a recorded marriage).
+export function personRow(person, generation, partner, marriage) {
   return {
     generation,
-    husband_name: husband?.name || '',
-    husband_surname: husband?.surname || '',
-    husband_birth: husband?.date_of_birth || '',
-    wife_name: wife?.name || '',
-    wife_surname: wife?.surname || '',
-    wife_birth: wife?.date_of_birth || '',
+    name: person?.name || '',
+    surname: person?.surname || '',
+    alt_surname: person?.alt_surname || '',
+    date_of_birth: person?.date_of_birth || '',
+    place_of_birth: person?.place_of_birth || '',
+    date_of_baptism: person?.date_of_baptism || '',
+    place_of_baptism: person?.place_of_baptism || '',
+    date_of_death: person?.date_of_death || '',
+    place_of_death: person?.place_of_death || '',
+    notes: person?.notes || '',
+    links: formatLinksCell(person?.links),
+    partner: partner ? [partner.name, partner.surname].filter(Boolean).join(' ') : '',
     date_of_marriage: marriage?.date || '',
     place_of_marriage: marriage?.place || '',
   };
@@ -453,7 +472,9 @@ export function attachCsvExport({ downloadBtnId, buildRows, personName, contribu
 // --- GEDCOM (.ged) export ---------------------------------------------------
 // The per-tree builders return a model of { individuals, families } using the
 // shapes below; `serializeGedcom` turns that into a GEDCOM 5.5.1 file.
-//   individual: { id, name, surname, sex, birth:{date,place}, fams:[famId], famc:famId|null }
+//   individual: { id, name, surname, altSurname, sex, birth:{date,place},
+//                 baptism:{date,place}, death:{date,place}, notes, links:[url],
+//                 fams:[famId], famc:famId|null }
 //   family:     { id, husband:indiId|null, wife:indiId|null, children:[indiId], marriage:{date,place}|null }
 // Dates are passed through verbatim (the index stores free-form date strings),
 // which GEDCOM readers tolerate in DATE values.
@@ -462,6 +483,25 @@ const GED_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP
 
 function gedHeaderDate(d) {
   return `${String(d.getDate()).padStart(2, '0')} ${GED_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// Emits a multi-line GEDCOM value as the given tag followed by CONT lines, so
+// embedded newlines survive (single-line values just produce one line).
+function gedTextLines(level, tag, value) {
+  const parts = String(value).split(/\r?\n/);
+  const out = [`${level} ${tag} ${parts[0]}`];
+  for (let i = 1; i < parts.length; i++) out.push(`${level + 1} CONT ${parts[i]}`);
+  return out;
+}
+
+// Emits an event block (BIRT/BAPM/DEAT) with optional DATE/PLAC, or nothing
+// when the event has neither.
+function gedEventLines(tag, event) {
+  if (!event || (!event.date && !event.place)) return [];
+  const out = [`1 ${tag}`];
+  if (event.date) out.push(`2 DATE ${event.date}`);
+  if (event.place) out.push(`2 PLAC ${event.place}`);
+  return out;
 }
 
 function serializeGedcom({ individuals, families }) {
@@ -488,12 +528,22 @@ function serializeGedcom({ individuals, families }) {
     if (indi.name || indi.surname) {
       lines.push(`1 NAME ${`${(indi.name || '').trim()} /${(indi.surname || '').trim()}/`.trim()}`);
     }
+    // Alternative surname as a second, "aka"-typed NAME structure.
+    if (indi.altSurname) {
+      lines.push(`1 NAME ${`${(indi.name || '').trim()} /${indi.altSurname.trim()}/`.trim()}`);
+      lines.push('2 TYPE aka');
+    }
     if (indi.sex === 'm') lines.push('1 SEX M');
     else if (indi.sex === 'f') lines.push('1 SEX F');
-    if (indi.birth && (indi.birth.date || indi.birth.place)) {
-      lines.push('1 BIRT');
-      if (indi.birth.date) lines.push(`2 DATE ${indi.birth.date}`);
-      if (indi.birth.place) lines.push(`2 PLAC ${indi.birth.place}`);
+    lines.push(...gedEventLines('BIRT', indi.birth));
+    lines.push(...gedEventLines('BAPM', indi.baptism));
+    lines.push(...gedEventLines('DEAT', indi.death));
+    if (indi.notes) lines.push(...gedTextLines(1, 'NOTE', indi.notes));
+    // Source links as multimedia objects pointing at the external URL.
+    for (const url of indi.links || []) {
+      lines.push('1 OBJE');
+      lines.push(`2 FILE ${url}`);
+      lines.push('3 FORM html');
     }
     for (const f of indi.fams) lines.push(`1 FAMS @${f}@`);
     if (indi.famc) lines.push(`1 FAMC @${indi.famc}@`);
@@ -524,14 +574,19 @@ export function createGedcomModel() {
   return {
     individuals,
     families,
-    // person: a tree person/partner dict (place_of_birth may be absent).
+    // person: a tree person/partner dict (some fields may be absent).
     addIndividual(person) {
       const indi = {
         id: `I${++iSeq}`,
         name: person?.name || '',
         surname: person?.surname || '',
+        altSurname: person?.alt_surname || '',
         sex: person?.sex || '',
         birth: { date: person?.date_of_birth || '', place: person?.place_of_birth || '' },
+        baptism: { date: person?.date_of_baptism || '', place: person?.place_of_baptism || '' },
+        death: { date: person?.date_of_death || '', place: person?.place_of_death || '' },
+        notes: person?.notes || '',
+        links: Array.isArray(person?.links) ? person.links : [],
         fams: [],
         famc: null,
       };

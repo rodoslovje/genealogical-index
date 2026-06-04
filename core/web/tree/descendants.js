@@ -1,7 +1,7 @@
 import { isPrivate } from '../utils.js';
 import { toUnicodeSearch } from '../url.js';
 import { parseDateForSort } from '../dates.js';
-import { computeBounds, createSvgWithZoom, attachSvgExport, attachCsvExport, attachGedExport, createGedcomModel, orderSpouses, marriageRow, appendLinks, decoratePersonNodes } from './shared.js';
+import { computeBounds, createSvgWithZoom, attachSvgExport, attachCsvExport, attachGedExport, createGedcomModel, orderSpouses, personRow, appendLinks, decoratePersonNodes } from './shared.js';
 
 export function renderD3DescendantsTree(data, container, personName, contributorName, ids, exportOpts) {
   const dx = 120, dy = 250;
@@ -108,28 +108,22 @@ export function renderD3DescendantsTree(data, container, personName, contributor
   appendDescendantFamilyLinks(node, contributorName);
 }
 
-// Flattens the descendants tree into CSV rows using the husband/wife layout of
-// the families export. Generation 0 is the focus person; their children are
-// generation 1, and so on (family nodes don't count as a generation). Each
-// person yields one couple row per marriage (the person + partner sorted into
-// husband/wife slots by sex); persons with no recorded family still get a lone
-// row so every descendant appears.
+// Flattens the descendants tree into one CSV row per person. Generation 0 is the
+// focus person; their children are generation 1, and so on (family nodes don't
+// count as a generation). A person is emitted once per marriage so each row
+// carries that marriage's partner + date/place; persons with no recorded family
+// still get a single row with empty marriage columns.
 function buildDescendantRows(rootData) {
   const rows = [];
 
   const walk = (person, generation) => {
     const families = (person.children || []).filter(c => c.is_family);
     if (!families.length) {
-      rows.push(marriageRow({ personA: person, personB: null, marriage: null, generation }));
+      rows.push(personRow(person, generation, null, null));
       return;
     }
     families.forEach(fam => {
-      rows.push(marriageRow({
-        personA: person,
-        personB: fam.partner || null,
-        marriage: fam.marriage,
-        generation,
-      }));
+      rows.push(personRow(person, generation, fam.partner, fam.marriage));
       (fam.children || [])
         .filter(c => !c.is_family)
         .forEach(child => walk(child, generation + 1));
