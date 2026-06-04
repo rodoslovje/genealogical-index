@@ -114,7 +114,11 @@
             <div id="ancestors-results" class="results-container">
               <div class="section-bar">
                 <h2 id="ancestor-page-title" style="margin: 0; padding: 0; border: none;"></h2>
-                <button id="btn-download-svg" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>SVG</button>
+                <div style="display: flex; gap: 8px;">
+                  <button id="btn-download-ged" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>GEDCOM</button>
+                  <button id="btn-download-csv" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV</button>
+                  <button id="btn-download-svg" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>SVG</button>
+                </div>
               </div>
               <div id="ancestor-tree-wrapper" style="position: relative; flex-grow: 1; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; background-color: #fafafa; min-height: 60vh;">
                 <div id="ancestor-tree-source" style="position: absolute; bottom: 15px; left: 15px; display: none; z-index: 10; font-size: 14px; color: #555; background: rgba(255, 255, 255, 0.8); padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
@@ -131,7 +135,11 @@
             <div id="descendants-results" class="results-container">
               <div class="section-bar">
                 <h2 id="descendant-page-title" style="margin: 0; padding: 0; border: none;"></h2>
-                <button id="btn-descendant-download-svg" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>SVG</button>
+                <div style="display: flex; gap: 8px;">
+                  <button id="btn-descendant-download-ged" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>GEDCOM</button>
+                  <button id="btn-descendant-download-csv" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV</button>
+                  <button id="btn-descendant-download-svg" class="export-btn" title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>SVG</button>
+                </div>
               </div>
               <div id="descendant-tree-wrapper" style="position: relative; flex-grow: 1; overflow: hidden; border: 1px solid var(--border); border-radius: 4px; background-color: #fafafa; min-height: 60vh;">
                 <div id="descendant-tree-source" style="position: absolute; bottom: 15px; left: 15px; display: none; z-index: 10; font-size: 14px; color: #555; background: rgba(255, 255, 255, 0.8); padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>

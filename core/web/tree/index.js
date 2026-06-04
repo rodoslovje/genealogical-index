@@ -18,6 +18,8 @@ const ANCESTORS_IDS = {
   zoomIn:     'btn-zoom-in',
   zoomOut:    'btn-zoom-out',
   downloadSvg:'btn-download-svg',
+  downloadCsv:'btn-download-csv',
+  downloadGed:'btn-download-ged',
 };
 const DESCENDANTS_IDS = {
   pageTitle:  'descendant-page-title',
@@ -28,6 +30,8 @@ const DESCENDANTS_IDS = {
   zoomIn:     'btn-descendant-zoom-in',
   zoomOut:    'btn-descendant-zoom-out',
   downloadSvg:'btn-descendant-download-svg',
+  downloadCsv:'btn-descendant-download-csv',
+  downloadGed:'btn-descendant-download-ged',
 };
 
 // ---------------------------------------------------------------------------
@@ -65,6 +69,10 @@ function renderTreePage(kind) {
   if (zoomOutBtn) { zoomOutBtn.innerHTML = '➖'; zoomOutBtn.title = t('tree_zoom_out'); }
   const downloadBtn = document.getElementById(config.ids.downloadSvg);
   if (downloadBtn) downloadBtn.title = t('tree_download_svg');
+  const downloadCsvBtn = document.getElementById(config.ids.downloadCsv);
+  if (downloadCsvBtn) downloadCsvBtn.title = t('tree_download_csv');
+  const downloadGedBtn = document.getElementById(config.ids.downloadGed);
+  if (downloadGedBtn) downloadGedBtn.title = t('tree_download_ged');
 
   controls.style.display = 'none';
   if (sourceEl) sourceEl.style.display = 'none';

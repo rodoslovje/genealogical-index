@@ -1,7 +1,7 @@
 import { isPrivate } from '../utils.js';
 import { toUnicodeSearch } from '../url.js';
 import { parseDateForSort } from '../dates.js';
-import { computeBounds, createSvgWithZoom, attachSvgExport, appendLinks, decoratePersonNodes } from './shared.js';
+import { computeBounds, createSvgWithZoom, attachSvgExport, attachCsvExport, attachGedExport, createGedcomModel, orderSpouses, marriageRow, appendLinks, decoratePersonNodes } from './shared.js';
 
 export function renderD3DescendantsTree(data, container, personName, contributorName, ids, exportOpts) {
   const dx = 120, dy = 250;
@@ -60,6 +60,21 @@ export function renderD3DescendantsTree(data, container, personName, contributor
     filePrefix: exportOpts.filePrefix,
   });
 
+  attachCsvExport({
+    downloadBtnId: ids.downloadCsv,
+    buildRows: () => buildDescendantRows(data),
+    personName, contributorName,
+    titleText: exportOpts.titleText,
+    filePrefix: exportOpts.filePrefix,
+  });
+
+  attachGedExport({
+    downloadBtnId: ids.downloadGed,
+    buildModel: () => buildDescendantGedcom(data),
+    personName,
+    filePrefix: exportOpts.filePrefix,
+  });
+
   appendLinks(g, root);
 
   const node = g.append('g')
@@ -91,6 +106,71 @@ export function renderD3DescendantsTree(data, container, personName, contributor
   decoratePersonNodes(personNode, contributorName);
 
   appendDescendantFamilyLinks(node, contributorName);
+}
+
+// Flattens the descendants tree into CSV rows using the husband/wife layout of
+// the families export. Generation 0 is the focus person; their children are
+// generation 1, and so on (family nodes don't count as a generation). Each
+// person yields one couple row per marriage (the person + partner sorted into
+// husband/wife slots by sex); persons with no recorded family still get a lone
+// row so every descendant appears.
+function buildDescendantRows(rootData) {
+  const rows = [];
+
+  const walk = (person, generation) => {
+    const families = (person.children || []).filter(c => c.is_family);
+    if (!families.length) {
+      rows.push(marriageRow({ personA: person, personB: null, marriage: null, generation }));
+      return;
+    }
+    families.forEach(fam => {
+      rows.push(marriageRow({
+        personA: person,
+        personB: fam.partner || null,
+        marriage: fam.marriage,
+        generation,
+      }));
+      (fam.children || [])
+        .filter(c => !c.is_family)
+        .forEach(child => walk(child, generation + 1));
+    });
+  };
+
+  walk(rootData, 0);
+  return rows;
+}
+
+// Builds a GEDCOM model from the descendants tree. Each person is an individual
+// and each family node becomes a FAM linking the person, the partner (also an
+// individual), the marriage (MARR) and the family's children (CHIL), recursing
+// into those children.
+function buildDescendantGedcom(rootData) {
+  const model = createGedcomModel();
+  const rootIndi = model.addIndividual(rootData);
+
+  const walk = (person, indi) => {
+    (person.children || []).filter(c => c.is_family).forEach(fam => {
+      const partnerIndi = model.addIndividual(fam.partner || {});
+
+      let husband;
+      let wife;
+      if (indi.sex === 'm') { husband = indi; wife = partnerIndi; }
+      else if (indi.sex === 'f') { husband = partnerIndi; wife = indi; }
+      else { [husband, wife] = orderSpouses(indi, partnerIndi); }
+
+      const famRec = model.addFamily(husband, wife, fam.marriage);
+
+      (fam.children || []).filter(c => !c.is_family).forEach(child => {
+        const childIndi = model.addIndividual(child);
+        childIndi.famc = famRec.id;
+        famRec.children.push(childIndi.id);
+        walk(child, childIndi);
+      });
+    });
+  };
+
+  walk(rootData, rootIndi);
+  return model;
 }
 
 // Family-side info text + clickable link beside the ⚭ glyph.

@@ -1,6 +1,6 @@
 import { toUnicodeSearch } from '../url.js';
 import { t } from '../i18n.js';
-import { isPrivate, downloadBlob } from '../utils.js';
+import { isPrivate, downloadBlob, formatExportFilename } from '../utils.js';
 
 // Shared layout / chrome helpers used by both the ancestors and descendants
 // trees. d3 is loaded globally from the CDN (see ensureD3), so it isn't imported.
@@ -381,6 +381,199 @@ export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contr
       `${filePrefix}_${safeName}.svg`
     );
   });
+}
+
+// CSV columns shared by both trees, in output order. Row objects produced by
+// the per-tree row builders use these same keys; headers come from `col_<key>`.
+// The husband/wife layout mirrors the families CSV export so the two downloads
+// line up column-for-column.
+const CSV_COLUMNS = [
+  'generation',
+  'husband_name',
+  'husband_surname',
+  'husband_birth',
+  'wife_name',
+  'wife_surname',
+  'wife_birth',
+  'date_of_marriage',
+  'place_of_marriage',
+];
+
+const csvCell = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+// Builds one CSV row from a couple. `personA`/`personB` are person/partner dicts
+// (either may be null); they're sorted into husband/wife slots by sex, matching
+// the families export. Used for both a marriage and a lone person (partner null).
+export function marriageRow({ personA, personB, marriage, generation }) {
+  const [husband, wife] = orderSpouses(personA, personB);
+  return {
+    generation,
+    husband_name: husband?.name || '',
+    husband_surname: husband?.surname || '',
+    husband_birth: husband?.date_of_birth || '',
+    wife_name: wife?.name || '',
+    wife_surname: wife?.surname || '',
+    wife_birth: wife?.date_of_birth || '',
+    date_of_marriage: marriage?.date || '',
+    place_of_marriage: marriage?.place || '',
+  };
+}
+
+// Wires the CSV-download button. `buildRows()` is supplied by each tree and
+// returns one row object per person (with an extra row per marriage), keyed by
+// CSV_COLUMNS. The flat list keeps a `generation` column so the tree structure
+// survives the export, and marriage rows carry partner + date/place of marriage.
+// A small provenance footer (subject, source contributor, site, timestamp)
+// mirrors the SVG export.
+export function attachCsvExport({ downloadBtnId, buildRows, personName, contributorName, titleText, filePrefix }) {
+  const btn = document.getElementById(downloadBtnId);
+  if (!btn) return;
+  d3.select(`#${downloadBtnId}`).on('click', null).on('click', () => {
+    // Ascending by generation (0, 1, 2, …); the stable sort preserves each
+    // tree's natural within-generation traversal order.
+    const rows = (buildRows() || []).slice().sort((a, b) => a.generation - b.generation);
+
+    const header = CSV_COLUMNS.map(col => csvCell(t('col_' + col))).join(',');
+    const body = rows.map(row => CSV_COLUMNS.map(col => csvCell(row[col])).join(','));
+
+    const footer = [];
+    if (titleText) footer.push(csvCell(titleText));
+    if (contributorName) footer.push(`${csvCell(t('tree_source'))},${csvCell(contributorName)}`);
+    footer.push(csvCell(t('site_title')));
+    footer.push(csvCell(window.location.origin));
+    footer.push(csvCell(new Date().toLocaleString()));
+
+    const csvContent = [header, ...body].join('\n') + '\n\n' + footer.join('\n');
+
+    const filename = formatExportFilename(`${filePrefix}-${personName || filePrefix}`, 'csv');
+    downloadBlob(new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' }), filename);
+  });
+}
+
+// --- GEDCOM (.ged) export ---------------------------------------------------
+// The per-tree builders return a model of { individuals, families } using the
+// shapes below; `serializeGedcom` turns that into a GEDCOM 5.5.1 file.
+//   individual: { id, name, surname, sex, birth:{date,place}, fams:[famId], famc:famId|null }
+//   family:     { id, husband:indiId|null, wife:indiId|null, children:[indiId], marriage:{date,place}|null }
+// Dates are passed through verbatim (the index stores free-form date strings),
+// which GEDCOM readers tolerate in DATE values.
+
+const GED_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+function gedHeaderDate(d) {
+  return `${String(d.getDate()).padStart(2, '0')} ${GED_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function serializeGedcom({ individuals, families }) {
+  const lines = [];
+  const sysId = 'GenealogicalIndex';
+  const submId = 'SUBM1';
+
+  lines.push('0 HEAD');
+  lines.push(`1 SOUR ${sysId}`);
+  lines.push(`2 NAME ${t('site_title')}`);
+  lines.push(`2 CORP ${window.location.hostname}`);
+  lines.push(`1 DATE ${gedHeaderDate(new Date())}`);
+  lines.push('1 GEDC');
+  lines.push('2 VERS 5.5.1');
+  lines.push('2 FORM LINEAGE-LINKED');
+  lines.push('1 CHAR UTF-8');
+  lines.push(`1 SUBM @${submId}@`);
+
+  lines.push(`0 @${submId}@ SUBM`);
+  lines.push(`1 NAME ${t('site_title')}`);
+
+  for (const indi of individuals) {
+    lines.push(`0 @${indi.id}@ INDI`);
+    if (indi.name || indi.surname) {
+      lines.push(`1 NAME ${`${(indi.name || '').trim()} /${(indi.surname || '').trim()}/`.trim()}`);
+    }
+    if (indi.sex === 'm') lines.push('1 SEX M');
+    else if (indi.sex === 'f') lines.push('1 SEX F');
+    if (indi.birth && (indi.birth.date || indi.birth.place)) {
+      lines.push('1 BIRT');
+      if (indi.birth.date) lines.push(`2 DATE ${indi.birth.date}`);
+      if (indi.birth.place) lines.push(`2 PLAC ${indi.birth.place}`);
+    }
+    for (const f of indi.fams) lines.push(`1 FAMS @${f}@`);
+    if (indi.famc) lines.push(`1 FAMC @${indi.famc}@`);
+  }
+
+  for (const fam of families) {
+    lines.push(`0 @${fam.id}@ FAM`);
+    if (fam.husband) lines.push(`1 HUSB @${fam.husband}@`);
+    if (fam.wife) lines.push(`1 WIFE @${fam.wife}@`);
+    for (const c of fam.children) lines.push(`1 CHIL @${c}@`);
+    if (fam.marriage && (fam.marriage.date || fam.marriage.place)) {
+      lines.push('1 MARR');
+      if (fam.marriage.date) lines.push(`2 DATE ${fam.marriage.date}`);
+      if (fam.marriage.place) lines.push(`2 PLAC ${fam.marriage.place}`);
+    }
+  }
+
+  lines.push('0 TRLR');
+  return lines.join('\n') + '\n';
+}
+
+// Factory the per-tree builders use to allocate sequentially-numbered records.
+export function createGedcomModel() {
+  const individuals = [];
+  const families = [];
+  let iSeq = 0;
+  let fSeq = 0;
+  return {
+    individuals,
+    families,
+    // person: a tree person/partner dict (place_of_birth may be absent).
+    addIndividual(person) {
+      const indi = {
+        id: `I${++iSeq}`,
+        name: person?.name || '',
+        surname: person?.surname || '',
+        sex: person?.sex || '',
+        birth: { date: person?.date_of_birth || '', place: person?.place_of_birth || '' },
+        fams: [],
+        famc: null,
+      };
+      individuals.push(indi);
+      return indi;
+    },
+    // Links a husband/wife (either may be null) and returns the new family.
+    addFamily(husband, wife, marriage) {
+      const fam = {
+        id: `F${++fSeq}`,
+        husband: husband ? husband.id : null,
+        wife: wife ? wife.id : null,
+        children: [],
+        marriage: marriage || null,
+      };
+      families.push(fam);
+      if (husband) husband.fams.push(fam.id);
+      if (wife) wife.fams.push(fam.id);
+      return fam;
+    },
+  };
+}
+
+// Wires the GEDCOM-download button. `buildModel()` returns { individuals, families }.
+export function attachGedExport({ downloadBtnId, buildModel, personName, filePrefix }) {
+  const btn = document.getElementById(downloadBtnId);
+  if (!btn) return;
+  d3.select(`#${downloadBtnId}`).on('click', null).on('click', () => {
+    const ged = serializeGedcom(buildModel());
+    const filename = formatExportFilename(`${filePrefix}-${personName || filePrefix}`, 'ged');
+    downloadBlob(new Blob([ged], { type: 'text/plain;charset=utf-8;' }), filename);
+  });
+}
+
+// Picks (husband, wife) from two individuals using whatever sex info exists,
+// falling back to the given order when neither side is determinative.
+export function orderSpouses(a, b) {
+  if (a && a.sex === 'm') return [a, b];
+  if (a && a.sex === 'f') return [b, a];
+  if (b && b.sex === 'f') return [a, b];
+  if (b && b.sex === 'm') return [b, a];
+  return [a, b];
 }
 
 // Horizontal link paths between parent/child nodes — identical in both trees.
