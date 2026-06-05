@@ -1,3 +1,4 @@
+import difflib
 import json
 import os
 import re
@@ -2031,57 +2032,103 @@ def _birth_year(node):
     return _extract_year(str(dob)) if dob else None
 
 
-def _same_person_heuristic(a, b):
-    """Fallback child/partner identity test when no precomputed match exists:
-    same (normalised) name + surname and birth years within tolerance. Refuses
-    to merge two nameless records."""
-    na, nb = _norm_cmp(a.get("name")), _norm_cmp(b.get("name"))
-    sa, sb = _norm_cmp(a.get("surname")), _norm_cmp(b.get("surname"))
-    if na != nb or sa != sb:
-        return False
-    if not na and not sa:
-        return False
+# Min similarity (0–1) for two given-names / surnames to count as the same.
+# Tolerant enough for spelling variants (e.g. "Sebastjan" vs "Sebastijan",
+# ratio ~0.95) without merging genuinely different names.
+_NAME_SIM_THRESHOLD = 0.8
+
+
+def _similar(a, b):
+    """Normalised-string similarity in [0, 1]; 1.0 for an exact match. Used for
+    the fuzzy child/partner fallback so given-name spelling variants still align.
+    """
+    a, b = _norm_cmp(a).lower(), _norm_cmp(b).lower()
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    return difflib.SequenceMatcher(None, a, b).ratio()
+
+
+def _person_similarity(a, b):
+    """Fallback child/partner identity *score* when no precomputed match exists:
+    0.0 means "not the same person" (fails the surname / name / birth-year
+    gates), otherwise a positive magnitude (higher = better) so the best of
+    several candidate siblings wins the pairing rather than the first seen.
+
+    Names from two genealogists routinely differ only in spelling — the matches
+    table absorbs most via trigram scoring, but borderline variants (below its
+    0.72 threshold, e.g. "Sebastjan" vs "Sebastijan") reach here and must still
+    align, or the whole subtree below them splits into only_a/only_b duplicates."""
     ya, yb = _birth_year(a), _birth_year(b)
     if ya and yb and abs(ya - yb) > _COMPARE_YEAR_TOLERANCE:
-        return False
-    return True
+        return 0.0
+
+    sa, sb = _norm_cmp(a.get("surname")), _norm_cmp(b.get("surname"))
+    # A clear surname disagreement rules it out; an absent surname on either
+    # side leaves the decision to the given name + birth year.
+    sur_sim = _similar(sa, sb) if (sa and sb) else None
+    if sur_sim is not None and sur_sim < _NAME_SIM_THRESHOLD:
+        return 0.0
+
+    na, nb = _norm_cmp(a.get("name")), _norm_cmp(b.get("name"))
+    if not na and not nb:
+        return 0.0
+    name_sim = _similar(na, nb)
+    if name_sim < _NAME_SIM_THRESHOLD:
+        return 0.0
+
+    score = name_sim + (sur_sim or 0.0)
+    if ya and yb and ya == yb:
+        score += 0.1  # exact birth-year agreement is a small tie-breaker
+    return score
 
 
-def _same_partner(pa, pb):
-    """Two families correspond when their partners are the same person. Partner
-    dicts carry no DB id, so this is name-based; two empty/unknown partners
+def _partner_score(pa, pb):
+    """Match score for two families' partners. Partner dicts carry no DB id, so
+    this is name-based (same fuzzy test as children); two empty/unknown partners
     (a single unrecorded spouse on each side) are treated as the same union."""
     a_empty = not pa or (not _norm_cmp(pa.get("name")) and not _norm_cmp(pa.get("surname")))
     b_empty = not pb or (not _norm_cmp(pb.get("name")) and not _norm_cmp(pb.get("surname")))
     if a_empty or b_empty:
-        return a_empty and b_empty
-    return (
-        _norm_cmp(pa.get("name")) == _norm_cmp(pb.get("name"))
-        and _norm_cmp(pa.get("surname")) == _norm_cmp(pb.get("surname"))
-    )
+        return 1.0 if (a_empty and b_empty) else 0.0
+    return _person_similarity(pa, pb)
 
 
-def _greedy_pair(a_items, b_items, same):
-    """Greedily pair items from two lists using a `same(x, y)` predicate.
+def _child_score(ca, cb, match_conf):
+    """Match score for two candidate children. A precomputed match (authoritative,
+    trigram-scored across the whole dataset) outranks any fuzzy fallback."""
+    conf = match_conf.get((ca.get("id"), cb.get("id")))
+    if conf is not None:
+        return 2.0 + conf
+    return _person_similarity(ca, cb)
+
+
+def _best_pairs(a_items, b_items, score):
+    """Pair items from two lists by best score first. `score(x, y)` returns 0 for
+    non-candidates and a positive magnitude otherwise; the highest-scoring pairs
+    are assigned greedily (each item used once) so a person with several
+    same-named siblings pairs with the closest one rather than the first seen.
     Returns (a, b) tuples; unmatched items pair with None."""
-    pairs = []
-    used = set()
-    for ia in a_items:
-        match_j = None
+    candidates = []
+    for i, ia in enumerate(a_items):
         for j, ib in enumerate(b_items):
-            if j in used:
-                continue
-            if same(ia, ib):
-                match_j = j
-                break
-        if match_j is not None:
-            used.add(match_j)
-            pairs.append((ia, b_items[match_j]))
-        else:
-            pairs.append((ia, None))
-    for j, ib in enumerate(b_items):
-        if j not in used:
-            pairs.append((None, ib))
+            s = score(ia, ib)
+            if s > 0:
+                candidates.append((s, i, j))
+    # Sort by score desc; (i, j) tiebreak keeps the assignment stable.
+    candidates.sort(key=lambda c: (-c[0], c[1], c[2]))
+
+    used_a, used_b, a_to_b = set(), set(), {}
+    for _s, i, j in candidates:
+        if i in used_a or j in used_b:
+            continue
+        used_a.add(i)
+        used_b.add(j)
+        a_to_b[i] = j
+
+    pairs = [(ia, b_items[a_to_b[i]] if i in a_to_b else None) for i, ia in enumerate(a_items)]
+    pairs.extend((None, ib) for j, ib in enumerate(b_items) if j not in used_b)
     return pairs
 
 
@@ -2151,12 +2198,9 @@ def _align_family(fa, fb, match_conf):
     a_children = _family_children(fa)
     b_children = _family_children(fb)
 
-    def same_child(ca, cb):
-        if (ca.get("id"), cb.get("id")) in match_conf:
-            return True
-        return _same_person_heuristic(ca, cb)
-
-    for ca, cb in _greedy_pair(a_children, b_children, same_child):
+    for ca, cb in _best_pairs(
+        a_children, b_children, lambda ca, cb: _child_score(ca, cb, match_conf)
+    ):
         if ca and cb:
             merged["children"].append(_align_descendants(ca, cb, match_conf))
         elif ca:
@@ -2176,8 +2220,8 @@ def _align_descendants(na, nb, match_conf):
     a_families = _person_families(na)
     b_families = _person_families(nb)
 
-    for fa, fb in _greedy_pair(
-        a_families, b_families, lambda x, y: _same_partner(x.get("partner"), y.get("partner"))
+    for fa, fb in _best_pairs(
+        a_families, b_families, lambda x, y: _partner_score(x.get("partner"), y.get("partner"))
     ):
         if fa and fb:
             merged["children"].append(_align_family(fa, fb, match_conf))
