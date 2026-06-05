@@ -210,7 +210,7 @@ export default {
 
     // Tree comparison
     compare_title: 'Usporedba stabala',
-    compare_action: 'Usporedi stabla',
+    compare_action: 'Usporedi',
     compare_tooltip: 'Usporedi rodoslovna stabla predaka oba rodoslovca za ovu osobu',
     compare_agree: 'Podudaranje',
     compare_conflict: 'Razlika',

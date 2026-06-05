@@ -217,7 +217,7 @@ export default {
 
     // Tree comparison
     compare_title: 'Confronto alberi',
-    compare_action: 'Confronta alberi',
+    compare_action: 'Confronta',
     compare_tooltip: 'Confronta gli alberi degli antenati di entrambi i genealogisti per questa persona',
     compare_agree: 'Corrispondenza',
     compare_conflict: 'Differenza',

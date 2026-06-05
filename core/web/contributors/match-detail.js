@@ -306,7 +306,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             const cmpHref = toUnicodeHref({
               t: 'compare', a: String(r.record_a.id), b: String(r.record_b.id), pn: cmpName,
             });
-            compareLinkHtml = `<div class="compare-link-wrap"><a class="compare-tree-link" href="${cmpHref}" data-spa-nav title="${t('compare_tooltip').replace(/"/g, '&quot;')}">⇆🌳 ${t('compare_action')}</a></div>`;
+            compareLinkHtml = `<div class="compare-link-wrap"><a class="compare-tree-link" href="${cmpHref}" data-spa-nav title="${t('compare_tooltip').replace(/"/g, '&quot;')}">🌳 ${t('compare_action')}</a></div>`;
           }
           const aContrib = r.record_a.contributor || contributor;
           const bContrib = r.record_b.contributor || partner;

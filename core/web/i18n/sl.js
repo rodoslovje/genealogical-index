@@ -210,7 +210,7 @@ export default {
 
     // Tree comparison
     compare_title: 'Primerjava dreves',
-    compare_action: 'Primerjaj drevesi',
+    compare_action: 'Primerjaj',
     compare_tooltip: 'Primerjaj predniški drevesi obeh rodoslovcev za to osebo',
     compare_agree: 'Ujemanje',
     compare_conflict: 'Razlika',

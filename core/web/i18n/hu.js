@@ -218,7 +218,7 @@ export default {
 
     // Tree comparison
     compare_title: 'Fák összehasonlítása',
-    compare_action: 'Fák összehasonlítása',
+    compare_action: 'Összehasonlítása',
     compare_tooltip: 'Mindkét genealógus őseinek fáját összehasonlítja ennél a személynél',
     compare_agree: 'Egyezés',
     compare_conflict: 'Eltérés',

@@ -162,7 +162,7 @@ function renderTree(data, container, detail) {
   decorate(node);
 }
 
-// Coloured dot (by status) + name + birth info; a small ⚠ on conflict nodes.
+// Coloured dot (by status) + name + birth info.
 function decorate(selection) {
   selection.append('circle')
       .attr('fill', d => STATUS_COLOR[d.data.status] || '#999')
@@ -172,7 +172,6 @@ function decorate(selection) {
     .append('text')
       .attr('x', 10).attr('y', -6)
       .attr('font-size', '13px')
-      .text('⚠');
 
   const nameText = selection.append('text')
       .attr('dy', '-0.8em')

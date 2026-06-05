@@ -210,7 +210,7 @@ export default {
 
     // Tree comparison
     compare_title: 'Stammbaum-Vergleich',
-    compare_action: 'Bäume vergleichen',
+    compare_action: 'Vergleichen',
     compare_tooltip: 'Die Vorfahrenbäume beider Genealogen für diese Person vergleichen',
     compare_agree: 'Übereinstimmung',
     compare_conflict: 'Unterschied',

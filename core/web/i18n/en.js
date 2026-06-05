@@ -210,7 +210,7 @@ export default {
 
     // Tree comparison
     compare_title: 'Tree Comparison',
-    compare_action: 'Compare trees',
+    compare_action: 'Compare',
     compare_tooltip: "Compare both genealogists' ancestor trees for this person",
     compare_agree: 'Match',
     compare_conflict: 'Difference',
