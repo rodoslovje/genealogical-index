@@ -216,6 +216,8 @@ export default {
     compare_conflict: 'Unterschied',
     compare_only_in: 'Nur bei',
     compare_click_hint: 'Auf eine Person klicken, um die Unterschiede anzuzeigen.',
+    compare_status: 'Status',
+    compare_diff_fields: 'Unterschiede',
 
     // Help manual
     help_auth_nav: ', Systemanmeldung (<strong>{USER_ICON}</strong>)',

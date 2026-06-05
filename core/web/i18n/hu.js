@@ -224,6 +224,8 @@ export default {
     compare_conflict: 'Eltérés',
     compare_only_in: 'Csak nála:',
     compare_click_hint: 'Kattintson egy személyre a részletes összehasonlításhoz.',
+    compare_status: 'Állapot',
+    compare_diff_fields: 'Eltérések',
 
     // Help manual
     help_auth_nav: ', a rendszerbe való bejelentkezést (<strong>{USER_ICON}</strong>)',

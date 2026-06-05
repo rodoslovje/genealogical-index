@@ -1,15 +1,20 @@
 import { API_BASE_URL } from '../config.js';
 import { currentParams, toUnicodeHref } from '../lib/url.js';
 import { t, formatTitleSuffix } from '../i18n.js';
-import { escapeHtml, ensureD3, highlightDifferences, baseContributorName } from '../lib/utils.js';
+import {
+  escapeHtml, ensureD3, highlightDifferences, baseContributorName,
+  downloadBlob, formatExportFilename,
+} from '../lib/utils.js';
 import { authFetch } from '../auth.js';
 import { computeBounds, createSvgWithZoom, appendLinks, attachSvgExport } from './shared.js';
+import siteConfig from '@site-config';
 
-// Tree comparison view (Phase 1: ancestors). Superimposes two genealogists'
-// ancestor trees rooted at a matched person pair into one merged tree, each
-// node coloured by its comparison status. Clicking a node opens a side-by-side
-// field detail with the differences highlighted. Reuses the layout/zoom/minimap
-// and SVG-export chrome from the regular tree views.
+// Tree comparison view (Phase 2: ancestors + descendants). Superimposes two
+// genealogists' trees rooted at a matched person pair into one merged tree,
+// each node coloured by its comparison status. A toggle switches direction;
+// clicking a node opens a side-by-side field detail with differences
+// highlighted; the differences can be exported to CSV. Reuses the layout / zoom
+// / minimap / SVG-export chrome from the regular tree views.
 
 const IDS = {
   pageTitle:   'compare-page-title',
@@ -21,9 +26,10 @@ const IDS = {
   zoomIn:      'btn-compare-zoom-in',
   zoomOut:     'btn-compare-zoom-out',
   downloadSvg: 'btn-compare-download-svg',
+  downloadCsv: 'btn-compare-download-csv',
 };
 
-// Status → swatch colour. Kept in sync with the circle fill in decorate().
+// Status → swatch colour. Kept in sync with the circle fill in decoratePersons().
 const STATUS_COLOR = {
   agree:    '#2e7d32',
   conflict: '#f59e0b',
@@ -31,7 +37,7 @@ const STATUS_COLOR = {
   only_b:   '#e8590c',
 };
 
-// Fields shown in the side-by-side detail panel, in display order.
+// Fields shown in the side-by-side detail panel and the CSV export, in order.
 const DETAIL_FIELDS = [
   ['name',            'col_name'],
   ['surname',         'col_surname'],
@@ -48,6 +54,8 @@ export function renderComparePage() {
   const aId = params.get('a') || '';
   const bId = params.get('b') || '';
   const personName = params.get('pn') || '';
+  const dir = params.get('dir') === 'descendants' ? 'descendants' : 'ancestors';
+  const ctx = { aId, bId, personName, dir };
 
   const titleSuffix = formatTitleSuffix(t('compare_title'));
   const pageTitle = personName ? `${personName} - ${titleSuffix}` : t('compare_title');
@@ -64,11 +72,13 @@ export function renderComparePage() {
   if (zoomInBtn) { zoomInBtn.innerHTML = '➕'; zoomInBtn.title = t('tree_zoom_in'); }
   const zoomOutBtn = document.getElementById(IDS.zoomOut);
   if (zoomOutBtn) { zoomOutBtn.innerHTML = '➖'; zoomOutBtn.title = t('tree_zoom_out'); }
-  const downloadBtn = document.getElementById(IDS.downloadSvg);
-  if (downloadBtn) downloadBtn.title = t('tree_download_svg');
+  const svgBtn = document.getElementById(IDS.downloadSvg);
+  if (svgBtn) svgBtn.title = t('tree_download_svg');
+  const csvBtn = document.getElementById(IDS.downloadCsv);
+  if (csvBtn) { csvBtn.title = t('tree_download_csv'); csvBtn.style.display = 'none'; csvBtn.onclick = null; }
 
   if (controls) controls.style.display = 'none';
-  if (legend) legend.innerHTML = '';
+  if (legend) renderLegend(legend, null, ctx);
   if (detail) { detail.innerHTML = ''; detail.style.display = 'none'; }
   container.innerHTML = `<p style="padding: 20px;">${t('tree_loading')}</p>`;
 
@@ -78,7 +88,7 @@ export function renderComparePage() {
   }
 
   const apiParams = new URLSearchParams({ a_id: aId, b_id: bId, max_generations: '0' });
-  const dataPromise = authFetch(`${API_BASE_URL}/api/compare/ancestors?${apiParams}`)
+  const dataPromise = authFetch(`${API_BASE_URL}/api/compare/${dir}?${apiParams}`)
       .then(r => r.ok ? r.json() : null);
   const d3Promise = ensureD3().catch(() => {});
 
@@ -94,8 +104,12 @@ export function renderComparePage() {
         return;
       }
       if (controls) controls.style.display = 'flex';
-      renderLegend(legend, data);
+      renderLegend(legend, data, ctx);
       renderTree(data, container, detail);
+      if (csvBtn) {
+        csvBtn.style.display = '';
+        csvBtn.onclick = () => exportDifferences(data, ctx);
+      }
     })
     .catch(err => {
       console.error(err);
@@ -103,38 +117,69 @@ export function renderComparePage() {
     });
 }
 
-// Legend + status counts header, plus which colour belongs to which genealogist.
-function renderLegend(legend, data) {
+// Direction toggle + legend with status counts. `data` is null while loading
+// (the toggle still renders so the user can switch before results arrive).
+function renderLegend(legend, data, ctx) {
   if (!legend) return;
-  const a = escapeHtml(baseContributorName(data.contributor_a || ''));
-  const b = escapeHtml(baseContributorName(data.contributor_b || ''));
-  const s = data.summary || {};
+  const a = escapeHtml(baseContributorName((data && data.contributor_a) || ''));
+  const b = escapeHtml(baseContributorName((data && data.contributor_b) || ''));
+  const s = (data && data.summary) || {};
+
+  const toggleLink = (dir, label) => {
+    const href = toUnicodeHref({ t: 'compare', a: ctx.aId, b: ctx.bId, pn: ctx.personName, dir });
+    const active = ctx.dir === dir ? ' compare-toggle-active' : '';
+    return `<a class="compare-toggle-btn${active}" href="${href}" data-spa-nav>${label}</a>`;
+  };
+  const toggle = `<div class="compare-toggle">
+      ${toggleLink('ancestors', t('tree_ancestors_title'))}
+      ${toggleLink('descendants', t('tree_descendants_title'))}
+    </div>`;
+
   const swatch = (status, label, count) =>
     `<span class="compare-legend-item">
       <span class="compare-swatch" style="background:${STATUS_COLOR[status]}"></span>
       ${label}${count != null ? ` <strong>(${count})</strong>` : ''}
     </span>`;
-  legend.innerHTML = `
-    <div class="compare-legend-row">
+
+  const counts = data ? `<div class="compare-legend-row">
       ${swatch('agree', t('compare_agree'), s.agree)}
       ${swatch('conflict', t('compare_conflict'), s.conflict)}
       ${swatch('only_a', `${t('compare_only_in')} ${a}`, s.only_a)}
       ${swatch('only_b', `${t('compare_only_in')} ${b}`, s.only_b)}
     </div>
-    <div class="compare-legend-hint">${t('compare_click_hint')}</div>`;
+    <div class="compare-legend-hint">${t('compare_click_hint')}</div>` : '';
+
+  legend.innerHTML = toggle + counts;
 }
 
 function renderTree(data, container, detail) {
   const dx = 120, dy = 250;
+  const isDesc = data.direction === 'descendants';
 
-  const root = d3.hierarchy(data.tree, d => d.parents);
+  const root = d3.hierarchy(data.tree, d => isDesc ? d.children : d.parents);
   d3.tree().nodeSize([dx, dy])(root.sort((a, b) => {
+    if (isDesc && a.data.is_family && b.data.is_family) return 0;
     const sexOrder = { m: 1, f: 2 };
     const aSex = sexOrder[a.data.sex] || 3;
     const bSex = sexOrder[b.data.sex] || 3;
     if (aSex !== bSex) return aSex - bSex;
     return d3.ascending(a.data.name || '', b.data.name || '');
   }));
+
+  // Descendant trees interleave family nodes between generations; snap each
+  // node to its generation column and pull families in towards their parent
+  // (mirrors the regular descendants view).
+  if (isDesc) {
+    root.each(d => {
+      let gen = 0, curr = d;
+      while (curr.parent) {
+        if (!curr.data.is_family) gen++;
+        curr = curr.parent;
+      }
+      if (d.data.is_family) { d.y = gen * dy + 50; d.x = d.x + 35; }
+      else { d.y = gen * dy; }
+    });
+  }
 
   const bounds = computeBounds(root, dx, dy);
   const { svg, g } = createSvgWithZoom(container, bounds, root, IDS);
@@ -159,19 +204,19 @@ function renderTree(data, container, detail) {
       .attr('cursor', 'pointer')
       .on('click', (event, d) => showDetail(detail, d.data, data));
 
-  decorate(node);
+  if (isDesc) {
+    decorateFamilies(node.filter(d => d.data.is_family));
+    decoratePersons(node.filter(d => !d.data.is_family));
+  } else {
+    decoratePersons(node);
+  }
 }
 
-// Coloured dot (by status) + name + birth info.
-function decorate(selection) {
+// Coloured dot (by status) + name + birth info for a person-node selection.
+function decoratePersons(selection) {
   selection.append('circle')
       .attr('fill', d => STATUS_COLOR[d.data.status] || '#999')
       .attr('r', 6);
-
-  selection.filter(d => d.data.status === 'conflict')
-    .append('text')
-      .attr('x', 10).attr('y', -6)
-      .attr('font-size', '13px')
 
   const nameText = selection.append('text')
       .attr('dy', '-0.8em')
@@ -198,12 +243,45 @@ function decorate(selection) {
   infoText.clone(true).lower().attr('stroke', 'white');
 }
 
+// Marriage glyph (⚭, coloured by family status) + partner / marriage info.
+function decorateFamilies(selection) {
+  selection.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('font-size', '16px')
+      .attr('fill', d => STATUS_COLOR[d.data.status] || '#999')
+      .text('⚭')
+    .clone(true).lower()
+      .attr('stroke', 'white')
+      .attr('stroke-width', 3);
+
+  const info = selection.append('text')
+      .attr('dy', '0.3em')
+      .attr('x', 14)
+      .attr('text-anchor', 'start')
+      .attr('font-size', '12px')
+      .attr('fill', d => STATUS_COLOR[d.data.status] || '#555');
+  info.each(function (d) {
+    const el = d3.select(this);
+    const p = d.data.partner || {};
+    const m = d.data.marriage || {};
+    const name = [p.name, p.surname].filter(Boolean).join(' ');
+    const date = m.date || '';
+    let first = true;
+    if (name) { el.append('tspan').attr('x', 14).attr('font-weight', 'bold').text(name); first = false; }
+    if (date) { el.append('tspan').attr('x', 14).attr('dy', first ? '0' : '1.2em').text(date); }
+  });
+  info.clone(true).lower().attr('stroke', 'white');
+}
+
 // Side-by-side field comparison for the clicked node, with differing values
-// highlighted. only_a / only_b nodes show the single present side.
+// highlighted. only_a / only_b nodes show the single present side. Works for
+// both person nodes and family (partner) nodes — both carry `a`/`b`.
 function showDetail(detail, node, data) {
   if (!detail) return;
   const a = node.a;
   const b = node.b;
+  if (!a && !b) return; // nothing to show (e.g. unknown-partner family)
   const aName = escapeHtml(baseContributorName(data.contributor_a || ''));
   const bName = escapeHtml(baseContributorName(data.contributor_b || ''));
   const diffs = new Set(node.field_diffs || []);
@@ -226,11 +304,13 @@ function showDetail(detail, node, data) {
     ? `<span class="compare-detail-conf">${t('col_confidence')}: <strong>${Math.round(node.confidence * 100)}%</strong></span>`
     : '';
 
+  const partnerTag = node.is_family ? ` <span class="compare-detail-conf">(${t('col_partner')})</span>` : '';
+
   detail.innerHTML = `
     <div class="compare-detail-head">
       <span class="compare-detail-status">
         <span class="compare-swatch" style="background:${STATUS_COLOR[node.status]}"></span>
-        ${escapeHtml(statusText)}
+        ${escapeHtml(statusText)}${partnerTag}
       </span>
       ${conf}
       <button type="button" class="compare-detail-close" title="${t('collapse_all')}">&times;</button>
@@ -243,4 +323,57 @@ function showDetail(detail, node, data) {
   detail.querySelector('.compare-detail-close')?.addEventListener('click', () => {
     detail.style.display = 'none';
   });
+}
+
+// --- CSV export of the differences ------------------------------------------
+
+const csvCell = (v) => {
+  const s = v == null ? '' : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+const STATUS_KEY = { agree: 'compare_agree', conflict: 'compare_conflict' };
+
+// One row per person node. Family nodes don't get a row, but crossing one in a
+// descendant tree advances the generation; crossing a person does too.
+function collectRows(node, gen, rows) {
+  if (!node.is_family) {
+    rows.push({ gen, node });
+  }
+  (node.parents || []).forEach(c => collectRows(c, gen + 1, rows));
+  (node.children || []).forEach(c => collectRows(c, node.is_family ? gen + 1 : gen, rows));
+}
+
+function exportDifferences(data, ctx) {
+  const A = baseContributorName(data.contributor_a || '');
+  const B = baseContributorName(data.contributor_b || '');
+
+  const rows = [];
+  collectRows(data.tree, 0, rows);
+
+  const header = [t('col_generation'), t('col_confidence'), t('compare_status')];
+  DETAIL_FIELDS.forEach(([, labelKey]) => {
+    header.push(`${t(labelKey)} (${A})`, `${t(labelKey)} (${B})`);
+  });
+  header.push(t('compare_diff_fields'));
+
+  const statusText = (st) => {
+    if (st === 'only_a') return `${t('compare_only_in')} ${A}`;
+    if (st === 'only_b') return `${t('compare_only_in')} ${B}`;
+    return t(STATUS_KEY[st] || 'compare_agree');
+  };
+
+  const lines = [header.map(csvCell).join(',')];
+  rows.forEach(({ gen, node }) => {
+    const a = node.a || {};
+    const b = node.b || {};
+    const cells = [gen, node.confidence != null ? Math.round(node.confidence * 100) + '%' : '', statusText(node.status)];
+    DETAIL_FIELDS.forEach(([f]) => { cells.push(a[f] || '', b[f] || ''); });
+    cells.push((node.field_diffs || []).map(f => t(`col_${f}`)).join('; '));
+    lines.push(cells.map(csvCell).join(','));
+  });
+
+  const prefix = siteConfig.filePrefix || 'sgi';
+  const fname = formatExportFilename(`${prefix}-compare-${ctx.dir}-${ctx.aId}-${ctx.bId}`, 'csv');
+  downloadBlob(new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' }), fname);
 }

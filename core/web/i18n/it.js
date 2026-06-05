@@ -223,6 +223,8 @@ export default {
     compare_conflict: 'Differenza',
     compare_only_in: 'Solo in',
     compare_click_hint: 'Clicca una persona per vedere il confronto dettagliato.',
+    compare_status: 'Stato',
+    compare_diff_fields: 'Differenze',
 
     // Help manual
     help_auth_nav: ", l'accesso al sistema (<strong>{USER_ICON}</strong>)",

@@ -216,6 +216,8 @@ export default {
     compare_conflict: 'Difference',
     compare_only_in: 'Only in',
     compare_click_hint: 'Click a person to see the field-by-field comparison.',
+    compare_status: 'Status',
+    compare_diff_fields: 'Differences',
 
     // Help manual
     help_auth_nav: ', system login (<strong>{USER_ICON}</strong>)',

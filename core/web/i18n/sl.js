@@ -216,6 +216,8 @@ export default {
     compare_conflict: 'Razlika',
     compare_only_in: 'Samo pri',
     compare_click_hint: 'Kliknite osebo za podroben prikaz razlik.',
+    compare_status: 'Status',
+    compare_diff_fields: 'Razlike',
 
     // Help manual
     help_auth_nav: ', prijavo v sistem (<strong>{USER_ICON}</strong>)',

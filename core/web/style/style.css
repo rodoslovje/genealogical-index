@@ -732,6 +732,18 @@ body.tree-view .section-bar {
   font-size: 0.9rem;
   color: var(--srd-ink-muted);
 }
+.compare-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.compare-toggle-btn {
+  padding: 4px 14px;
+  font-size: 0.88rem;
+  text-decoration: none;
+  color: var(--srd-brand);
+  background: var(--srd-surface);
+}
+.compare-toggle-btn + .compare-toggle-btn { border-left: 1px solid var(--border); }
+.compare-toggle-btn:hover { background: var(--srd-bg-subtle); }
+.compare-toggle-active { background: var(--srd-brand); color: #fff; font-weight: 600; }
+.compare-toggle-active:hover { background: var(--srd-brand); }
 .compare-legend-row { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
 .compare-legend-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .compare-legend-hint { font-style: italic; }

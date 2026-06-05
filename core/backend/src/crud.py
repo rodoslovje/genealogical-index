@@ -1915,26 +1915,49 @@ def _split_parents_by_sex(node):
     return father, mother
 
 
-def _merged_person_node(a, b, status, confidence):
-    """Build one node of the merged comparison tree. Display fields (name/sex/…)
-    are flattened onto the node from whichever side is present (A preferred) so
-    the D3 renderer can read them directly; the full `a`/`b` records are kept
-    for the side-by-side conflict detail."""
-    src = a or b or {}
+# Scalar person fields kept in each merged node's `a`/`b` for the side-by-side
+# detail. Deliberately excludes the structural `parents`/`children` arrays so a
+# merged node doesn't embed its own subtree (which would blow up the payload).
+_VIEW_FIELDS = [
+    "id", "ext_id", "name", "surname", "alt_surname", "sex",
+    "date_of_birth", "place_of_birth", "date_of_baptism", "place_of_baptism",
+    "date_of_death", "place_of_death", "notes",
+]
+
+
+def _scalar_person(node):
+    if not node:
+        return None
+    return {f: node.get(f) for f in _VIEW_FIELDS}
+
+
+def _merged_person_core(a, b, status, confidence):
+    """Shared body of a merged comparison node. Display fields (name/sex/…) are
+    flattened from whichever side is present (A preferred) so the D3 renderer can
+    read them directly; slimmed `a`/`b` records back the side-by-side detail.
+    Callers add the structural key (`parents` for ancestors, `children` +
+    `is_family` for descendants)."""
+    av, bv = _scalar_person(a), _scalar_person(b)
+    src = av or bv or {}
     return {
         "status": status,
         "field_diffs": _conflict_fields(a, b) if (a and b) else [],
         "confidence": confidence,
-        "a": a,
-        "b": b,
-        # Flattened display fields (prefer A, fall back to B).
+        "a": av,
+        "b": bv,
         "name": src.get("name"),
         "surname": src.get("surname"),
         "sex": src.get("sex"),
         "date_of_birth": src.get("date_of_birth"),
         "place_of_birth": src.get("place_of_birth"),
-        "parents": [],
     }
+
+
+def _merged_person_node(a, b, status, confidence):
+    """Merged ancestor node (children live under `parents`)."""
+    node = _merged_person_core(a, b, status, confidence)
+    node["parents"] = []
+    return node
 
 
 def _only_subtree(node, side):
@@ -1971,14 +1994,196 @@ def _align_ancestors(na, nb, match_conf):
     return merged
 
 
+# --- Descendant alignment ---------------------------------------------------
+#
+# Descendant trees interleave person nodes and family nodes: a person's
+# `children` are family nodes (one per marriage, each with a `partner`,
+# `marriage` and its own `children` = the bloodline persons of that union).
+# Alignment therefore proceeds person→family→person: align two persons, match
+# their families by partner identity, then within each matched family match the
+# children and recurse.
+
+
+# Max birth-year gap still treated as the same person in the heuristic child /
+# partner fallback (mirrors compute_matches.YEAR_TOLERANCE).
+_COMPARE_YEAR_TOLERANCE = 5
+
+
+def _birth_year(node):
+    dob = node.get("date_of_birth") if node else None
+    return _extract_year(str(dob)) if dob else None
+
+
+def _same_person_heuristic(a, b):
+    """Fallback child/partner identity test when no precomputed match exists:
+    same (normalised) name + surname and birth years within tolerance. Refuses
+    to merge two nameless records."""
+    na, nb = _norm_cmp(a.get("name")), _norm_cmp(b.get("name"))
+    sa, sb = _norm_cmp(a.get("surname")), _norm_cmp(b.get("surname"))
+    if na != nb or sa != sb:
+        return False
+    if not na and not sa:
+        return False
+    ya, yb = _birth_year(a), _birth_year(b)
+    if ya and yb and abs(ya - yb) > _COMPARE_YEAR_TOLERANCE:
+        return False
+    return True
+
+
+def _same_partner(pa, pb):
+    """Two families correspond when their partners are the same person. Partner
+    dicts carry no DB id, so this is name-based; two empty/unknown partners
+    (a single unrecorded spouse on each side) are treated as the same union."""
+    a_empty = not pa or (not _norm_cmp(pa.get("name")) and not _norm_cmp(pa.get("surname")))
+    b_empty = not pb or (not _norm_cmp(pb.get("name")) and not _norm_cmp(pb.get("surname")))
+    if a_empty or b_empty:
+        return a_empty and b_empty
+    return (
+        _norm_cmp(pa.get("name")) == _norm_cmp(pb.get("name"))
+        and _norm_cmp(pa.get("surname")) == _norm_cmp(pb.get("surname"))
+    )
+
+
+def _greedy_pair(a_items, b_items, same):
+    """Greedily pair items from two lists using a `same(x, y)` predicate.
+    Returns (a, b) tuples; unmatched items pair with None."""
+    pairs = []
+    used = set()
+    for ia in a_items:
+        match_j = None
+        for j, ib in enumerate(b_items):
+            if j in used:
+                continue
+            if same(ia, ib):
+                match_j = j
+                break
+        if match_j is not None:
+            used.add(match_j)
+            pairs.append((ia, b_items[match_j]))
+        else:
+            pairs.append((ia, None))
+    for j, ib in enumerate(b_items):
+        if j not in used:
+            pairs.append((None, ib))
+    return pairs
+
+
+def _merged_descendant_person(a, b, status, confidence):
+    """Merged descendant person node (children live under `children`)."""
+    node = _merged_person_core(a, b, status, confidence)
+    node["is_family"] = False
+    node["children"] = []
+    return node
+
+
+def _merged_family_node(fa, fb, status):
+    """Merged family/marriage node joining two persons' corresponding unions."""
+    pa = fa.get("partner") if fa else None
+    pb = fb.get("partner") if fb else None
+    src_p = pa or pb or {}
+    marriage = (fa or fb or {}).get("marriage") or {}
+    return {
+        "is_family": True,
+        "status": status,
+        "field_diffs": _conflict_fields(pa, pb) if (pa and pb) else [],
+        "partner": {
+            "name": src_p.get("name"),
+            "surname": src_p.get("surname"),
+            "sex": src_p.get("sex"),
+            "date_of_birth": src_p.get("date_of_birth"),
+        },
+        "a": _scalar_person(pa),
+        "b": _scalar_person(pb),
+        "marriage": marriage,
+        "children": [],
+    }
+
+
+def _person_families(node):
+    return [c for c in (node.get("children") or []) if c.get("is_family")]
+
+
+def _family_children(fam):
+    return [c for c in (fam.get("children") or []) if not c.get("is_family")]
+
+
+def _only_descendant_subtree(node, side):
+    status = "only_" + side
+    a = node if side == "a" else None
+    b = node if side == "b" else None
+    merged = _merged_descendant_person(a, b, status, None)
+    for fam in _person_families(node):
+        merged["children"].append(_only_family_subtree(fam, side))
+    return merged
+
+
+def _only_family_subtree(fam, side):
+    status = "only_" + side
+    fa = fam if side == "a" else None
+    fb = fam if side == "b" else None
+    merged = _merged_family_node(fa, fb, status)
+    for child in _family_children(fam):
+        merged["children"].append(_only_descendant_subtree(child, side))
+    return merged
+
+
+def _align_family(fa, fb, match_conf):
+    status = "conflict" if _conflict_fields(fa.get("partner"), fb.get("partner")) else "agree"
+    merged = _merged_family_node(fa, fb, status)
+
+    a_children = _family_children(fa)
+    b_children = _family_children(fb)
+
+    def same_child(ca, cb):
+        if (ca.get("id"), cb.get("id")) in match_conf:
+            return True
+        return _same_person_heuristic(ca, cb)
+
+    for ca, cb in _greedy_pair(a_children, b_children, same_child):
+        if ca and cb:
+            merged["children"].append(_align_descendants(ca, cb, match_conf))
+        elif ca:
+            merged["children"].append(_only_descendant_subtree(ca, "a"))
+        else:
+            merged["children"].append(_only_descendant_subtree(cb, "b"))
+    return merged
+
+
+def _align_descendants(na, nb, match_conf):
+    """Align two descendant persons known to be the same individual: compare
+    their fields, match their families by partner, recurse into matched ones."""
+    conf = match_conf.get((na.get("id"), nb.get("id")))
+    status = "conflict" if _conflict_fields(na, nb) else "agree"
+    merged = _merged_descendant_person(na, nb, status, conf)
+
+    a_families = _person_families(na)
+    b_families = _person_families(nb)
+
+    for fa, fb in _greedy_pair(
+        a_families, b_families, lambda x, y: _same_partner(x.get("partner"), y.get("partner"))
+    ):
+        if fa and fb:
+            merged["children"].append(_align_family(fa, fb, match_conf))
+        elif fa:
+            merged["children"].append(_only_family_subtree(fa, "a"))
+        else:
+            merged["children"].append(_only_family_subtree(fb, "b"))
+    return merged
+
+
 def _summarize(merged):
-    """Count nodes by status across the whole merged tree."""
+    """Count person nodes by status across the whole merged tree. Family nodes
+    (descendant marriages) are traversed but not counted — the summary reflects
+    people, not unions."""
     counts = {"agree": 0, "conflict": 0, "only_a": 0, "only_b": 0}
 
     def walk(node):
-        counts[node["status"]] = counts.get(node["status"], 0) + 1
-        for p in node.get("parents", []):
-            walk(p)
+        if not node.get("is_family"):
+            counts[node["status"]] = counts.get(node["status"], 0) + 1
+        for child in node.get("parents", []):
+            walk(child)
+        for child in node.get("children", []):
+            walk(child)
 
     walk(merged)
     return counts
@@ -1992,26 +2197,31 @@ def _contributor_forms(name):
 
 
 def _collect_node_ids(node, acc):
-    """Gather the DB ids of every record-backed node in an ancestor tree
-    (unresolved JSON-only nodes have id=None and are skipped)."""
+    """Gather the DB ids of every record-backed person node in a raw tree.
+    Walks both `parents` (ancestors) and `children` (descendants); family nodes
+    and unresolved JSON-only nodes have no id and contribute nothing."""
     nid = node.get("id")
     if nid is not None:
         acc.add(nid)
-    for parent in node.get("parents", []):
-        _collect_node_ids(parent, acc)
+    for child in node.get("parents", []):
+        _collect_node_ids(child, acc)
+    for child in node.get("children", []):
+        _collect_node_ids(child, acc)
 
 
-def _build_trees_parallel(a_id, b_id, max_generations):
-    """Build two ancestor trees concurrently, each on its own session so the
-    DB round-trips overlap. Marriage attachment is skipped (compare doesn't
-    render it). Sessions are short-lived and closed in the worker."""
+def _build_trees_parallel(a_id, b_id, max_generations, direction):
+    """Build the two trees concurrently, each on its own session so the DB
+    round-trips overlap. Ancestors skip the unused parents-marriage attachment;
+    descendants need their family nodes. Sessions are closed in the worker."""
 
     def build(person_id):
         session = SessionLocal()
         try:
-            return get_ancestors_tree(
-                session, person_id, max_generations, include_marriage=False
-            )
+            if direction == "ancestors":
+                return get_ancestors_tree(
+                    session, person_id, max_generations, include_marriage=False
+                )
+            return get_descendants_tree(session, person_id, max_generations)
         finally:
             session.close()
 
@@ -2027,10 +2237,11 @@ def compare_trees(
     """Build and align two genealogists' trees rooted at a matched person pair.
 
     `a_id` / `b_id` are Person row ids (the match-detail view hands these over
-    directly). Returns a merged tree of comparison nodes plus a status summary,
-    or None if either anchor person is missing. Phase 1 supports ancestors only.
+    directly). `direction` is "ancestors" or "descendants". Returns a merged
+    tree of comparison nodes plus a status summary, or None if either anchor
+    person is missing.
     """
-    if direction != "ancestors":
+    if direction not in ("ancestors", "descendants"):
         return None
 
     person_a = db.query(models.Person).filter(models.Person.id == a_id).first()
@@ -2038,11 +2249,10 @@ def compare_trees(
     if not person_a or not person_b:
         return None
 
-    # The two ancestor trees are independent, I/O-bound builds — run them
-    # concurrently on their own sessions (psycopg2 releases the GIL during DB
-    # round-trips, so this genuinely overlaps the work) and skip the unused
-    # parents-marriage attachment.
-    tree_a, tree_b = _build_trees_parallel(a_id, b_id, max_generations)
+    # The two trees are independent, I/O-bound builds — run them concurrently on
+    # their own sessions (psycopg2 releases the GIL during DB round-trips, so
+    # this genuinely overlaps the work).
+    tree_a, tree_b = _build_trees_parallel(a_id, b_id, max_generations, direction)
     if not tree_a or not tree_b:
         return None
 
@@ -2074,10 +2284,13 @@ def compare_trees(
     ).fetchall()
     match_conf = {(r.record_a_id, r.record_b_id): r.confidence for r in rows}
 
-    merged = _align_ancestors(tree_a, tree_b, match_conf)
+    if direction == "ancestors":
+        merged = _align_ancestors(tree_a, tree_b, match_conf)
+    else:
+        merged = _align_descendants(tree_a, tree_b, match_conf)
 
     return {
-        "direction": "ancestors",
+        "direction": direction,
         "anchor": {
             "a_id": a_id,
             "b_id": b_id,

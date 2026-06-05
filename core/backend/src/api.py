@@ -241,6 +241,21 @@ def compare_ancestors(
     )
 
 
+@app.get("/api/compare/descendants")
+def compare_descendants(
+    a_id: int,
+    b_id: int,
+    max_generations: int = 0,  # 0 = all generations
+    db: Session = Depends(get_db),
+    user: Optional[dict] = Depends(require_user),
+):
+    """Compare the descendant trees of two matched persons (one per genealogist).
+    `a_id` / `b_id` are Person row ids from the match-detail pair view."""
+    return crud.compare_trees(
+        db, a_id, b_id, direction="descendants", max_generations=max_generations
+    )
+
+
 @app.get("/api/descendants")
 def get_descendants_by_params(
     n: Optional[str] = None,
