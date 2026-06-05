@@ -216,7 +216,6 @@ export default {
     compare_minor: 'Manja razlika',
     compare_conflict: 'Ključna razlika',
     compare_only_in: 'Samo kod',
-    compare_click_hint: 'Kliknite osobu za detaljan prikaz razlika.',
     compare_status: 'Status',
     compare_diff_fields: 'Razlike',
 

@@ -216,7 +216,6 @@ export default {
     compare_minor: 'Geringe Abweichung',
     compare_conflict: 'Wesentliche Abweichung',
     compare_only_in: 'Nur bei',
-    compare_click_hint: 'Auf eine Person klicken, um die Unterschiede anzuzeigen.',
     compare_status: 'Status',
     compare_diff_fields: 'Unterschiede',
 

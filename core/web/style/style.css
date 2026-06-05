@@ -711,16 +711,32 @@ body.tree-view .section-bar {
   vertical-align: middle;
   white-space: nowrap;
 }
-/* Tree-comparison entry link in the match-detail confidence cell. */
-.compare-link-wrap { margin-top: 6px; }
+/* Tree-comparison entry link in the match-detail confidence cell. Styled as a
+   bordered pill matching the ancestors/descendants `.tree-link-btn`, with a
+   hover fill so it reads as an actionable button. */
+.compare-link-wrap { margin-top: 8px; }
 .compare-tree-link {
-  display: inline-block;
-  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  font-size: 0.8em;
+  font-weight: 500;
+  line-height: 1.4;
   white-space: nowrap;
-  color: var(--srd-brand);
   text-decoration: none;
+  color: var(--secondary);
+  background: transparent;
+  border: 1px solid var(--secondary);
+  border-radius: 4px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
-.compare-tree-link:hover { text-decoration: underline; }
+.compare-tree-link:hover {
+  background: var(--secondary);
+  color: #fff;
+}
 
 /* --- Tree comparison view --- */
 .compare-legend {
@@ -795,7 +811,6 @@ body.tree-view .section-bar {
 .compare-list-item:hover { background: var(--srd-bg-subtle); }
 .compare-list-name { font-weight: 500; }
 .compare-list-dob { color: var(--srd-ink-muted); font-size: 0.82rem; white-space: nowrap; }
-.compare-legend-hint { font-style: italic; }
 .compare-swatch {
   display: inline-block;
   width: 12px;

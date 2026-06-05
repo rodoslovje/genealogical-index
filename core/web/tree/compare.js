@@ -3,11 +3,11 @@ import { currentParams, toUnicodeHref } from '../lib/url.js';
 import { t, formatTitleSuffix } from '../i18n.js';
 import {
   escapeHtml, ensureD3, highlightDifferences, baseContributorName,
-  downloadBlob, formatExportFilename, isPrivate,
+  formatExportFilename, isPrivate,
 } from '../lib/utils.js';
+import { csvCell, csvRow, csvFooter, downloadCsv } from '../lib/csv.js';
 import { authFetch } from '../auth.js';
 import { computeBounds, createSvgWithZoom, appendLinks, attachSvgExport } from './shared.js';
-import siteConfig from '@site-config';
 
 // Tree comparison view (Phase 2: ancestors + descendants). Superimposes two
 // genealogists' trees rooted at a matched person pair into one merged tree,
@@ -67,6 +67,20 @@ const closeCompareLists = () =>
 document.addEventListener('click', closeCompareLists);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCompareLists(); });
 
+// Page + browser-tab title. Mirrors the match page by including the genealogist
+// pair ("A × B") once the data has loaded; before then it's just the person.
+function setCompareTitle(ctx, data) {
+  const suffix = formatTitleSuffix(t('compare_title'));
+  const pair = data
+    ? `${baseContributorName(data.contributor_a || '')} × ${baseContributorName(data.contributor_b || '')}`
+    : '';
+  const base = ctx.personName ? `${ctx.personName} - ${suffix}` : t('compare_title');
+  const pageTitle = pair ? `${base} - ${pair}` : base;
+  const titleEl = document.getElementById(IDS.pageTitle);
+  if (titleEl) titleEl.textContent = pageTitle;
+  document.title = `${pageTitle} | ${t('site_title')}`;
+}
+
 export function renderComparePage() {
   const params = currentParams();
   const aId = params.get('a') || '';
@@ -75,11 +89,7 @@ export function renderComparePage() {
   const dir = params.get('dir') === 'descendants' ? 'descendants' : 'ancestors';
   const ctx = { aId, bId, personName, dir };
 
-  const titleSuffix = formatTitleSuffix(t('compare_title'));
-  const pageTitle = personName ? `${personName} - ${titleSuffix}` : t('compare_title');
-  const titleEl = document.getElementById(IDS.pageTitle);
-  if (titleEl) titleEl.textContent = pageTitle;
-  document.title = `${pageTitle} | ${t('site_title')}`;
+  setCompareTitle(ctx, null);
 
   const container = document.getElementById(IDS.container);
   const controls = document.getElementById(IDS.controls);
@@ -129,6 +139,7 @@ export function renderComparePage() {
         return;
       }
       if (controls) controls.style.display = 'flex';
+      setCompareTitle(ctx, data);
       renderLegend(legend, data, ctx);
       const view = renderTree(data, container, detail);
       wireLegendList(legend, view, detail, data);
@@ -152,11 +163,7 @@ export function relocalizeCompare() {
   if (!compareState) return;
   const { data, ctx, view, detail } = compareState;
 
-  const titleSuffix = formatTitleSuffix(t('compare_title'));
-  const pageTitle = ctx.personName ? `${ctx.personName} - ${titleSuffix}` : t('compare_title');
-  const titleEl = document.getElementById(IDS.pageTitle);
-  if (titleEl) titleEl.textContent = pageTitle;
-  document.title = `${pageTitle} | ${t('site_title')}`;
+  setCompareTitle(ctx, data);
 
   const setTitle = (id, key) => { const el = document.getElementById(id); if (el) el.title = t(key); };
   setTitle(IDS.zoomIn, 'tree_zoom_in');
@@ -207,8 +214,7 @@ function renderLegend(legend, data, ctx) {
       ${swatch('conflict', t('compare_conflict'), s.conflict)}
       ${swatch('only_a', `${t('compare_only_in')} ${a}`, s.only_a)}
       ${swatch('only_b', `${t('compare_only_in')} ${b}`, s.only_b)}
-    </div>
-    <div class="compare-legend-hint">${t('compare_click_hint')}</div>` : '';
+    </div>` : '';
 
   legend.innerHTML = toggle + counts;
 }
@@ -472,11 +478,6 @@ function showDetail(detail, node, data) {
 
 // --- CSV export of the differences ------------------------------------------
 
-const csvCell = (v) => {
-  const s = v == null ? '' : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-
 const STATUS_KEY = { agree: 'compare_agree', minor: 'compare_minor', conflict: 'compare_conflict' };
 
 // One row per person node. Family nodes don't get a row, but crossing one in a
@@ -508,17 +509,22 @@ function exportDifferences(data, ctx) {
     return t(STATUS_KEY[st] || 'compare_agree');
   };
 
-  const lines = [header.map(csvCell).join(',')];
-  rows.forEach(({ gen, node }) => {
+  const body = rows.map(({ gen, node }) => {
     const a = node.a || {};
     const b = node.b || {};
     const cells = [gen, node.confidence != null ? Math.round(node.confidence * 100) + '%' : '', statusText(node.status)];
     DETAIL_FIELDS.forEach(([f]) => { cells.push(a[f] || '', b[f] || ''); });
     cells.push((node.field_diffs || []).map(f => t(`col_${f}`)).join('; '));
-    lines.push(cells.map(csvCell).join(','));
+    return csvRow(cells);
   });
 
-  const prefix = siteConfig.filePrefix || 'sgi';
-  const fname = formatExportFilename(`${prefix}-compare-${ctx.dir}-${ctx.aId}-${ctx.bId}`, 'csv');
-  downloadBlob(new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' }), fname);
+  // Standard footer block (site + timestamp + URL via csvFooter) preceded by a
+  // subject block naming the compared person, direction, and the two sources.
+  const dirLabel = t(ctx.dir === 'descendants' ? 'tree_descendants_title' : 'tree_ancestors_title');
+  const subject = [csvCell(`${t('compare_title')} – ${dirLabel}`)];
+  if (ctx.personName) subject.push(csvRow([t('col_name'), ctx.personName]));
+  subject.push(csvRow([t('tree_source'), `${A} ↔ ${B}`]));
+
+  const filename = formatExportFilename(`compare-${ctx.dir}-${ctx.personName || ctx.dir}`, 'csv');
+  downloadCsv([csvRow(header), ...body, '', ...csvFooter(subject)], filename);
 }

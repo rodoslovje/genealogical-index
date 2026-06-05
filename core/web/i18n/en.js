@@ -216,7 +216,6 @@ export default {
     compare_minor: 'Minor difference',
     compare_conflict: 'Key difference',
     compare_only_in: 'Only in',
-    compare_click_hint: 'Click a person to see the field-by-field comparison.',
     compare_status: 'Status',
     compare_diff_fields: 'Differences',
 

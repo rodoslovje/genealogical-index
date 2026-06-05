@@ -223,7 +223,6 @@ export default {
     compare_minor: 'Differenza minore',
     compare_conflict: 'Differenza chiave',
     compare_only_in: 'Solo in',
-    compare_click_hint: 'Clicca una persona per vedere il confronto dettagliato.',
     compare_status: 'Stato',
     compare_diff_fields: 'Differenze',
 
