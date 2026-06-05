@@ -99,6 +99,7 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
   const treeH = Math.max(bounds.treeHeight, 1);
   const treeAspect = treeW / treeH;
 
+  // Fit the tree into a maxMmSize box, preserving aspect ratio.
   let mmContentWidth, mmContentHeight;
   if (treeAspect > 1) {
     mmContentWidth = maxMmSize - mmPad * 2;
@@ -108,12 +109,25 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
     mmContentWidth = mmContentHeight * treeAspect;
   }
 
+  // A very tall/wide tree would otherwise collapse the minimap to a useless
+  // sliver. Guarantee a minimum width and let the height grow to keep the
+  // aspect ratio, capped (relative to the viewport) so it can't run off-screen.
+  const minMmContentWidth = 90;
+  const maxMmContentHeight = Math.max(maxMmSize, Math.min(viewHeight * 0.8, 500)) - mmPad * 2;
+  if (mmContentWidth < minMmContentWidth) {
+    mmContentWidth = minMmContentWidth;
+    mmContentHeight = Math.min(mmContentWidth / treeAspect, maxMmContentHeight);
+  }
+
   const mmWidth = mmContentWidth + mmPad * 2;
   const mmHeight = mmContentHeight + mmPad * 2;
-  const mmScale = mmContentWidth / treeW;
+  // Uniform "contain" scale; identical to width-fit in the normal case, but
+  // when the height cap clamps a sliver-thin tree it keeps the whole tree
+  // visible (centered) inside the min-width box rather than clipping it.
+  const mmScale = Math.min(mmContentWidth / treeW, mmContentHeight / treeH);
 
-  const offsetX = mmPad;
-  const offsetY = mmPad;
+  const offsetX = mmPad + (mmContentWidth - treeW * mmScale) / 2;
+  const offsetY = mmPad + (mmContentHeight - treeH * mmScale) / 2;
 
   const mm = d3.select(wrapper).append('svg')
       .attr('class', 'tree-minimap')
@@ -153,7 +167,9 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
     .join('circle')
       .attr('cx', d => d.y)
       .attr('cy', d => d.x)
-      .attr('r', 4 / mmScale)
+      // Stroke straddles the path, so subtract half its width to match the
+      // filled person dot's outer radius (4) rather than ending up larger.
+      .attr('r', (4 - 0.75) / mmScale)
       .attr('fill', 'none')
       .attr('stroke', d => {
         const sex = d.data.partner?.sex;
