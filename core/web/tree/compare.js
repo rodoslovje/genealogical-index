@@ -80,6 +80,11 @@ export function renderComparePage() {
   if (controls) controls.style.display = 'none';
   if (legend) renderLegend(legend, null, ctx);
   if (detail) { detail.innerHTML = ''; detail.style.display = 'none'; }
+  // The minimap lives in the wrapper (sibling of the container), so clearing the
+  // container alone leaves a stale minimap behind when the new direction has no
+  // results and never re-runs createSvgWithZoom. Remove it up front.
+  document.getElementById(IDS.wrapper)
+    ?.querySelectorAll('.tree-minimap').forEach(el => el.remove());
   container.innerHTML = `<p style="padding: 20px;">${t('tree_loading')}</p>`;
 
   if (!aId || !bId) {
