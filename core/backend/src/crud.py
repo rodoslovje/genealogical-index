@@ -2050,7 +2050,7 @@ def _similar(a, b):
     return difflib.SequenceMatcher(None, a, b).ratio()
 
 
-def _person_similarity(a, b):
+def _person_similarity(a, b, year_tol=_COMPARE_YEAR_TOLERANCE):
     """Fallback child/partner identity *score* when no precomputed match exists:
     0.0 means "not the same person" (fails the surname / name / birth-year
     gates), otherwise a positive magnitude (higher = better) so the best of
@@ -2059,11 +2059,11 @@ def _person_similarity(a, b):
     Names from two genealogists routinely differ only in spelling — the matches
     table absorbs most via trigram scoring, but borderline variants (below its
     0.72 threshold, e.g. "Sebastjan" vs "Sebastijan") reach here and must still
-    align, or the whole subtree below them splits into only_a/only_b duplicates."""
-    ya, yb = _birth_year(a), _birth_year(b)
-    if ya and yb and abs(ya - yb) > _COMPARE_YEAR_TOLERANCE:
-        return 0.0
+    align, or the whole subtree below them splits into only_a/only_b duplicates.
 
+    `year_tol` is the max birth-year gap still allowed. Bloodline children use
+    the tight default (precise baptism dates); spouses use a wider window since
+    their birth years are often rough estimates ("ABT 1725" vs 1716)."""
     sa, sb = _norm_cmp(a.get("surname")), _norm_cmp(b.get("surname"))
     # A clear surname disagreement rules it out; an absent surname on either
     # side leaves the decision to the given name + birth year.
@@ -2078,21 +2078,37 @@ def _person_similarity(a, b):
     if name_sim < _NAME_SIM_THRESHOLD:
         return 0.0
 
-    score = name_sim + (sur_sim or 0.0)
-    if ya and yb and ya == yb:
-        score += 0.1  # exact birth-year agreement is a small tie-breaker
-    return score
+    # Birth year is a graded signal, not a hard filter beyond the tolerance:
+    # within the window, a closer year scores higher so the nearest of several
+    # same-named candidates wins; outside it, the pair is rejected.
+    ya, yb = _birth_year(a), _birth_year(b)
+    if ya and yb:
+        gap = abs(ya - yb)
+        if gap > year_tol:
+            return 0.0
+        year_bonus = 0.2 * (1 - gap / year_tol)
+    else:
+        year_bonus = 0.0
+
+    return name_sim + (sur_sim or 0.0) + year_bonus
+
+
+# Spouse birth years are frequently rough estimates, so partner matching uses a
+# far wider window than bloodline children — a same-named, same-surnamed spouse
+# off by a decade is a data discrepancy to flag, not a different person.
+_PARTNER_YEAR_TOLERANCE = 20
 
 
 def _partner_score(pa, pb):
     """Match score for two families' partners. Partner dicts carry no DB id, so
-    this is name-based (same fuzzy test as children); two empty/unknown partners
-    (a single unrecorded spouse on each side) are treated as the same union."""
+    this is name-based (same fuzzy test as children, with a generous birth-year
+    window); two empty/unknown partners (a single unrecorded spouse on each
+    side) are treated as the same union."""
     a_empty = not pa or (not _norm_cmp(pa.get("name")) and not _norm_cmp(pa.get("surname")))
     b_empty = not pb or (not _norm_cmp(pb.get("name")) and not _norm_cmp(pb.get("surname")))
     if a_empty or b_empty:
         return 1.0 if (a_empty and b_empty) else 0.0
-    return _person_similarity(pa, pb)
+    return _person_similarity(pa, pb, year_tol=_PARTNER_YEAR_TOLERANCE)
 
 
 def _child_score(ca, cb, match_conf):
@@ -2102,6 +2118,40 @@ def _child_score(ca, cb, match_conf):
     if conf is not None:
         return 2.0 + conf
     return _person_similarity(ca, cb)
+
+
+# Marriage years come from church records and are usually precise, so a tight
+# window. A man marrying two different women within a couple of years is
+# essentially impossible, which makes a matching marriage date a strong "same
+# union" signal — strong enough to pair families whose spouse names diverge.
+_MARRIAGE_YEAR_TOLERANCE = 3
+
+
+def _marriage_year(fam):
+    m = (fam or {}).get("marriage") or {}
+    d = m.get("date")
+    return _extract_year(str(d)) if d else None
+
+
+def _family_score(fa, fb):
+    """Match score for two families (unions). Builds on partner identity, then
+    folds in the marriage date when both sides have one: a matching date
+    confirms the pairing and disambiguates a person's several marriages, and on
+    its own it can rescue a union whose spouse name one genealogist left vague."""
+    pscore = _partner_score(fa.get("partner"), fb.get("partner"))
+
+    ya, yb = _marriage_year(fa), _marriage_year(fb)
+    if ya and yb:
+        gap = abs(ya - yb)
+        if gap <= _MARRIAGE_YEAR_TOLERANCE:
+            boost = 0.5 * (1 - gap / _MARRIAGE_YEAR_TOLERANCE)
+            # Confirm a partner match, or rescue a union the partner names alone
+            # couldn't (one side's spouse unnamed or recorded very differently).
+            return (pscore if pscore > 0 else 1.0) + boost
+        # Both dated but clearly different marriages: keep the partner-only score
+        # so a better-dated candidate is preferred without dropping this one.
+
+    return pscore
 
 
 def _best_pairs(a_items, b_items, score):
@@ -2220,9 +2270,7 @@ def _align_descendants(na, nb, match_conf):
     a_families = _person_families(na)
     b_families = _person_families(nb)
 
-    for fa, fb in _best_pairs(
-        a_families, b_families, lambda x, y: _partner_score(x.get("partner"), y.get("partner"))
-    ):
+    for fa, fb in _best_pairs(a_families, b_families, _family_score):
         if fa and fb:
             merged["children"].append(_align_family(fa, fb, match_conf))
         elif fa:
