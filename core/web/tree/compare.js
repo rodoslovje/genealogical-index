@@ -336,8 +336,12 @@ function renderTree(data, container, detail, ctx) {
     data: data.tree,
     personName: (ctx && ctx.personName) || data.tree.name || '',
     contributorName: data.contributor_a || '',
-    // Both genealogists in the footer "Source:" line (comma-separated).
-    sourceText: `${baseContributorName(data.contributor_a || '')}, ${baseContributorName(data.contributor_b || '')}`,
+    // Both genealogists in the footer "Source:" line, each linked to its
+    // contributor page.
+    sourceContributors: [
+      baseContributorName(data.contributor_a || ''),
+      baseContributorName(data.contributor_b || ''),
+    ],
     titleText: compareTitleText(ctx || {}, data),
     filePrefix: `compare-${data.direction}`,
   });

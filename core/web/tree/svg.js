@@ -246,7 +246,7 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
 // Wires the SVG-download button. Both trees produce the same export chrome
 // (title at top-left, site title at top-right, contributor + timestamp at the
 // bottom), only the heading text and output filename differ.
-export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorName, sourceText, titleText, filePrefix }) {
+export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorName, sourceContributors, titleText, filePrefix }) {
   d3.select(`#${downloadBtnId}`).on('click', null).on('click', () => {
     const originalTransform = g.attr('transform');
     g.attr('transform', null);
@@ -350,53 +350,40 @@ export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contr
           .text(`${t('tree_source')}:`);
 
       const labelWidth = sourceLabel.node().getComputedTextLength();
-      // The source value is either a single linked contributor (the regular
-      // trees) or a plain comma-separated list of both genealogists when a
-      // `sourceText` is supplied (the compare view).
-      let contribWidth;
-      if (sourceText) {
-        const node = overlay.append('text')
-            .attr('x', footerLeftX + labelWidth + 6)
-            .attr('y', exportY + exportHeight - footerHeight / 2)
+      // Lay out the source value as a row of text/link segments, advancing a
+      // cursor by each segment's measured width. The value is either a single
+      // linked contributor (the regular trees) or a comma-separated list of the
+      // genealogists compared (the compare view) — every name links to its
+      // contributor page. The site title closes the line.
+      let cursorX = footerLeftX + labelWidth + 6;
+      const footerYc = exportY + exportHeight - footerHeight / 2;
+      const contribUrl = (name) =>
+        window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', c: name });
+      const appendSegment = (label, href, fill) => {
+        const host = href
+          ? overlay.append('a').attr('href', href).attr('target', '_blank')
+          : overlay;
+        const node = host.append('text')
+            .attr('x', cursorX)
+            .attr('y', footerYc)
             .attr('dominant-baseline', 'central')
             .attr('font-size', '14px')
-            .attr('fill', '#555')
-            .text(sourceText);
-        contribWidth = node.node().getComputedTextLength();
+            .attr('fill', fill)
+            .text(label);
+        cursorX += node.node().getComputedTextLength();
+      };
+
+      if (sourceContributors && sourceContributors.length) {
+        sourceContributors.forEach((name, i) => {
+          if (i > 0) appendSegment(', ', null, '#555');
+          appendSegment(name, contribUrl(name), '#3498db');
+        });
       } else {
-        const contribUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', c: contributorName });
-        const node = overlay.append('a')
-            .attr('href', contribUrl)
-            .attr('target', '_blank')
-            .append('text')
-            .attr('x', footerLeftX + labelWidth + 6)
-            .attr('y', exportY + exportHeight - footerHeight / 2)
-            .attr('dominant-baseline', 'central')
-            .attr('font-size', '14px')
-            .attr('fill', '#3498db')
-            .text(`${t('col_contributor')} ${contributorName}`);
-        contribWidth = node.node().getComputedTextLength();
+        appendSegment(`${t('col_contributor')} ${contributorName}`, contribUrl(contributorName), '#3498db');
       }
 
-      const commaNode = overlay.append('text')
-          .attr('x', footerLeftX + labelWidth + 6 + contribWidth)
-          .attr('y', exportY + exportHeight - footerHeight / 2)
-          .attr('dominant-baseline', 'central')
-          .attr('font-size', '14px')
-          .attr('fill', '#555')
-          .text(', ');
-
-      const commaWidth = commaNode.node().getComputedTextLength();
-      overlay.append('a')
-          .attr('href', window.location.origin + window.location.pathname)
-          .attr('target', '_blank')
-          .append('text')
-          .attr('x', footerLeftX + labelWidth + 6 + contribWidth + commaWidth)
-          .attr('y', exportY + exportHeight - footerHeight / 2)
-          .attr('dominant-baseline', 'central')
-          .attr('font-size', '14px')
-          .attr('fill', '#3498db')
-          .text(t('site_title'));
+      appendSegment(', ', null, '#555');
+      appendSegment(t('site_title'), window.location.origin + window.location.pathname, '#3498db');
     }
 
     const dateStr = exportDateStr();
