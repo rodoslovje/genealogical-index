@@ -214,7 +214,7 @@ export default {
     compare_tooltip: 'Die Vorfahrenbäume beider Genealogen für diese Person vergleichen',
     compare_agree: 'Übereinstimmung',
     compare_minor: 'Geringe Abweichung',
-    compare_conflict: 'Kerndaten abweichend',
+    compare_conflict: 'Wesentliche Abweichung',
     compare_only_in: 'Nur bei',
     compare_click_hint: 'Auf eine Person klicken, um die Unterschiede anzuzeigen.',
     compare_status: 'Status',

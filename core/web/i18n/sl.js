@@ -214,7 +214,7 @@ export default {
     compare_tooltip: 'Primerjaj predniški drevesi obeh rodoslovcev za to osebo',
     compare_agree: 'Ujemanje',
     compare_minor: 'Manjša razlika',
-    compare_conflict: 'Razlika v ključnih podatkih',
+    compare_conflict: 'Ključna razlika',
     compare_only_in: 'Samo pri',
     compare_click_hint: 'Kliknite osebo za podroben prikaz razlik.',
     compare_status: 'Status',

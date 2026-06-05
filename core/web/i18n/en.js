@@ -214,7 +214,7 @@ export default {
     compare_tooltip: "Compare both genealogists' ancestor trees for this person",
     compare_agree: 'Match',
     compare_minor: 'Minor difference',
-    compare_conflict: 'Key data differs',
+    compare_conflict: 'Key difference',
     compare_only_in: 'Only in',
     compare_click_hint: 'Click a person to see the field-by-field comparison.',
     compare_status: 'Status',

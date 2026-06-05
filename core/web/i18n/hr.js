@@ -214,7 +214,7 @@ export default {
     compare_tooltip: 'Usporedi rodoslovna stabla predaka oba rodoslovca za ovu osobu',
     compare_agree: 'Podudaranje',
     compare_minor: 'Manja razlika',
-    compare_conflict: 'Razlika u ključnim podacima',
+    compare_conflict: 'Ključna razlika',
     compare_only_in: 'Samo kod',
     compare_click_hint: 'Kliknite osobu za detaljan prikaz razlika.',
     compare_status: 'Status',

@@ -79,7 +79,20 @@ export function createSvgWithZoom(container, bounds, root, ids, opts = {}) {
     updateMinimap(d3.zoomTransform(svg.node()));
   }
 
-  return { svg, g };
+  // Smoothly recenter the view on a laid-out node (d.x vertical, d.y horizontal),
+  // zooming in to at least 1× so the target is legible. Used by the compare
+  // view's "jump to person" list.
+  function panToNode(node, targetScale) {
+    if (!node) return;
+    const k = targetScale || Math.max(d3.zoomTransform(svg.node()).k, 1);
+    const tx = width / 2 - node.y * k;
+    const ty = height / 2 - node.x * k;
+    svg.transition().duration(500).call(
+      zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(k)
+    );
+  }
+
+  return { svg, g, panToNode };
 }
 
 // Small top-left overview that shows the entire tree plus a rectangle

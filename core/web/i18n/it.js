@@ -221,7 +221,7 @@ export default {
     compare_tooltip: 'Confronta gli alberi degli antenati di entrambi i genealogisti per questa persona',
     compare_agree: 'Corrispondenza',
     compare_minor: 'Differenza minore',
-    compare_conflict: 'Dati chiave diversi',
+    compare_conflict: 'Differenza chiave',
     compare_only_in: 'Solo in',
     compare_click_hint: 'Clicca una persona per vedere il confronto dettagliato.',
     compare_status: 'Stato',

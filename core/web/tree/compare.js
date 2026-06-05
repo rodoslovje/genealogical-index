@@ -3,7 +3,7 @@ import { currentParams, toUnicodeHref } from '../lib/url.js';
 import { t, formatTitleSuffix } from '../i18n.js';
 import {
   escapeHtml, ensureD3, highlightDifferences, baseContributorName,
-  downloadBlob, formatExportFilename,
+  downloadBlob, formatExportFilename, isPrivate,
 } from '../lib/utils.js';
 import { authFetch } from '../auth.js';
 import { computeBounds, createSvgWithZoom, appendLinks, attachSvgExport } from './shared.js';
@@ -52,6 +52,21 @@ const DETAIL_FIELDS = [
   ['place_of_death',  'col_place_of_death'],
 ];
 
+const collator = new Intl.Collator('sl', { sensitivity: 'base' });
+
+// Last rendered comparison, kept so a language switch can re-translate the
+// chrome/legend/detail in place (no re-fetch, no tree rebuild → view preserved).
+let compareState = null;     // { data, ctx, view, detail }
+let openDetailNode = null;   // merged node whose detail panel is currently open
+
+// Close any open legend "jump to person" list on an outside click or Escape.
+// Chips and list items stop propagation on their own clicks, so this only fires
+// for genuine outside interactions. Registered once at module load.
+const closeCompareLists = () =>
+  document.querySelectorAll('.compare-list').forEach(dd => { dd.style.display = 'none'; });
+document.addEventListener('click', closeCompareLists);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCompareLists(); });
+
 export function renderComparePage() {
   const params = currentParams();
   const aId = params.get('a') || '';
@@ -83,6 +98,8 @@ export function renderComparePage() {
   if (controls) controls.style.display = 'none';
   if (legend) renderLegend(legend, null, ctx);
   if (detail) { detail.innerHTML = ''; detail.style.display = 'none'; }
+  compareState = null;
+  openDetailNode = null;
   // The minimap lives in the wrapper (sibling of the container), so clearing the
   // container alone leaves a stale minimap behind when the new direction has no
   // results and never re-runs createSvgWithZoom. Remove it up front.
@@ -113,7 +130,9 @@ export function renderComparePage() {
       }
       if (controls) controls.style.display = 'flex';
       renderLegend(legend, data, ctx);
-      renderTree(data, container, detail);
+      const view = renderTree(data, container, detail);
+      wireLegendList(legend, view, detail, data);
+      compareState = { data, ctx, view, detail };
       if (csvBtn) {
         csvBtn.style.display = '';
         csvBtn.onclick = () => exportDifferences(data, ctx);
@@ -123,6 +142,33 @@ export function renderComparePage() {
       console.error(err);
       container.innerHTML = `<p style="padding: 20px;">${t('tree_error')}</p>`;
     });
+}
+
+// Re-translate the compare view in place after a language switch — without
+// re-fetching or rebuilding the D3 tree, so the current zoom/pan is preserved.
+// Covers the page title, control tooltips, the legend + jump-to-person list,
+// and any open differences panel. No-op until a comparison has loaded.
+export function relocalizeCompare() {
+  if (!compareState) return;
+  const { data, ctx, view, detail } = compareState;
+
+  const titleSuffix = formatTitleSuffix(t('compare_title'));
+  const pageTitle = ctx.personName ? `${ctx.personName} - ${titleSuffix}` : t('compare_title');
+  const titleEl = document.getElementById(IDS.pageTitle);
+  if (titleEl) titleEl.textContent = pageTitle;
+  document.title = `${pageTitle} | ${t('site_title')}`;
+
+  const setTitle = (id, key) => { const el = document.getElementById(id); if (el) el.title = t(key); };
+  setTitle(IDS.zoomIn, 'tree_zoom_in');
+  setTitle(IDS.zoomOut, 'tree_zoom_out');
+  setTitle(IDS.downloadSvg, 'tree_download_svg');
+  setTitle(IDS.downloadCsv, 'tree_download_csv');
+
+  const legend = document.getElementById(IDS.legend);
+  renderLegend(legend, data, ctx);
+  wireLegendList(legend, view, detail, data);
+
+  if (openDetailNode && detail) showDetail(detail, openDetailNode, data);
 }
 
 // Direction toggle + legend with status counts. `data` is null while loading
@@ -143,11 +189,17 @@ function renderLegend(legend, data, ctx) {
       ${toggleLink('descendants', t('tree_descendants_title'))}
     </div>`;
 
-  const swatch = (status, label, count) =>
-    `<span class="compare-legend-item">
+  // Groups with people are clickable dropdowns (jump-to-person); a pill outline
+  // + caret signals that, empty groups stay plain text.
+  const swatch = (status, label, count) => {
+    const clickable = typeof count === 'number' && count > 0;
+    const cls = 'compare-legend-item' + (clickable ? ' compare-legend-clickable' : '');
+    const caret = clickable ? '<span class="compare-caret">▾</span>' : '';
+    return `<span class="${cls}" data-compare-status="${status}">
       <span class="compare-swatch" style="background:${STATUS_COLOR[status]}"></span>
-      ${label}${count != null ? ` <strong>(${count})</strong>` : ''}
+      ${label}${count != null ? ` <strong>(${count})</strong>` : ''}${caret}
     </span>`;
+  };
 
   const counts = data ? `<div class="compare-legend-row">
       ${swatch('agree', t('compare_agree'), s.agree)}
@@ -159,6 +211,72 @@ function renderLegend(legend, data, ctx) {
     <div class="compare-legend-hint">${t('compare_click_hint')}</div>` : '';
 
   legend.innerHTML = toggle + counts;
+}
+
+// Make each legend status chip clickable: it opens a dropdown listing that
+// group's people; choosing one pans the diagram to that node, pulses it, and
+// closes the list. `view` is renderTree's { root, panToNode, highlightNode }.
+function wireLegendList(legend, view, detail, data) {
+  if (!legend || !view) return;
+  const { root, panToNode, highlightNode } = view;
+
+  const byStatus = {};
+  root.descendants().forEach(d => {
+    if (d.data.is_family) return;
+    (byStatus[d.data.status] ||= []).push(d);
+  });
+
+  legend.style.position = 'relative';
+  let dropdown = legend.querySelector('.compare-list');
+  if (!dropdown) {
+    dropdown = document.createElement('div');
+    dropdown.className = 'compare-list';
+    dropdown.addEventListener('click', (e) => e.stopPropagation());
+    legend.appendChild(dropdown);
+  }
+  dropdown.style.display = 'none';
+  const close = () => { dropdown.style.display = 'none'; dropdown.dataset.status = ''; };
+
+  const fullName = d => [d.data.surname, d.data.name].filter(Boolean).join(' ');
+  const isPriv = d => isPrivate(d.data.name) || isPrivate(d.data.surname);
+
+  legend.querySelectorAll('.compare-legend-item[data-compare-status]').forEach(item => {
+    const status = item.dataset.compareStatus;
+    const nodes = (byStatus[status] || []).slice().sort((a, b) => {
+      // Private records sink to the bottom; the rest sort by surname then name.
+      const pa = isPriv(a), pb = isPriv(b);
+      if (pa !== pb) return pa ? 1 : -1;
+      return collator.compare(fullName(a), fullName(b));
+    });
+    if (!nodes.length) return;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (dropdown.style.display !== 'none' && dropdown.dataset.status === status) { close(); return; }
+
+      dropdown.innerHTML = nodes.map((d, i) => {
+        const label = [d.data.name, d.data.surname].filter(Boolean).join(' ') || '?';
+        const dob = d.data.date_of_birth
+          ? `<span class="compare-list-dob">${escapeHtml(d.data.date_of_birth)}</span>` : '';
+        return `<button type="button" class="compare-list-item" data-idx="${i}"><span class="compare-list-name">${escapeHtml(label)}</span>${dob}</button>`;
+      }).join('');
+      dropdown.dataset.status = status;
+      // Anchor under the chip, clamped so a right-edge chip's list stays on-screen.
+      dropdown.style.left = Math.max(0, Math.min(item.offsetLeft, legend.clientWidth - 280)) + 'px';
+      dropdown.style.top = (item.offsetTop + item.offsetHeight + 6) + 'px';
+      dropdown.style.display = 'block';
+      dropdown.scrollTop = 0;
+
+      dropdown.querySelectorAll('.compare-list-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const d = nodes[+btn.dataset.idx];
+          panToNode(d);
+          highlightNode(d);
+          showDetail(detail, d.data, data);
+          close();
+        });
+      });
+    });
+  });
 }
 
 function renderTree(data, container, detail) {
@@ -193,7 +311,7 @@ function renderTree(data, container, detail) {
   const bounds = computeBounds(root, dx, dy);
   // Colour the minimap dots/rings by comparison status (not sex) so the overview
   // matches the main view's agree/minor/conflict/only-A/only-B palette.
-  const { svg, g } = createSvgWithZoom(container, bounds, root, IDS, {
+  const { svg, g, panToNode } = createSvgWithZoom(container, bounds, root, IDS, {
     nodeColor: d => STATUS_COLOR[d.data.status] || '#999',
   });
 
@@ -223,6 +341,18 @@ function renderTree(data, container, detail) {
   } else {
     decoratePersons(node);
   }
+
+  // Briefly pulse a ring around a node so the user spots where the view jumped.
+  function highlightNode(d) {
+    node.filter(x => x === d).each(function () {
+      const ring = d3.select(this).append('circle')
+          .attr('r', 9).attr('fill', 'none')
+          .attr('stroke', '#222').attr('stroke-width', 2.5).attr('opacity', 0.9);
+      ring.transition().duration(1300).attr('r', 26).attr('opacity', 0).remove();
+    });
+  }
+
+  return { root, panToNode, highlightNode };
 }
 
 // Coloured dot (by status) + name + birth info for a person-node selection.
@@ -333,8 +463,10 @@ function showDetail(detail, node, data) {
       <tbody>${rows}</tbody>
     </table>`;
   detail.style.display = 'block';
+  openDetailNode = node;  // remembered so a language switch can re-render it
   detail.querySelector('.compare-detail-close')?.addEventListener('click', () => {
     detail.style.display = 'none';
+    openDetailNode = null;
   });
 }
 

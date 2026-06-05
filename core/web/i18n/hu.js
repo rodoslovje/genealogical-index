@@ -222,7 +222,7 @@ export default {
     compare_tooltip: 'Mindkét genealógus őseinek fáját összehasonlítja ennél a személynél',
     compare_agree: 'Egyezés',
     compare_minor: 'Kisebb eltérés',
-    compare_conflict: 'Fő adatok eltérnek',
+    compare_conflict: 'Fő eltérés',
     compare_only_in: 'Csak nála:',
     compare_click_hint: 'Kattintson egy személyre a részletes összehasonlításhoz.',
     compare_status: 'Állapot',

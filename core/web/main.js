@@ -9,7 +9,7 @@ import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderIntros } from './intros.js';
 import { initNavbar, checkNavOverflow } from './navbar.js';
 import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, maybeRouteCompare, tabIdFromParams } from './router.js';
-import { renderComparePage } from './tree/compare.js';
+import { relocalizeCompare } from './tree/compare.js';
 import { setupClearableInput } from './lib/utils.js';
 
 // --- Global styles injected from JS ---
@@ -111,7 +111,7 @@ async function init() {
         renderDescendantsPage();
       }
       if (document.getElementById('tab-compare')?.classList.contains('active')) {
-        renderComparePage();
+        relocalizeCompare();
       }
     });
   } catch (err) {
