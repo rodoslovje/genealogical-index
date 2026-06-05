@@ -85,7 +85,10 @@ export function activateTab(targetTab, { skipHistory = false, initial = false } 
       requireLogin('premium_gated_desc');
       return false; // Do not switch tab
     }
-    targetTab = 'tab-general'; // Fallback to general if accessing via direct URL
+    // Direct URL into a premium tab while logged out: fall back to general, but
+    // still surface the login prompt so the deep-link isn't silently dropped.
+    requireLogin('premium_gated_desc');
+    targetTab = 'tab-general';
   }
 
   const urlT = TYPE_BY_TAB[targetTab];

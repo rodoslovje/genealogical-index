@@ -64,7 +64,7 @@ export function renderD3DescendantsTree(data, container, personName, contributor
     downloadBtnId: ids.downloadCsv,
     buildRows: () => buildDescendantRows(data),
     personName, contributorName,
-    titleText: exportOpts.titleText,
+    criteria: exportOpts.criteria,
     filePrefix: exportOpts.filePrefix,
   });
 

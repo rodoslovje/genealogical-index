@@ -28,7 +28,7 @@ export function renderD3AncestorsTree(data, container, personName, contributorNa
     downloadBtnId: ids.downloadCsv,
     buildRows: () => buildAncestorRows(data),
     personName, contributorName,
-    titleText: exportOpts.titleText,
+    criteria: exportOpts.criteria,
     filePrefix: exportOpts.filePrefix,
   });
 

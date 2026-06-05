@@ -442,9 +442,9 @@ export function personRow(person, generation, partner, marriage) {
 // returns one row object per person (with an extra row per marriage), keyed by
 // CSV_COLUMNS. The flat list keeps a `generation` column so the tree structure
 // survives the export, and marriage rows carry partner + date/place of marriage.
-// A small provenance footer (subject, source contributor, site, timestamp)
-// mirrors the SVG export.
-export function attachCsvExport({ downloadBtnId, buildRows, personName, contributorName, titleText, filePrefix }) {
+// The footer mirrors the search/table CSV exports: site + timestamp, then an
+// "Iskanje" block listing the subject criteria and the page URL.
+export function attachCsvExport({ downloadBtnId, buildRows, personName, contributorName, criteria, filePrefix }) {
   const btn = document.getElementById(downloadBtnId);
   if (!btn) return;
   d3.select(`#${downloadBtnId}`).on('click', null).on('click', () => {
@@ -455,12 +455,22 @@ export function attachCsvExport({ downloadBtnId, buildRows, personName, contribu
     const header = CSV_COLUMNS.map(col => csvCell(t('col_' + col))).join(',');
     const body = rows.map(row => CSV_COLUMNS.map(col => csvCell(row[col])).join(','));
 
-    const footer = [];
-    if (titleText) footer.push(csvCell(titleText));
-    if (contributorName) footer.push(`${csvCell(t('tree_source'))},${csvCell(contributorName)}`);
-    footer.push(csvCell(t('site_title')));
-    footer.push(csvCell(window.location.origin));
-    footer.push(csvCell(new Date().toLocaleString()));
+    const footer = [
+      csvCell(t('site_title')),
+      csvCell(window.location.origin),
+      csvCell(new Date().toLocaleString()),
+    ];
+
+    // Subject criteria block — the person the tree was built for, plus source.
+    const criteriaRows = [];
+    if (criteria?.name)    criteriaRows.push(`${csvCell(t('col_name'))},${csvCell(criteria.name)}`);
+    if (criteria?.surname) criteriaRows.push(`${csvCell(t('col_surname'))},${csvCell(criteria.surname)}`);
+    if (criteria?.dob)     criteriaRows.push(`${csvCell(t('label_birth'))},${csvCell(criteria.dob)}`);
+    if (contributorName)   criteriaRows.push(`${csvCell(t('tree_source'))},${csvCell(contributorName)}`);
+    if (criteriaRows.length) {
+      footer.push('', csvCell(t('tab_search')), ...criteriaRows,
+        `${csvCell(t('col_url'))},${csvCell(window.location.href)}`);
+    }
 
     const csvContent = [header, ...body].join('\n') + '\n\n' + footer.join('\n');
 

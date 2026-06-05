@@ -114,6 +114,7 @@ function renderTreePage(kind) {
       config.renderTree(data, container, personName, c, config.ids, {
         titleText: personName ? `${personName} - ${titleSuffix}` : t(config.titleKey),
         filePrefix: config.filePrefix,
+        criteria: { name: n, surname: sn, dob },
       });
     })
     .catch(err => {

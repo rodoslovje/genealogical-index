@@ -233,7 +233,7 @@ def get_descendants_by_params(
     dob: Optional[str] = None,
     c: Optional[str] = None,
     id: Optional[str] = None,
-    max_generations: int = 5,
+    max_generations: int = 0,  # 0 = all generations (the web tree pages)
     db: Session = Depends(get_db),
     user: Optional[dict] = Depends(require_user),
 ):
@@ -307,7 +307,7 @@ def get_ancestors_by_params(
     dob: Optional[str] = None,
     c: Optional[str] = None,
     id: Optional[str] = None,
-    max_generations: int = 5,
+    max_generations: int = 0,  # 0 = all generations (the web tree pages)
     db: Session = Depends(get_db),
     user: Optional[dict] = Depends(require_user),
 ):
