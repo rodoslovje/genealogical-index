@@ -35,7 +35,7 @@ export function renderD3AncestorsTree(data, container, personName, contributorNa
   attachGedExport({
     downloadBtnId: ids.downloadGed,
     buildModel: () => buildAncestorGedcom(data),
-    personName,
+    personName, contributorName,
     filePrefix: exportOpts.filePrefix,
   });
 
