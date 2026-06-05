@@ -36,8 +36,8 @@ const STATUS_COLOR = {
   agree:    '#2e7d32',
   minor:    '#f5a623',
   conflict: '#d32f2f',
-  only_a:   '#3498db',
-  only_b:   '#e8590c',
+  only_a:   '#0097a7',  // teal
+  only_b:   '#8e44ad',  // purple
 };
 
 // Fields shown in the side-by-side detail panel and the CSV export, in order.
@@ -191,7 +191,11 @@ function renderTree(data, container, detail) {
   }
 
   const bounds = computeBounds(root, dx, dy);
-  const { svg, g } = createSvgWithZoom(container, bounds, root, IDS);
+  // Colour the minimap dots/rings by comparison status (not sex) so the overview
+  // matches the main view's agree/minor/conflict/only-A/only-B palette.
+  const { svg, g } = createSvgWithZoom(container, bounds, root, IDS, {
+    nodeColor: d => STATUS_COLOR[d.data.status] || '#999',
+  });
 
   attachSvgExport({
     svg, g, downloadBtnId: IDS.downloadSvg,

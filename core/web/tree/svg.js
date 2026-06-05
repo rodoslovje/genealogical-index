@@ -21,7 +21,7 @@ export function computeBounds(root, dx, dy) {
   return { minX, minY, maxX, maxY, treeWidth: maxX - minX, treeHeight: maxY - minY };
 }
 
-export function createSvgWithZoom(container, bounds, root, ids) {
+export function createSvgWithZoom(container, bounds, root, ids, opts = {}) {
   const width = container.clientWidth || 900;
   const height = container.clientHeight || 500;
 
@@ -74,7 +74,7 @@ export function createSvgWithZoom(container, bounds, root, ids) {
   // Minimap on desktop and large-tablet sized viewports. Below ~1024px the
   // overlay would just steal real-estate from the tree itself.
   if (root && ids.wrapper && window.innerWidth >= 1024) {
-    const updateMinimap = addMinimap(ids.wrapper, root, bounds, width, height, svg, zoom);
+    const updateMinimap = addMinimap(ids.wrapper, root, bounds, width, height, svg, zoom, opts.nodeColor);
     zoom.on('zoom.minimap', (e) => updateMinimap(e.transform));
     updateMinimap(d3.zoomTransform(svg.node()));
   }
@@ -87,7 +87,9 @@ export function createSvgWithZoom(container, bounds, root, ids) {
 // minimap re-centers the main view at the chosen tree coordinate.
 // Returns an `update(transform)` callback the caller must invoke whenever
 // the main view's zoom transform changes.
-function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoom) {
+// `nodeColor(d)` optionally overrides the default sex-based dot/ring colour
+// (compare mode passes the comparison-status palette).
+function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoom, nodeColor) {
   const wrapper = document.getElementById(wrapperId);
   if (!wrapper) return () => {};
 
@@ -161,7 +163,7 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
       .attr('cx', d => d.y)
       .attr('cy', d => d.x)
       .attr('r', 4 / mmScale)
-      .attr('fill', d => d.data.sex === 'm' ? '#3498db' : (d.data.sex === 'f' ? '#e83e8c' : '#999'));
+      .attr('fill', d => nodeColor ? nodeColor(d) : (d.data.sex === 'm' ? '#3498db' : (d.data.sex === 'f' ? '#e83e8c' : '#999')));
 
   mmG.append('g')
     .selectAll('circle')
@@ -174,6 +176,7 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
       .attr('r', (4 - 0.75) / mmScale)
       .attr('fill', 'none')
       .attr('stroke', d => {
+        if (nodeColor) return nodeColor(d);
         const sex = d.data.partner?.sex;
         return sex === 'm' ? '#3498db' : (sex === 'f' ? '#e83e8c' : '#999');
       })
