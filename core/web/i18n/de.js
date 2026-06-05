@@ -284,7 +284,8 @@ export default {
       <ul>
         <li><strong>Vergrößern und Verkleinern:</strong> mit den Schaltflächen <strong>➕</strong> und <strong>➖</strong> in der unteren rechten Ecke oder mit dem Mausrad.</li>
         <li><strong>Verschieben:</strong> Sie können den Baum mit der Maus (oder auf Touchscreens mit dem Finger) ziehen.</li>
-        <li><strong>Exportieren:</strong> Mit der Schaltfläche <strong>SVG</strong> in der oberen rechten Ecke können Sie das Bild des Baums auf Ihren Computer herunterladen.</li>
+        <li><strong>Exportieren:</strong> Mit den Schaltflächen in der oberen rechten Ecke können Sie den Baum als <strong>SVG</strong>-Bild, als <strong>CSV</strong>-Tabelle oder als <strong>GEDCOM</strong>-Datei zum Import in andere Genealogieprogramme herunterladen.</li>
+        <li><strong>Übersichtskarte:</strong> Auf größeren Bildschirmen zeigt eine kleine Karte in der oberen linken Ecke den gesamten Baum und den aktuell sichtbaren Bereich; ein Klick darauf springt zu einem anderen Teil.</li>
       </ul>
       <h3>4. Genealogen</h3>
       <p>Der Reiter <strong>Genealogen</strong> zeigt die Gesamtstatistik des Index und eine Liste aller Forscher, die ihre Daten beigesteuert haben.</p>
@@ -309,6 +310,7 @@ export default {
         <li><strong>Konfidenz:</strong> Jede Übereinstimmung hat einen Prozentwert, der angibt, wie wahrscheinlich es sich um dieselbe Person oder Familie handelt.</li>
         <li><strong>Hervorgehobene Unterschiede:</strong> Wörter oder Daten, die sich zwischen den beiden Genealogen unterscheiden, werden in der Tabelle automatisch hervorgehoben (gelb), was das Erkennen von Abweichungen oder neuen Informationen erleichtert.</li>
         <li><strong>Übereinstimmungen filtern:</strong> Im Suchfeld in der Seitenleiste können Sie die angezeigten Übereinstimmungen weiter nach Name, Nachname, Datum oder Ort eingrenzen.</li>
+        <li><strong>Stammbaum-Vergleich:</strong> Für eine übereinstimmende Person öffnet die Schaltfläche <strong>🌳 Vergleichen</strong> eine Gegenüberstellung der Stammbäume beider Genealogen. Jede Person ist farblich gekennzeichnet — <em>Übereinstimmung</em>, <em>geringe Abweichung</em>, <em>wesentliche Abweichung</em> (Vorname, Nachname oder Geburtsdatum weichen ab) oder nur in <em>einem</em> der Bäume vorhanden —, und ein Klick auf eine Person zeigt einen feldweisen Vergleich einschließlich der Quellenlinks. Sie können zwischen <em>Vorfahren</em> und <em>Nachkommen</em> wechseln, über die farbige Legende zu jeder Person springen und den Vergleich als <strong>CSV</strong>-Tabelle oder <strong>SVG</strong>-Bild herunterladen.</li>
       </ul>
       {auth_section}
     `,

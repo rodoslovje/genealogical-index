@@ -284,7 +284,8 @@ export default {
       <ul>
         <li><strong>Povećanje i smanjivanje:</strong> gumbima <strong>➕</strong> i <strong>➖</strong> u donjem desnom kutu ili kotačićem miša.</li>
         <li><strong>Pomicanje:</strong> stablo možete povlačiti mišem (ili prstom na zaslonima osjetljivim na dodir).</li>
-        <li><strong>Izvoz:</strong> gumbom <strong>SVG</strong> u gornjem desnom kutu možete preuzeti sliku stabla na svoje računalo.</li>
+        <li><strong>Izvoz:</strong> gumbima u gornjem desnom kutu možete preuzeti stablo kao sliku <strong>SVG</strong>, tablicu <strong>CSV</strong> ili datoteku <strong>GEDCOM</strong> za uvoz u druge rodoslovne programe.</li>
+        <li><strong>Pregledna karta:</strong> na većim zaslonima u gornjem lijevom kutu prikazana je mala karta cijelog stabla i trenutno vidljivog dijela; klikom na nju pomičete se na drugi dio.</li>
       </ul>
       <h3>4. Rodoslovci</h3>
       <p>Kartica <strong>Rodoslovci</strong> prikazuje ukupnu statistiku indeksa i popis svih istraživača koji su doprinijeli svojim podacima.</p>
@@ -309,6 +310,7 @@ export default {
         <li><strong>Ocjena pouzdanosti:</strong> Svako podudaranje ima ocjenu u postocima koja govori koliko je vjerojatno da se radi o istoj osobi ili obitelji.</li>
         <li><strong>Označene razlike:</strong> Riječi ili podaci koji se razlikuju između dvaju rodoslovaca automatski su označeni (obojeni žutom bojom) u tablici, što olakšava brzo uočavanje razlika ili novih informacija.</li>
         <li><strong>Filtriranje podudaranja:</strong> U polju za pretragu u bočnoj traci možete dodatno suziti prikazana podudaranja po imenu, prezimenu, datumu ili mjestu.</li>
+        <li><strong>Usporedba stabala:</strong> za osobu koja se podudara gumb <strong>🌳 Usporedi</strong> otvara usporedni prikaz rodoslovnih stabala obaju rodoslovaca. Svaka je osoba označena bojom — <em>podudaranje</em>, <em>manja razlika</em>, <em>ključna razlika</em> (razlikuju se ime, prezime ili datum rođenja) ili prisutna samo u <em>jednom</em> stablu —, a klikom na osobu prikazuje se detaljna usporedba po pojedinim poljima, uključujući poveznice na izvore. Možete prebacivati između <em>predaka</em> i <em>potomaka</em>, putem obojene legende skočiti na bilo koju osobu, a usporedbu preuzeti kao tablicu <strong>CSV</strong> ili sliku <strong>SVG</strong>.</li>
       </ul>
       {auth_section}
     `,

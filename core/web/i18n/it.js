@@ -291,7 +291,8 @@ export default {
       <ul>
         <li><strong>Ingrandimento e rimpicciolimento:</strong> con i pulsanti <strong>➕</strong> e <strong>➖</strong> nell'angolo in basso a destra o con la rotellina del mouse.</li>
         <li><strong>Spostamento:</strong> è possibile trascinare l'albero con il mouse (o con il dito sui touchscreen).</li>
-        <li><strong>Esportazione:</strong> con il pulsante <strong>SVG</strong> nell'angolo in alto a destra, è possibile scaricare l'immagine dell'albero sul computer.</li>
+        <li><strong>Esportazione:</strong> con i pulsanti nell'angolo in alto a destra è possibile scaricare l'albero come immagine <strong>SVG</strong>, tabella <strong>CSV</strong> o file <strong>GEDCOM</strong> da importare in altri programmi di genealogia.</li>
+        <li><strong>Mappa panoramica:</strong> sugli schermi più grandi una piccola mappa nell'angolo in alto a sinistra mostra l'intero albero e l'area attualmente visibile; cliccandola ci si sposta in un'altra parte.</li>
       </ul>
       <h3>4. Genealogisti</h3>
       <p>La scheda <strong>Genealogisti</strong> mostra le statistiche generali dell'indice e un elenco di tutti i ricercatori che hanno contribuito con i loro dati.</p>
@@ -316,6 +317,7 @@ export default {
         <li><strong>Punteggio di confidenza:</strong> Ogni corrispondenza ha un punteggio in percentuale che indica quanto è probabile che si tratti della stessa persona o famiglia.</li>
         <li><strong>Differenze evidenziate:</strong> Parole o dati che differiscono tra i due genealogisti vengono automaticamente evidenziati (in giallo) nella tabella, rendendo facile individuare discrepanze o nuove informazioni.</li>
         <li><strong>Filtrare le corrispondenze:</strong> Nel campo di ricerca nella barra laterale è possibile restringere ulteriormente le corrispondenze visualizzate per nome, cognome, data o luogo.</li>
+        <li><strong>Confronto degli alberi:</strong> per una persona corrispondente, il pulsante <strong>🌳 Confronta</strong> apre una vista affiancata degli alberi genealogici di entrambi i genealogisti. Ogni persona è contrassegnata da un colore — <em>corrispondenza</em>, <em>differenza minore</em>, <em>differenza chiave</em> (differiscono nome, cognome o data di nascita) o presente in <em>uno solo</em> degli alberi —, e cliccando su una persona si apre un confronto campo per campo, compresi i collegamenti alle fonti. È possibile passare tra <em>antenati</em> e <em>discendenti</em>, saltare a qualsiasi persona dalla legenda colorata e scaricare il confronto come tabella <strong>CSV</strong> o immagine <strong>SVG</strong>.</li>
       </ul>
       {auth_section}
     `,

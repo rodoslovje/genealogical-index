@@ -284,7 +284,8 @@ export default {
       <ul>
         <li><strong>Povečava in pomanjšava:</strong> z gumboma <strong>➕</strong> in <strong>➖</strong> v spodnjem desnem kotu ali s kolescem miške.</li>
         <li><strong>Premikanje:</strong> drevo lahko vlečete z miško (oziroma s prstom na zaslonih na dotik).</li>
-        <li><strong>Izvoz:</strong> z gumbom <strong>SVG</strong> v zgornjem desnem kotu prenesete sliko drevesa na svoj računalnik.</li>
+        <li><strong>Izvoz:</strong> z gumbi v zgornjem desnem kotu lahko drevo prenesete kot sliko <strong>SVG</strong>, tabelo <strong>CSV</strong> ali datoteko <strong>GEDCOM</strong> za uvoz v druge rodoslovne programe.</li>
+        <li><strong>Pregledna karta:</strong> na večjih zaslonih je v zgornjem levem kotu prikazana majhna karta celotnega drevesa in trenutno vidnega dela; s klikom nanjo se premaknete na drug del.</li>
       </ul>
       <h3>4. Rodoslovci</h3>
       <p>V zavihku <strong>Rodoslovci</strong> je prikazana skupna statistika indeksa in seznam vseh rodoslovcev, ki so prispevali svoje podatke.</p>
@@ -309,6 +310,7 @@ export default {
         <li><strong>Ocena zaupanja:</strong> Vsak ujemek ima oceno v odstotkih, ki pove, kako verjetno gre za isto osebo ali družino.</li>
         <li><strong>Označene razlike:</strong> Besede ali podatki, ki se med rodoslovcema razlikujejo, so v tabeli samodejno označene (obarvane z rumeno), kar olajša hitro iskanje neskladij ali novih informacij.</li>
         <li><strong>Filtriranje ujemanj:</strong> V iskalnem polju v stranski vrstici lahko prikazana ujemanja dodatno zožite po imenu, priimku, datumu ali kraju.</li>
+        <li><strong>Primerjava dreves:</strong> za ujemajočo se osebo gumb <strong>🌳 Primerjaj</strong> odpre vzporedni prikaz rodovniških dreves obeh rodoslovcev. Vsaka oseba je barvno označena — <em>ujemanje</em>, <em>manjša razlika</em>, <em>ključna razlika</em> (razlikujejo se ime, priimek ali datum rojstva) ali prisotna le v <em>enem</em> drevesu —, s klikom na osebo pa se prikaže podrobna primerjava po posameznih poljih, vključno s povezavami do virov. Preklapljate lahko med <em>predniki</em> in <em>potomci</em>, prek barvne legende skočite na poljubno osebo, primerjavo pa prenesete kot tabelo <strong>CSV</strong> ali sliko <strong>SVG</strong>.</li>
       </ul>
       {auth_section}
     `,

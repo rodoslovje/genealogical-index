@@ -284,7 +284,8 @@ export default {
       <ul>
         <li><strong>Zoom in and out:</strong> with the <strong>➕</strong> and <strong>➖</strong> buttons in the bottom right corner or with the mouse wheel.</li>
         <li><strong>Panning:</strong> you can drag the tree with the mouse (or finger on touch screens).</li>
-        <li><strong>Export:</strong> with the <strong>SVG</strong> button in the top right corner, you can download the image of the tree to your computer.</li>
+        <li><strong>Export:</strong> with the buttons in the top right corner you can download the tree as an <strong>SVG</strong> image, a <strong>CSV</strong> table, or a <strong>GEDCOM</strong> file for import into other genealogy software.</li>
+        <li><strong>Overview map:</strong> on larger screens a small map in the top-left corner shows the whole tree and the currently visible area; click it to jump to another part.</li>
       </ul>
       <h3>4. Genealogists</h3>
       <p>The <strong>Genealogists</strong> tab shows the overall statistics of the index and a list of all researchers who contributed their data.</p>
@@ -309,6 +310,7 @@ export default {
         <li><strong>Confidence score:</strong> Each match has a percentage score indicating how likely it is to be the same person or family.</li>
         <li><strong>Highlighted differences:</strong> Words or data that differ between the two genealogists are automatically highlighted (in yellow) in the table, making it easy to spot discrepancies or new information.</li>
         <li><strong>Filtering matches:</strong> In the search field in the sidebar you can further narrow down the displayed matches by name, surname, date, or place.</li>
+        <li><strong>Tree comparison:</strong> for a matching person, the <strong>🌳 Compare</strong> button opens a side-by-side view of both genealogists' family trees. Every person is colour-coded — <em>match</em>, <em>minor difference</em>, <em>key difference</em> (name, surname or birth date differs), or present in <em>only one</em> of the trees — and clicking a person reveals a field-by-field comparison, including source links. You can switch between <em>ancestors</em> and <em>descendants</em>, jump to any person from the coloured legend, and download the comparison as a <strong>CSV</strong> table or an <strong>SVG</strong> image.</li>
       </ul>
       {auth_section}
     `,

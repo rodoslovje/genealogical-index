@@ -292,7 +292,8 @@ export default {
       <ul>
         <li><strong>Nagyítás és kicsinyítés:</strong> a jobb alsó sarokban található <strong>➕</strong> és <strong>➖</strong> gombokkal vagy az egér görgőjével.</li>
         <li><strong>Pásztázás:</strong> a fát az egérrel (vagy érintőképernyőn az ujjával) húzhatja.</li>
-        <li><strong>Exportálás:</strong> a jobb felső sarokban található <strong>SVG</strong> gombbal letöltheti a fa képét a számítógépére.</li>
+        <li><strong>Exportálás:</strong> a jobb felső sarokban található gombokkal a fát letöltheti <strong>SVG</strong> képként, <strong>CSV</strong> táblázatként vagy <strong>GEDCOM</strong> fájlként más genealógiai programokba való importáláshoz.</li>
+        <li><strong>Áttekintő térkép:</strong> nagyobb képernyőkön a bal felső sarokban egy kis térkép mutatja a teljes fát és az éppen látható területet; rákattintva egy másik részre ugorhat.</li>
       </ul>
       <h3>4. Genealógusok</h3>
       <p>A <strong>Genealógusok</strong> fül megmutatja az index általános statisztikáit és az adataikat beküldő kutatók listáját.</p>
@@ -317,6 +318,7 @@ export default {
         <li><strong>Megbízhatóság:</strong> Minden egyezéshez tartozik egy százalékos pontszám, amely jelzi, hogy mekkora valószínűséggel ugyanarról a személyről vagy családról van szó.</li>
         <li><strong>Kiemelt különbségek:</strong> A két genealógus között eltérő szavak vagy adatok automatikusan kiemelésre kerülnek (sárgával) a táblázatban, így könnyen észrevehetők az eltérések vagy új információk.</li>
         <li><strong>Egyezések szűrése:</strong> Az oldalsávban található keresőmezőben tovább szűkítheti a megjelenített egyezéseket név, vezetéknév, dátum vagy hely alapján.</li>
+        <li><strong>Fák összehasonlítása:</strong> egy egyező személynél a <strong>🌳 Összehasonlítás</strong> gomb megnyitja mindkét genealógus családfájának egymás melletti nézetét. Minden személy színkóddal jelölt — <em>egyezés</em>, <em>kisebb eltérés</em>, <em>fő eltérés</em> (eltér a keresztnév, a vezetéknév vagy a születési dátum) vagy csak az <em>egyik</em> fában szerepel —, és egy személyre kattintva mezőnkénti összehasonlítás jelenik meg, beleértve a forráshivatkozásokat is. Válthat az <em>ősök</em> és az <em>utódok</em> között, a színes jelmagyarázatból bármely személyre ugorhat, az összehasonlítást pedig letöltheti <strong>CSV</strong> táblázatként vagy <strong>SVG</strong> képként.</li>
       </ul>
       {auth_section}
     `,
