@@ -182,6 +182,16 @@ export function formatExportFilename(baseName, extension) {
   return `${prefix}-${safeBase}.${extension}`;
 }
 
+/** Parses a JSON array string (or passes through an array) to an array; [] on failure. */
+export function parseList(jsonOrArr) {
+  if (!jsonOrArr) return [];
+  if (Array.isArray(jsonOrArr)) return jsonOrArr;
+  try {
+    const v = typeof jsonOrArr === 'string' ? JSON.parse(jsonOrArr) : jsonOrArr;
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
+}
+
 export function isPrivate(val) {
   if (!val) return false;
   const v = String(val).toLowerCase();

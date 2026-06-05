@@ -1,4 +1,4 @@
-import { t, getCurrentLang } from './i18n.js';
+import { t, getCurrentLang } from '../i18n.js';
 
 function parseLinksList(links) {
   if (!links) return [];

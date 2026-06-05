@@ -1,7 +1,9 @@
 import { t, formatTitleSuffix } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
-import { escapeHtml, baseContributorName, ensureChartJs, downloadBlob, formatExportFilename } from '../utils.js';
-import { toUnicodeHref } from '../url.js';
+import { escapeHtml, baseContributorName, ensureChartJs, formatExportFilename } from '../lib/utils.js';
+import { toUnicodeHref } from '../lib/url.js';
+import { DOWNLOAD_ICON } from '../lib/icons.js';
+import { csvCell, csvFooter, downloadCsv } from '../lib/csv.js';
 
 let cachedStats = null;
 let fetchPromise = null;
@@ -140,9 +142,7 @@ function renderBooksSection(books) {
     html: `<div class="matricula-stats-section" style="margin-bottom: 24px;">
       <div class="matricula-allbooks-header section-bar section-bar--top">
         <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('matricula_section_books')} (<span id="matricula-books-count">${fmt(books.length)}</span>)</h3>
-        <button class="export-btn matricula-allbooks-csv-btn" title="${t('download_csv')}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
-        </button>
+        <button class="export-btn matricula-allbooks-csv-btn" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
       </div>
       <div class="matricula-allbooks-content">
         <div class="table-responsive">
@@ -204,24 +204,16 @@ function renderBooksSection(books) {
  *  to the generic `t('col_X')` keys used by the shared exportToCSV. */
 export function exportBooksToCSV(books, columns, filename) {
   if (!books?.length) return;
-  const header = columns.map(c => `"${(c.h || '').replace(/"/g, '""')}"`).join(',');
-  const rows = books.map(b => columns.map(c => {
+  const header = columns.map(c => csvCell(c.h || '')).join(',');
+  const body = books.map(b => columns.map(c => {
     let v;
-    if (c.f === 'type')          v = typeLabel(b.type);
-    else if (c.f === 'count')    v = b.count ?? 0;
-    else                          v = b[c.f] ?? '';
-    return `"${String(v).replace(/"/g, '""')}"`;
+    if (c.f === 'type')        v = typeLabel(b.type);
+    else if (c.f === 'count')  v = b.count ?? 0;
+    else                       v = b[c.f] ?? '';
+    return csvCell(v);
   }).join(','));
 
-  const siteTitle = t('site_title').replace(/"/g, '""');
-  const siteUrl = window.location.origin;
-  const dateStr = new Date().toLocaleString();
-  const csv = [header, ...rows].join('\n') +
-    `\n\n"${siteTitle}"\n"${siteUrl}"\n"${dateStr}"`;
-  downloadBlob(
-    new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }),
-    filename,
-  );
+  downloadCsv([header, ...body, '', ...csvFooter()], filename);
 }
 
 const CHART_BG_COLORS = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#34495e', '#d35400', '#7f8c8d', '#bdc3c7'];

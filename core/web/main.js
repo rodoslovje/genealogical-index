@@ -4,12 +4,12 @@ import { initAuth } from './auth.js';
 import { refreshContributorsIfVisible, prefetchContributors, updateFooterDataDate } from './contributors.js';
 import { initHelp } from './help.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL } from './search.js';
-import { currentParams } from './url.js';
+import { currentParams } from './lib/url.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderIntros } from './intros.js';
 import { initNavbar, checkNavOverflow } from './navbar.js';
 import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, tabIdFromParams } from './router.js';
-import { setupClearableInput } from './utils.js';
+import { setupClearableInput } from './lib/utils.js';
 
 // --- Global styles injected from JS ---
 // (Anchor color/underline is handled per-area in style.css — `.intro-text a`,

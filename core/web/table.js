@@ -1,137 +1,16 @@
 import { t } from './i18n.js';
-import { formatLinks } from './links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isMatriculaContributor, escapeHtml, highlightDifferences, downloadBlob, formatExportFilename } from './utils.js';
-import { childYearOf, parseDateForSort } from './dates.js';
-import { PARAM_MAP_REVERSE, toUnicodeHref } from './url.js';
+import { formatLinks } from './lib/links.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isMatriculaContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList } from './lib/utils.js';
+import { childYearOf, parseDateForSort } from './lib/dates.js';
+import { toUnicodeHref } from './lib/url.js';
+import { createExportButton } from './lib/icons.js';
+import { exportToCSV } from './table-csv.js';
 import siteConfig from '@site-config';
 
-export function exportToCSV(data, columns, filename) {
-  if (!data || !data.length) return;
-  const headers = columns.map(col => `"${t('col_' + col).replace(/"/g, '""')}"`).join(',');
-  // Renders a parent pair as plain text, optionally prefixed with a side label
-  // (husband/wife) when both pairs are concatenated into one cell.
-  const formatParentPair = (jsonOrArr, label) => {
-    const arr = parseList(jsonOrArr);
-    if (!arr.length) return '';
-    const parts = [arr[0], arr[1]].filter(Boolean).map(p => personInlineText(p, '')).filter(Boolean);
-    if (!parts.length) return '';
-    const inner = parts.join(', ');
-    return label ? `${label}: ${inner}` : inner;
-  };
-
-  const rows = data.map(row => {
-    return columns.map(col => {
-      let val = '';
-      if (col === 'parents') {
-        if (row.parents_list) {
-          val = formatParentPair(row.parents_list);
-        } else {
-          const hp = formatParentPair(row.husband_parents, t('label_husband'));
-          const wp = formatParentPair(row.wife_parents,    t('label_wife'));
-          val = [hp, wp].filter(Boolean).join(' | ');
-        }
-      } else if (col === 'children' && row.children_list) {
-        val = parseList(row.children_list)
-          .map(c => personInlineText(c, row.husband_surname))
-          .join(', ');
-      } else if (col === 'partners' && row.partners_list) {
-        val = parseList(row.partners_list).map(p => {
-          const text = personInlineText(p, '').trim();
-          const label = p.sex === 'm' ? t('label_husband') : p.sex === 'f' ? t('label_wife') : '';
-          return label ? `${label}: ${text}` : text;
-        }).join(' | ');
-      } else if (col === 'matches') {
-        val = row.matches_count || '';
-        if (Number(val) === 0) val = '';
-      } else {
-        let cellVal = row[col] != null ? row[col] : '';
-        if (col === 'total_links' && Number(cellVal) === 0) cellVal = '';
-
-        // Append optional fields to match HTML table display
-        if (col === 'surname' && row.alt_surname) {
-          cellVal = `${cellVal} (${row.alt_surname})`.trim();
-        } else if (col === 'husband_surname' && row.husband_alt_surname) {
-          cellVal = `${cellVal} (${row.husband_alt_surname})`.trim();
-        } else if (col === 'wife_surname' && row.wife_alt_surname) {
-          cellVal = `${cellVal} (${row.wife_alt_surname})`.trim();
-        } else if (col === 'date_of_birth' && (row.date_of_baptism || row.place_of_baptism)) {
-          const b = [row.date_of_baptism, row.place_of_baptism].filter(Boolean).join(', ');
-          cellVal = `${cellVal} (✝ ${b})`.trim();
-        } else if ((col === 'place_of_birth' || col === 'place_of_marriage') && row.notes) {
-          cellVal = `${cellVal} (🗒 ${row.notes})`.trim();
-        }
-
-        val = cellVal;
-      }
-      val = String(val).replace(/"/g, '""');
-      return `"${val}"`;
-    }).join(',');
-  });
-
-  const siteTitle = t('site_title').replace(/"/g, '""');
-  const siteUrl = window.location.origin;
-  const dateStr = new Date().toLocaleString();
-  let csvContent = [headers, ...rows].join('\n') + `\n\n"${siteTitle}"\n"${siteUrl}"\n"${dateStr}"`;
-
-  if (filename.includes('contributors')) {
-    const persons = data.reduce((s, r) => s + (r.total_persons || 0), 0);
-    const families = data.reduce((s, r) => s + (r.total_families || 0), 0);
-    const links = data.reduce((s, r) => s + (r.total_links || 0), 0);
-    const total = persons + families;
-    const lastUpdate = data.reduce((max, r) => (r.last_modified && r.last_modified > max) ? r.last_modified : max, '');
-
-    csvContent += `\n\n"${t('tab_contributors')}","${data.length}"`;
-    csvContent += `\n"${t('col_total_persons')}","${persons}"`;
-    csvContent += `\n"${t('col_total_families')}","${families}"`;
-    csvContent += `\n"${t('col_total')}","${total}"`;
-    csvContent += `\n"${t('col_total_links')}","${links}"`;
-    csvContent += `\n"${t('col_last_modified')}","${lastUpdate}"`;
-  } else {
-    const params = new URLSearchParams(window.location.search);
-    const activeFilters = [];
-
-    for (const [k, v] of params.entries()) {
-      if (k === 't') continue; // Skip the tab indicator
-
-      let field = PARAM_MAP_REVERSE[k] || k;
-      let label = field;
-
-      if (field === 'q') {
-        label = t('general_search_label');
-      } else if (field === 'ex') {
-        label = t('exact_search');
-      } else if (field === 'hl' || field === 'has_link') {
-        label = t('has_link');
-      } else if (field === 'with') {
-        label = t('filter_with');
-      } else if (field === 'filter') {
-        label = t('general_search_label');
-      } else if (field.endsWith('_to')) {
-        const baseField = field.replace('_to', '');
-        const baseLabel = t('col_' + baseField) !== 'col_' + baseField ? t('col_' + baseField) : baseField;
-        label = `${baseLabel} - ${t('date_to')}`;
-      } else {
-        label = t('col_' + field) !== 'col_' + field ? t('col_' + field) : field;
-      }
-
-      let val = v;
-      if ((field === 'ex' || field === 'hl' || field === 'has_link') && v === '1') {
-        val = '✓'; // Output a nice checkmark for boolean toggles
-      }
-
-      activeFilters.push(`"${String(label).replace(/"/g, '""')}","${String(val).replace(/"/g, '""')}"`);
-    }
-
-    if (activeFilters.length > 0) {
-      csvContent += `\n\n"${t('tab_search').replace(/"/g, '""')}"`;
-      csvContent += '\n' + activeFilters.join('\n');
-      const fullUrl = window.location.href;
-      csvContent += `\n"${t('col_url').replace(/"/g, '""')}","${fullUrl.replace(/"/g, '""')}"`;
-    }
-  }
-
-  downloadBlob(new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }), filename);
-}
+// Re-exported so existing importers (`contributors/*`, surname cloud) can keep
+// importing the CSV export from './table.js'; the implementation now lives in
+// table-csv.js.
+export { exportToCSV };
 
 const CENTERED_COLUMNS = new Set([
   'contributor', 'contributor_ID',
@@ -275,15 +154,6 @@ function findBestMatch(p, otherList) {
 
 const yearsDiffer = (a, b) => String(a || '') !== String(b || '');
 
-function parseList(jsonOrArr) {
-  if (!jsonOrArr) return [];
-  if (Array.isArray(jsonOrArr)) return jsonOrArr;
-  try {
-    const v = typeof jsonOrArr === 'string' ? JSON.parse(jsonOrArr) : jsonOrArr;
-    return Array.isArray(v) ? v : [];
-  } catch { return []; }
-}
-
 // Counts derived from children/parents/partners lists are looked up many times
 // per sort. Cache off-row so we don't mutate caller-owned data with `_*_count`
 // fields.
@@ -294,17 +164,6 @@ function memoCount(row, key, compute) {
   if (!cache) { cache = {}; rowCountCache.set(row, cache); }
   cache[key] = compute();
   return cache[key];
-}
-
-// Plain-text "Name Surname *Year" rendering used by CSV export and any other
-// non-HTML consumer. Mirrors the display format so exports stay in sync.
-function personInlineText(p, hideSurnameIfEquals) {
-  if (isPrivate(p.name) || isPrivate(p.surname)) return p.name || p.surname || '';
-  let text = p.name || '';
-  if (p.surname && p.surname !== hideSurnameIfEquals) text += ` ${p.surname}`;
-  const year = childYearOf(p);
-  if (year) text += ` *${year}`;
-  return text;
 }
 
 // Wraps the count + tree button + body in the standard <details> shell used
@@ -772,13 +631,13 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       });
     }
 
-    const btn = document.createElement('button');
-    btn.className = 'export-btn';
-    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV`;
-    btn.title = t('download_csv'); // Keeps the tooltip translation for accessibility
-    btn.addEventListener('click', () => {
-      const baseName = containerId.replace('table-', '');
-      exportToCSV(data, columns, formatExportFilename(baseName, 'csv'));
+    const btn = createExportButton({
+      label: 'CSV',
+      title: t('download_csv'), // Keeps the tooltip translation for accessibility
+      onClick: () => {
+        const baseName = containerId.replace('table-', '');
+        exportToCSV(data, columns, formatExportFilename(baseName, 'csv'));
+      },
     });
 
     if (headerEl.classList.contains('totals-bar')) {

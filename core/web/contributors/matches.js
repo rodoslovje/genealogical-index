@@ -1,10 +1,11 @@
 import { t, formatTitleSuffix } from '../i18n.js';
 import { renderTable, exportToCSV } from '../table.js';
 import {
-  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, escapeHtml,
-} from '../utils.js';
+  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, escapeHtml, formatExportFilename,
+} from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
-import { toUnicodeHref } from '../url.js';
+import { toUnicodeHref } from '../lib/url.js';
+import { DOWNLOAD_ICON } from '../lib/icons.js';
 import siteConfig from '@site-config';
 
 import { ensureData, getCachedData, getContributorUrlMap, fetchMatriculaBooks } from './data.js';
@@ -190,9 +191,7 @@ export async function renderMatchesPage(contributor, withPartner) {
         booksHtml = `<div class="matricula-books-subsection" style="margin-top: 1.5rem;">
           <div class="matricula-books-header section-bar section-bar--top" style="margin-bottom: 8px;">
             <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_matricula_books')}</h4>
-            <button class="export-btn export-matricula-books-btn" title="${t('download_csv')}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
-            </button>
+            <button class="export-btn export-matricula-books-btn" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
           </div>
           <div class="table-responsive">
             <table class="matricula-books-table">
@@ -249,8 +248,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       const csvBtn = container.querySelector('.export-matricula-books-btn');
       if (csvBtn) {
         csvBtn.addEventListener('click', () => {
-          const prefix = siteConfig.filePrefix || 'sgi';
-          exportBooksToCSV(matriculaBooks, booksCols, `${prefix}-matricula-books-${displayName}.csv`);
+          exportBooksToCSV(matriculaBooks, booksCols, formatExportFilename(`matricula-books-${displayName}`, 'csv'));
         });
       }
 
@@ -393,9 +391,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       `<div class="matches-summary-section">
         <div class="matches-summary-header section-bar section-bar--top">
           <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('col_matches')}</h3>
-          <button class="export-btn export-matches-summary-btn" title="${t('download_csv')}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
-          </button>
+          <button class="export-btn export-matches-summary-btn" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
         </div>
         <div class="matches-summary-content">
           <p>${t('matches_found_intro')} <strong>${displayName}</strong>.<br>${t('matches_found_outro')}</p>
@@ -424,8 +420,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     const summaryBtn = container.querySelector('.export-matches-summary-btn');
     if (summaryBtn) {
       summaryBtn.addEventListener('click', () => {
-        const prefix = siteConfig.filePrefix || 'sgi';
-        exportToCSV(tableData, summaryCols, `${prefix}-matches-${displayName}.csv`);
+        exportToCSV(tableData, summaryCols, formatExportFilename(`matches-${displayName}`, 'csv'));
       });
     }
 

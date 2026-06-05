@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '../config.js';
-import { toUnicodeHref, currentParams } from '../url.js';
+import { toUnicodeHref, currentParams } from '../lib/url.js';
 import { t, formatTitleSuffix } from '../i18n.js';
-import { escapeHtml, ensureD3 } from '../utils.js';
+import { escapeHtml, ensureD3 } from '../lib/utils.js';
 import { authFetch } from '../auth.js';
 import { renderD3AncestorsTree } from './ancestors.js';
 import { renderD3DescendantsTree } from './descendants.js';

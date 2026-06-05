@@ -1,6 +1,6 @@
-import { isPrivate } from '../utils.js';
-import { toUnicodeSearch } from '../url.js';
-import { parseDateForSort } from '../dates.js';
+import { isPrivate } from '../lib/utils.js';
+import { toUnicodeSearch } from '../lib/url.js';
+import { parseDateForSort } from '../lib/dates.js';
 import { computeBounds, createSvgWithZoom, attachSvgExport, attachCsvExport, attachGedExport, createGedcomModel, orderSpouses, personRow, appendLinks, decoratePersonNodes } from './shared.js';
 
 export function renderD3DescendantsTree(data, container, personName, contributorName, ids, exportOpts) {

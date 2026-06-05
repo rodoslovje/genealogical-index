@@ -1,8 +1,9 @@
 import { t } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
 import { exportToCSV } from '../table.js';
-import { toUnicodeSearch } from '../url.js';
-import { escapeHtml, downloadBlob, formatExportFilename } from '../utils.js';
+import { toUnicodeSearch } from '../lib/url.js';
+import { escapeHtml, downloadBlob, formatExportFilename } from '../lib/utils.js';
+import { IMAGE_ICON, createExportButton } from '../lib/icons.js';
 import { getCachedData } from './data.js';
 
 // One abort controller per target so re-renders cancel stale fetches.
@@ -246,25 +247,25 @@ function decorateCloudHeader(cloud, data, list) {
   const select = section.querySelector('select');
   if (select && select.parentElement !== controls) controls.appendChild(select);
 
-  const downloadIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
-  const imageIcon    = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`;
-
-  const btnCsv = document.createElement('button');
-  btnCsv.className = 'export-btn export-surnames-csv-btn';
-  btnCsv.title = t('download_csv');
-  btnCsv.innerHTML = `${downloadIcon}CSV`;
-  btnCsv.addEventListener('click', () => {
-    const exportData = data.map(d => ({ surname: d.surname, total: d.count })).sort((a, b) => b.total - a.total);
-    const filename = formatExportFilename(list.length === 1 ? `surnames-${list[0]}` : 'surnames', 'csv');
-    exportToCSV(exportData, ['surname', 'total'], filename);
+  const btnCsv = createExportButton({
+    label: 'CSV',
+    title: t('download_csv'),
+    className: 'export-surnames-csv-btn',
+    onClick: () => {
+      const exportData = data.map(d => ({ surname: d.surname, total: d.count })).sort((a, b) => b.total - a.total);
+      const filename = formatExportFilename(list.length === 1 ? `surnames-${list[0]}` : 'surnames', 'csv');
+      exportToCSV(exportData, ['surname', 'total'], filename);
+    },
   });
 
-  const btnSvg = document.createElement('button');
-  btnSvg.className = 'export-btn export-surnames-svg-btn';
-  btnSvg.innerHTML = `${imageIcon}SVG`;
-  btnSvg.addEventListener('click', () => {
-    const filename = formatExportFilename(list.length === 1 ? `surnames-${list[0]}` : 'surnames', 'svg');
-    downloadCloudAsSVG(cloud, filename, list);
+  const btnSvg = createExportButton({
+    label: 'SVG',
+    icon: IMAGE_ICON,
+    className: 'export-surnames-svg-btn',
+    onClick: () => {
+      const filename = formatExportFilename(list.length === 1 ? `surnames-${list[0]}` : 'surnames', 'svg');
+      downloadCloudAsSVG(cloud, filename, list);
+    },
   });
 
   controls.appendChild(btnCsv);

@@ -1,5 +1,5 @@
 import { t } from '../i18n.js';
-import { ensureChartJs } from '../utils.js';
+import { ensureChartJs } from '../lib/utils.js';
 
 let chartInstance = null;
 let timelineChartInstance = null;

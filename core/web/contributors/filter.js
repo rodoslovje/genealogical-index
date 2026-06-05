@@ -1,7 +1,7 @@
 import { t } from '../i18n.js';
 import { renderTable } from '../table.js';
-import { toUnicodeHref, toUnicodeSearch, currentParams, getParam } from '../url.js';
-import { baseContributorName } from '../utils.js';
+import { toUnicodeHref, toUnicodeSearch, currentParams, getParam } from '../lib/url.js';
+import { baseContributorName } from '../lib/utils.js';
 import {
   getCachedData,
   enrichWithMatchCounts,

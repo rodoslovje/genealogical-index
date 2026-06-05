@@ -1,6 +1,6 @@
 import { t, onLanguageChange } from './i18n.js';
 import siteConfig from '@site-config';
-import { escapeHtml } from './utils.js';
+import { escapeHtml } from './lib/utils.js';
 
 const TOKEN_KEY = 'sgi_token';
 

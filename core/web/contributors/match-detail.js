@@ -1,16 +1,16 @@
 import { t, formatTitleSuffix } from '../i18n.js';
 import { formatSpecialCell, exportToCSV } from '../table.js';
-import { formatLinks } from '../links.js';
-import { parseDateForSort } from '../dates.js';
+import { formatLinks } from '../lib/links.js';
+import { parseDateForSort } from '../lib/dates.js';
 import {
   isPrivate, getExpandCollapseIcon, shortenUrlLabel, baseContributorName,
   matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
-  escapeHtml, highlightDifferences,
-} from '../utils.js';
+  escapeHtml, highlightDifferences, formatExportFilename,
+} from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
-import { toUnicodeHref } from '../url.js';
+import { toUnicodeHref } from '../lib/url.js';
+import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
-import siteConfig from '@site-config';
 
 import { getContributorUrlMap } from './data.js';
 import { getContributorFilter, setDetailRefilter } from './filter.js';
@@ -332,9 +332,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             <h4 class="${collapsedClass}" style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
             <div class="matches-section-actions" style="display: flex; gap: 10px;">
               ${expandBtnHtml}
-              <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>CSV
-              </button>
+              <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
             </div>
           </div>
           <div class="matches-section-content table-responsive"${contentDisplay}>
@@ -424,7 +422,6 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
       detailEl.querySelectorAll('.export-matches-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const prefix = siteConfig.filePrefix || 'sgi';
           const typeKey = btn.dataset.type;
           const typeData = byType[typeKey];
           const config = typeConfig.find(c => c.key === typeKey);
@@ -434,7 +431,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             flatData.push({ ...r.record_b, contributor_ID: partner, confidence: Math.round((r.confidence || 0) * 100) });
           });
           const cols = [...config.fields.map(f => f.f), 'contributor_ID', 'confidence'];
-          exportToCSV(flatData, cols, `${prefix}-matches-${typeKey}-${contributor}-${partner}.csv`);
+          exportToCSV(flatData, cols, formatExportFilename(`matches-${typeKey}-${contributor}-${partner}`, 'csv'));
         });
       });
 

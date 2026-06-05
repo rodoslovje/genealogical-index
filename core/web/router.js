@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams } from './url.js';
+import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams } from './lib/url.js';
 import { isPremiumLocked, requireLogin } from './auth.js';
 import { renderContributors, renderTotalsBar } from './contributors.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';

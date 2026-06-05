@@ -6,7 +6,7 @@
 import { t } from './i18n.js';
 import siteConfig from '@site-config';
 import { renderTable } from './table.js';
-import { toUnicodeHref, toUnicodeSearch, currentParams } from './url.js';
+import { toUnicodeHref, toUnicodeSearch, currentParams } from './lib/url.js';
 import { isPremiumLocked, requireLogin } from './auth.js';
 
 import {
@@ -15,7 +15,7 @@ import {
   getContributorUrlMap, prefetchContributors,
 } from './contributors/data.js';
 import { renderChart, renderTimelineChart } from './contributors/charts.js';
-import { ensureChartJs } from './utils.js';
+import { ensureChartJs } from './lib/utils.js';
 import { loadSurnameCloud } from './contributors/cloud.js';
 import {
   contributorColumns,

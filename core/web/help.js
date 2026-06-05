@@ -1,5 +1,5 @@
 import { t, onLanguageChange } from './i18n.js';
-import { currentParams, toUnicodeSearch } from './url.js';
+import { currentParams, toUnicodeSearch } from './lib/url.js';
 import siteConfig from '@site-config';
 
 const hasAuth = !!siteConfig.authUrl;

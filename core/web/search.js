@@ -1,11 +1,11 @@
 import { t, onLanguageChange } from './i18n.js';
 import { renderTable } from './table.js';
-import { normalizeSearchDate } from './dates.js';
+import { normalizeSearchDate } from './lib/dates.js';
 import { API_BASE_URL, personColumns, familyColumns, DATE_RANGE_COLUMNS, DISPLAY_ONLY_COLUMNS } from './config.js';
-import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP, currentParams } from './url.js';
+import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP, currentParams } from './lib/url.js';
 import { hideIntro } from './intros.js';
 import { tabsWithResults } from './tab-state.js';
-import { inputWithClear, wireClearableContainer, setInputValue } from './utils.js';
+import { inputWithClear, wireClearableContainer, setInputValue } from './lib/utils.js';
 
 let lastGeneralResults = null;
 const lastAdvResults = { person: null, family: null };
