@@ -3,10 +3,12 @@ import os
 import re
 import time
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, cast, Text, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from . import models
+from .database import SessionLocal
 
 
 def _as_list(v):
@@ -1343,10 +1345,16 @@ def _make_ancestor_node_from_info(info):
     }
 
 
-def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
+def get_ancestors_tree(
+    db: Session, person_id: int, max_generations: int = 5, include_marriage: bool = True
+):
     """Build the ancestors tree using breadth-first expansion with per-level
     batched lookups. Two queries per generation (parents resolution + family
     lookup for parents_marriage) replace what used to be O(N) round-trips.
+
+    `include_marriage=False` skips the parents-marriage attachment (an extra
+    query plus a full-tree walk); the tree-comparison view doesn't render
+    marriages, so it opts out to save that work on both trees it builds.
     """
     max_generations = _resolve_max_generations(max_generations)
     root_person = db.query(models.Person).filter(models.Person.id == person_id).first()
@@ -1397,7 +1405,8 @@ def get_ancestors_tree(db: Session, person_id: int, max_generations: int = 5):
 
     # Batch-fetch parents_marriage families for every node that ended up with
     # two parents. The single OR'd query collapses N family lookups into one.
-    _attach_parents_marriage(db, root_node, contributor)
+    if include_marriage:
+        _attach_parents_marriage(db, root_node, contributor)
 
     return root_node
 
@@ -1982,6 +1991,36 @@ def _contributor_forms(name):
     return [norm, norm + MATRICULA_SUFFIX]
 
 
+def _collect_node_ids(node, acc):
+    """Gather the DB ids of every record-backed node in an ancestor tree
+    (unresolved JSON-only nodes have id=None and are skipped)."""
+    nid = node.get("id")
+    if nid is not None:
+        acc.add(nid)
+    for parent in node.get("parents", []):
+        _collect_node_ids(parent, acc)
+
+
+def _build_trees_parallel(a_id, b_id, max_generations):
+    """Build two ancestor trees concurrently, each on its own session so the
+    DB round-trips overlap. Marriage attachment is skipped (compare doesn't
+    render it). Sessions are short-lived and closed in the worker."""
+
+    def build(person_id):
+        session = SessionLocal()
+        try:
+            return get_ancestors_tree(
+                session, person_id, max_generations, include_marriage=False
+            )
+        finally:
+            session.close()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        fut_a = executor.submit(build, a_id)
+        fut_b = executor.submit(build, b_id)
+        return fut_a.result(), fut_b.result()
+
+
 def compare_trees(
     db: Session, a_id: int, b_id: int, direction: str = "ancestors", max_generations: int = 0
 ):
@@ -1999,10 +2038,20 @@ def compare_trees(
     if not person_a or not person_b:
         return None
 
-    tree_a = get_ancestors_tree(db, a_id, max_generations)
-    tree_b = get_ancestors_tree(db, b_id, max_generations)
+    # The two ancestor trees are independent, I/O-bound builds — run them
+    # concurrently on their own sessions (psycopg2 releases the GIL during DB
+    # round-trips, so this genuinely overlaps the work) and skip the unused
+    # parents-marriage attachment.
+    tree_a, tree_b = _build_trees_parallel(a_id, b_id, max_generations)
     if not tree_a or not tree_b:
         return None
+
+    # Person ids present in each tree, so the matches lookup is bounded to the
+    # pairs that can actually be aligned rather than every match between the
+    # two contributors.
+    a_ids, b_ids = set(), set()
+    _collect_node_ids(tree_a, a_ids)
+    _collect_node_ids(tree_b, b_ids)
 
     # Precomputed person matches between the two contributors: (a_pid, b_pid) ->
     # confidence. Used to annotate aligned pairs; alignment itself is structural.
@@ -2013,10 +2062,14 @@ def compare_trees(
         WHERE record_type = 'person'
           AND contributor_a = ANY(:a_forms)
           AND contributor_b = ANY(:b_forms)
+          AND record_a_id = ANY(:a_ids)
+          AND record_b_id = ANY(:b_ids)
     """),
         {
             "a_forms": _contributor_forms(person_a.contributor),
             "b_forms": _contributor_forms(person_b.contributor),
+            "a_ids": list(a_ids),
+            "b_ids": list(b_ids),
         },
     ).fetchall()
     match_conf = {(r.record_a_id, r.record_b_id): r.confidence for r in rows}
