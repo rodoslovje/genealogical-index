@@ -1939,7 +1939,7 @@ def _split_parents_by_sex(node):
 _VIEW_FIELDS = [
     "id", "ext_id", "name", "surname", "alt_surname", "sex",
     "date_of_birth", "place_of_birth", "date_of_baptism", "place_of_baptism",
-    "date_of_death", "place_of_death", "notes",
+    "date_of_death", "place_of_death", "notes", "links",
 ]
 
 

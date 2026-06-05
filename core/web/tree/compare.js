@@ -6,6 +6,7 @@ import {
   formatExportFilename, isPrivate,
 } from '../lib/utils.js';
 import { csvCell, csvRow, csvFooter, downloadCsv } from '../lib/csv.js';
+import { formatLinks } from '../lib/links.js';
 import { authFetch } from '../auth.js';
 import { computeBounds, createSvgWithZoom, appendLinks, attachSvgExport } from './shared.js';
 
@@ -466,6 +467,14 @@ function showDetail(detail, node, data) {
     return `<tr><th>${t(labelKey)}</th><td>${aCell}</td><td>${bCell}</td></tr>`;
   }).join('');
 
+  // Source-document links as icons, each side highlighting the links the other
+  // lacks (formatLinks does the diffing). Shown only when a side has any.
+  const aLinks = formatLinks(a ? a.links : [], b ? b.links : []);
+  const bLinks = formatLinks(b ? b.links : [], a ? a.links : []);
+  const linksRow = (aLinks || bLinks)
+    ? `<tr><th>${t('col_links')}</th><td class="compare-detail-links">${aLinks}</td><td class="compare-detail-links">${bLinks}</td></tr>`
+    : '';
+
   const conf = node.confidence != null
     ? `<span class="compare-detail-conf">${t('col_confidence')}: <strong>${Math.round(node.confidence * 100)}%</strong></span>`
     : '';
@@ -483,7 +492,7 @@ function showDetail(detail, node, data) {
     </div>
     <table class="compare-detail-table">
       <thead><tr><th></th><th>${aName}</th><th>${bName}</th></tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rows}${linksRow}</tbody>
     </table>`;
   detail.style.display = 'block';
   openDetailNode = node;  // remembered so a language switch can re-render it
@@ -525,7 +534,10 @@ function exportDifferences(data, ctx) {
   DETAIL_FIELDS.forEach(([, labelKey]) => {
     header.push(`${t(labelKey)} (${A})`, `${t(labelKey)} (${B})`);
   });
+  header.push(`${t('col_links')} (${A})`, `${t('col_links')} (${B})`);
   header.push(t('compare_diff_fields'));
+
+  const linksToStr = (l) => (Array.isArray(l) ? l.join(' ') : (l || ''));
 
   const statusText = (st) => {
     if (st === 'only_a') return `${t('compare_only_in')} ${A}`;
@@ -538,6 +550,7 @@ function exportDifferences(data, ctx) {
     const b = node.b || {};
     const cells = [gen, node.confidence != null ? Math.round(node.confidence * 100) + '%' : '', statusText(node.status)];
     DETAIL_FIELDS.forEach(([f]) => { cells.push(a[f] || '', b[f] || ''); });
+    cells.push(linksToStr(a.links), linksToStr(b.links));
     cells.push((node.field_diffs || []).map(f => t(`col_${f}`)).join('; '));
     return csvRow(cells);
   });

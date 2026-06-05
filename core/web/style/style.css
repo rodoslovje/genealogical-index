@@ -857,6 +857,7 @@ body.tree-view .section-bar {
 }
 .compare-detail-table thead th { color: var(--srd-ink-muted); font-weight: 600; }
 .compare-detail-table tbody th { color: var(--srd-ink-muted); font-weight: 500; white-space: nowrap; }
+.compare-detail-links a { text-decoration: none; margin-right: 3px; font-size: 1.05em; }
 .match-pair-even { background: var(--srd-bg-subtle); }
 .match-pair-odd  { background: var(--srd-surface); }
 .match-pair-row:nth-child(odd) td:not([rowspan]) {
