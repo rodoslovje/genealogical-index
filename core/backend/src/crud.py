@@ -1894,6 +1894,23 @@ def _conflict_fields(a, b):
     return diffs
 
 
+# Identity fields — when these disagree the two records may not even be the same
+# person, so that gets its own "conflict" status (vs. a "minor" difference in
+# secondary fields like place of baptism or date of death).
+_IDENTITY_FIELDS = {"name", "surname", "date_of_birth"}
+
+
+def _compare_status(a, b):
+    """Classify an aligned pair: agree (no differing fields), conflict (an
+    identity field differs), or minor (only secondary fields differ)."""
+    diffs = _conflict_fields(a, b)
+    if not diffs:
+        return "agree"
+    if any(f in _IDENTITY_FIELDS for f in diffs):
+        return "conflict"
+    return "minor"
+
+
 def _split_parents_by_sex(node):
     """Return (father, mother) from a node's parents list. Known sexes take
     their slot; unknown-sex parents fill whatever slot is still empty. Ancestor
@@ -1977,7 +1994,7 @@ def _align_ancestors(na, nb, match_conf):
     their fields, then pairs up fathers and mothers and recurses; an ancestor
     present on only one side becomes an only_a/only_b subtree."""
     conf = match_conf.get((na.get("id"), nb.get("id")))
-    status = "conflict" if _conflict_fields(na, nb) else "agree"
+    status = _compare_status(na, nb)
     merged = _merged_person_node(na, nb, status, conf)
 
     a_father, a_mother = _split_parents_by_sex(na)
@@ -2128,7 +2145,7 @@ def _only_family_subtree(fam, side):
 
 
 def _align_family(fa, fb, match_conf):
-    status = "conflict" if _conflict_fields(fa.get("partner"), fb.get("partner")) else "agree"
+    status = _compare_status(fa.get("partner"), fb.get("partner"))
     merged = _merged_family_node(fa, fb, status)
 
     a_children = _family_children(fa)
@@ -2153,7 +2170,7 @@ def _align_descendants(na, nb, match_conf):
     """Align two descendant persons known to be the same individual: compare
     their fields, match their families by partner, recurse into matched ones."""
     conf = match_conf.get((na.get("id"), nb.get("id")))
-    status = "conflict" if _conflict_fields(na, nb) else "agree"
+    status = _compare_status(na, nb)
     merged = _merged_descendant_person(na, nb, status, conf)
 
     a_families = _person_families(na)
@@ -2175,7 +2192,7 @@ def _summarize(merged):
     """Count person nodes by status across the whole merged tree. Family nodes
     (descendant marriages) are traversed but not counted — the summary reflects
     people, not unions."""
-    counts = {"agree": 0, "conflict": 0, "only_a": 0, "only_b": 0}
+    counts = {"agree": 0, "minor": 0, "conflict": 0, "only_a": 0, "only_b": 0}
 
     def walk(node):
         if not node.get("is_family"):

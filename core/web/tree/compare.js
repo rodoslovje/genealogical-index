@@ -30,9 +30,12 @@ const IDS = {
 };
 
 // Status → swatch colour. Kept in sync with the circle fill in decoratePersons().
+// `minor` = secondary fields differ (amber); `conflict` = an identity field
+// (name/surname/birth date) differs, so it may not be the same person (red).
 const STATUS_COLOR = {
   agree:    '#2e7d32',
-  conflict: '#f59e0b',
+  minor:    '#f5a623',
+  conflict: '#d32f2f',
   only_a:   '#3498db',
   only_b:   '#e8590c',
 };
@@ -148,6 +151,7 @@ function renderLegend(legend, data, ctx) {
 
   const counts = data ? `<div class="compare-legend-row">
       ${swatch('agree', t('compare_agree'), s.agree)}
+      ${swatch('minor', t('compare_minor'), s.minor)}
       ${swatch('conflict', t('compare_conflict'), s.conflict)}
       ${swatch('only_a', `${t('compare_only_in')} ${a}`, s.only_a)}
       ${swatch('only_b', `${t('compare_only_in')} ${b}`, s.only_b)}
@@ -294,7 +298,7 @@ function showDetail(detail, node, data) {
   let statusText;
   if (node.status === 'only_a') statusText = `${t('compare_only_in')} ${aName}`;
   else if (node.status === 'only_b') statusText = `${t('compare_only_in')} ${bName}`;
-  else statusText = t(node.status === 'conflict' ? 'compare_conflict' : 'compare_agree');
+  else statusText = t(STATUS_KEY[node.status] || 'compare_agree');
 
   const rows = DETAIL_FIELDS.map(([f, labelKey]) => {
     const va = a ? (a[f] || '') : '';
@@ -337,7 +341,7 @@ const csvCell = (v) => {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-const STATUS_KEY = { agree: 'compare_agree', conflict: 'compare_conflict' };
+const STATUS_KEY = { agree: 'compare_agree', minor: 'compare_minor', conflict: 'compare_conflict' };
 
 // One row per person node. Family nodes don't get a row, but crossing one in a
 // descendant tree advances the generation; crossing a person does too.
