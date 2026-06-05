@@ -215,6 +215,15 @@ export default {
     tree_source: 'Fonte',
     tree_created: 'Creato',
 
+    // Tree comparison
+    compare_title: 'Confronto alberi',
+    compare_action: 'Confronta alberi',
+    compare_tooltip: 'Confronta gli alberi degli antenati di entrambi i genealogisti per questa persona',
+    compare_agree: 'Corrispondenza',
+    compare_conflict: 'Differenza',
+    compare_only_in: 'Solo in',
+    compare_click_hint: 'Clicca una persona per vedere il confronto dettagliato.',
+
     // Help manual
     help_auth_nav: ", l'accesso al sistema (<strong>{USER_ICON}</strong>)",
     help_auth_tree: " Questa funzione è disponibile solo per i membri che hanno effettuato l'accesso.",

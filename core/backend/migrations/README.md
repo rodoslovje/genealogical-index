@@ -152,6 +152,25 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/006_ext_id_btree.sql
 ```
 
+### 008 — `matches_pair_lookup`
+
+Adds a composite btree index on
+`matches (contributor_a, contributor_b, record_type, record_a_id)` for the
+tree-comparison endpoint (`/api/compare/ancestors`), which loads the
+precomputed person matches between two genealogists to annotate aligned
+ancestor pairs with their confidence. The single-column contributor btrees
+already serve the query; this composite index lets the planner satisfy the
+whole predicate from the index as the matches table grows.
+
+- `CREATE INDEX CONCURRENTLY` — online; no table lock.
+- Must run **outside** a transaction block.
+- Re-runnable (`IF NOT EXISTS`).
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/008_matches_pair_lookup.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

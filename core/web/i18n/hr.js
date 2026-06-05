@@ -208,6 +208,15 @@ export default {
     tree_source: 'Izvor',
     tree_created: 'Izrađeno',
 
+    // Tree comparison
+    compare_title: 'Usporedba stabala',
+    compare_action: 'Usporedi stabla',
+    compare_tooltip: 'Usporedi rodoslovna stabla predaka oba rodoslovca za ovu osobu',
+    compare_agree: 'Podudaranje',
+    compare_conflict: 'Razlika',
+    compare_only_in: 'Samo kod',
+    compare_click_hint: 'Kliknite osobu za detaljan prikaz razlika.',
+
     // Help manual
     help_auth_nav: ', prijavu u sustav (<strong>{USER_ICON}</strong>)',
     help_auth_tree: ' Ova je funkcija dostupna samo prijavljenim članovima.',

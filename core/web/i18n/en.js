@@ -208,6 +208,15 @@ export default {
     tree_source: 'Source',
     tree_created: 'Created',
 
+    // Tree comparison
+    compare_title: 'Tree Comparison',
+    compare_action: 'Compare trees',
+    compare_tooltip: "Compare both genealogists' ancestor trees for this person",
+    compare_agree: 'Match',
+    compare_conflict: 'Difference',
+    compare_only_in: 'Only in',
+    compare_click_hint: 'Click a person to see the field-by-field comparison.',
+
     // Help manual
     help_auth_nav: ', system login (<strong>{USER_ICON}</strong>)',
     help_auth_tree: ' This feature is only available to logged-in members.',

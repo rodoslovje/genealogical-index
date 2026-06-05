@@ -8,7 +8,8 @@ import { currentParams } from './lib/url.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderIntros } from './intros.js';
 import { initNavbar, checkNavOverflow } from './navbar.js';
-import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, tabIdFromParams } from './router.js';
+import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, maybeRouteCompare, tabIdFromParams } from './router.js';
+import { renderComparePage } from './tree/compare.js';
 import { setupClearableInput } from './lib/utils.js';
 
 // --- Global styles injected from JS ---
@@ -93,6 +94,9 @@ async function init() {
     if (maybeRouteMatricula(urlParams)) {
       return;
     }
+    if (maybeRouteCompare(urlParams)) {
+      return;
+    }
     activateTab(tabIdFromParams(urlParams), { initial: true });
 
     restoreFromURL();
@@ -105,6 +109,9 @@ async function init() {
       }
       if (document.getElementById('tab-descendants').classList.contains('active')) {
         renderDescendantsPage();
+      }
+      if (document.getElementById('tab-compare')?.classList.contains('active')) {
+        renderComparePage();
       }
     });
   } catch (err) {

@@ -1834,3 +1834,204 @@ def get_descendants_tree(db: Session, person_id: int, max_generations: int = 5):
         current_records, current_nodes = next_records, next_nodes
 
     return root_node
+
+
+# ---------------------------------------------------------------------------
+# Tree comparison (Phase 1: ancestors)
+# ---------------------------------------------------------------------------
+#
+# Given two persons — one from genealogist A, one from genealogist B — that have
+# been matched as the same individual, build both ancestor trees and align them
+# slot-by-slot. A person has at most two parents distinguishable by sex, so the
+# alignment is a clean lockstep walk: root↔root (the anchor pair), then
+# father_A↔father_B and mother_A↔mother_B, recursively. Each aligned slot is
+# classified as agree / conflict / only_a / only_b, and the precomputed
+# `matches` table supplies a confidence score wherever the two persons are a
+# known match.
+
+# Person fields compared when deciding agree vs. conflict. A "conflict" is a
+# field both genealogists filled in but with differing values; a value present
+# on only one side is extra information, not a disagreement.
+_COMPARE_FIELDS = [
+    "name",
+    "surname",
+    "sex",
+    "date_of_birth",
+    "place_of_birth",
+    "date_of_baptism",
+    "place_of_baptism",
+    "date_of_death",
+    "place_of_death",
+]
+
+
+def _norm_cmp(v):
+    """Normalise a field value for equality comparison: trim whitespace and
+    NFC-normalise unicode so e.g. trailing spaces or composed/decomposed
+    accents don't read as a difference."""
+    if v is None:
+        return ""
+    s = str(v).strip()
+    return unicodedata.normalize("NFC", s) if s else ""
+
+
+def _conflict_fields(a, b):
+    """Fields that both sides populated but disagree on (the CONFLICT signal)."""
+    diffs = []
+    for f in _COMPARE_FIELDS:
+        va, vb = _norm_cmp(a.get(f)), _norm_cmp(b.get(f))
+        if va and vb and va != vb:
+            diffs.append(f)
+    return diffs
+
+
+def _split_parents_by_sex(node):
+    """Return (father, mother) from a node's parents list. Known sexes take
+    their slot; unknown-sex parents fill whatever slot is still empty. Ancestor
+    nodes carry at most two parents, so this never drops anyone."""
+    father = mother = None
+    unknown = []
+    for p in node.get("parents") or []:
+        if p.get("sex") == "m" and father is None:
+            father = p
+        elif p.get("sex") == "f" and mother is None:
+            mother = p
+        else:
+            unknown.append(p)
+    for p in unknown:
+        if father is None:
+            father = p
+        elif mother is None:
+            mother = p
+    return father, mother
+
+
+def _merged_person_node(a, b, status, confidence):
+    """Build one node of the merged comparison tree. Display fields (name/sex/…)
+    are flattened onto the node from whichever side is present (A preferred) so
+    the D3 renderer can read them directly; the full `a`/`b` records are kept
+    for the side-by-side conflict detail."""
+    src = a or b or {}
+    return {
+        "status": status,
+        "field_diffs": _conflict_fields(a, b) if (a and b) else [],
+        "confidence": confidence,
+        "a": a,
+        "b": b,
+        # Flattened display fields (prefer A, fall back to B).
+        "name": src.get("name"),
+        "surname": src.get("surname"),
+        "sex": src.get("sex"),
+        "date_of_birth": src.get("date_of_birth"),
+        "place_of_birth": src.get("place_of_birth"),
+        "parents": [],
+    }
+
+
+def _only_subtree(node, side):
+    """Wrap a whole ancestor subtree that exists for just one genealogist,
+    tagging every node only_a / only_b and recursing through its parents."""
+    status = "only_" + side
+    a = node if side == "a" else None
+    b = node if side == "b" else None
+    merged = _merged_person_node(a, b, status, None)
+    for parent in node.get("parents") or []:
+        merged["parents"].append(_only_subtree(parent, side))
+    return merged
+
+
+def _align_ancestors(na, nb, match_conf):
+    """Lockstep-align two ancestor nodes known to be the same person. Compares
+    their fields, then pairs up fathers and mothers and recurses; an ancestor
+    present on only one side becomes an only_a/only_b subtree."""
+    conf = match_conf.get((na.get("id"), nb.get("id")))
+    status = "conflict" if _conflict_fields(na, nb) else "agree"
+    merged = _merged_person_node(na, nb, status, conf)
+
+    a_father, a_mother = _split_parents_by_sex(na)
+    b_father, b_mother = _split_parents_by_sex(nb)
+
+    for ca, cb in ((a_father, b_father), (a_mother, b_mother)):
+        if ca and cb:
+            merged["parents"].append(_align_ancestors(ca, cb, match_conf))
+        elif ca:
+            merged["parents"].append(_only_subtree(ca, "a"))
+        elif cb:
+            merged["parents"].append(_only_subtree(cb, "b"))
+
+    return merged
+
+
+def _summarize(merged):
+    """Count nodes by status across the whole merged tree."""
+    counts = {"agree": 0, "conflict": 0, "only_a": 0, "only_b": 0}
+
+    def walk(node):
+        counts[node["status"]] = counts.get(node["status"], 0) + 1
+        for p in node.get("parents", []):
+            walk(p)
+
+    walk(merged)
+    return counts
+
+
+def _contributor_forms(name):
+    """Both spellings a contributor may appear under in the matches table:
+    the NFC-normalised name and its -matricula variant."""
+    norm = unicodedata.normalize("NFC", name or "")
+    return [norm, norm + MATRICULA_SUFFIX]
+
+
+def compare_trees(
+    db: Session, a_id: int, b_id: int, direction: str = "ancestors", max_generations: int = 0
+):
+    """Build and align two genealogists' trees rooted at a matched person pair.
+
+    `a_id` / `b_id` are Person row ids (the match-detail view hands these over
+    directly). Returns a merged tree of comparison nodes plus a status summary,
+    or None if either anchor person is missing. Phase 1 supports ancestors only.
+    """
+    if direction != "ancestors":
+        return None
+
+    person_a = db.query(models.Person).filter(models.Person.id == a_id).first()
+    person_b = db.query(models.Person).filter(models.Person.id == b_id).first()
+    if not person_a or not person_b:
+        return None
+
+    tree_a = get_ancestors_tree(db, a_id, max_generations)
+    tree_b = get_ancestors_tree(db, b_id, max_generations)
+    if not tree_a or not tree_b:
+        return None
+
+    # Precomputed person matches between the two contributors: (a_pid, b_pid) ->
+    # confidence. Used to annotate aligned pairs; alignment itself is structural.
+    rows = db.execute(
+        text("""
+        SELECT record_a_id, record_b_id, confidence
+        FROM matches
+        WHERE record_type = 'person'
+          AND contributor_a = ANY(:a_forms)
+          AND contributor_b = ANY(:b_forms)
+    """),
+        {
+            "a_forms": _contributor_forms(person_a.contributor),
+            "b_forms": _contributor_forms(person_b.contributor),
+        },
+    ).fetchall()
+    match_conf = {(r.record_a_id, r.record_b_id): r.confidence for r in rows}
+
+    merged = _align_ancestors(tree_a, tree_b, match_conf)
+
+    return {
+        "direction": "ancestors",
+        "anchor": {
+            "a_id": a_id,
+            "b_id": b_id,
+            "confidence": match_conf.get((a_id, b_id)),
+        },
+        "contributor_a": person_a.contributor,
+        "contributor_b": person_b.contributor,
+        "summary": _summarize(merged),
+        "tree": merged,
+    }

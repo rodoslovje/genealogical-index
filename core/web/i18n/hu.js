@@ -216,6 +216,15 @@ export default {
     tree_source: 'Forrás',
     tree_created: 'Létrehozva',
 
+    // Tree comparison
+    compare_title: 'Fák összehasonlítása',
+    compare_action: 'Fák összehasonlítása',
+    compare_tooltip: 'Mindkét genealógus őseinek fáját összehasonlítja ennél a személynél',
+    compare_agree: 'Egyezés',
+    compare_conflict: 'Eltérés',
+    compare_only_in: 'Csak nála:',
+    compare_click_hint: 'Kattintson egy személyre a részletes összehasonlításhoz.',
+
     // Help manual
     help_auth_nav: ', a rendszerbe való bejelentkezést (<strong>{USER_ICON}</strong>)',
     help_auth_tree: ' Ez a funkció csak bejelentkezett tagok számára érhető el.',

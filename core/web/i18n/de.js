@@ -208,6 +208,15 @@ export default {
     tree_source: 'Quelle',
     tree_created: 'Erstellt',
 
+    // Tree comparison
+    compare_title: 'Stammbaum-Vergleich',
+    compare_action: 'Bäume vergleichen',
+    compare_tooltip: 'Die Vorfahrenbäume beider Genealogen für diese Person vergleichen',
+    compare_agree: 'Übereinstimmung',
+    compare_conflict: 'Unterschied',
+    compare_only_in: 'Nur bei',
+    compare_click_hint: 'Auf eine Person klicken, um die Unterschiede anzuzeigen.',
+
     // Help manual
     help_auth_nav: ', Systemanmeldung (<strong>{USER_ICON}</strong>)',
     help_auth_tree: ' Diese Funktion steht nur angemeldeten Mitgliedern zur Verfügung.',

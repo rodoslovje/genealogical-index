@@ -3,6 +3,7 @@ import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams } from './lib/url.js';
 import { isPremiumLocked, requireLogin } from './auth.js';
 import { renderContributors, renderTotalsBar } from './contributors.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
+import { renderComparePage } from './tree/compare.js';
 import { renderMatriculaStatsPage } from './contributors/matricula-stats.js';
 import { getTabURLParams, restoreFromURL, clearAllSearchForms } from './search.js';
 import { hideIntro, showIntros } from './intros.js';
@@ -71,6 +72,35 @@ export function maybeRouteMatricula(urlParams) {
   }
 
   renderMatriculaStatsPage();
+  return true;
+}
+
+/** Side route: ?t=compare&a=<id>&b=<id> renders the tree-comparison page for a
+ *  matched person pair. Premium-gated like the tree tabs — when locked we
+ *  surface the login prompt and fall back to the general tab. Returns true when
+ *  handled so the caller can skip normal tab routing. */
+export function maybeRouteCompare(urlParams) {
+  if (urlParams.get('t') !== 'compare') return false;
+
+  if (isPremiumLocked()) {
+    requireLogin('premium_gated_desc');
+    activateTab('tab-general', { initial: true });
+    return true;
+  }
+
+  document.body.classList.remove('contributors-view');
+  document.body.classList.add('tree-view');
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
+
+  const sectionEl = document.getElementById('tab-compare');
+  if (sectionEl) sectionEl.classList.add('active');
+
+  sidebar?.classList.remove('open');
+
+  renderComparePage();
   return true;
 }
 
@@ -199,6 +229,7 @@ function navigateToURL({ triggerSearch = true } = {}) {
   normalizeLegacyURL();
   const urlParams = currentParams();
   if (maybeRouteMatricula(urlParams)) return;
+  if (maybeRouteCompare(urlParams)) return;
 
   if (!activateTab(tabIdFromParams(urlParams), { skipHistory: true })) {
     return;
@@ -241,7 +272,7 @@ export function initRouter() {
 
     const urlT = url.searchParams.get('t');
     const hasWith = url.searchParams.has('w') || url.searchParams.has('with');
-    if ((urlT === 'ancestors' || urlT === 'descendants' || (urlT === 'contributors' && hasWith)) && isPremiumLocked()) {
+    if ((urlT === 'ancestors' || urlT === 'descendants' || urlT === 'compare' || (urlT === 'contributors' && hasWith)) && isPremiumLocked()) {
       requireLogin('premium_gated_desc');
       return;
     }

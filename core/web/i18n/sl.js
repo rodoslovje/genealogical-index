@@ -208,6 +208,15 @@ export default {
     tree_source: 'Vir',
     tree_created: 'Ustvarjeno',
 
+    // Tree comparison
+    compare_title: 'Primerjava dreves',
+    compare_action: 'Primerjaj drevesi',
+    compare_tooltip: 'Primerjaj predniški drevesi obeh rodoslovcev za to osebo',
+    compare_agree: 'Ujemanje',
+    compare_conflict: 'Razlika',
+    compare_only_in: 'Samo pri',
+    compare_click_hint: 'Kliknite osebo za podroben prikaz razlik.',
+
     // Help manual
     help_auth_nav: ', prijavo v sistem (<strong>{USER_ICON}</strong>)',
     help_auth_tree: ' Ta funkcija je na voljo samo za prijavljene člane.',

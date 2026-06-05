@@ -295,6 +295,19 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           const aCells = fields.map(({ f }) => makeCell(r.record_a, r.record_b, f)).join('');
           const bCells = fields.map(({ f }) => makeCell(r.record_b, r.record_a, f)).join('');
           const conf = Math.round((r.confidence || 0) * 100);
+
+          // Tree-comparison link (Phase 1: ancestors, persons only). Carries both
+          // person ids so the compare view can anchor on this matched pair. The
+          // SPA-nav handler gates it behind login on auth-configured sites.
+          let compareLinkHtml = '';
+          if (key === 'person' && r.record_a.id && r.record_b.id) {
+            const cmpName = isPrivate(r.record_a.name) || isPrivate(r.record_a.surname)
+              ? '' : [r.record_a.name, r.record_a.surname].filter(Boolean).join(' ');
+            const cmpHref = toUnicodeHref({
+              t: 'compare', a: String(r.record_a.id), b: String(r.record_b.id), pn: cmpName,
+            });
+            compareLinkHtml = `<div class="compare-link-wrap"><a class="compare-tree-link" href="${cmpHref}" data-spa-nav title="${t('compare_tooltip').replace(/"/g, '&quot;')}">⇆🌳 ${t('compare_action')}</a></div>`;
+          }
           const aContrib = r.record_a.contributor || contributor;
           const bContrib = r.record_b.contributor || partner;
           const contribBaseL = baseContributorName(aContrib);
@@ -306,7 +319,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           return `<tr class="match-pair-row ${pairCls}" data-row-key="${keyFor(r.record_a)}">
                     ${aCells}
                     <td class="match-pair-label match-pair-label-a col-center">${contributorLink}</td>
-                    <td rowspan="2" class="match-conf col-center">${conf}%</td>
+                    <td rowspan="2" class="match-conf col-center">${conf}%${compareLinkHtml}</td>
                   </tr>
                   <tr class="match-pair-row ${pairCls}" data-row-key="${keyFor(r.record_b)}">
                     ${bCells}

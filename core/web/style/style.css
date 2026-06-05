@@ -711,6 +711,76 @@ body.tree-view .section-bar {
   vertical-align: middle;
   white-space: nowrap;
 }
+/* Tree-comparison entry link in the match-detail confidence cell. */
+.compare-link-wrap { margin-top: 6px; }
+.compare-tree-link {
+  display: inline-block;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  color: var(--srd-brand);
+  text-decoration: none;
+}
+.compare-tree-link:hover { text-decoration: underline; }
+
+/* --- Tree comparison view --- */
+.compare-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin: 4px 0 12px 0;
+  font-size: 0.9rem;
+  color: var(--srd-ink-muted);
+}
+.compare-legend-row { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+.compare-legend-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.compare-legend-hint { font-style: italic; }
+.compare-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.compare-detail-panel {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 11;
+  max-width: min(420px, 80%);
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  padding: 10px 12px;
+  font-size: 0.88rem;
+}
+.compare-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.compare-detail-status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.compare-detail-conf { color: var(--srd-ink-muted); }
+.compare-detail-close {
+  margin-left: auto;
+  border: none;
+  background: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--srd-ink-muted);
+}
+.compare-detail-table { width: 100%; border-collapse: collapse; }
+.compare-detail-table th,
+.compare-detail-table td {
+  text-align: left;
+  padding: 3px 8px 3px 0;
+  vertical-align: top;
+}
+.compare-detail-table thead th { color: var(--srd-ink-muted); font-weight: 600; }
+.compare-detail-table tbody th { color: var(--srd-ink-muted); font-weight: 500; white-space: nowrap; }
 .match-pair-even { background: var(--srd-bg-subtle); }
 .match-pair-odd  { background: var(--srd-surface); }
 .match-pair-row:nth-child(odd) td:not([rowspan]) {
