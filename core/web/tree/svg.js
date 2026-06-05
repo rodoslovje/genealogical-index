@@ -246,7 +246,7 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
 // Wires the SVG-download button. Both trees produce the same export chrome
 // (title at top-left, site title at top-right, contributor + timestamp at the
 // bottom), only the heading text and output filename differ.
-export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorName, titleText, filePrefix }) {
+export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorName, sourceText, titleText, filePrefix }) {
   d3.select(`#${downloadBtnId}`).on('click', null).on('click', () => {
     const originalTransform = g.attr('transform');
     g.attr('transform', null);
@@ -350,19 +350,33 @@ export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contr
           .text(`${t('tree_source')}:`);
 
       const labelWidth = sourceLabel.node().getComputedTextLength();
-      const contribUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', c: contributorName });
-      const contribText = overlay.append('a')
-          .attr('href', contribUrl)
-          .attr('target', '_blank')
-          .append('text')
-          .attr('x', footerLeftX + labelWidth + 6)
-          .attr('y', exportY + exportHeight - footerHeight / 2)
-          .attr('dominant-baseline', 'central')
-          .attr('font-size', '14px')
-          .attr('fill', '#3498db')
-          .text(`${t('col_contributor')} ${contributorName}`);
-
-      const contribWidth = contribText.node().getComputedTextLength();
+      // The source value is either a single linked contributor (the regular
+      // trees) or a plain comma-separated list of both genealogists when a
+      // `sourceText` is supplied (the compare view).
+      let contribWidth;
+      if (sourceText) {
+        const node = overlay.append('text')
+            .attr('x', footerLeftX + labelWidth + 6)
+            .attr('y', exportY + exportHeight - footerHeight / 2)
+            .attr('dominant-baseline', 'central')
+            .attr('font-size', '14px')
+            .attr('fill', '#555')
+            .text(sourceText);
+        contribWidth = node.node().getComputedTextLength();
+      } else {
+        const contribUrl = window.location.origin + window.location.pathname + '?' + toUnicodeSearch({ t: 'contributors', c: contributorName });
+        const node = overlay.append('a')
+            .attr('href', contribUrl)
+            .attr('target', '_blank')
+            .append('text')
+            .attr('x', footerLeftX + labelWidth + 6)
+            .attr('y', exportY + exportHeight - footerHeight / 2)
+            .attr('dominant-baseline', 'central')
+            .attr('font-size', '14px')
+            .attr('fill', '#3498db')
+            .text(`${t('col_contributor')} ${contributorName}`);
+        contribWidth = node.node().getComputedTextLength();
+      }
 
       const commaNode = overlay.append('text')
           .attr('x', footerLeftX + labelWidth + 6 + contribWidth)

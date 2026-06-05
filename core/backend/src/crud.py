@@ -2340,23 +2340,44 @@ def _build_trees_parallel(a_id, b_id, max_generations, direction):
         return fut_a.result(), fut_b.result()
 
 
+def _find_person_by_ext(db: Session, contributor: str, ext_id: str):
+    """Resolve a person by its stable (contributor, GEDCOM ext_id) identity.
+    Preferred over the row id, which can change on re-import."""
+    if not contributor or not ext_id:
+        return None
+    norm_c = unicodedata.normalize("NFC", contributor)
+    return (
+        db.query(models.Person)
+        .filter(models.Person.contributor == norm_c, models.Person.ext_id == ext_id)
+        .first()
+    )
+
+
 def compare_trees(
-    db: Session, a_id: int, b_id: int, direction: str = "ancestors", max_generations: int = 0
+    db: Session,
+    a_contributor: str,
+    a_ext_id: str,
+    b_contributor: str,
+    b_ext_id: str,
+    direction: str = "ancestors",
+    max_generations: int = 0,
 ):
     """Build and align two genealogists' trees rooted at a matched person pair.
 
-    `a_id` / `b_id` are Person row ids (the match-detail view hands these over
-    directly). `direction` is "ancestors" or "descendants". Returns a merged
-    tree of comparison nodes plus a status summary, or None if either anchor
-    person is missing.
+    Each side is identified by its stable (contributor, GEDCOM ext_id) pair —
+    not the internal row id, which can change on re-import. `direction` is
+    "ancestors" or "descendants". Returns a merged tree of comparison nodes plus
+    a status summary, or None if either anchor person can't be resolved.
     """
     if direction not in ("ancestors", "descendants"):
         return None
 
-    person_a = db.query(models.Person).filter(models.Person.id == a_id).first()
-    person_b = db.query(models.Person).filter(models.Person.id == b_id).first()
+    person_a = _find_person_by_ext(db, a_contributor, a_ext_id)
+    person_b = _find_person_by_ext(db, b_contributor, b_ext_id)
     if not person_a or not person_b:
         return None
+
+    a_id, b_id = person_a.id, person_b.id
 
     # The two trees are independent, I/O-bound builds — run them concurrently on
     # their own sessions (psycopg2 releases the GIL during DB round-trips, so
@@ -2400,9 +2421,10 @@ def compare_trees(
 
     return {
         "direction": direction,
+        # Anchor identity is the stable (contributor, ext_id) pair, not row ids.
         "anchor": {
-            "a_id": a_id,
-            "b_id": b_id,
+            "a_ext_id": person_a.ext_id,
+            "b_ext_id": person_b.ext_id,
             "confidence": match_conf.get((a_id, b_id)),
         },
         "contributor_a": person_a.contributor,

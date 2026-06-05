@@ -67,15 +67,20 @@ const closeCompareLists = () =>
 document.addEventListener('click', closeCompareLists);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCompareLists(); });
 
-// Page + browser-tab title. Mirrors the match page by including the genealogist
-// pair ("A × B") once the data has loaded; before then it's just the person.
-function setCompareTitle(ctx, data) {
+// Title string, mirroring the match page by including the genealogist pair
+// ("A × B") once the data has loaded; before then it's just the person.
+function compareTitleText(ctx, data) {
   const suffix = formatTitleSuffix(t('compare_title'));
   const pair = data
     ? `${baseContributorName(data.contributor_a || '')} × ${baseContributorName(data.contributor_b || '')}`
     : '';
   const base = ctx.personName ? `${ctx.personName} - ${suffix}` : t('compare_title');
-  const pageTitle = pair ? `${base} - ${pair}` : base;
+  return pair ? `${base} - ${pair}` : base;
+}
+
+// Page heading + browser-tab title.
+function setCompareTitle(ctx, data) {
+  const pageTitle = compareTitleText(ctx, data);
   const titleEl = document.getElementById(IDS.pageTitle);
   if (titleEl) titleEl.textContent = pageTitle;
   document.title = `${pageTitle} | ${t('site_title')}`;
@@ -83,11 +88,14 @@ function setCompareTitle(ctx, data) {
 
 export function renderComparePage() {
   const params = currentParams();
-  const aId = params.get('a') || '';
-  const bId = params.get('b') || '';
+  // Each side is a stable (contributor, ext_id) pair: ca/a for A, cb/b for B.
+  const ca = params.get('ca') || '';
+  const a = params.get('a') || '';
+  const cb = params.get('cb') || '';
+  const b = params.get('b') || '';
   const personName = params.get('pn') || '';
   const dir = params.get('dir') === 'descendants' ? 'descendants' : 'ancestors';
-  const ctx = { aId, bId, personName, dir };
+  const ctx = { ca, a, cb, b, personName, dir };
 
   setCompareTitle(ctx, null);
 
@@ -117,12 +125,12 @@ export function renderComparePage() {
     ?.querySelectorAll('.tree-minimap').forEach(el => el.remove());
   container.innerHTML = `<p style="padding: 20px;">${t('tree_loading')}</p>`;
 
-  if (!aId || !bId) {
+  if (!ca || !a || !cb || !b) {
     container.innerHTML = `<p style="padding: 20px;">${t('no_results')}</p>`;
     return;
   }
 
-  const apiParams = new URLSearchParams({ a_id: aId, b_id: bId, max_generations: '0' });
+  const apiParams = new URLSearchParams({ ca, a, cb, b, max_generations: '0' });
   const dataPromise = authFetch(`${API_BASE_URL}/api/compare/${dir}?${apiParams}`)
       .then(r => r.ok ? r.json() : null);
   const d3Promise = ensureD3().catch(() => {});
@@ -141,7 +149,7 @@ export function renderComparePage() {
       if (controls) controls.style.display = 'flex';
       setCompareTitle(ctx, data);
       renderLegend(legend, data, ctx);
-      const view = renderTree(data, container, detail);
+      const view = renderTree(data, container, detail, ctx);
       wireLegendList(legend, view, detail, data);
       compareState = { data, ctx, view, detail };
       if (csvBtn) {
@@ -187,7 +195,9 @@ function renderLegend(legend, data, ctx) {
   const s = (data && data.summary) || {};
 
   const toggleLink = (dir, label) => {
-    const href = toUnicodeHref({ t: 'compare', a: ctx.aId, b: ctx.bId, pn: ctx.personName, dir });
+    const href = toUnicodeHref({
+      t: 'compare', ca: ctx.ca, a: ctx.a, cb: ctx.cb, b: ctx.b, pn: ctx.personName, dir,
+    });
     const active = ctx.dir === dir ? ' compare-toggle-active' : '';
     return `<a class="compare-toggle-btn${active}" href="${href}" data-spa-nav>${label}</a>`;
   };
@@ -285,7 +295,7 @@ function wireLegendList(legend, view, detail, data) {
   });
 }
 
-function renderTree(data, container, detail) {
+function renderTree(data, container, detail, ctx) {
   const dx = 120, dy = 250;
   const isDesc = data.direction === 'descendants';
 
@@ -323,10 +333,13 @@ function renderTree(data, container, detail) {
 
   attachSvgExport({
     svg, g, downloadBtnId: IDS.downloadSvg,
-    data: data.tree, personName: data.tree.name || '',
+    data: data.tree,
+    personName: (ctx && ctx.personName) || data.tree.name || '',
     contributorName: data.contributor_a || '',
-    titleText: t('compare_title'),
-    filePrefix: 'compare',
+    // Both genealogists in the footer "Source:" line (comma-separated).
+    sourceText: `${baseContributorName(data.contributor_a || '')}, ${baseContributorName(data.contributor_b || '')}`,
+    titleText: compareTitleText(ctx || {}, data),
+    filePrefix: `compare-${data.direction}`,
   });
 
   appendLinks(g, root);
@@ -479,6 +492,8 @@ function showDetail(detail, node, data) {
 // --- CSV export of the differences ------------------------------------------
 
 const STATUS_KEY = { agree: 'compare_agree', minor: 'compare_minor', conflict: 'compare_conflict' };
+// CSV sort order for the status column (matches the legend order).
+const STATUS_ORDER = { agree: 0, minor: 1, conflict: 2, only_a: 3, only_b: 4 };
 
 // One row per person node. Family nodes don't get a row, but crossing one in a
 // descendant tree advances the generation; crossing a person does too.
@@ -496,6 +511,11 @@ function exportDifferences(data, ctx) {
 
   const rows = [];
   collectRows(data.tree, 0, rows);
+  // Sort by generation, then by status (legend order); the stable sort keeps the
+  // tree's natural within-group order.
+  rows.sort((x, y) =>
+    (x.gen - y.gen) ||
+    ((STATUS_ORDER[x.node.status] ?? 9) - (STATUS_ORDER[y.node.status] ?? 9)));
 
   const header = [t('col_generation'), t('col_confidence'), t('compare_status')];
   DETAIL_FIELDS.forEach(([, labelKey]) => {
@@ -523,7 +543,7 @@ function exportDifferences(data, ctx) {
   const dirLabel = t(ctx.dir === 'descendants' ? 'tree_descendants_title' : 'tree_ancestors_title');
   const subject = [csvCell(`${t('compare_title')} – ${dirLabel}`)];
   if (ctx.personName) subject.push(csvRow([t('col_name'), ctx.personName]));
-  subject.push(csvRow([t('tree_source'), `${A} ↔ ${B}`]));
+  subject.push(csvRow([t('tree_source'), `${A}, ${B}`]));
 
   const filename = formatExportFilename(`compare-${ctx.dir}-${ctx.personName || ctx.dir}`, 'csv');
   downloadCsv([csvRow(header), ...body, '', ...csvFooter(subject)], filename);

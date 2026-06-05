@@ -226,33 +226,38 @@ def get_person_descendants(
     return crud.get_descendants_tree(db, person_id, max_generations)
 
 
+# Each side of a comparison is identified by its stable (contributor, GEDCOM
+# ext_id) pair — `ca`/`a` for side A, `cb`/`b` for side B — rather than the
+# internal row id, which can change on re-import.
 @app.get("/api/compare/ancestors")
 def compare_ancestors(
-    a_id: int,
-    b_id: int,
+    ca: str,
+    a: str,
+    cb: str,
+    b: str,
     max_generations: int = 0,  # 0 = all generations
     db: Session = Depends(get_db),
     user: Optional[dict] = Depends(require_user),
 ):
-    """Compare the ancestor trees of two matched persons (one per genealogist).
-    `a_id` / `b_id` are Person row ids from the match-detail pair view."""
+    """Compare the ancestor trees of two matched persons (one per genealogist)."""
     return crud.compare_trees(
-        db, a_id, b_id, direction="ancestors", max_generations=max_generations
+        db, ca, a, cb, b, direction="ancestors", max_generations=max_generations
     )
 
 
 @app.get("/api/compare/descendants")
 def compare_descendants(
-    a_id: int,
-    b_id: int,
+    ca: str,
+    a: str,
+    cb: str,
+    b: str,
     max_generations: int = 0,  # 0 = all generations
     db: Session = Depends(get_db),
     user: Optional[dict] = Depends(require_user),
 ):
-    """Compare the descendant trees of two matched persons (one per genealogist).
-    `a_id` / `b_id` are Person row ids from the match-detail pair view."""
+    """Compare the descendant trees of two matched persons (one per genealogist)."""
     return crud.compare_trees(
-        db, a_id, b_id, direction="descendants", max_generations=max_generations
+        db, ca, a, cb, b, direction="descendants", max_generations=max_generations
     )
 
 
