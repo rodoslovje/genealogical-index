@@ -673,6 +673,25 @@ def _date_filter(
     return None
 
 
+# Characters that delimit a "word" for exact (whole-word) matching. Exact
+# search must match a value as a standalone token, so "Visoko 1" matches both
+# "Visoko 1" and "Visoko 1, p. Šenčur" but not "Visoko 10". Postgres's \y /
+# [[:alpha:]] word boundaries are locale-dependent — under a C-locale database
+# (the postgres:alpine default) they treat accented letters like č/š/ž as
+# non-word characters, which would break boundaries inside the name itself. So
+# we enumerate the whitespace + punctuation separators explicitly and treat
+# everything else — accented letters and digits included — as word content.
+_EXACT_SEPS = r" \t\n\r,.;:!?()\[\]{}<>/\\|\"'`«»‹›“”„’…·•\-–—"
+
+
+def _exact_word_filter(column, part):
+    """Whole-word match that treats punctuation (not just spaces) as word
+    boundaries, via a case-insensitive regex. Backed by the same gin_trgm_ops
+    indexes that accelerate the ILIKE/`%>` fuzzy path."""
+    pattern = rf"(^|[{_EXACT_SEPS}]){re.escape(part)}($|[{_EXACT_SEPS}])"
+    return column.op("~*")(pattern)
+
+
 def _text_filter(column, value, exact: bool, split_comma: bool = False):
     if not value:
         return None
@@ -686,15 +705,7 @@ def _text_filter(column, value, exact: bool, split_comma: bool = False):
     conds = []
     for part in parts:
         if exact:
-            v = part.replace("%", r"\%").replace("_", r"\_")
-            conds.append(
-                or_(
-                    column.ilike(v),
-                    column.ilike(f"{v} %"),
-                    column.ilike(f"% {v}"),
-                    column.ilike(f"% {v} %"),
-                )
-            )
+            conds.append(_exact_word_filter(column, part))
         else:
             conds.append(
                 or_(column.op("%>")(cast(part, Text)), column.ilike(f"%{part}%"))
