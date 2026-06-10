@@ -2,6 +2,7 @@ import argparse
 import os
 import json
 import re
+import time
 import unicodedata
 from sqlalchemy import create_engine, text
 import urllib.request
@@ -522,6 +523,14 @@ def _s(v):
     return unicodedata.normalize("NFC", s)
 
 
+def _print_done(count, start):
+    """Print elapsed time and throughput for an insert that began at `start`
+    (a time.perf_counter() reading)."""
+    elapsed = time.perf_counter() - start
+    rate = count / elapsed if elapsed > 0 else 0
+    print(f"  -> DONE in {elapsed:.1f} sec ({rate:,.0f} records/sec)")
+
+
 def _flatten_person(p, contributor_id):
     birth = p.get("birth") or {}
     baptism = p.get("baptism") or {}
@@ -620,6 +629,7 @@ def import_contributor(
                 persons_data = json.load(f)
             if persons_data:
                 print(f"  -> Inserting {len(persons_data)} person records...")
+                start = time.perf_counter()
                 rows = [_flatten_person(p, contributor_id) for p in persons_data]
                 db.execute(
                     text("""
@@ -639,6 +649,7 @@ def import_contributor(
                     """),
                     rows,
                 )
+                _print_done(len(persons_data), start)
         elif persons_count > 0:
             visible = [
                 f
@@ -660,6 +671,7 @@ def import_contributor(
                 families_data = json.load(f)
             if families_data:
                 print(f"  -> Inserting {len(families_data)} family records...")
+                start = time.perf_counter()
                 rows = [_flatten_family(fam, contributor_id) for fam in families_data]
                 db.execute(
                     text("""
@@ -684,6 +696,7 @@ def import_contributor(
                     """),
                     rows,
                 )
+                _print_done(len(families_data), start)
         elif families_count > 0:
             visible = [
                 f
