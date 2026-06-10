@@ -14,6 +14,8 @@ class PersonBase(BaseModel):
     place_of_baptism: Optional[str] = None
     date_of_death: Optional[str] = None
     place_of_death: Optional[str] = None
+    date_of_burial: Optional[str] = None
+    place_of_burial: Optional[str] = None
     parents_list: Optional[Any] = None
     partners_list: Optional[Any] = None
     notes: Optional[str] = None
@@ -86,6 +88,7 @@ class Contributor(BaseModel):
     url: Optional[str] = None
     tree: Optional[ContributorPart] = None
     matricula: Optional[ContributorPart] = None
+    geneanet: Optional[ContributorPart] = None
 
     class Config:
         from_attributes = True
@@ -124,3 +127,24 @@ class MatriculaBook(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class GeneanetCemetery(BaseModel):
+    name: Optional[str] = None
+    place: Optional[str] = None
+    type: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    persons_count: int = 0
+    families_count: int = 0
+    graves_count: int = 0
+    url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class GeneanetStats(BaseModel):
+    cemeteries: List[GeneanetCemetery]
+    top_places: List[Any] = []
+    totals: Any = None

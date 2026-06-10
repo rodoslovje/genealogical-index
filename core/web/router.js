@@ -5,6 +5,7 @@ import { renderContributors, renderTotalsBar } from './contributors.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderComparePage } from './tree/compare.js';
 import { renderMatriculaStatsPage } from './contributors/matricula-stats.js';
+import { renderGeneanetStatsPage } from './contributors/geneanet-stats.js';
 import { getTabURLParams, restoreFromURL, clearAllSearchForms } from './search.js';
 import { hideIntro, showIntros } from './intros.js';
 import { tabsWithResults } from './tab-state.js';
@@ -72,6 +73,38 @@ export function maybeRouteMatricula(urlParams) {
   }
 
   renderMatriculaStatsPage();
+  return true;
+}
+
+/** Side route: ?t=geneanet renders the global Geneanet Cemeteries index page
+ *  (with map) outside the regular tab system. Mirrors maybeRouteMatricula.
+ *  Returns true when handled. */
+export function maybeRouteGeneanet(urlParams) {
+  if (urlParams.get('t') !== 'geneanet') return false;
+
+  document.body.classList.remove('contributors-view', 'tree-view');
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
+
+  const sectionEl = document.getElementById('tab-geneanet');
+  if (sectionEl) sectionEl.classList.add('active');
+
+  const sidebarSection = document.getElementById('geneanet-search-sidebar');
+  if (sidebarSection) {
+    sidebarSection.classList.add('active');
+    const input = document.getElementById('filter-geneanet-cemeteries');
+    if (input && window.innerWidth > 768) setTimeout(() => input.focus(), 0);
+  }
+
+  if (window.innerWidth <= 768) {
+    sidebar?.classList.remove('open');
+  } else {
+    sidebar?.classList.add('open');
+  }
+
+  renderGeneanetStatsPage();
   return true;
 }
 
@@ -229,6 +262,7 @@ function navigateToURL({ triggerSearch = true } = {}) {
   normalizeLegacyURL();
   const urlParams = currentParams();
   if (maybeRouteMatricula(urlParams)) return;
+  if (maybeRouteGeneanet(urlParams)) return;
   if (maybeRouteCompare(urlParams)) return;
 
   if (!activateTab(tabIdFromParams(urlParams), { skipHistory: true })) {

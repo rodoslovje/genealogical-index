@@ -1,7 +1,7 @@
 import { t, formatTitleSuffix } from '../i18n.js';
 import { renderTable, exportToCSV } from '../table.js';
 import {
-  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, escapeHtml, formatExportFilename,
+  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, escapeHtml, formatExportFilename,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref } from '../lib/url.js';
@@ -94,7 +94,7 @@ export async function renderMatchesPage(contributor, withPartner) {
 
     if (!contribData) {
       const safeContributor = escapeHtml(baseContributor);
-      const contribInd = matriculaIndicatorHtml(contributor, t('icon_matricula_index'));
+      const contribInd = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index'));
       document.title = `${t('no_results')} | ${t('site_title')}`;
       container.innerHTML = `<div class="matches-page-header">
         <h2 class="matches-page-title">${safeContributor}${contribInd} - ${formatTitleSuffix(t('col_contributor'))}</h2>
@@ -115,7 +115,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       const partnerData = cached.find(d => d.contributor_ID === basePartner);
       if (!partnerData) {
         const safePartner = escapeHtml(basePartner);
-        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index'));
+        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index')) + geneanetIndicatorHtml(withPartner, t('icon_geneanet_index'));
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
           <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${formatTitleSuffix(t('col_matches'))}</h2>

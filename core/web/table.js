@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './lib/links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isMatriculaContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList } from './lib/utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isSpecialContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList } from './lib/utils.js';
 import { childYearOf, parseDateForSort } from './lib/dates.js';
 import { toUnicodeHref } from './lib/url.js';
 import { createExportButton } from './lib/icons.js';
@@ -19,7 +19,7 @@ const CENTERED_COLUMNS = new Set([
 ]);
 
 const RIGHT_COLUMNS = new Set([
-  'date_of_birth', 'date_of_marriage', 'date_of_death', 'husband_birth', 'wife_birth',
+  'date_of_birth', 'date_of_marriage', 'date_of_death', 'date_of_burial', 'husband_birth', 'wife_birth',
 ]);
 
 const NUMERIC_COLUMNS = new Set([
@@ -36,7 +36,7 @@ function treeButton({ kind, n, sn, dob, contributor, extId }) {
   const icon     = kind === 'ancestors' ? '🌳' : '🌿';
   const titleKey = kind === 'ancestors' ? 'tree_ancestors_title' : 'tree_descendants_title';
   if (siteConfig.gatedFeatures?.includes(feature)) return '';
-  if (isMatriculaContributor(contributor)) return '';
+  if (isSpecialContributor(contributor)) return '';
   if (!n && !sn) return '';
   const p = new URLSearchParams();
   p.set('t', kind);
@@ -486,7 +486,9 @@ function renderCellHtml(col, row) {
     const name = row[col] || '';
     const display = baseContributorName(name);
     const showIndicator = !row.hasOwnProperty('_tree');
-    const indicator = showIndicator ? matriculaIndicatorHtml(name, t('icon_matricula_index')) : '';
+    const indicator = showIndicator
+      ? matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index'))
+      : '';
     const internalHref = row._match_href || row._contributor_href || '';
     const externalUrl = row._url || '';
     if (internalHref) return `<td class="col-center"><a href="${internalHref}" data-spa-nav>${display}</a>${indicator}</td>`;
@@ -497,7 +499,7 @@ function renderCellHtml(col, row) {
     const name = row[col] || '';
     if (!name) return `<td></td>`;
     const display = baseContributorName(name);
-    const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index'));
+    const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index'));
     return `<td><a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
   }
   if (CENTERED_COLUMNS.has(col)) {

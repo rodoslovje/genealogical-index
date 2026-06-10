@@ -104,6 +104,11 @@ def get_matricula_stats(db: Session = Depends(get_db)):
     return crud.get_matricula_stats(db)
 
 
+@app.get("/api/geneanet/stats")
+def get_geneanet_stats(db: Session = Depends(get_db)):
+    return crud.get_geneanet_stats(db)
+
+
 @app.get("/api/contributors/{name}/matches/{other}")
 def get_contributor_match_detail(
     name: str,
@@ -179,6 +184,9 @@ def search_advanced_persons(
     date_of_death: Optional[str] = None,
     date_of_death_to: Optional[str] = None,
     place_of_death: Optional[str] = None,
+    date_of_burial: Optional[str] = None,
+    date_of_burial_to: Optional[str] = None,
+    place_of_burial: Optional[str] = None,
     contributor: Optional[str] = None,
     source: str = "all",
     has_link: bool = False,
@@ -197,6 +205,9 @@ def search_advanced_persons(
         date_of_death=date_of_death,
         date_of_death_to=date_of_death_to,
         place_of_death=place_of_death,
+        date_of_burial=date_of_burial,
+        date_of_burial_to=date_of_burial_to,
+        place_of_burial=place_of_burial,
         contributor=contributor,
         source=source,
         has_link=has_link,

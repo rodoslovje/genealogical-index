@@ -171,6 +171,30 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/008_matches_pair_lookup.sql
 ```
 
+### 009 — `burial_and_geneanet`
+
+Supports the Geneanet cemeteries data source.
+
+- Adds `date_of_burial`, `burial_year`, `place_of_burial` to `persons`
+  (parity with birth/death; populated from each record's `burial {date, place}`
+  block) plus a GIN trgm index on `place_of_burial` and a btree on
+  `burial_year` so burial search is index-fast.
+- Creates the `geneanet_cemeteries` table that backs the standalone
+  `?t=geneanet` index page (flat cemetery list with lat/lon for the map).
+
+`ADD COLUMN` (nullable) is a fast metadata-only change; `CREATE INDEX
+CONCURRENTLY` runs online. Both `import_to_db.py` paths (`setup_full` /
+`setup_update`) already create these for fresh DBs — this file is only for
+upgrading an existing production DB in place.
+
+- Must run **outside** a transaction block.
+- Re-runnable (`IF NOT EXISTS`).
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/009_burial_and_geneanet.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

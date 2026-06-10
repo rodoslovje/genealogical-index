@@ -4,7 +4,7 @@ import { formatLinks } from '../lib/links.js';
 import { parseDateForSort } from '../lib/dates.js';
 import {
   isPrivate, getExpandCollapseIcon, shortenUrlLabel, baseContributorName,
-  matriculaIndicatorHtml, isMatriculaContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
+  matriculaIndicatorHtml, geneanetIndicatorHtml, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
   escapeHtml, highlightDifferences, formatExportFilename,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
@@ -49,8 +49,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
   const partnerUrl = urlMap[partner];
   const contribBase = baseContributorName(contributor);
   const partnerBase = baseContributorName(partner);
-  const contribInd  = matriculaIndicatorHtml(contributor, t('icon_matricula_index'));
-  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index'));
+  const contribInd  = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index'));
+  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index')) + geneanetIndicatorHtml(partner, t('icon_geneanet_index'));
 
   let urlsHtml = '';
   if (contribUrl || partnerUrl) {
@@ -303,10 +303,11 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           // matched pair using each side's stable (contributor, ext_id) identity
           // rather than the row id (which can change on re-import). The SPA-nav
           // handler gates it behind login on auth-configured sites. Hidden when
-          // either side is a Matricula-index source (no tree) or lacks an ext_id.
+          // either side is a special non-tree source (Matricula / Geneanet) or
+          // lacks an ext_id.
           let compareLinkHtml = '';
           if (key === 'person' && r.record_a.ext_id && r.record_b.ext_id
-              && !isMatriculaContributor(aContrib) && !isMatriculaContributor(bContrib)) {
+              && !isSpecialContributor(aContrib) && !isSpecialContributor(bContrib)) {
             const cmpName = isPrivate(r.record_a.name) || isPrivate(r.record_a.surname)
               ? '' : [r.record_a.name, r.record_a.surname].filter(Boolean).join(' ');
             const cmpHref = toUnicodeHref({
@@ -316,8 +317,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           }
           const contribBaseL = baseContributorName(aContrib);
           const partnerBaseL = baseContributorName(bContrib);
-          const contribIndicator = matriculaIndicatorHtml(aContrib, t('icon_matricula_index'));
-          const partnerIndicator = matriculaIndicatorHtml(bContrib, t('icon_matricula_index'));
+          const contribIndicator = matriculaIndicatorHtml(aContrib, t('icon_matricula_index')) + geneanetIndicatorHtml(aContrib, t('icon_geneanet_index'));
+          const partnerIndicator = matriculaIndicatorHtml(bContrib, t('icon_matricula_index')) + geneanetIndicatorHtml(bContrib, t('icon_geneanet_index'));
           const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', c: contribBaseL })}" data-spa-nav>${contribBaseL}</a>${contribIndicator}`;
           const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', c: partnerBaseL })}" data-spa-nav>${partnerBaseL}</a>${partnerIndicator}`;
           return `<tr class="match-pair-row ${pairCls}" data-row-key="${keyFor(r.record_a)}">

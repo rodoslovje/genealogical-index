@@ -8,7 +8,7 @@ import { currentParams } from './lib/url.js';
 import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderIntros } from './intros.js';
 import { initNavbar, checkNavOverflow } from './navbar.js';
-import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, maybeRouteCompare, tabIdFromParams } from './router.js';
+import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, maybeRouteGeneanet, maybeRouteCompare, tabIdFromParams } from './router.js';
 import { relocalizeCompare } from './tree/compare.js';
 import { setupClearableInput } from './lib/utils.js';
 
@@ -71,6 +71,11 @@ async function init() {
       document.activeElement?.blur();
     });
 
+    setupClearableInput(document.getElementById('filter-geneanet-cemeteries'), () => {
+      sidebar.classList.remove('open');
+      document.activeElement?.blur();
+    });
+
     setupGeneralSearch();
     setupPersonSearchForm();
     setupFamilySearchForm();
@@ -92,6 +97,9 @@ async function init() {
     // Infer active tab from the (now-normalized) URL.
     const urlParams = currentParams();
     if (maybeRouteMatricula(urlParams)) {
+      return;
+    }
+    if (maybeRouteGeneanet(urlParams)) {
       return;
     }
     if (maybeRouteCompare(urlParams)) {

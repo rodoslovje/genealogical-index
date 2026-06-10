@@ -21,6 +21,9 @@ class Person(Base):
     date_of_death = Column(Text)
     death_year = Column(SmallInteger)
     place_of_death = Column(Text)
+    date_of_burial = Column(Text)
+    burial_year = Column(SmallInteger)
+    place_of_burial = Column(Text)
     parents_list = Column(JSONB, nullable=True)
     partners_list = Column(JSONB, nullable=True)
     notes = Column(Text)
@@ -103,3 +106,18 @@ class MatriculaBook(Base):
     count = Column(Integer, default=0)
     url = Column(Text)
     last_modified = Column(Text)
+
+
+class GeneanetCemetery(Base):
+    __tablename__ = "geneanet_cemeteries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text)
+    place = Column(Text)
+    type = Column(Text)
+    lat = Column(Float)
+    lon = Column(Float)
+    persons_count = Column(Integer, default=0)
+    families_count = Column(Integer, default=0)
+    graves_count = Column(Integer, default=0)
+    url = Column(Text)

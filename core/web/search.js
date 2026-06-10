@@ -27,6 +27,7 @@ function renderSourceSelect(id, value) {
             ${opt('all', 'source_all')}
             ${opt('tree', 'source_tree')}
             ${opt('matricula', 'source_matricula')}
+            ${opt('geneanet', 'source_geneanet')}
           </select>`;
 }
 
@@ -80,7 +81,7 @@ function toApiParams(fieldParams, { exact, hasLink, sourceVal } = {}) {
 const GENERAL_FIELDS = ['name', 'surname', 'date_from', 'date_to', 'place', 'contributor'];
 
 // Date-typed fields (incl. range "_to" companions) that get date normalization.
-const DATE_FIELDS = new Set(['date_from', 'date_to', 'date_of_birth', 'date_of_birth_to', 'date_of_marriage', 'date_of_marriage_to', 'date_of_death', 'date_of_death_to', 'husband_birth', 'husband_birth_to', 'wife_birth', 'wife_birth_to']);
+const DATE_FIELDS = new Set(['date_from', 'date_to', 'date_of_birth', 'date_of_birth_to', 'date_of_marriage', 'date_of_marriage_to', 'date_of_death', 'date_of_death_to', 'date_of_burial', 'date_of_burial_to', 'husband_birth', 'husband_birth_to', 'wife_birth', 'wife_birth_to']);
 
 /** Searchable input names for an advanced form's column set: every non
  *  display-only column, each date-range column followed by its "_to" partner. */
@@ -306,6 +307,7 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     wife_name:        { startLabelKey: 'label_wife',     members: ['wife_name', 'wife_surname', 'wife_birth'] },
     date_of_birth:    { startLabelKey: 'label_birth',    members: ['date_of_birth', 'place_of_birth'] },
     date_of_death:    { startLabelKey: 'label_death',    members: ['date_of_death', 'place_of_death'] },
+    date_of_burial:   { startLabelKey: 'label_burial',   members: ['date_of_burial', 'place_of_burial'] },
     date_of_marriage: { startLabelKey: 'label_marriage', members: ['date_of_marriage', 'place_of_marriage'] },
   };
   const GROUPED_FIELDS = new Set();
@@ -324,6 +326,8 @@ function setupSearchForm({ controlsId, columns, endpoint, resultsId, countId, ta
     place_of_birth: 'col_place',
     date_of_death: 'col_date',
     place_of_death: 'col_place',
+    date_of_burial: 'col_date',
+    place_of_burial: 'col_place',
     date_of_marriage: 'col_date',
     place_of_marriage: 'col_place',
   };

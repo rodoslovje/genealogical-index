@@ -36,7 +36,7 @@ function typeLabel(type) {
 /** Wires up a sortable, collapsible table that renders rows from `data` with
  *  the given column definitions. Mounts into the `<tbody>` inside `tableId`
  *  and toggles content visibility from the header inside `headerSelector`. */
-function setupSortableTable({ tableId, headerSelector, contentSelector, columns, data, initialSort, renderRow, fallbackSort }) {
+export function setupSortableTable({ tableId, headerSelector, contentSelector, columns, data, initialSort, renderRow, fallbackSort }) {
   const tableEl = document.getElementById(tableId);
   if (!tableEl) return null;
   const tbody = tableEl.querySelector('tbody');
@@ -102,7 +102,7 @@ function setupSortableTable({ tableId, headerSelector, contentSelector, columns,
   };
 }
 
-function buildThead(columns) {
+export function buildThead(columns) {
   return columns.map(({ f, h, cls = '' }) =>
     `<th data-col="${f}" class="sortable${cls}">${h}</th>`
   ).join('');
@@ -222,7 +222,7 @@ const chartInstances = new Map();
 
 /** Top-N doughnut chart with a trailing "Others" slice. Destroys any previous
  *  chart bound to the same canvas so re-renders don't leak Chart.js instances. */
-async function renderDoughnut(canvasId, rows, { valueKey, labelKey, title, topN = 10 }) {
+export async function renderDoughnut(canvasId, rows, { valueKey, labelKey, title, topN = 10 }) {
   try { await ensureChartJs(); } catch { return; }
   if (!window.Chart) return;
   const ctx = document.getElementById(canvasId)?.getContext('2d');

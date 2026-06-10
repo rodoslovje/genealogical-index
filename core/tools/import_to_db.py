@@ -39,7 +39,7 @@ def setup_full(db):
     print("Setting up database tables and extensions (full rebuild)...")
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
     db.execute(text("""
-        DROP TABLE IF EXISTS persons, births, families, deaths, contributors, match_jobs, matches CASCADE;
+        DROP TABLE IF EXISTS persons, births, families, deaths, contributors, match_jobs, matches, matricula_books, geneanet_cemeteries CASCADE;
 
         CREATE TABLE contributors (
             id SERIAL PRIMARY KEY,
@@ -55,6 +55,7 @@ def setup_full(db):
             date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT,
             date_of_baptism TEXT, place_of_baptism TEXT,
             date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
+            date_of_burial TEXT, burial_year SMALLINT, place_of_burial TEXT,
             parents_list JSONB, partners_list JSONB,
             notes TEXT, contributor TEXT, links JSONB
         );
@@ -85,6 +86,7 @@ def setup_full(db):
         -- Place columns used by search_all / search_advanced_*.
         CREATE INDEX idx_person_place_of_birth_trgm    ON persons  USING gin (place_of_birth gin_trgm_ops);
         CREATE INDEX idx_person_place_of_death_trgm    ON persons  USING gin (place_of_death gin_trgm_ops);
+        CREATE INDEX idx_person_place_of_burial_trgm   ON persons  USING gin (place_of_burial gin_trgm_ops);
         CREATE INDEX idx_family_place_of_marriage_trgm ON families USING gin (place_of_marriage gin_trgm_ops);
         -- Contributor and family-name columns: also filtered via ILIKE / `%>`
         -- by _text_filter, so they need GIN trgm for fuzzy/substring search.
@@ -124,6 +126,7 @@ def setup_full(db):
         CREATE INDEX idx_person_birth_year ON persons(birth_year);
         CREATE INDEX idx_person_ancestor_search ON persons(contributor, surname, name, birth_year);
         CREATE INDEX idx_person_death_year ON persons(death_year);
+        CREATE INDEX idx_person_burial_year ON persons(burial_year);
         CREATE INDEX idx_family_year       ON families(marriage_year);
 
         -- Indexes for finding families for descendants tree
@@ -165,6 +168,19 @@ def setup_full(db):
             last_modified TEXT
         );
         CREATE INDEX idx_matricula_books_contributor ON matricula_books(contributor);
+
+        CREATE TABLE geneanet_cemeteries (
+            id SERIAL PRIMARY KEY,
+            name TEXT,
+            place TEXT,
+            type TEXT,
+            lat DOUBLE PRECISION,
+            lon DOUBLE PRECISION,
+            persons_count INTEGER DEFAULT 0,
+            families_count INTEGER DEFAULT 0,
+            graves_count INTEGER DEFAULT 0,
+            url TEXT
+        );
 
         -- Strips the GEDCOM xref `id` field from every element of a JSONB
         -- array of person-info objects. compute_matches uses this to compare
@@ -245,6 +261,7 @@ def setup_update(db):
             date_of_birth TEXT, birth_year SMALLINT, place_of_birth TEXT,
             date_of_baptism TEXT, place_of_baptism TEXT,
             date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
+            date_of_burial TEXT, burial_year SMALLINT, place_of_burial TEXT,
             parents_list JSONB, partners_list JSONB,
             notes TEXT, contributor TEXT, links JSONB
         );
@@ -292,6 +309,19 @@ def setup_update(db):
         ALTER TABLE matricula_books ADD COLUMN IF NOT EXISTS date          TEXT;
         ALTER TABLE matricula_books ADD COLUMN IF NOT EXISTS last_modified TEXT;
         CREATE INDEX IF NOT EXISTS idx_matricula_books_contributor ON matricula_books(contributor);
+
+        CREATE TABLE IF NOT EXISTS geneanet_cemeteries (
+            id SERIAL PRIMARY KEY,
+            name TEXT,
+            place TEXT,
+            type TEXT,
+            lat DOUBLE PRECISION,
+            lon DOUBLE PRECISION,
+            persons_count INTEGER DEFAULT 0,
+            families_count INTEGER DEFAULT 0,
+            graves_count INTEGER DEFAULT 0,
+            url TEXT
+        );
     """))
     db.commit()
 
@@ -313,6 +343,9 @@ def setup_update(db):
         ALTER TABLE persons  ADD COLUMN IF NOT EXISTS alt_surname      TEXT;
         ALTER TABLE persons  ADD COLUMN IF NOT EXISTS date_of_baptism  TEXT;
         ALTER TABLE persons  ADD COLUMN IF NOT EXISTS place_of_baptism TEXT;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS date_of_burial   TEXT;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS burial_year      SMALLINT;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS place_of_burial  TEXT;
         ALTER TABLE persons  ADD COLUMN IF NOT EXISTS notes            TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_ext_id      TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_alt_surname TEXT;
@@ -336,6 +369,7 @@ def setup_update(db):
         -- Place columns used by search_all / search_advanced_* (see migration 004).
         CREATE INDEX IF NOT EXISTS idx_person_place_of_birth_trgm    ON persons  USING gin (place_of_birth gin_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_person_place_of_death_trgm    ON persons  USING gin (place_of_death gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_person_place_of_burial_trgm   ON persons  USING gin (place_of_burial gin_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_family_place_of_marriage_trgm ON families USING gin (place_of_marriage gin_trgm_ops);
         -- Contributor + family-name columns also filtered via _text_filter (see migration 005).
         CREATE INDEX IF NOT EXISTS idx_person_contributor_trgm ON persons  USING gin (contributor gin_trgm_ops);
@@ -365,6 +399,7 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_person_ancestor_search  ON persons(contributor, surname, name, birth_year);
         CREATE INDEX IF NOT EXISTS idx_person_birth_year       ON persons(birth_year);
         CREATE INDEX IF NOT EXISTS idx_person_death_year       ON persons(death_year);
+        CREATE INDEX IF NOT EXISTS idx_person_burial_year      ON persons(burial_year);
         CREATE INDEX IF NOT EXISTS idx_family_year             ON families(marriage_year);
 
         -- Indexes for finding families for descendants tree
@@ -491,6 +526,7 @@ def _flatten_person(p, contributor_id):
     birth = p.get("birth") or {}
     baptism = p.get("baptism") or {}
     death = p.get("death") or {}
+    burial = p.get("burial") or {}
     return {
         "ext_id": _s(p.get("id")),
         "name": _s(p.get("name")),
@@ -505,6 +541,9 @@ def _flatten_person(p, contributor_id):
         "date_of_death": _s(death.get("date")),
         "death_year": _extract_year(death.get("date")),
         "place_of_death": _s(death.get("place")),
+        "date_of_burial": _s(burial.get("date")),
+        "burial_year": _extract_year(burial.get("date")),
+        "place_of_burial": _s(burial.get("place")),
         "parents_list": _to_json_or_none(p.get("parents_list")),
         "partners_list": _to_json_or_none(p.get("partners_list")),
         "notes": _s(p.get("notes")),
@@ -588,11 +627,13 @@ def import_contributor(
                             date_of_birth, birth_year, place_of_birth,
                             date_of_baptism, place_of_baptism,
                             date_of_death, death_year, place_of_death,
+                            date_of_burial, burial_year, place_of_burial,
                             parents_list, partners_list, notes, contributor, links)
                         VALUES (:ext_id, :name, :surname, :alt_surname, :sex,
                             :date_of_birth, :birth_year, :place_of_birth,
                             :date_of_baptism, :place_of_baptism,
                             :date_of_death, :death_year, :place_of_death,
+                            :date_of_burial, :burial_year, :place_of_burial,
                             CAST(:parents_list AS jsonb), CAST(:partners_list AS jsonb),
                             :notes, :contributor, CAST(:links AS jsonb))
                     """),
@@ -706,6 +747,59 @@ def import_matricula_index(db):
         f"\nImported {len(rows)} matricula book entries "
         f"for {len(data)} contributor(s)."
     )
+
+
+def import_geneanet_index(db):
+    """Replace the geneanet_cemeteries table with the contents of
+    data/output/geneanet-index.json. Unlike matricula-index.json (a map keyed
+    by contributor), this file is a flat array of cemeteries, each with geo
+    coordinates and per-cemetery record counts, so it powers the standalone
+    Geneanet Cemeteries index page (`?t=geneanet`). Wholesale re-import keeps
+    it simple and fast.
+    """
+    path = os.path.join(DATA_DIR, "geneanet-index.json")
+    if not os.path.exists(path):
+        print(f"\nSkipping geneanet-index: '{path}' not found.")
+        return
+
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    def _to_float(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    rows = []
+    for c in data or []:
+        rows.append(
+            {
+                "name": _s(c.get("name")),
+                "place": _s(c.get("place")),
+                "type": _s(c.get("type")),
+                "lat": _to_float(c.get("lat")),
+                "lon": _to_float(c.get("lon")),
+                "persons_count": int(c.get("persons_count") or 0),
+                "families_count": int(c.get("families_count") or 0),
+                "graves_count": int(c.get("graves_count") or 0),
+                "url": _s(c.get("url")),
+            }
+        )
+
+    db.execute(text("TRUNCATE geneanet_cemeteries;"))
+    if rows:
+        db.execute(
+            text("""
+                INSERT INTO geneanet_cemeteries
+                    (name, place, type, lat, lon, persons_count, families_count, graves_count, url)
+                VALUES
+                    (:name, :place, :type, :lat, :lon, :persons_count, :families_count, :graves_count, :url)
+            """),
+            rows,
+        )
+    db.commit()
+    print(f"\nImported {len(rows)} Geneanet cemetery entries.")
 
 
 def main():
@@ -935,6 +1029,7 @@ def main():
             updated_contributors.append(contributor_id)
 
     import_matricula_index(db)
+    import_geneanet_index(db)
 
     print("\nData import finished successfully.")
 

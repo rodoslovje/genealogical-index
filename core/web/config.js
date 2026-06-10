@@ -5,7 +5,8 @@ const cleanHost = apiHost.replace(/\/+$/, '');
 export const API_BASE_URL = cleanHost.startsWith('http') ? cleanHost : `https://${cleanHost}`;
 
 export const personColumns = ['name', 'surname', 'date_of_birth',
-  'place_of_birth', 'date_of_death', 'place_of_death', 'links',
+  'place_of_birth', 'date_of_death', 'place_of_death',
+  'date_of_burial', 'place_of_burial', 'links',
   'partners', 'parents', 'contributor'];
 export const familyColumns = ['husband_name', 'husband_surname', 'husband_birth', 'wife_name', 'wife_surname', 'wife_birth',
   'date_of_marriage', 'place_of_marriage', 'links', 'children',
@@ -15,4 +16,4 @@ export const familyColumns = ['husband_name', 'husband_surname', 'husband_birth'
 export const DISPLAY_ONLY_COLUMNS = new Set(['links', 'parents', 'partners']);
 
 // Columns that get a paired "from / to" date range input in the search form
-export const DATE_RANGE_COLUMNS = new Set(['date_of_birth', 'date_of_marriage', 'date_of_death', 'husband_birth', 'wife_birth']);
+export const DATE_RANGE_COLUMNS = new Set(['date_of_birth', 'date_of_marriage', 'date_of_death', 'date_of_burial', 'husband_birth', 'wife_birth']);

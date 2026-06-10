@@ -54,6 +54,7 @@ export function ensureData() {
           _url: m.url || '',
           _tree: _toPart(m.tree),
           _matricula: _toPart(m.matricula),
+          _geneanet: _toPart(m.geneanet),
         }));
         return cachedData;
       });
@@ -98,7 +99,8 @@ export function expandContributorNames(rows) {
   rows.forEach(r => {
     if (r._tree)      names.push(r._tree.contributor_ID);
     if (r._matricula) names.push(r._matricula.contributor_ID);
-    if (!r._tree && !r._matricula) names.push(r.contributor_ID);
+    if (r._geneanet)  names.push(r._geneanet.contributor_ID);
+    if (!r._tree && !r._matricula && !r._geneanet) names.push(r.contributor_ID);
   });
   return names;
 }
@@ -113,6 +115,7 @@ export function getContributorUrlMap() {
     // suffixed name resolve to the correct URL.
     if (d._tree?._url)      map[d._tree.contributor_ID]      = d._tree._url;
     if (d._matricula?._url) map[d._matricula.contributor_ID] = d._matricula._url;
+    if (d._geneanet?._url)  map[d._geneanet.contributor_ID]  = d._geneanet._url;
   });
   return map;
 }

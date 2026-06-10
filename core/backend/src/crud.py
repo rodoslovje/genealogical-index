@@ -53,6 +53,11 @@ def _load_contributor_links():
 CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
 MATCH_COUNTS_TTL = 60  # shorter TTL — counts change during match computation
 MATRICULA_SUFFIX = "-matricula"
+GENEANET_SUFFIX = "-geneanet"
+# Suffixes that mark a contributor as a "special" non-tree source. They are
+# folded into their base name for display/match-count purposes and excluded
+# from the `tree` (family-tree) source filter.
+SPECIAL_SUFFIXES = (MATRICULA_SUFFIX, GENEANET_SUFFIX)
 _timeline_cache = {"data": None, "time": 0}
 _surnames_cache = {}  # keyed by contributor name (or "" for all)
 _match_counts_cache = {"data": None, "time": 0}
@@ -75,10 +80,11 @@ def get_match_counts(db: Session):
     ):
         return _match_counts_cache["data"]
     rows = db.execute(text("""
-        SELECT REPLACE(contributor_a, '-matricula', '') AS contributor,
-               REPLACE(contributor_b, '-matricula', '') AS partner
+        SELECT REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', '') AS contributor,
+               REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', '') AS partner
         FROM matches
-        GROUP BY REPLACE(contributor_a, '-matricula', ''), REPLACE(contributor_b, '-matricula', '')
+        GROUP BY REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''),
+                 REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', '')
     """)).fetchall()
 
     counts = {}
@@ -99,7 +105,7 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
     results = []
 
     a_norm = unicodedata.normalize("NFC", contributor_a)
-    a_forms = [a_norm, a_norm + MATRICULA_SUFFIX]
+    a_forms = [a_norm, *(a_norm + s for s in SPECIAL_SUFFIXES)]
 
     b_forms = [unicodedata.normalize("NFC", contributor_b)]
 
@@ -351,12 +357,67 @@ def get_matricula_books(db: Session, contributor: str):
     return rows
 
 
+def get_geneanet_stats(db: Session):
+    """Return aggregate stats over the geneanet_cemeteries table for the global
+    Geneanet Cemeteries index page (`?t=geneanet`):
+      - `cemeteries`: full table — one row per cemetery (incl. lat/lon for the map).
+      - `top_places`: per-place counts (cemeteries, persons, graves).
+      - `totals`: overall counts for the summary bar.
+    """
+    rows = (
+        db.query(models.GeneanetCemetery)
+        .order_by(models.GeneanetCemetery.place, models.GeneanetCemetery.name)
+        .all()
+    )
+    cemeteries = [
+        {
+            "name": c.name,
+            "place": c.place,
+            "type": c.type,
+            "lat": c.lat,
+            "lon": c.lon,
+            "persons_count": c.persons_count or 0,
+            "families_count": c.families_count or 0,
+            "graves_count": c.graves_count or 0,
+            "url": c.url,
+        }
+        for c in rows
+    ]
+
+    place_rows = db.execute(text("""
+            SELECT place,
+                   COUNT(*)                          AS cemeteries_count,
+                   COALESCE(SUM(persons_count), 0)   AS persons_count,
+                   COALESCE(SUM(graves_count), 0)    AS graves_count
+            FROM geneanet_cemeteries
+            WHERE place IS NOT NULL AND place <> ''
+            GROUP BY place
+            ORDER BY persons_count DESC, place
+        """)).fetchall()
+    top_places = [
+        {
+            "place": r.place,
+            "cemeteries_count": int(r.cemeteries_count or 0),
+            "persons_count": int(r.persons_count or 0),
+            "graves_count": int(r.graves_count or 0),
+        }
+        for r in place_rows
+    ]
+
+    totals = {
+        "cemeteries_count": len(cemeteries),
+        "persons_count": sum(c["persons_count"] for c in cemeteries),
+        "families_count": sum(c["families_count"] for c in cemeteries),
+        "graves_count": sum(c["graves_count"] for c in cemeteries),
+        "places_count": len(top_places),
+    }
+
+    return {"cemeteries": cemeteries, "top_places": top_places, "totals": totals}
+
+
 def get_contributor_matches(db: Session, contributor: str):
     contrib_norm = unicodedata.normalize("NFC", contributor)
-    c_forms = [
-        contrib_norm,
-        contrib_norm + MATRICULA_SUFFIX,
-    ]
+    c_forms = [contrib_norm, *(contrib_norm + s for s in SPECIAL_SUFFIXES)]
 
     rows = db.execute(
         text("""
@@ -378,22 +439,30 @@ def get_contributor_matches(db: Session, contributor: str):
 
 
 def _base_contributor_name(name: str) -> str:
-    if name and name.endswith(MATRICULA_SUFFIX):
-        name = name[: -len(MATRICULA_SUFFIX)]
+    for suffix in SPECIAL_SUFFIXES:
+        if name and name.endswith(suffix):
+            return name[: -len(suffix)]
     return name
 
 
 def get_contributors(db: Session):
-    """Fetch pre-calculated stats, merging Matricula index entries into their
-    base contributor (e.g. ``Kovačič-matricula`` is folded into ``Kovačič``)
-    while still exposing the per-source breakdown via ``tree`` / ``matricula``.
+    """Fetch pre-calculated stats, merging special-source entries into their
+    base contributor (e.g. ``Kovačič-matricula`` folds into ``Kovačič``, and
+    ``Pokopališča-geneanet`` into ``Pokopališča``) while still exposing the
+    per-source breakdown via ``tree`` / ``matricula`` / ``geneanet``.
     """
     rows = db.query(models.Contributor).all()
     links = _load_contributor_links()
 
+    def _source_key(name: str) -> str:
+        if name.endswith(MATRICULA_SUFFIX):
+            return "matricula"
+        if name.endswith(GENEANET_SUFFIX):
+            return "geneanet"
+        return "tree"
+
     grouped: dict[str, dict] = {}
     for row in rows:
-        is_matricula = row.name.endswith(MATRICULA_SUFFIX)
         base = _base_contributor_name(row.name)
         part = {
             "name": row.name,
@@ -403,36 +472,28 @@ def get_contributors(db: Session):
             "links_count": row.links_count or 0,
             "url": links.get(row.name),
         }
-        bucket = grouped.setdefault(base, {"tree": None, "matricula": None})
-        bucket["matricula" if is_matricula else "tree"] = part
+        bucket = grouped.setdefault(
+            base, {"tree": None, "matricula": None, "geneanet": None}
+        )
+        bucket[_source_key(row.name)] = part
 
     merged = []
     for base, parts in grouped.items():
-        tree = parts["tree"]
-        mat = parts["matricula"]
-        persons = (tree["persons_count"] if tree else 0) + (
-            mat["persons_count"] if mat else 0
-        )
-        families = (tree["families_count"] if tree else 0) + (
-            mat["families_count"] if mat else 0
-        )
-        link_total = (tree["links_count"] if tree else 0) + (
-            mat["links_count"] if mat else 0
-        )
-        last_modified = max(
-            (p["last_modified"] for p in (tree, mat) if p and p["last_modified"]),
-            default="",
-        )
+        present = [p for p in parts.values() if p]
         merged.append(
             {
                 "name": base,
-                "last_modified": last_modified,
-                "persons_count": persons,
-                "families_count": families,
-                "links_count": link_total,
-                "url": (tree["url"] if tree else None) or (mat["url"] if mat else None),
-                "tree": tree,
-                "matricula": mat,
+                "last_modified": max(
+                    (p["last_modified"] for p in present if p["last_modified"]),
+                    default="",
+                ),
+                "persons_count": sum(p["persons_count"] for p in present),
+                "families_count": sum(p["families_count"] for p in present),
+                "links_count": sum(p["links_count"] for p in present),
+                "url": next((p["url"] for p in present if p["url"]), None),
+                "tree": parts["tree"],
+                "matricula": parts["matricula"],
+                "geneanet": parts["geneanet"],
             }
         )
     return merged
@@ -514,9 +575,11 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
             norm_c = unicodedata.normalize("NFC", c)
             if norm_c not in expanded:
                 expanded.append(norm_c)
-            mat_form = norm_c + MATRICULA_SUFFIX
-            if not norm_c.endswith(MATRICULA_SUFFIX) and mat_form not in expanded:
-                expanded.append(mat_form)
+            if not norm_c.endswith(SPECIAL_SUFFIXES):
+                for suffix in SPECIAL_SUFFIXES:
+                    variant = norm_c + suffix
+                    if variant not in expanded:
+                        expanded.append(variant)
 
     def _contributor_filter(q, contributor_col):
         if not expanded:
@@ -758,9 +821,12 @@ def _apply_source_and_contributor(
     query, column, contributor: str, source: str, exact: bool
 ):
     if source == "tree":
-        query = query.filter(~column.like(f"%{MATRICULA_SUFFIX}"))
+        for suffix in SPECIAL_SUFFIXES:
+            query = query.filter(~column.like(f"%{suffix}"))
     elif source == "matricula":
         query = query.filter(column.like(f"%{MATRICULA_SUFFIX}"))
+    elif source == "geneanet":
+        query = query.filter(column.like(f"%{GENEANET_SUFFIX}"))
 
     if contributor:
         if isinstance(contributor, str):
@@ -774,12 +840,17 @@ def _apply_source_and_contributor(
         for part in parts:
             norm_part = unicodedata.normalize("NFC", part)
             conds.append(_text_filter(column, norm_part, exact, split_comma=False))
-            if not norm_part.lower().endswith(MATRICULA_SUFFIX):
+            # Also match the special-source variants so a search for the base
+            # name (e.g. "Kovačič") surfaces its -matricula / -geneanet records.
+            low = norm_part.lower()
+            for suffix in SPECIAL_SUFFIXES:
+                if low.endswith(suffix):
+                    continue
                 if norm_part.endswith("$"):
-                    mat_part = norm_part[:-1] + MATRICULA_SUFFIX + "$"
+                    var = norm_part[:-1] + suffix + "$"
                 else:
-                    mat_part = norm_part + MATRICULA_SUFFIX
-                conds.append(_text_filter(column, mat_part, exact, split_comma=False))
+                    var = norm_part + suffix
+                conds.append(_text_filter(column, var, exact, split_comma=False))
         if len(conds) == 1:
             query = query.filter(conds[0])
         elif len(conds) > 1:
@@ -833,9 +904,12 @@ def search_all(
                     _text_filter(
                         models.Person.place_of_death, place, exact, split_comma=True
                     ),
+                    _text_filter(
+                        models.Person.place_of_burial, place, exact, split_comma=True
+                    ),
                 )
             )
-        # Date range filters apply to either birth or death.
+        # Date range filters apply to birth, death, or burial.
         date_cond_b = _date_filter(
             models.Person.date_of_birth,
             date_from,
@@ -850,10 +924,18 @@ def search_all(
             exact,
             year_column=models.Person.death_year,
         )
-        if date_cond_b is not None and date_cond_d is not None:
-            q = q.filter(or_(date_cond_b, date_cond_d))
-        elif date_cond_b is not None:
-            q = q.filter(date_cond_b)
+        date_cond_u = _date_filter(
+            models.Person.date_of_burial,
+            date_from,
+            date_to,
+            exact,
+            year_column=models.Person.burial_year,
+        )
+        date_conds = [c for c in (date_cond_b, date_cond_d, date_cond_u) if c is not None]
+        if len(date_conds) > 1:
+            q = q.filter(or_(*date_conds))
+        elif date_conds:
+            q = q.filter(date_conds[0])
         q = _apply_source_and_contributor(
             q, models.Person.contributor, contributor, source, exact
         )
@@ -928,6 +1010,9 @@ def search_advanced_persons(
     date_of_death: str = None,
     date_of_death_to: str = None,
     place_of_death: str = None,
+    date_of_burial: str = None,
+    date_of_burial_to: str = None,
+    place_of_burial: str = None,
     contributor: str = None,
     source: str = "all",
     has_link: bool = False,
@@ -965,6 +1050,12 @@ def search_advanced_persons(
                 models.Person.place_of_death, place_of_death, exact, split_comma=True
             )
         )
+    if place_of_burial:
+        query = query.filter(
+            _text_filter(
+                models.Person.place_of_burial, place_of_burial, exact, split_comma=True
+            )
+        )
     bcond = _date_filter(
         models.Person.date_of_birth,
         date_of_birth,
@@ -983,6 +1074,15 @@ def search_advanced_persons(
     )
     if dcond is not None:
         query = query.filter(dcond)
+    ucond = _date_filter(
+        models.Person.date_of_burial,
+        date_of_burial,
+        date_of_burial_to,
+        exact,
+        year_column=models.Person.burial_year,
+    )
+    if ucond is not None:
+        query = query.filter(ucond)
     query = _apply_source_and_contributor(
         query, models.Person.contributor, contributor, source, exact
     )
@@ -1328,6 +1428,8 @@ def _person_full_dict(p):
         "place_of_baptism": p.place_of_baptism,
         "date_of_death": p.date_of_death,
         "place_of_death": p.place_of_death,
+        "date_of_burial": p.date_of_burial,
+        "place_of_burial": p.place_of_burial,
         "notes": p.notes,
         "links": p.links or [],
     }
@@ -1342,6 +1444,8 @@ _EMPTY_PERSON_EXTRAS = {
     "place_of_baptism": None,
     "date_of_death": None,
     "place_of_death": None,
+    "date_of_burial": None,
+    "place_of_burial": None,
     "notes": None,
     "links": [],
 }
@@ -1579,6 +1683,8 @@ def _enrich_partner_from_record(partner, person):
     partner["place_of_baptism"] = person.place_of_baptism
     partner["date_of_death"] = person.date_of_death
     partner["place_of_death"] = person.place_of_death
+    partner["date_of_burial"] = person.date_of_burial
+    partner["place_of_burial"] = person.place_of_burial
     partner["notes"] = person.notes
     partner["links"] = person.links or []
     if not partner.get("date_of_birth"):
@@ -1977,6 +2083,8 @@ _VIEW_FIELDS = [
     "place_of_baptism",
     "date_of_death",
     "place_of_death",
+    "date_of_burial",
+    "place_of_burial",
     "notes",
     "links",
 ]
@@ -2345,10 +2453,11 @@ def _summarize(merged):
 
 
 def _contributor_forms(name):
-    """Both spellings a contributor may appear under in the matches table:
-    the NFC-normalised name and its -matricula variant."""
+    """Every spelling a contributor may appear under in the matches table:
+    the NFC-normalised base name and its special-source variants
+    (-matricula, -geneanet)."""
     norm = unicodedata.normalize("NFC", name or "")
-    return [norm, norm + MATRICULA_SUFFIX]
+    return [norm, *(norm + s for s in SPECIAL_SUFFIXES)]
 
 
 def _collect_node_ids(node, acc):

@@ -124,6 +124,23 @@ export function loadScript(src) {
 export const ensureChartJs = () => loadScript('https://cdn.jsdelivr.net/npm/chart.js');
 export const ensureD3      = () => loadScript('https://cdn.jsdelivr.net/npm/d3@7');
 
+/** Inject a stylesheet <link> once (idempotent). Used for libraries whose CSS
+ *  must be present before their JS renders, e.g. Leaflet. */
+export function loadCss(href) {
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.appendChild(link);
+}
+
+/** Lazily load Leaflet (CSS + JS) for the Geneanet cemeteries map. Only the
+ *  Geneanet index page pulls it in, so the common Search user never pays for it. */
+export const ensureLeaflet = () => {
+  loadCss('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css');
+  return loadScript('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js');
+};
+
 /** Escapes a value for safe insertion into HTML text content / attribute. */
 export function escapeHtml(value) {
   if (value === null || value === undefined) return '';
@@ -212,15 +229,20 @@ export function getExpandCollapseIcon(isOpen) {
 }
 
 const MATRICULA_SUFFIX = '-matricula';
+const GENEANET_SUFFIX = '-geneanet';
+const SPECIAL_SUFFIXES = [MATRICULA_SUFFIX, GENEANET_SUFFIX];
 const MATRICULA_INDICATOR = '⛪';
+const GENEANET_INDICATOR = '🪦';
 
-/** Returns the base contributor name (strips trailing -matricula), Unicode-normalized. */
+/** Returns the base contributor name (strips a trailing special-source suffix
+ *  -matricula / -geneanet), Unicode-normalized. */
 export function baseContributorName(name) {
   if (!name) return name;
   const normalized = name.normalize('NFC');
-  return normalized.endsWith(MATRICULA_SUFFIX)
-    ? normalized.slice(0, -MATRICULA_SUFFIX.length)
-    : normalized;
+  for (const s of SPECIAL_SUFFIXES) {
+    if (normalized.endsWith(s)) return normalized.slice(0, -s.length);
+  }
+  return normalized;
 }
 
 export function isMatriculaContributor(name) {
@@ -228,11 +250,29 @@ export function isMatriculaContributor(name) {
   return name.normalize('NFC').endsWith(MATRICULA_SUFFIX);
 }
 
+export function isGeneanetContributor(name) {
+  if (!name) return false;
+  return name.normalize('NFC').endsWith(GENEANET_SUFFIX);
+}
+
+/** True for any non-tree special source (matricula, geneanet). These have no
+ *  stable per-person IDs for ancestor/descendant tree navigation. */
+export function isSpecialContributor(name) {
+  return isMatriculaContributor(name) || isGeneanetContributor(name);
+}
+
 /** Returns the HTML for the matricula indicator (with tooltip), or '' if not matricula. */
 export function matriculaIndicatorHtml(name, tooltip) {
   if (!isMatriculaContributor(name)) return '';
   const safe = escapeHtml(tooltip || '');
   return ` <span class="matricula-indicator" title="${safe}" aria-label="${safe}">${MATRICULA_INDICATOR}</span>`;
+}
+
+/** Returns the HTML for the geneanet (grave) indicator, or '' if not geneanet. */
+export function geneanetIndicatorHtml(name, tooltip) {
+  if (!isGeneanetContributor(name)) return '';
+  const safe = escapeHtml(tooltip || '');
+  return ` <span class="geneanet-indicator" title="${safe}" aria-label="${safe}">${GENEANET_INDICATOR}</span>`;
 }
 
 // --- inline row icons for optional fields shown in result cells ---
