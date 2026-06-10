@@ -237,13 +237,13 @@ export async function renderGeneanetStatsPage() {
     const places = stats.top_places || [];
     const totals = stats.totals || {};
 
-    // Geneanet's cemetery portal is localized for de/it; everything else falls
-    // back to the English entry point.
+    // Geneanet's "A cemetery for posterity" page is localized for de/it;
+    // everything else falls back to the English version.
     const lang = getCurrentLang();
     const gPrefix = (lang === 'de' || lang === 'it') ? lang : 'en';
     const introHtml = t('geneanet_intro')
       .replace('{0}', 'https://rodoslovje.si/register-slovenskih-pokopalisc/')
-      .replace('{1}', `https://${gPrefix}.geneanet.org/cemetery/`);
+      .replace('{1}', `https://${gPrefix}.geneanet.org/a-cemetery-for-posterity/`);
 
     const heading = `<div class="matches-page-header">
       <h2 class="matches-page-title">${t('geneanet_page_title')}</h2>
