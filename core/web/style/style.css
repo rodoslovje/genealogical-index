@@ -278,6 +278,12 @@ h2 {
   color: var(--srd-accent);
 }
 
+/* Bold text inside an intro link must keep the link colour, not the
+   ink colour that .intro-text strong otherwise forces. */
+.intro-text a strong {
+  color: inherit;
+}
+
 .intro-text a:hover {
   color: var(--srd-accent-strong);
   text-decoration: none;
