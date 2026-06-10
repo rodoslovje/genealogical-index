@@ -39,6 +39,8 @@ export default {
     col_graves: 'Sírok',
     geneanet_type_cimetiere: 'Temető',
     geneanet_type_eglise: 'Templom',
+    geneanet_type_cimetiere_militaire: 'Katonai temető',
+    geneanet_type_monument: 'Emlékmű',
     geneanet_page_title: 'Geneanet temetők',
     geneanet_section_cemeteries: 'Temetők',
     geneanet_section_places: 'Helyek',

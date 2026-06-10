@@ -39,6 +39,8 @@ export default {
     col_graves: 'Grobovi',
     geneanet_type_cimetiere: 'Pokopališče',
     geneanet_type_eglise: 'Cerkev',
+    geneanet_type_cimetiere_militaire: 'Vojaško pokopališče',
+    geneanet_type_monument: 'Spomenik',
     geneanet_page_title: 'Geneanet pokopališča',
     geneanet_section_cemeteries: 'Pokopališča',
     geneanet_section_places: 'Kraji',

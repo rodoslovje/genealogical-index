@@ -39,6 +39,8 @@ export default {
     col_graves: 'Tombe',
     geneanet_type_cimetiere: 'Cimitero',
     geneanet_type_eglise: 'Chiesa',
+    geneanet_type_cimetiere_militaire: 'Cimitero militare',
+    geneanet_type_monument: 'Monumento',
     geneanet_page_title: 'Cimiteri Geneanet',
     geneanet_section_cemeteries: 'Cimiteri',
     geneanet_section_places: 'Luoghi',

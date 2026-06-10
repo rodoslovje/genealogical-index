@@ -39,6 +39,8 @@ export default {
     col_graves: 'Grobovi',
     geneanet_type_cimetiere: 'Groblje',
     geneanet_type_eglise: 'Crkva',
+    geneanet_type_cimetiere_militaire: 'Vojno groblje',
+    geneanet_type_monument: 'Spomenik',
     geneanet_page_title: 'Geneanet groblja',
     geneanet_section_cemeteries: 'Groblja',
     geneanet_section_places: 'Mjesta',

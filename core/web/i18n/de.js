@@ -39,6 +39,8 @@ export default {
     col_graves: 'Gräber',
     geneanet_type_cimetiere: 'Friedhof',
     geneanet_type_eglise: 'Kirche',
+    geneanet_type_cimetiere_militaire: 'Militärfriedhof',
+    geneanet_type_monument: 'Denkmal',
     geneanet_page_title: 'Geneanet Friedhöfe',
     geneanet_section_cemeteries: 'Friedhöfe',
     geneanet_section_places: 'Orte',

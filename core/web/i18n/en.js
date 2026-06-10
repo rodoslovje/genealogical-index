@@ -39,6 +39,8 @@ export default {
     col_graves: 'Graves',
     geneanet_type_cimetiere: 'Cemetery',
     geneanet_type_eglise: 'Church',
+    geneanet_type_cimetiere_militaire: 'Military cemetery',
+    geneanet_type_monument: 'Monument',
     geneanet_page_title: 'Geneanet Cemeteries',
     geneanet_section_cemeteries: 'Cemeteries',
     geneanet_section_places: 'Places',

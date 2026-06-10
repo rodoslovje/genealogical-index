@@ -930,6 +930,30 @@ body.tree-view .section-bar {
 @media (max-width: 600px) {
   .chart-wrapper { height: 380px; }
 }
+/* Geneanet cemeteries map: fills its chart-wrapper so it sits as a rectangle
+   beside the places chart (and stacks above it on narrow screens). */
+.geneanet-map {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+.geneanet-map-legend {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 6px 9px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  color: var(--srd-ink, #333);
+}
+.geneanet-map-legend span { display: flex; align-items: center; gap: 6px; }
+.geneanet-map-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+}
 
 /* =============================================================
  * Mobile responsiveness
