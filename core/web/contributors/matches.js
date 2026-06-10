@@ -104,11 +104,15 @@ export async function renderMatchesPage(contributor, withPartner) {
     }
 
     const displayName = baseContributor;
-    const hasTree = !!contribData._tree;
     const hasMatricula = !!contribData._matricula;
-    // Matches section needs Genealogist data AND the 'matches' feature not
+    // The "primary" record source — a family tree, or (when there's no tree)
+    // the Geneanet cemeteries source. Both carry persons/families and have
+    // computed matches, so they drive the surname cloud + matches section.
+    // Matricula is index-only and handled separately below.
+    const primary = contribData._tree || contribData._geneanet;
+    // Matches section needs primary record data AND the 'matches' feature not
     // being gated out of this build.
-    const showMatchesSection = hasTree && !siteConfig.gatedFeatures?.includes('matches');
+    const showMatchesSection = !!primary && !siteConfig.gatedFeatures?.includes('matches');
 
     if (withPartner) {
       const basePartner = baseContributorName(withPartner);
@@ -131,13 +135,13 @@ export async function renderMatchesPage(contributor, withPartner) {
     document.title = `${displayName} - ${formatTitleSuffix(t('col_contributor'))} | ${t('site_title')}`;
 
     const urlMap = getContributorUrlMap();
-    const url = urlMap[displayName] || (contribData._tree?._url) || (contribData._matricula?._url);
+    const url = urlMap[displayName] || (contribData._tree?._url) || (contribData._geneanet?._url) || (contribData._matricula?._url);
     const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${displayName}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a></div></div>` : '';
 
     const statsHtml = renderContributorStats(contribData);
 
     let cloudSectionsHtml = '';
-    if (hasTree) {
+    if (primary) {
       cloudSectionsHtml += `<div class="surname-cloud-section" style="margin-bottom: 24px;">
         <div class="surname-cloud-header section-bar">
           <h3 class="section-heading" data-i18n="section_surnames" style="margin: 0; padding: 0; border: none;">${t('section_surnames')}</h3>
@@ -332,7 +336,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     ${matriculaSectionHtml}`;
 
     const loadDetailClouds = () => {
-      if (hasTree)      loadSurnameCloud([contribData._tree.contributor_ID],      'contributor-surname-cloud');
+      if (primary)      loadSurnameCloud([primary.contributor_ID],                 'contributor-surname-cloud');
       if (hasMatricula) loadSurnameCloud([contribData._matricula.contributor_ID], 'contributor-matricula-surname-cloud', { hideSectionIfEmpty: true });
     };
 
@@ -346,8 +350,9 @@ export async function renderMatchesPage(contributor, withPartner) {
     let partners;
     let status = 0;
     try {
-      // Matches are only computed for Genealogist (tree) data — fetch by the tree name.
-      const treeName = contribData._tree.contributor_ID;
+      // Fetch matches by the primary source name (tree or Geneanet). The API
+      // expands the base name to its suffix variants, so this covers both.
+      const treeName = primary.contributor_ID;
       const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(treeName)}/matches`);
       status = res.status;
       if (!res.ok) throw new Error('API failed');

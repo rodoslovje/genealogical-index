@@ -117,6 +117,7 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                p1.date_of_birth AS a_dob, p1.place_of_birth AS a_pob,
                p1.date_of_baptism AS a_dobap, p1.place_of_baptism AS a_pobap,
                p1.date_of_death AS a_dod, p1.place_of_death AS a_pod,
+               p1.date_of_burial AS a_dobur, p1.place_of_burial AS a_pobur,
                p1.parents_list AS a_parents, p1.partners_list AS a_partners,
                p1.notes AS a_notes, p1.links AS a_links, p1.contributor AS a_contributor,
                p2.id AS b_id, p2.ext_id AS b_ext_id, p2.name AS b_name,
@@ -124,6 +125,7 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                p2.date_of_birth AS b_dob, p2.place_of_birth AS b_pob,
                p2.date_of_baptism AS b_dobap, p2.place_of_baptism AS b_pobap,
                p2.date_of_death AS b_dod, p2.place_of_death AS b_pod,
+               p2.date_of_burial AS b_dobur, p2.place_of_burial AS b_pobur,
                p2.parents_list AS b_parents, p2.partners_list AS b_partners,
                p2.notes AS b_notes, p2.links AS b_links, p2.contributor AS b_contributor
         FROM matches m
@@ -153,6 +155,8 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                     "place_of_baptism": r.a_pobap,
                     "date_of_death": r.a_dod,
                     "place_of_death": r.a_pod,
+                    "date_of_burial": r.a_dobur,
+                    "place_of_burial": r.a_pobur,
                     "parents_list": r.a_parents,
                     "partners_list": r.a_partners,
                     "notes": r.a_notes,
@@ -172,6 +176,8 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
                     "place_of_baptism": r.b_pobap,
                     "date_of_death": r.b_dod,
                     "place_of_death": r.b_pod,
+                    "date_of_burial": r.b_dobur,
+                    "place_of_burial": r.b_pobur,
                     "parents_list": r.b_parents,
                     "partners_list": r.b_partners,
                     "notes": r.b_notes,

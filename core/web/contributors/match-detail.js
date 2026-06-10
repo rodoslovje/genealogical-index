@@ -24,6 +24,7 @@ const isDateField = (f) => DATE_FIELDS_SET.has(f);
 const HIGHLIGHTABLE = new Set([
   'name', 'surname', 'husband_name', 'husband_surname', 'wife_name', 'wife_surname',
   'date_of_birth', 'place_of_birth', 'date_of_death', 'place_of_death',
+  'date_of_burial', 'place_of_burial',
   'date_of_marriage', 'place_of_marriage', 'husband_birth', 'wife_birth',
 ]);
 
@@ -34,6 +35,7 @@ const FILTER_FIELDS = [
   'date_of_birth', 'place_of_birth',
   'date_of_baptism', 'place_of_baptism',
   'date_of_death', 'place_of_death',
+  'date_of_burial', 'place_of_burial',
   'notes',
   'husband_name', 'husband_surname', 'husband_alt_surname', 'husband_birth',
   'wife_name', 'wife_surname', 'wife_alt_surname', 'wife_birth',
@@ -180,6 +182,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             { f: 'place_of_birth', h: t('col_place_of_birth') },
             { f: 'date_of_death',  h: t('col_date_of_death') },
             { f: 'place_of_death', h: t('col_place_of_death') },
+            { f: 'date_of_burial',  h: t('col_date_of_burial') },
+            { f: 'place_of_burial', h: t('col_place_of_burial') },
             { f: 'links',          h: t('col_links') },
             { f: 'partners',       h: t('col_partners') },
             { f: 'parents',        h: t('col_parents') },
