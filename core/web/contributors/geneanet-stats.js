@@ -253,7 +253,7 @@ export async function renderGeneanetStatsPage() {
     <div id="geneanet-stats-body">
       <div class="totals-bar matricula-totals-bar">
         <span><span>${t('geneanet_section_cemeteries')}</span>: <strong>${fmt(totals.cemeteries_count)}</strong></span>
-        <span><span>${t('col_place')}</span>: <strong>${fmt(totals.places_count)}</strong></span>
+        <span><span>${t('geneanet_section_places')}</span>: <strong>${fmt(totals.places_count)}</strong></span>
         <span><span>${t('col_persons')}</span>: <strong>${fmt(totals.persons_count)}</strong></span>
         <span><span>${t('col_graves')}</span>: <strong>${fmt(totals.graves_count)}</strong></span>
       </div>

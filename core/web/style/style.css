@@ -289,6 +289,15 @@ h2 {
   text-decoration: none;
 }
 
+/* Intro paragraph under the Matricula / Geneanet index page headers — same
+   readable measure and muted tone as the main intro text. */
+.index-intro {
+  max-width: 780px;
+  line-height: 1.6;
+  color: var(--srd-ink-muted);
+  margin: 0 0 20px;
+}
+
 .intro-logo-links {
   display: flex;
   align-items: center;
@@ -1038,15 +1047,20 @@ body.compact-nav .mobile-nav-section { display: flex; }
   .tree-minimap { display: none; }
 }
 
-/* Bare anchors inside the contributors page (matches header, URL info
- * boxes, etc.) — match the rest of the site instead of browser default.
- * Already-classed links (.name-link, .contributor-link, etc.) and the
- * page-title links that use inline color:inherit are unaffected. */
-#tab-contributors a:not([class]):not([style*="color"]) {
+/* Bare anchors inside the contributors / Matricula / Geneanet index pages
+ * (intro text, table cells, headers, URL info boxes, etc.) — match the rest
+ * of the site instead of browser default. Already-classed links (.name-link,
+ * .contributor-link, etc.) and page-title links that use inline color:inherit
+ * are unaffected. */
+#tab-contributors a:not([class]):not([style*="color"]),
+#tab-matricula a:not([class]):not([style*="color"]),
+#tab-geneanet a:not([class]):not([style*="color"]) {
   color: var(--srd-accent);
   text-decoration: none;
 }
-#tab-contributors a:not([class]):not([style*="color"]):hover {
+#tab-contributors a:not([class]):not([style*="color"]):hover,
+#tab-matricula a:not([class]):not([style*="color"]):hover,
+#tab-geneanet a:not([class]):not([style*="color"]):hover {
   color: var(--srd-accent-strong);
   text-decoration: underline;
 }
