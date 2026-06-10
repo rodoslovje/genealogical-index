@@ -291,16 +291,14 @@ def get_matricula_stats(db: Session):
         for b in book_rows
     ]
 
-    contrib_rows = db.execute(
-        text("""
+    contrib_rows = db.execute(text("""
             SELECT contributor,
                    COUNT(*)                 AS books_count,
                    COALESCE(SUM(count), 0)  AS total_records
             FROM matricula_books
             GROUP BY contributor
             ORDER BY total_records DESC, contributor
-        """)
-    ).fetchall()
+        """)).fetchall()
     top_contributors = [
         {
             "contributor": r.contributor,
@@ -310,8 +308,7 @@ def get_matricula_stats(db: Session):
         for r in contrib_rows
     ]
 
-    parish_rows = db.execute(
-        text("""
+    parish_rows = db.execute(text("""
             SELECT parish,
                    COUNT(*)                         AS books_count,
                    COALESCE(SUM(count), 0)          AS total_records,
@@ -320,8 +317,7 @@ def get_matricula_stats(db: Session):
             WHERE parish IS NOT NULL AND parish <> ''
             GROUP BY parish
             ORDER BY total_records DESC, parish
-        """)
-    ).fetchall()
+        """)).fetchall()
     top_parishes = [
         {
             "parish": r.parish,
@@ -535,9 +531,9 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
     # query does the merge, empty/whitespace filtering, and ordering server-side so
     # only distinct surnames cross the wire.
     def _source(surname_col, contributor_col):
-        sub = db.query(
-            surname_col.label("surname"), func.count().label("c")
-        ).group_by(surname_col)
+        sub = db.query(surname_col.label("surname"), func.count().label("c")).group_by(
+            surname_col
+        )
         return _contributor_filter(sub, contributor_col)
 
     union_sq = (
@@ -688,7 +684,16 @@ def _exact_word_filter(column, part):
     """Whole-word match that treats punctuation (not just spaces) as word
     boundaries, via a case-insensitive regex. Backed by the same gin_trgm_ops
     indexes that accelerate the ILIKE/`%>` fuzzy path."""
-    pattern = rf"(^|[{_EXACT_SEPS}]){re.escape(part)}($|[{_EXACT_SEPS}])"
+    starts_with = part.startswith("^")
+    ends_with = part.endswith("$")
+
+    clean_part = part[1:] if starts_with else part
+    clean_part = clean_part[:-1] if ends_with else clean_part
+
+    prefix = "^" if starts_with else rf"(^|[{_EXACT_SEPS}])"
+    suffix = "$" if ends_with else rf"($|[{_EXACT_SEPS}])"
+
+    pattern = rf"{prefix}{re.escape(clean_part)}{suffix}"
     return column.op("~*")(pattern)
 
 
@@ -707,9 +712,25 @@ def _text_filter(column, value, exact: bool, split_comma: bool = False):
         if exact:
             conds.append(_exact_word_filter(column, part))
         else:
-            conds.append(
-                or_(column.op("%>")(cast(part, Text)), column.ilike(f"%{part}%"))
-            )
+            starts_with = part.startswith("^")
+            ends_with = part.endswith("$")
+
+            if starts_with or ends_with:
+                clean_part = part[1:] if starts_with else part
+                clean_part = clean_part[:-1] if ends_with else clean_part
+
+                v = clean_part.replace("%", r"\%").replace("_", r"\_")
+
+                if starts_with and ends_with:
+                    conds.append(column.ilike(v))
+                elif starts_with:
+                    conds.append(column.ilike(f"{v}%"))
+                elif ends_with:
+                    conds.append(column.ilike(f"%{v}"))
+            else:
+                conds.append(
+                    or_(column.op("%>")(cast(part, Text)), column.ilike(f"%{part}%"))
+                )
 
     if len(conds) == 1:
         return conds[0]
@@ -758,11 +779,11 @@ def _apply_source_and_contributor(
             norm_part = unicodedata.normalize("NFC", part)
             conds.append(_text_filter(column, norm_part, exact, split_comma=False))
             if not norm_part.lower().endswith(MATRICULA_SUFFIX):
-                conds.append(
-                    _text_filter(
-                        column, norm_part + MATRICULA_SUFFIX, exact, split_comma=False
-                    )
-                )
+                if norm_part.endswith("$"):
+                    mat_part = norm_part[:-1] + MATRICULA_SUFFIX + "$"
+                else:
+                    mat_part = norm_part + MATRICULA_SUFFIX
+                conds.append(_text_filter(column, mat_part, exact, split_comma=False))
         if len(conds) == 1:
             query = query.filter(conds[0])
         elif len(conds) > 1:
@@ -1948,9 +1969,20 @@ def _split_parents_by_sex(node):
 # detail. Deliberately excludes the structural `parents`/`children` arrays so a
 # merged node doesn't embed its own subtree (which would blow up the payload).
 _VIEW_FIELDS = [
-    "id", "ext_id", "name", "surname", "alt_surname", "sex",
-    "date_of_birth", "place_of_birth", "date_of_baptism", "place_of_baptism",
-    "date_of_death", "place_of_death", "notes", "links",
+    "id",
+    "ext_id",
+    "name",
+    "surname",
+    "alt_surname",
+    "sex",
+    "date_of_birth",
+    "place_of_birth",
+    "date_of_baptism",
+    "place_of_baptism",
+    "date_of_death",
+    "place_of_death",
+    "notes",
+    "links",
 ]
 
 
@@ -2115,8 +2147,12 @@ def _partner_score(pa, pb):
     this is name-based (same fuzzy test as children, with a generous birth-year
     window); two empty/unknown partners (a single unrecorded spouse on each
     side) are treated as the same union."""
-    a_empty = not pa or (not _norm_cmp(pa.get("name")) and not _norm_cmp(pa.get("surname")))
-    b_empty = not pb or (not _norm_cmp(pb.get("name")) and not _norm_cmp(pb.get("surname")))
+    a_empty = not pa or (
+        not _norm_cmp(pa.get("name")) and not _norm_cmp(pa.get("surname"))
+    )
+    b_empty = not pb or (
+        not _norm_cmp(pb.get("name")) and not _norm_cmp(pb.get("surname"))
+    )
     if a_empty or b_empty:
         return 1.0 if (a_empty and b_empty) else 0.0
     return _person_similarity(pa, pb, year_tol=_PARTNER_YEAR_TOLERANCE)
@@ -2188,7 +2224,10 @@ def _best_pairs(a_items, b_items, score):
         used_b.add(j)
         a_to_b[i] = j
 
-    pairs = [(ia, b_items[a_to_b[i]] if i in a_to_b else None) for i, ia in enumerate(a_items)]
+    pairs = [
+        (ia, b_items[a_to_b[i]] if i in a_to_b else None)
+        for i, ia in enumerate(a_items)
+    ]
     pairs.extend((None, ib) for j, ib in enumerate(b_items) if j not in used_b)
     return pairs
 

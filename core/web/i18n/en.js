@@ -250,6 +250,7 @@ export default {
       <ul>
         <li><strong>Multiple values at once:</strong> In text fields (names, surnames, places, genealogist), you can enter multiple words separated by commas (e.g. <em>Janez, Ivan</em> or <em>Smith, Smithson</em>). The system will search for records containing any of them.</li>
         <li><strong>Dates and years:</strong> In date fields, you can enter exact dates (e.g. <em>15. 4. 1850</em>) or just years (e.g. <em>1850</em>). Date fields also allow searching by a range (from - to), but this applies <strong>only to years</strong>.</li>
+        <li><strong>Precise matching:</strong> You can use the <code>^</code> character at the beginning of a word to find entries that start with it (e.g. <code>^Kranj</code>), or <code>$</code> at the end to find entries that end with it. Using both (<code>^Kranj$</code>) searches for an exact match.</li>
         <li><strong>Clearing fields:</strong> Each input field has a <strong>×</strong> button on the right edge, which quickly clears the entered value.</li>
       </ul>
       <h4>Advanced Search Settings</h4>

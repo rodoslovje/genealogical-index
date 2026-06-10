@@ -250,6 +250,7 @@ export default {
       <ul>
         <li><strong>Mehrere Werte gleichzeitig:</strong> In Textfelder (Vornamen, Nachnamen, Orte, Genealoge) können Sie mehrere durch Kommas getrennte Wörter eingeben (z. B. <em>Janez, Ivan</em> oder <em>Mali, Mally</em>). Das System sucht nach Datensätzen, die eines davon enthalten.</li>
         <li><strong>Daten und Jahreszahlen:</strong> In Datumsfelder können Sie genaue Daten (z. B. <em>15. 4. 1850</em>) oder nur Jahreszahlen (z. B. <em>1850</em>) eingeben. Datumsfelder erlauben auch die Suche nach einem Bereich (von - bis), dies gilt jedoch <strong>nur für Jahreszahlen</strong>.</li>
+        <li><strong>Präzise Suche:</strong> Sie können das Zeichen <code>^</code> am Anfang eines Wortes verwenden, um Einträge zu finden, die damit beginnen (z. B. <code>^Kranj</code>), oder <code>$</code> am Ende, um nach solchen zu suchen, die damit enden. Wenn Sie beide (<code>^Kranj$</code>) verwenden, wird nach einer genauen Übereinstimmung gesucht.</li>
         <li><strong>Feld leeren:</strong> Jedes Eingabefeld hat am rechten Rand eine <strong>×</strong>-Schaltfläche, mit der Sie den eingegebenen Wert schnell löschen können.</li>
       </ul>
       <h4>Erweiterte Sucheinstellungen</h4>

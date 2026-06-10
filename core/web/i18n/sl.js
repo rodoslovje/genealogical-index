@@ -250,6 +250,7 @@ export default {
       <ul>
         <li><strong>Več vrednosti hkrati:</strong> V besedilna polja (imena, priimki, kraji, rodoslovec) lahko vnesete več besed, ločenih z vejico (npr. <em>Janez, Ivan</em> ali <em>Kovač, Kovačič</em>). Sistem bo poiskal zapise, ki vsebujejo katero koli izmed njih.</li>
         <li><strong>Datumi in letnice:</strong> V datumska polja lahko vnesete točne datume (npr. <em>15. 4. 1850</em>) ali zgolj letnice (npr. <em>1850</em>). Datumska polja omogočajo tudi iskanje po razponu (od – do), vendar se pri tem upoštevajo <strong>le letnice</strong>.</li>
+        <li><strong>Natančno iskanje:</strong> Na začetku besede lahko uporabite znak <code>^</code>, da poiščete zapise, ki se z njo začnejo (npr. <code>^Kranj</code>), ali pa <code>$</code> na koncu, da poiščete tiste, ki se z njo končajo. Če uporabite oba (<code>^Kranj$</code>), iskalnik išče natančno ujemanje.</li>
         <li><strong>Čiščenje polja:</strong> Vsako vnosno polje ima ob desnem robu gumb <strong>×</strong>, s katerim hitro pobrišete vneseno vrednost.</li>
       </ul>
       <h4>Napredne nastavitve iskanja</h4>

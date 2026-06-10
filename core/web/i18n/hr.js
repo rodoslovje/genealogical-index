@@ -250,6 +250,7 @@ export default {
       <ul>
         <li><strong>Više vrijednosti odjednom:</strong> U tekstualna polja (imena, prezimena, mjesta, rodoslovac) možete unijeti više riječi odvojenih zarezom (npr. <em>Janez, Ivan</em> ili <em>Kovač, Kovačić</em>). Sustav će pronaći zapise koji sadrže bilo koju od njih.</li>
         <li><strong>Datumi i godine:</strong> U datumska polja možete unijeti točne datume (npr. <em>15. 4. 1850.</em>) ili samo godine (npr. <em>1850</em>). Datumska polja omogućuju i pretragu po rasponu (od - do), no pri tome se u obzir uzimaju <strong>samo godine</strong>.</li>
+        <li><strong>Precizno pretraživanje:</strong> Na početku riječi možete upotrijebiti znak <code>^</code> kako biste pronašli zapise koji njome počinju (npr. <code>^Kranj</code>) ili pak <code>$</code> na kraju za pronalaženje onih koji njome završavaju. Upotrebom oba znaka (<code>^Kranj$</code>) traži se točno podudaranje.</li>
         <li><strong>Brisanje polja:</strong> Svako polje za unos na desnom rubu ima gumb <strong>×</strong> kojim brzo brišete unesenu vrijednost.</li>
       </ul>
       <h4>Napredne postavke pretrage</h4>
