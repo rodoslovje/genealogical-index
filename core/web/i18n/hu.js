@@ -258,6 +258,7 @@ export default {
       <ul>
         <li><strong>Több érték egyszerre:</strong> A szövegmezőkbe (nevek, vezetéknevek, helyek, genealógus) több szót is beírhat vesszővel elválasztva (pl. <em>Janez, Ivan</em> vagy <em>Mali, Mally</em>). A rendszer azokat a rekordokat fogja megkeresni, amelyek bármelyiket tartalmazzák.</li>
         <li><strong>Dátumok és évek:</strong> A dátummezőkbe beírhat pontos dátumokat (pl. <em>1850. 4. 15.</em>) vagy csak éveket (pl. <em>1850</em>). A dátummezők lehetővé teszik a tartomány megadását is (tól - ig), de ez <strong>csak az évekre vonatkozik</strong>.</li>
+        <li><strong>Pontos keresés:</strong> A szó elején használhatja a <code>^</code> karaktert az azzal kezdődő bejegyzések kereséséhez (pl. <code>^Kranj</code>), vagy a <code>$</code> karaktert a végén az azzal végződő bejegyzések kereséséhez. Mindkettő használatával (<code>^Kranj$</code>) pontos egyezést keres.</li>
         <li><strong>Mező törlése:</strong> Minden beviteli mező jobb szélén található egy <strong>×</strong> gomb, amellyel gyorsan törölheti a beírt értéket.</li>
       </ul>
       <h4>Speciális keresési beállítások</h4>

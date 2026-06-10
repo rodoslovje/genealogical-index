@@ -718,15 +718,11 @@ def _text_filter(column, value, exact: bool, split_comma: bool = False):
             if starts_with or ends_with:
                 clean_part = part[1:] if starts_with else part
                 clean_part = clean_part[:-1] if ends_with else clean_part
-
-                v = clean_part.replace("%", r"\%").replace("_", r"\_")
-
-                if starts_with and ends_with:
-                    conds.append(column.ilike(v))
-                elif starts_with:
-                    conds.append(column.ilike(f"{v}%"))
-                elif ends_with:
-                    conds.append(column.ilike(f"%{v}"))
+                prefix = "^" if starts_with else ""
+                suffix = "$" if ends_with else ""
+                conds.append(
+                    column.op("~*")(rf"{prefix}{re.escape(clean_part)}{suffix}")
+                )
             else:
                 conds.append(
                     or_(column.op("%>")(cast(part, Text)), column.ilike(f"%{part}%"))

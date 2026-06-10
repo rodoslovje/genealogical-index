@@ -257,6 +257,7 @@ export default {
       <ul>
         <li><strong>Più valori contemporaneamente:</strong> Nei campi di testo (nomi, cognomi, luoghi, genealogista) è possibile inserire più parole separate da virgole (es. <em>Janez, Ivan</em> o <em>Mali, Mally</em>). Il sistema cercherà i record che contengono una qualsiasi di esse.</li>
         <li><strong>Date e anni:</strong> Nei campi della data, è possibile inserire date esatte (es. <em>15. 4. 1850</em>) o solo anni (es. <em>1850</em>). I campi data consentono anche la ricerca per intervallo (da - a), ma questo si applica <strong>solo agli anni</strong>.</li>
+        <li><strong>Corrispondenza precisa:</strong> È possibile utilizzare il carattere <code>^</code> all'inizio di una parola per trovare le voci che iniziano con essa (es. <code>^Kranj</code>), oppure <code>$</code> alla fine per trovare quelle che terminano con essa. Utilizzandoli entrambi (<code>^Kranj$</code>) si cerca una corrispondenza esatta.</li>
         <li><strong>Cancellare un campo:</strong> Ogni campo di input ha un pulsante <strong>×</strong> sul bordo destro per cancellare rapidamente il valore inserito.</li>
       </ul>
       <h4>Impostazioni di ricerca avanzate</h4>
