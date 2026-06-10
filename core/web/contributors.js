@@ -125,8 +125,11 @@ export async function renderContributors() {
   if (chartsContainer) chartsContainer.style.display = statsCollapsed ? 'none' : 'grid';
   if (totalsBar && !readContributorParam(urlParams)) totalsBar.style.display = statsCollapsed ? 'none' : '';
   if (matriculaLink) {
-    const linkHtml = `<a href="${toUnicodeHref({ t: 'matricula' })}" data-spa-nav>${t('matricula_page_title')}</a>`;
-    matriculaLink.innerHTML = t('contributors_matricula_link_intro').replace('{0}', linkHtml);
+    const matriculaHtml = `<a href="${toUnicodeHref({ t: 'matricula' })}" data-spa-nav>${t('matricula_page_title')}</a>`;
+    const geneanetHtml = `<a href="${toUnicodeHref({ t: 'geneanet' })}" data-spa-nav>${t('geneanet_page_title')}</a>`;
+    matriculaLink.innerHTML = t('contributors_index_links_intro')
+      .replace('{0}', matriculaHtml)
+      .replace('{1}', geneanetHtml);
     matriculaLink.style.display = statsCollapsed ? 'none' : '';
   }
   if (surnameCloudSection) surnameCloudSection.style.display = '';

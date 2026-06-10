@@ -1,4 +1,4 @@
-import { t, formatTitleSuffix } from '../i18n.js';
+import { t, getCurrentLang } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
 import { escapeHtml, baseContributorName, ensureChartJs, formatExportFilename } from '../lib/utils.js';
 import { toUnicodeHref } from '../lib/url.js';
@@ -106,6 +106,22 @@ export function buildThead(columns) {
   return columns.map(({ f, h, cls = '' }) =>
     `<th data-col="${f}" class="sortable${cls}">${h}</th>`
   ).join('');
+}
+
+/** Wire a heading so clicking it collapses/expands the given content block —
+ *  the same "Statistika" interaction used on the Genealogists page. Reused by
+ *  the Matricula and Geneanet index pages. */
+export function setupCollapsibleHeader(headerSelector, contentSelector) {
+  const header = document.querySelector(headerSelector);
+  const content = document.querySelector(contentSelector);
+  if (!header || !content) return;
+  header.classList.add('collapsible-header');
+  header.addEventListener('click', (e) => {
+    if (e.target.closest('button') || e.target.closest('a')) return;
+    const isCollapsed = header.classList.contains('collapsed');
+    content.style.display = isCollapsed ? '' : 'none';
+    header.classList.toggle('collapsed', !isCollapsed);
+  });
 }
 
 function renderBooksSection(books) {
@@ -312,30 +328,39 @@ export async function renderMatriculaStatsPage() {
       '',
     ).slice(0, 10);
 
-    const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${t('matricula_page_title')} - ${formatTitleSuffix(t('section_statistics'))}</h2>
-    </div>
-    <div class="totals-bar matricula-totals-bar">
-      <span><span>${t('tab_contributors')}</span>: <strong>${fmt(contribCount)}</strong></span>
-      <span><span>${t('col_books_count')}</span>: <strong>${fmt(books.length)}</strong></span>
-      <span><span>${t('book_type_birth')}</span>: <strong>${fmt(totalBirths)}</strong></span>
-      <span><span>${t('book_type_marriage')}</span>: <strong>${fmt(totalMarriages)}</strong></span>
-      <span><span>${t('col_total')}</span>: <strong>${fmt(totalRecords)}</strong></span>
-      <span><span>${t('col_last_modified')}</span>: <strong>${escapeHtml(lastUpdate)}</strong></span>
-    </div>`;
+    // Matricula Online is localized for sl/de/en/it; others fall back to en.
+    const mLang = ['sl', 'de', 'en', 'it'].includes(getCurrentLang()) ? getCurrentLang() : 'en';
+    const introHtml = t('matricula_intro')
+      .replace('{0}', 'https://rodoslovje.si/projekti-drustva/indeks-maticnih-knjig-sam/')
+      .replace('{1}', `https://data.matricula-online.eu/${mLang}/slovenia/`);
 
-    const chartsHtml = `<div class="charts-container matricula-charts-container">
-      <div class="chart-wrapper">
-        <canvas id="matriculaContributorsChart"></canvas>
+    const heading = `<div class="matches-page-header">
+      <h2 class="matches-page-title">${t('matricula_page_title')}</h2>
+    </div>
+    <p class="index-intro">${introHtml}</p>
+    <h2 class="section-heading" id="matricula-stats-heading">${t('section_statistics')}</h2>
+    <div id="matricula-stats-body">
+      <div class="totals-bar matricula-totals-bar">
+        <span><span>${t('tab_contributors')}</span>: <strong>${fmt(contribCount)}</strong></span>
+        <span><span>${t('col_books_count')}</span>: <strong>${fmt(books.length)}</strong></span>
+        <span><span>${t('book_type_birth')}</span>: <strong>${fmt(totalBirths)}</strong></span>
+        <span><span>${t('book_type_marriage')}</span>: <strong>${fmt(totalMarriages)}</strong></span>
+        <span><span>${t('col_total')}</span>: <strong>${fmt(totalRecords)}</strong></span>
+        <span><span>${t('col_last_modified')}</span>: <strong>${escapeHtml(lastUpdate)}</strong></span>
       </div>
-      <div class="chart-wrapper">
-        <canvas id="matriculaParishesChart"></canvas>
+      <div class="charts-container matricula-charts-container">
+        <div class="chart-wrapper">
+          <canvas id="matriculaContributorsChart"></canvas>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="matriculaParishesChart"></canvas>
+        </div>
       </div>
     </div>`;
 
     const booksSection = renderBooksSection(books);
 
-    container.innerHTML = heading + chartsHtml + booksSection.html;
+    container.innerHTML = heading + booksSection.html;
 
     renderDoughnut('matriculaContributorsChart', tc, {
       valueKey: 'total_records',
@@ -347,6 +372,7 @@ export async function renderMatriculaStatsPage() {
       labelKey: 'parish',
       title: t('matricula_section_parishes'),
     });
+    setupCollapsibleHeader('#matricula-stats-heading', '#matricula-stats-body');
     booksSection.setup();
   } finally {
     if (overlay) overlay.style.display = 'none';

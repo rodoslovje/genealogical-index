@@ -1,8 +1,8 @@
-import { t, formatTitleSuffix } from '../i18n.js';
+import { t, getCurrentLang } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
 import { escapeHtml, ensureLeaflet, formatExportFilename } from '../lib/utils.js';
 import { csvCell, csvFooter, downloadCsv } from '../lib/csv.js';
-import { setupSortableTable, buildThead, renderDoughnut } from './matricula-stats.js';
+import { setupSortableTable, buildThead, renderDoughnut, setupCollapsibleHeader } from './matricula-stats.js';
 
 let cachedStats = null;
 let fetchPromise = null;
@@ -190,27 +190,37 @@ export async function renderGeneanetStatsPage() {
     const places = stats.top_places || [];
     const totals = stats.totals || {};
 
+    // Geneanet's cemetery portal is localized for de/it; everything else falls
+    // back to the English entry point.
+    const lang = getCurrentLang();
+    const gPrefix = (lang === 'de' || lang === 'it') ? lang : 'en';
+    const introHtml = t('geneanet_intro')
+      .replace('{0}', 'https://rodoslovje.si/register-slovenskih-pokopalisc/')
+      .replace('{1}', `https://${gPrefix}.geneanet.org/cemetery/`);
+
     const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${t('geneanet_page_title')} - ${formatTitleSuffix(t('section_statistics'))}</h2>
+      <h2 class="matches-page-title">${t('geneanet_page_title')}</h2>
     </div>
-    <div class="totals-bar matricula-totals-bar">
-      <span><span>${t('geneanet_section_cemeteries')}</span>: <strong>${fmt(totals.cemeteries_count)}</strong></span>
-      <span><span>${t('col_place')}</span>: <strong>${fmt(totals.places_count)}</strong></span>
-      <span><span>${t('col_persons')}</span>: <strong>${fmt(totals.persons_count)}</strong></span>
-      <span><span>${t('col_graves')}</span>: <strong>${fmt(totals.graves_count)}</strong></span>
-    </div>`;
-
-    const mapHtml = `<div id="geneanet-map" class="geneanet-map" style="height: 420px; margin-bottom: 24px; border-radius: 8px;"></div>`;
-
-    const chartsHtml = `<div class="charts-container matricula-charts-container">
-      <div class="chart-wrapper">
-        <canvas id="geneanetPlacesChart"></canvas>
+    <p class="index-intro">${introHtml}</p>
+    <h2 class="section-heading" id="geneanet-stats-heading">${t('section_statistics')}</h2>
+    <div id="geneanet-stats-body">
+      <div class="totals-bar matricula-totals-bar">
+        <span><span>${t('geneanet_section_cemeteries')}</span>: <strong>${fmt(totals.cemeteries_count)}</strong></span>
+        <span><span>${t('col_place')}</span>: <strong>${fmt(totals.places_count)}</strong></span>
+        <span><span>${t('col_persons')}</span>: <strong>${fmt(totals.persons_count)}</strong></span>
+        <span><span>${t('col_graves')}</span>: <strong>${fmt(totals.graves_count)}</strong></span>
+      </div>
+      <div id="geneanet-map" class="geneanet-map" style="height: 420px; margin-bottom: 24px; border-radius: 8px;"></div>
+      <div class="charts-container matricula-charts-container">
+        <div class="chart-wrapper">
+          <canvas id="geneanetPlacesChart"></canvas>
+        </div>
       </div>
     </div>`;
 
     const cemeteriesSection = renderCemeteriesSection(cemeteries);
 
-    container.innerHTML = heading + mapHtml + chartsHtml + cemeteriesSection.html;
+    container.innerHTML = heading + cemeteriesSection.html;
 
     renderMap(cemeteries);
     renderDoughnut('geneanetPlacesChart', places, {
@@ -218,6 +228,7 @@ export async function renderGeneanetStatsPage() {
       labelKey: 'place',
       title: t('geneanet_section_places'),
     });
+    setupCollapsibleHeader('#geneanet-stats-heading', '#geneanet-stats-body');
     cemeteriesSection.setup();
   } finally {
     if (overlay) overlay.style.display = 'none';
