@@ -177,6 +177,38 @@ th.sortable { cursor: pointer; user-select: none; transition: background 0.2s; }
 th.sortable:hover { background: var(--srd-bg); }
 tr:hover { background: var(--srd-bg-subtle); }
 
+/* --- Virtualized large tables (see table.js: mountTableHtml) ---
+   Big result sets (> VIRTUAL_ROW_THRESHOLD rows) get fixed layout with
+   pre-measured column widths plus per-row `content-visibility`, so the browser
+   skips layout/paint of off-screen rows. This bounds render/sort cost to the
+   viewport instead of the row count, while keeping every row in the DOM (so
+   find-in-page, CSV export, and sort all keep working). `contain-intrinsic-size`
+   gives skipped rows an estimated height (the `auto` keyword lets the browser
+   remember each row's real height once rendered, so the scrollbar settles). */
+.virtual-table { table-layout: fixed; }
+/* Long unbroken tokens (URLs, long place names) wrap instead of overflowing a
+   fixed-width column. */
+.virtual-table th, .virtual-table td { overflow-wrap: anywhere; }
+.virtual-table tbody tr {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 44px;
+}
+
+/* Centered spinner shown while a large table sorts (see table.js setTableBusy).
+   Reuses .srd-spinner; the rotate animation is composited so it keeps spinning
+   even while the sort blocks the main thread. pointer-events:none so it never
+   swallows clicks. No backdrop — a quick sort shouldn't flash the whole page. */
+#table-busy-spinner {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+#table-busy-spinner.active { display: flex; }
+
 /* --- Expandable cells for long lists (e.g. children) --- */
 .expandable-cell summary {
   cursor: pointer;

@@ -28,6 +28,68 @@ const NUMERIC_COLUMNS = new Set([
 
 const MATCHES_CONTEXT_COLS = new Set(['contributor_ID', 'total_persons', 'total_families', 'total']);
 
+// Above this row count, the table is rendered "virtualized": fixed column
+// widths + per-row `content-visibility:auto` so the browser skips layout/paint
+// of off-screen rows. Keeps large search/matches result sets fast to render and
+// re-sort without holding thousands of laid-out rows. Below the threshold the
+// table renders exactly as before (auto layout, no extra measuring pass).
+const VIRTUAL_ROW_THRESHOLD = 150;
+// Rows sampled (auto layout) to measure natural column widths before locking
+// them for fixed layout. Small enough to render instantly, large enough to be
+// representative; outlier-long cells in later rows just wrap instead of clip.
+const VIRTUAL_SAMPLE_ROWS = 40;
+
+// Above this row count a sort takes long enough to be worth a busy indicator.
+// Below it the sort is instant, so we run synchronously and skip the spinner
+// (which would otherwise add a frame of latency and a visible flicker).
+const BUSY_SPINNER_ROW_THRESHOLD = 2000;
+
+// Toggles a shared, centered spinner overlay. Used while a large table sorts:
+// the spinner's CSS rotate animation is composited, so it keeps spinning even
+// while the main thread is blocked by the sort — unlike a CSS `cursor` change,
+// which most browsers only re-evaluate on the next mouse move.
+export function setTableBusy(busy) {
+  let el = document.getElementById('table-busy-spinner');
+  if (busy && !el) {
+    el = document.createElement('div');
+    el.id = 'table-busy-spinner';
+    el.innerHTML = '<div class="srd-spinner"></div>';
+    document.body.appendChild(el);
+  }
+  if (el) el.classList.toggle('active', busy);
+}
+
+// Runs `work` behind the busy spinner when `heavy` is true, deferring two frames
+// so the spinner actually paints before the (blocking) work runs. Otherwise runs
+// synchronously. Shared by sort and expand/collapse-all across the tables.
+export function runWithBusy(heavy, work) {
+  if (!heavy) { work(); return; }
+  setTableBusy(true);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try { work(); }
+    catch (err) { console.error('table op failed', err); }
+    finally { setTableBusy(false); }
+  }));
+}
+
+// Re-measures and re-locks a virtualized table's column widths against its
+// current content. Used after expand/collapse-all: the colgroup was first
+// measured while expandable cells were collapsed (just a count, hence narrow),
+// so expanded content would otherwise be crammed into too-narrow fixed columns.
+// The .virtual-table class is kept (content-visibility stays on), so the brief
+// auto-layout measure only reflows the visible rows, not the whole table.
+export function remeasureVirtualColumns(table) {
+  if (!table || !table.classList.contains('virtual-table')) return;
+  table.querySelector('colgroup')?.remove();
+  table.style.tableLayout = 'auto';
+  const widths = Array.from(table.querySelectorAll('thead th'), th => th.offsetWidth);
+  const total = widths.reduce((a, b) => a + b, 0) || 1;
+  const colgroup = document.createElement('colgroup');
+  colgroup.innerHTML = widths.map(w => `<col style="width:${((w / total) * 100).toFixed(3)}%">`).join('');
+  table.insertBefore(colgroup, table.firstChild);
+  table.style.tableLayout = '';
+}
+
 // Renders the 🌳/🌿 tree button used in expandable parent/child/partner cells.
 // Returns '' when the feature is gated, there's no name/surname to seed the
 // tree, or the contributor is matricula (no stable IDs for tree nav).
@@ -99,14 +161,22 @@ function getValue(row, col) {
 }
 
 function sortData(data, primary, secondary) {
+  // Decorate-sort: precompute each row's sort key(s) once (O(n)) instead of
+  // recomputing getValue() inside the comparator (O(n log n)). getValue does
+  // real work per call (toLowerCase, date parsing, JSON list counting), so on
+  // a 20k-row table this is the difference between snappy and multi-second.
+  const pKey = new Map();
+  const sKey = secondary ? new Map() : null;
+  for (const row of data) {
+    pKey.set(row, getValue(row, primary.column));
+    if (sKey) sKey.set(row, getValue(row, secondary.column));
+  }
+  const dir = primary.ascending ? 1 : -1;
+  const sdir = secondary && secondary.ascending ? 1 : -1;
   data.sort((a, b) => {
-    const dir = primary.ascending ? 1 : -1;
-    const r = cmp(getValue(a, primary.column), getValue(b, primary.column));
+    const r = cmp(pKey.get(a), pKey.get(b));
     if (r !== 0) return r * dir;
-    if (secondary) {
-      const sdir = secondary.ascending ? 1 : -1;
-      return cmp(getValue(a, secondary.column), getValue(b, secondary.column)) * sdir;
-    }
+    if (sKey) return cmp(sKey.get(a), sKey.get(b)) * sdir;
     return 0;
   });
 }
@@ -538,6 +608,36 @@ function renderRowsHtml(data, columns) {
   ).join('');
 }
 
+// Mounts the table HTML into the container. For large result sets, renders a
+// small sample first to measure natural column widths, then re-renders the full
+// set with those widths locked (as percentages, so it stays responsive) and the
+// `.virtual-table` class — which switches the table to fixed layout and applies
+// `content-visibility:auto` per row. Fixed layout is required so off-screen rows
+// (skipped by content-visibility) don't influence column sizing and cause jitter
+// while scrolling. Small tables skip all this and render with auto layout.
+function mountTableHtml(container, data, columns, theadHtml) {
+  const bodyHtml = renderRowsHtml(data, columns);
+
+  if (data.length <= VIRTUAL_ROW_THRESHOLD) {
+    container.innerHTML = `<table>${theadHtml}<tbody>${bodyHtml}</tbody></table>`;
+    return;
+  }
+
+  // Pass 1: thead + a representative sample, auto layout, to measure widths.
+  const sampleHtml = renderRowsHtml(data.slice(0, VIRTUAL_SAMPLE_ROWS), columns);
+  container.innerHTML = `<table>${theadHtml}<tbody>${sampleHtml}</tbody></table>`;
+  const widths = Array.from(container.querySelectorAll('thead th'), (th) => th.offsetWidth);
+  const total = widths.reduce((a, b) => a + b, 0) || 1;
+  const colgroup =
+    '<colgroup>' +
+    widths.map((w) => `<col style="width:${((w / total) * 100).toFixed(3)}%">`).join('') +
+    '</colgroup>';
+
+  // Pass 2: full row set with widths locked + virtualization class.
+  container.innerHTML =
+    `<table class="virtual-table">${colgroup}${theadHtml}<tbody>${bodyHtml}</tbody></table>`;
+}
+
 export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
   const container = document.getElementById(containerId);
   const headerEl = container.previousElementSibling;
@@ -590,7 +690,18 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   });
   theadHtml += '</tr></thead>';
 
-  container.innerHTML = `<table>${theadHtml}<tbody>${renderRowsHtml(data, columns)}</tbody></table>`;
+  mountTableHtml(container, data, columns, theadHtml);
+
+  // Map each row object to its freshly-rendered <tr>. Sorting then reorders
+  // these existing nodes (see the sort handler) instead of regenerating the
+  // whole <tbody> — no cell HTML is rebuilt and open <details> survive because
+  // the same nodes move. The map is rebuilt on every full render, when the
+  // tbody row order still matches `data`.
+  const rowTrs = new Map();
+  {
+    const trs = container.querySelector('tbody').children;
+    for (let i = 0; i < data.length; i++) rowTrs.set(data[i], trs[i]);
+  }
 
   // Hoisted so the sort handler can reset the expand toggle after a re-render
   // (rebuilt <tbody> always starts with all <details> collapsed).
@@ -628,8 +739,13 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
       setExpandLabel(initialAllOpen);
       expandBtn.addEventListener('click', () => {
         const targetOpen = expandBtn.dataset.allOpen !== '1';
-        container.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
-        setExpandLabel(targetOpen);
+        runWithBusy(data.length > BUSY_SPINNER_ROW_THRESHOLD, () => {
+          container.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
+          // Expanded cells need more width than the collapsed-state colgroup
+          // allotted, so re-lock column widths against the new content.
+          remeasureVirtualColumns(container.querySelector('table.virtual-table'));
+          setExpandLabel(targetOpen);
+        });
       });
     }
 
@@ -664,47 +780,37 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         state.secondary = state.primary;
         state.primary = { column: col, ascending: true };
       }
-      // Capture which <details> cells are currently open, keyed by row object
-      // identity + column name. Row references survive the sortData() reorder,
-      // so we can re-open the same cells in the new positions.
-      const openMap = new Map();
-      container.querySelectorAll('tbody tr').forEach((tr, rowIdx) => {
-        const row = data[rowIdx];
-        if (!row) return;
-        Array.from(tr.children).forEach((td, colIdx) => {
-          const det = td.querySelector('details.expandable-cell');
-          if (!det?.open) return;
-          if (!openMap.has(row)) openMap.set(row, new Set());
-          openMap.get(row).add(columns[colIdx]);
+      // Re-sort in place, update <thead> arrows, then reorder the existing <tr>
+      // nodes to match. <thead> stays put so the click listeners survive;
+      // headerEl buttons (CSV / expand-all) are outside `container` and
+      // untouched.
+      const applySort = () => {
+        sortData(data, state.primary, state.secondary);
+        container.querySelectorAll('thead th.sortable').forEach(thNode => {
+          const c = thNode.dataset.col;
+          thNode.innerHTML = `${t(`col_${c}`)}${buildArrowIndicator(c, state)}`;
         });
-      });
 
-      // Re-sort in place and swap only <tbody> + update <thead> arrows.
-      // <thead> stays put so the click listeners survive; headerEl buttons
-      // (CSV / expand-all) are outside `container` and untouched.
-      sortData(data, state.primary, state.secondary);
-      container.querySelectorAll('thead th.sortable').forEach(thNode => {
-        const c = thNode.dataset.col;
-        thNode.innerHTML = `${t(`col_${c}`)}${buildArrowIndicator(c, state)}`;
-      });
-      container.querySelector('tbody').innerHTML = renderRowsHtml(data, columns);
+        // Move the existing rows into the new order via one fragment append,
+        // instead of rebuilding the <tbody> HTML. appendChild relocates the live
+        // nodes, so no cells are re-rendered and any open <details> stay open —
+        // which is why the old capture/restore dance is gone.
+        const tbody = container.querySelector('tbody');
+        const frag = document.createDocumentFragment();
+        for (const row of data) {
+          const tr = rowTrs.get(row);
+          if (tr) frag.appendChild(tr);
+        }
+        tbody.appendChild(frag);
 
-      // Restore open <details> in their new row positions.
-      if (openMap.size) {
-        container.querySelectorAll('tbody tr').forEach((tr, rowIdx) => {
-          const openCols = openMap.get(data[rowIdx]);
-          if (!openCols) return;
-          Array.from(tr.children).forEach((td, colIdx) => {
-            if (!openCols.has(columns[colIdx])) return;
-            const det = td.querySelector('details.expandable-cell');
-            if (det) det.open = true;
-          });
-        });
-      }
+        // Sync the expand-all toggle to reflect the (preserved) state.
+        const allEls = container.querySelectorAll('details.expandable-cell');
+        setExpandLabel(allEls.length > 0 && Array.from(allEls).every(d => d.open));
+      };
 
-      // Sync the expand-all toggle to reflect the (possibly restored) state.
-      const allEls = container.querySelectorAll('details.expandable-cell');
-      setExpandLabel(allEls.length > 0 && Array.from(allEls).every(d => d.open));
+      // For large tables the sort blocks the main thread long enough to feel
+      // unresponsive, so run it behind the spinner (deferred so it paints first).
+      runWithBusy(data.length > BUSY_SPINNER_ROW_THRESHOLD, applySort);
     });
   });
 }

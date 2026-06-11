@@ -1,5 +1,5 @@
 import { t, formatTitleSuffix } from '../i18n.js';
-import { formatSpecialCell, exportToCSV } from '../table.js';
+import { formatSpecialCell, exportToCSV, runWithBusy, remeasureVirtualColumns } from '../table.js';
 import { formatLinks } from '../lib/links.js';
 import { parseDateForSort } from '../lib/dates.js';
 import {
@@ -19,6 +19,14 @@ import { getContributorFilter, setDetailRefilter } from './filter.js';
 
 const DATE_FIELDS_SET = new Set(['date_of_birth', 'date_of_death', 'date_of_marriage', 'husband_birth', 'wife_birth']);
 const isDateField = (f) => DATE_FIELDS_SET.has(f);
+
+// Above this match count, a sort/filter re-render blocks long enough to warrant
+// the busy spinner (mirrors table.js's threshold for the search tables).
+const MATCHES_SPINNER_THRESHOLD = 2000;
+// Per-table row count above which we lock column widths and switch the table to
+// `content-visibility` virtualization (the `.virtual-table` styles in style.css)
+// so off-screen rows are skipped by the browser.
+const MATCHES_VIRTUAL_THRESHOLD = 150;
 
 // Fields whose text is highlighted (diff'd) when comparing record_a vs record_b.
 const HIGHLIGHTABLE = new Set([
@@ -41,6 +49,103 @@ const FILTER_FIELDS = [
   'wife_name', 'wife_surname', 'wife_alt_surname', 'wife_birth',
   'date_of_marriage', 'place_of_marriage',
 ];
+
+// --- Sorting & reorder helpers (shared by the full rebuild and the fast
+// sort-only path). Kept at module scope since they depend on no per-render
+// state — only their arguments. ---------------------------------------------
+
+const _collator = new Intl.Collator('sl', { sensitivity: 'base' });
+
+function getMatchValue(r, col) {
+  if (col === 'confidence') return r.confidence || 0;
+  const val = r.record_a[col];
+  if (col === 'links') {
+    if (!val) return 0;
+    if (Array.isArray(val)) return val.length;
+    try { return JSON.parse(val).length; } catch { return 0; }
+  }
+  if (isDateField(col)) return parseDateForSort(val);
+  return String(val || '').toLowerCase();
+}
+
+function cmpVals(a, b) {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return _collator.compare(String(a ?? ''), String(b ?? ''));
+}
+
+// Sorts a record group in place. Decorate-sort: each record's sort key(s) are
+// computed once (O(n)) instead of inside the comparator (O(n log n)) — getMatchValue
+// does real work (toLowerCase, date parsing, JSON length) so on large match sets
+// this is the difference between snappy and multi-second. Confidence is the
+// implicit final tiebreak (descending) unless it's already the primary/secondary.
+function sortGroup(group, state) {
+  if (!state || !state.primary || group.length === 0) return;
+  const pcol = state.primary.column;
+  const scol = state.secondary?.column;
+  const needConf = pcol !== 'confidence' && scol !== 'confidence';
+  const pk = new Map();
+  const sk = scol ? new Map() : null;
+  const ck = needConf ? new Map() : null;
+  for (const r of group) {
+    pk.set(r, getMatchValue(r, pcol));
+    if (sk) sk.set(r, getMatchValue(r, scol));
+    if (ck) ck.set(r, getMatchValue(r, 'confidence'));
+  }
+  const dir = state.primary.ascending ? 1 : -1;
+  const sdir = state.secondary?.ascending ? 1 : -1;
+  group.sort((a, b) => {
+    const res = cmpVals(pk.get(a), pk.get(b));
+    if (res !== 0) return res * dir;
+    if (sk) {
+      const sres = cmpVals(sk.get(a), sk.get(b));
+      if (sres !== 0) return sres * sdir;
+    }
+    if (ck) return cmpVals(ck.get(a), ck.get(b)) * -1;
+    return 0;
+  });
+}
+
+// Rewrites the sort-arrow indicators on a section's sortable headers in place
+// (keeps the <th> nodes so their click listeners survive). Base label text is
+// stashed in data-label at render time.
+function updateHeaderArrows(section, state) {
+  section.querySelectorAll('th.sortable').forEach(th => {
+    const col = th.dataset.col;
+    let ind = '';
+    if (state.primary.column === col) ind = state.primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
+    else if (state.secondary?.column === col) ind = state.secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
+    th.innerHTML = `${th.dataset.label || ''}${ind}`;
+  });
+}
+
+// Reorders an already-rendered section's rows to match `group`'s new order by
+// moving the existing <tr> pairs (each record = two rows joined by the rowspan
+// confidence cell) — no HTML regenerated, so open <details> survive. Re-stripes
+// the per-pair even/odd background classes since those are positional.
+//
+// The <tbody> is detached from the document first: moving thousands of live,
+// content-visibility rows one-by-one while attached forces per-move layout
+// bookkeeping that goes pathological on large match sets (a cemetery dataset can
+// be tens of thousands of pairs). Detached, the moves are pure tree ops with no
+// layout cost; reattaching does a single layout pass.
+function reorderType(tbody, group, pairMap) {
+  if (!tbody) return;
+  const parent = tbody.parentNode;
+  const next = tbody.nextSibling;
+  if (parent) parent.removeChild(tbody);
+  group.forEach((r, i) => {
+    const pair = pairMap.get(r);
+    if (!pair) return;
+    const cls = i % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
+    for (const tr of pair) {
+      if (!tr) continue;
+      tr.classList.remove('match-pair-even', 'match-pair-odd');
+      tr.classList.add(cls);
+      tbody.appendChild(tr); // moves within the detached tbody — cheap
+    }
+  });
+  if (parent) parent.insertBefore(tbody, next);
+}
 
 export async function renderMatchDetail(contributor, partner, contribData, container) {
   const detailEl = container;
@@ -104,6 +209,11 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
     const collapseState = { person: false, family: false };
 
+    // Per-type display order + DOM pair nodes from the last full render, so a
+    // subsequent *sort* (row set unchanged, only order) can reorder existing
+    // rows instead of rebuilding the whole section. Keyed: { group, pairMap, tbody }.
+    let renderedGroups = {};
+
     const recordSearchText = (rec) =>
       FILTER_FIELDS.map(f => rec[f] || '').join(' ').toLowerCase();
     const pairMatchesFilter = (r, q) => {
@@ -129,41 +239,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         if (pairMatchesFilter(r, currentFilter)) byType[r.record_type]?.push(r);
       });
 
-      const collator = new Intl.Collator('sl', { sensitivity: 'base' });
-      const getMatchValue = (r, col) => {
-        if (col === 'confidence') return r.confidence || 0;
-        const val = r.record_a[col];
-        if (col === 'links') {
-          if (!val) return 0;
-          if (Array.isArray(val)) return val.length;
-          try { return JSON.parse(val).length; } catch { return 0; }
-        }
-        if (isDateField(col)) return parseDateForSort(val);
-        return String(val || '').toLowerCase();
-      };
-      const cmp = (a, b) => {
-        if (typeof a === 'number' && typeof b === 'number') return a - b;
-        return collator.compare(String(a ?? ''), String(b ?? ''));
-      };
-
       for (const key of ['person', 'family']) {
-        const state = sortState[key];
-        if (state && state.primary && byType[key].length > 0) {
-          byType[key].sort((a, b) => {
-            const dir = state.primary.ascending ? 1 : -1;
-            const res = cmp(getMatchValue(a, state.primary.column), getMatchValue(b, state.primary.column));
-            if (res !== 0) return res * dir;
-            if (state.secondary) {
-              const sdir = state.secondary.ascending ? 1 : -1;
-              const sres = cmp(getMatchValue(a, state.secondary.column), getMatchValue(b, state.secondary.column));
-              if (sres !== 0) return sres * sdir;
-            }
-            if (state.primary.column !== 'confidence' && (!state.secondary || state.secondary.column !== 'confidence')) {
-              return cmp(getMatchValue(a, 'confidence'), getMatchValue(b, 'confidence')) * -1;
-            }
-            return 0;
-          });
-        }
+        sortGroup(byType[key], sortState[key]);
       }
 
       const buildSearchUrl = (tab, pairs) => {
@@ -287,7 +364,9 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             : `tip_${f}`;
           const tipText = t(tipKey);
           const titleAttr = tipText && tipText !== tipKey ? ` title="${tipText.replace(/"/g, '&quot;')}"` : '';
-          return `<th data-col="${f}" data-type="${key}" class="${cls}"${titleAttr}>${h}${indicator}</th>`;
+          // data-label stashes the base header text so a fast sort-only re-render
+          // can rewrite just the arrow indicator (see updateHeaderArrows).
+          return `<th data-col="${f}" data-type="${key}" data-label="${String(h).replace(/"/g, '&quot;')}" class="${cls}"${titleAttr}>${h}${indicator}</th>`;
         }).join('');
 
         let confIndicator = '';
@@ -362,7 +441,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
               <thead><tr>
                 ${headerCells}
                 <th class="col-center" title="${t('tip_contributor_ID').replace(/"/g, '&quot;')}">${t('col_contributor_ID')}</th>
-                <th data-col="confidence" data-type="${key}" class="sortable col-center" title="${t('tip_confidence').replace(/"/g, '&quot;')}">${t('col_confidence')}${confIndicator}</th>
+                <th data-col="confidence" data-type="${key}" data-label="${t('col_confidence').replace(/"/g, '&quot;')}" class="sortable col-center" title="${t('tip_confidence').replace(/"/g, '&quot;')}">${t('col_confidence')}${confIndicator}</th>
               </tr></thead>
               <tbody>${groupRows}</tbody>
             </table>
@@ -387,6 +466,21 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       });
 
       detailEl.innerHTML = html;
+
+      // Virtualize large match tables: measure the freshly-rendered (auto-layout)
+      // column widths, lock them as percentages via a <colgroup>, then switch to
+      // fixed layout + per-row content-visibility (.virtual-table, styled in
+      // style.css) so the browser skips layout/paint of off-screen rows. Fixed
+      // layout is required so skipped rows don't make columns jitter on scroll.
+      detailEl.querySelectorAll('table.matches-detail-table').forEach(table => {
+        if (table.tBodies[0]?.rows.length <= MATCHES_VIRTUAL_THRESHOLD) return;
+        const widths = Array.from(table.querySelectorAll('thead th'), th => th.offsetWidth);
+        const total = widths.reduce((a, b) => a + b, 0) || 1;
+        const colgroup = document.createElement('colgroup');
+        colgroup.innerHTML = widths.map(w => `<col style="width:${((w / total) * 100).toFixed(3)}%">`).join('');
+        table.insertBefore(colgroup, table.firstChild);
+        table.classList.add('virtual-table');
+      });
 
       if (openMap.size) {
         detailEl.querySelectorAll('tr[data-row-key]').forEach(tr => {
@@ -438,7 +532,9 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             state.secondary = state.primary;
             state.primary = { column: col, ascending: true };
           }
-          renderTables();
+          // sortType() reorders the existing rows (no HTML rebuilt). On a large
+          // set even that takes a beat, so run it behind the spinner.
+          runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, () => sortType(type));
         });
       });
 
@@ -462,13 +558,46 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           const section = btn.closest('.matches-section');
           if (!section) return;
           const targetOpen = btn.dataset.allOpen !== '1';
-          section.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
-          btn.dataset.allOpen = targetOpen ? '1' : '0';
-          const text = targetOpen ? t('collapse_all') : t('expand_all');
-          btn.innerHTML = `${getExpandCollapseIcon(targetOpen)}${text}`;
-          btn.title = text;
+          runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, () => {
+            section.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
+            // Expanded cells need more width than the collapsed-state colgroup
+            // allotted, so re-lock this table's column widths to the new content.
+            remeasureVirtualColumns(section.querySelector('table.virtual-table'));
+            btn.dataset.allOpen = targetOpen ? '1' : '0';
+            const text = targetOpen ? t('collapse_all') : t('expand_all');
+            btn.innerHTML = `${getExpandCollapseIcon(targetOpen)}${text}`;
+            btn.title = text;
+          });
         });
       });
+
+      // Snapshot each rendered section so a later sort can reorder its existing
+      // rows. tbody rows are in `group` order, two consecutive <tr> per record
+      // (record_a row, record_b row), so map record → [trA, trB].
+      renderedGroups = {};
+      for (const key of ['person', 'family']) {
+        const group = byType[key];
+        if (!group.length) continue;
+        const tbody = detailEl.querySelector(`.matches-section[data-type="${key}"] table.matches-detail-table tbody`);
+        if (!tbody) continue;
+        const rows = tbody.children;
+        const pairMap = new Map();
+        group.forEach((r, i) => pairMap.set(r, [rows[2 * i], rows[2 * i + 1]]));
+        renderedGroups[key] = { group, pairMap, tbody };
+      }
+    }
+
+    // Fast path for a header-sort click: the visible row set is unchanged, only
+    // its order, so re-sort the stored group and physically reorder the existing
+    // <tr> pairs instead of rebuilding the section. Falls back to a full render
+    // if the section was never rendered (shouldn't normally happen).
+    function sortType(key) {
+      const rendered = renderedGroups[key];
+      const section = detailEl.querySelector(`.matches-section[data-type="${key}"]`);
+      if (!rendered || !section) { renderTables(); return; }
+      sortGroup(rendered.group, sortState[key]);
+      updateHeaderArrows(section, sortState[key]);
+      reorderType(rendered.tbody, rendered.group, rendered.pairMap);
     }
 
     renderTables();
