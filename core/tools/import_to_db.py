@@ -63,9 +63,9 @@ def setup_full(db):
         CREATE TABLE families (
             id SERIAL PRIMARY KEY,
             husband_ext_id TEXT, husband_name TEXT, husband_surname TEXT,
-            husband_alt_surname TEXT, husband_birth TEXT,
+            husband_alt_surname TEXT, husband_birth TEXT, husband_birth_year SMALLINT,
             wife_ext_id TEXT, wife_name TEXT, wife_surname TEXT,
-            wife_alt_surname TEXT, wife_birth TEXT,
+            wife_alt_surname TEXT, wife_birth TEXT, wife_birth_year SMALLINT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
             children_list JSONB, husband_parents JSONB, wife_parents JSONB,
             notes TEXT, contributor TEXT, links JSONB
@@ -129,6 +129,10 @@ def setup_full(db):
         CREATE INDEX idx_person_death_year ON persons(death_year);
         CREATE INDEX idx_person_burial_year ON persons(burial_year);
         CREATE INDEX idx_family_year       ON families(marriage_year);
+        -- Spouse birth years let family date search match on birth as well as
+        -- marriage (search_all ORs marriage/husband_birth/wife_birth).
+        CREATE INDEX idx_family_h_birth_year ON families(husband_birth_year);
+        CREATE INDEX idx_family_w_birth_year ON families(wife_birth_year);
 
         -- Indexes for finding families for descendants tree
         CREATE INDEX idx_family_descendant_h_search ON families(contributor, husband_surname, husband_name);
@@ -269,9 +273,9 @@ def setup_update(db):
         CREATE TABLE IF NOT EXISTS families (
             id SERIAL PRIMARY KEY,
             husband_ext_id TEXT, husband_name TEXT, husband_surname TEXT,
-            husband_alt_surname TEXT, husband_birth TEXT,
+            husband_alt_surname TEXT, husband_birth TEXT, husband_birth_year SMALLINT,
             wife_ext_id TEXT, wife_name TEXT, wife_surname TEXT,
-            wife_alt_surname TEXT, wife_birth TEXT,
+            wife_alt_surname TEXT, wife_birth TEXT, wife_birth_year SMALLINT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
             children_list JSONB, husband_parents JSONB, wife_parents JSONB,
             notes TEXT, contributor TEXT, links JSONB
@@ -334,8 +338,10 @@ def setup_update(db):
         ALTER TABLE contributors DROP COLUMN IF EXISTS births_count;
         ALTER TABLE contributors DROP COLUMN IF EXISTS deaths_count;
 
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_birth TEXT;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_birth    TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_birth      TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_birth_year SMALLINT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_birth         TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_birth_year    SMALLINT;
         ALTER TABLE families DROP COLUMN IF EXISTS husband_year;
         ALTER TABLE families DROP COLUMN IF EXISTS wife_year;
 
@@ -402,6 +408,8 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_person_death_year       ON persons(death_year);
         CREATE INDEX IF NOT EXISTS idx_person_burial_year      ON persons(burial_year);
         CREATE INDEX IF NOT EXISTS idx_family_year             ON families(marriage_year);
+        CREATE INDEX IF NOT EXISTS idx_family_h_birth_year     ON families(husband_birth_year);
+        CREATE INDEX IF NOT EXISTS idx_family_w_birth_year     ON families(wife_birth_year);
 
         -- Indexes for finding families for descendants tree
         CREATE INDEX IF NOT EXISTS idx_family_descendant_h_search ON families(contributor, husband_surname, husband_name);
@@ -571,11 +579,13 @@ def _flatten_family(f, contributor_id):
         "husband_surname": _s(husband.get("surname")),
         "husband_alt_surname": _s(husband.get("alt_surname")),
         "husband_birth": _s(husband.get("date_of_birth")),
+        "husband_birth_year": _extract_year(husband.get("date_of_birth")),
         "wife_ext_id": _s(wife.get("id")),
         "wife_name": _s(wife.get("name")),
         "wife_surname": _s(wife.get("surname")),
         "wife_alt_surname": _s(wife.get("alt_surname")),
         "wife_birth": _s(wife.get("date_of_birth")),
+        "wife_birth_year": _extract_year(wife.get("date_of_birth")),
         "date_of_marriage": _s(marriage.get("date")),
         "marriage_year": _extract_year(marriage.get("date")),
         "place_of_marriage": _s(marriage.get("place")),
@@ -677,17 +687,17 @@ def import_contributor(
                     text("""
                         INSERT INTO families (
                             husband_ext_id, husband_name, husband_surname,
-                            husband_alt_surname, husband_birth,
+                            husband_alt_surname, husband_birth, husband_birth_year,
                             wife_ext_id, wife_name, wife_surname,
-                            wife_alt_surname, wife_birth,
+                            wife_alt_surname, wife_birth, wife_birth_year,
                             date_of_marriage, marriage_year, place_of_marriage,
                             children_list, husband_parents, wife_parents,
                             notes, contributor, links)
                         VALUES (
                             :husband_ext_id, :husband_name, :husband_surname,
-                            :husband_alt_surname, :husband_birth,
+                            :husband_alt_surname, :husband_birth, :husband_birth_year,
                             :wife_ext_id, :wife_name, :wife_surname,
-                            :wife_alt_surname, :wife_birth,
+                            :wife_alt_surname, :wife_birth, :wife_birth_year,
                             :date_of_marriage, :marriage_year, :place_of_marriage,
                             CAST(:children_list AS jsonb),
                             CAST(:husband_parents AS jsonb),

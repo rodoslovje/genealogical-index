@@ -195,6 +195,32 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/009_burial_and_geneanet.sql
 ```
 
+### 010 — `family_spouse_birth_year`
+
+Lets general search match a family on either spouse's birth date, not just the
+marriage date.
+
+- Adds `husband_birth_year` / `wife_birth_year` SMALLINT to `families` (parity
+  with the persons birth/death/burial year columns), back-fills them from the
+  existing `husband_birth` / `wife_birth` TEXT columns, and adds a btree on each
+  so `search_all`'s OR'd birth conditions stay index-backed instead of
+  seq-scanning.
+
+`ADD COLUMN` (nullable) is a fast metadata-only change; the back-fill `UPDATE`
+runs once over the table; `CREATE INDEX CONCURRENTLY` runs online. Both
+`import_to_db.py` paths (`setup_full` / `setup_update`) already create these for
+fresh DBs and populate them on re-import — this file is only for upgrading an
+existing production DB in place (and back-filling rows for contributors that
+aren't being re-imported).
+
+- Must run **outside** a transaction block.
+- Re-runnable (`IF NOT EXISTS`; the back-fill is gated on `IS NULL`).
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/010_family_spouse_birth_year.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

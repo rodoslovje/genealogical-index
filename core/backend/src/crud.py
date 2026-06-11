@@ -987,15 +987,37 @@ def search_all(
                     models.Family.place_of_marriage, place, exact, split_comma=True
                 )
             )
-        date_cond_f = _date_filter(
+        # Date range filters apply to the marriage or to either spouse's birth,
+        # mirroring the persons branch (birth/death/burial). Each uses its
+        # indexed SMALLINT year sibling so the range scan stays index-backed.
+        date_cond_m = _date_filter(
             models.Family.date_of_marriage,
             date_from,
             date_to,
             exact,
             year_column=models.Family.marriage_year,
         )
-        if date_cond_f is not None:
-            families_q = families_q.filter(date_cond_f)
+        date_cond_hb = _date_filter(
+            models.Family.husband_birth,
+            date_from,
+            date_to,
+            exact,
+            year_column=models.Family.husband_birth_year,
+        )
+        date_cond_wb = _date_filter(
+            models.Family.wife_birth,
+            date_from,
+            date_to,
+            exact,
+            year_column=models.Family.wife_birth_year,
+        )
+        fam_date_conds = [
+            c for c in (date_cond_m, date_cond_hb, date_cond_wb) if c is not None
+        ]
+        if len(fam_date_conds) > 1:
+            families_q = families_q.filter(or_(*fam_date_conds))
+        elif fam_date_conds:
+            families_q = families_q.filter(fam_date_conds[0])
         families_q = _apply_source_and_contributor(
             families_q, models.Family.contributor, contributor, source, exact
         )
