@@ -159,6 +159,8 @@ export default {
     matches_found_intro: 'Pronašli smo sljedeće rodoslovce koji imaju podudarne ili slične podatke kao',
     matches_found_outro: 'Odabirom podudarnog rodoslovca prikazat će se sva podudaranja između dva rodoslovca.',
     matches_detail_intro: 'Prikazana su sva podudaranja između rodoslovaca {1} i {0}.',
+    matches_truncated: 'Prikazano je {0} najjačih od {1} podudaranja.',
+    matches_load_all: 'Učitaj sva',
     contributor_surnames_intro: 'Rodoslovac',
     contributor_surnames_outro: 'ima u svom stablu sljedeća najčešća prezimena:',
     contributor_matricula_surnames_intro: 'Transkribirane matične knjige sadrže sljedeća najčešća prezimena:',

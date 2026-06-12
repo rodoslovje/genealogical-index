@@ -31,6 +31,10 @@ const MATCHES_VIRTUAL_THRESHOLD = 150;
 // the rest stream in on setTimeout batches so first paint doesn't wait for
 // tens of thousands of rows.
 const MATCHES_CHUNK_PAIRS = 500;
+// Top-N matches by confidence requested per record type; matches the API
+// default. Server time scales ~linearly with record count (~0.8ms each), so a
+// cemetery-scale pair (25k+) drops from ~25s to ~2s. "Load all" lifts the cap.
+const MATCHES_DETAIL_LIMIT = 2000;
 
 // Fields whose text is highlighted (diff'd) when comparing record_a vs record_b.
 const HIGHLIGHTABLE = new Set([
@@ -188,14 +192,34 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
   try {
     let records;
+    // Server-side totals per record type. Large pairs are capped to the top-N
+    // matches by confidence (MATCHES_DETAIL_LIMIT); totals let the UI say how
+    // much was held back and offer "load all".
+    let totals = { person: 0, family: 0 };
     let status = 0;
-    try {
+
+    const fetchRecords = async (limit) => {
       const res = await authFetch(
-        `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}`
+        `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}?limit=${limit}`
       );
       status = res.status;
       if (!res.ok) throw new Error('API failed');
-      records = await res.json();
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        // Older API: bare uncapped array (ignores ?limit). Totals = loaded.
+        records = data;
+        totals = {
+          person: data.filter(r => r.record_type === 'person').length,
+          family: data.filter(r => r.record_type === 'family').length,
+        };
+      } else {
+        records = data.records;
+        totals = { person: data.persons_total || 0, family: data.families_total || 0 };
+      }
+    };
+
+    try {
+      await fetchRecords(MATCHES_DETAIL_LIMIT);
     } catch {
       detailEl.innerHTML = baseHtml + `<p>${t(fetchErrorKey(status))}</p>`;
       return;
@@ -248,9 +272,16 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       const pendingChunks = [];
 
       const byType = { person: [], family: [] };
+      const loadedCounts = { person: 0, family: 0 };
       records.forEach(r => {
+        if (loadedCounts[r.record_type] !== undefined) loadedCounts[r.record_type] += 1;
         if (pairMatchesFilter(r, currentFilter)) byType[r.record_type]?.push(r);
       });
+      // True when the server held back rows beyond the top-N cap.
+      const truncated = {
+        person: totals.person > loadedCounts.person,
+        family: totals.family > loadedCounts.family,
+      };
 
       for (const key of ['person', 'family']) {
         sortGroup(byType[key], sortState[key]);
@@ -315,6 +346,15 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       ];
 
       let html = baseHtml;
+
+      if (truncated.person || truncated.family) {
+        const shown = (loadedCounts.person + loadedCounts.family).toLocaleString();
+        const total = (totals.person + totals.family).toLocaleString();
+        html += `<div class="matches-truncated-note">
+          ${t('matches_truncated').replace('{0}', shown).replace('{1}', total)}
+          <button id="load-all-matches" class="export-btn">${t('matches_load_all')}</button>
+        </div>`;
+      }
 
       // Field → optional row-icon builder. Adding a new icon is one entry.
       const ROW_ICON_BUILDERS = {
@@ -452,7 +492,9 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
         html += `<div class="matches-section" data-type="${key}">
           <div class="section-bar section-bar--top-sm">
-            <h4 class="${collapsedClass}" style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${group.length})</h4>
+            <h4 class="${collapsedClass}" style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${
+              truncated[key] ? `${group.length.toLocaleString()} / ${totals[key].toLocaleString()}` : group.length.toLocaleString()
+            })</h4>
             <div class="matches-section-actions" style="display: flex; gap: 10px;">
               ${expandBtnHtml}
               <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
@@ -509,6 +551,22 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       });
 
       // --- immediate listeners (don't depend on rows being complete) -------
+      const loadAllBtn = detailEl.querySelector('#load-all-matches');
+      if (loadAllBtn) {
+        loadAllBtn.addEventListener('click', async () => {
+          loadAllBtn.disabled = true;
+          setTableBusy(true);
+          try {
+            await fetchRecords(0); // 0 = no cap
+            renderTables();
+          } catch {
+            loadAllBtn.disabled = false;
+          } finally {
+            setTableBusy(false);
+          }
+        });
+      }
+
       detailEl.querySelectorAll('.matches-section').forEach(section => {
         const typeKey = section.dataset.type;
         const header = section.querySelector('h4');

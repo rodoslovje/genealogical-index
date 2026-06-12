@@ -159,6 +159,8 @@ export default {
     matches_found_intro: 'Wir haben die folgenden Genealogen gefunden, die übereinstimmende oder ähnliche Daten aufweisen wie',
     matches_found_outro: 'Wählen Sie einen übereinstimmenden Genealogen aus, um alle Übereinstimmungen zwischen den beiden anzuzeigen.',
     matches_detail_intro: 'Alle Übereinstimmungen zwischen {1} und {0} werden unten angezeigt.',
+    matches_truncated: 'Es werden die {0} stärksten von {1} Übereinstimmungen angezeigt.',
+    matches_load_all: 'Alle laden',
     contributor_surnames_intro: 'Der Genealoge',
     contributor_surnames_outro: 'hat die folgenden häufigsten Nachnamen in seinem Stammbaum:',
     contributor_matricula_surnames_intro: 'Die transkribierten Kirchenbücher enthalten die folgenden häufigsten Nachnamen:',

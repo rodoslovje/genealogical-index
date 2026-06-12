@@ -2,6 +2,7 @@ import os
 from typing import List, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import ORJSONResponse
 from sqlalchemy.orm import Session
 
 import jwt
@@ -113,10 +114,21 @@ def get_geneanet_stats(db: Session = Depends(get_db)):
 def get_contributor_match_detail(
     name: str,
     other: str,
+    limit: int = 2000,
     db: Session = Depends(get_db),
     user: Optional[dict] = Depends(require_user),
 ):
-    return crud.get_contributor_match_detail(db, name, other)
+    """Top matches by confidence between two contributors.
+
+    `limit` caps persons and families independently; 0 means no cap. Returned
+    as a direct ORJSONResponse: the payload is plain str/int/float/list/dict
+    rows, so skipping FastAPI's jsonable_encoder pass (which walks the whole
+    multi-MB structure) cuts most of the serialization time on large pairs.
+    """
+    payload = crud.get_contributor_match_detail(
+        db, name, other, limit=limit if limit > 0 else None
+    )
+    return ORJSONResponse(payload)
 
 
 @app.get("/api/stats/timeline", response_model=List[schemas.TimelineStat])

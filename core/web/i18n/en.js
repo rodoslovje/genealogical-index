@@ -159,6 +159,8 @@ export default {
     matches_found_intro: 'We have found that the following genealogists have matching or similar data to',
     matches_found_outro: 'Select a matching genealogist to view all matches between the two.',
     matches_detail_intro: 'All matches between {1} and {0} are shown below.',
+    matches_truncated: 'Showing the {0} strongest of {1} matches.',
+    matches_load_all: 'Load all',
     contributor_surnames_intro: 'Genealogist',
     contributor_surnames_outro: 'has the following top surnames in their tree:',
     contributor_matricula_surnames_intro: 'Transcribed parish registers contain the following top surnames:',

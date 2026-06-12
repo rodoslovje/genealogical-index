@@ -101,13 +101,35 @@ def get_match_counts(db: Session):
     return result
 
 
-def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b: str):
+def get_contributor_match_detail(
+    db: Session, contributor_a: str, contributor_b: str, limit: int = None
+):
+    """Match pairs between two contributors, strongest first.
+
+    `limit` caps each record type independently (persons, families) to the
+    top-N by confidence — large pairs (cemetery indexes) can run to tens of
+    thousands of matches, and the per-record dict building + JSON encoding is
+    what dominates the response time, so the cap cuts it proportionally.
+    None means no cap (the UI's explicit "load all"). Totals are always
+    reported so the client can show how much was truncated.
+    """
     results = []
 
     a_norm = unicodedata.normalize("NFC", contributor_a)
     a_forms = [a_norm, *(a_norm + s for s in SPECIAL_SUFFIXES)]
 
     b_forms = [unicodedata.normalize("NFC", contributor_b)]
+
+    totals = {"person": 0, "family": 0}
+    for row in db.execute(
+        text("""
+        SELECT record_type, COUNT(*) AS n FROM matches
+        WHERE contributor_a = ANY(:a_forms) AND contributor_b = ANY(:b_forms)
+        GROUP BY record_type
+    """),
+        {"a_forms": a_forms, "b_forms": b_forms},
+    ):
+        totals[row.record_type] = row.n
 
     person_rows = db.execute(
         text("""
@@ -133,8 +155,9 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
         JOIN persons p2 ON m.record_b_id = p2.id
         WHERE m.contributor_a = ANY(:a_forms) AND m.contributor_b = ANY(:b_forms) AND m.record_type = 'person'
         ORDER BY m.confidence DESC
+        LIMIT :limit
     """),
-        {"a_forms": a_forms, "b_forms": b_forms},
+        {"a_forms": a_forms, "b_forms": b_forms, "limit": limit},
     ).fetchall()
     for r in person_rows:
         results.append(
@@ -215,8 +238,9 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
         JOIN families f2 ON m.record_b_id = f2.id
         WHERE m.contributor_a = ANY(:a_forms) AND m.contributor_b = ANY(:b_forms) AND m.record_type = 'family'
         ORDER BY m.confidence DESC
+        LIMIT :limit
     """),
-        {"a_forms": a_forms, "b_forms": b_forms},
+        {"a_forms": a_forms, "b_forms": b_forms, "limit": limit},
     ).fetchall()
     for r in family_rows:
         results.append(
@@ -269,7 +293,11 @@ def get_contributor_match_detail(db: Session, contributor_a: str, contributor_b:
             }
         )
 
-    return results
+    return {
+        "persons_total": totals["person"],
+        "families_total": totals["family"],
+        "records": results,
+    }
 
 
 def get_matricula_stats(db: Session):

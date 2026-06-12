@@ -162,6 +162,8 @@ export default {
     matches_found_intro: 'A következő genealógusokat találtuk, akik egyező vagy hasonló adatokkal rendelkeznek, mint',
     matches_found_outro: 'Válasszon ki egy egyező genealógust a kettejük közötti összes egyezés megtekintéséhez.',
     matches_detail_intro: 'A {1} és {0} közötti összes egyezés alább látható.',
+    matches_truncated: 'A(z) {1} egyezésből a(z) {0} legerősebb látható.',
+    matches_load_all: 'Összes betöltése',
     contributor_surnames_intro: 'A genealógus',
     contributor_surnames_outro: 'a következő leggyakoribb vezetéknevekkel rendelkezik a családfájában:',
     contributor_matricula_surnames_intro: 'Az átírt anyakönyvek a következő leggyakoribb vezetékneveket tartalmazzák:',

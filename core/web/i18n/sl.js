@@ -159,6 +159,8 @@ export default {
     matches_found_intro: 'Naslednji rodoslovci imajo ujemajoče ali podobne podatke kot',
     matches_found_outro: 'Z izbiro posameznega rodoslovca vam prikažemo vse ujemke med njima.',
     matches_detail_intro: 'Prikazana so vsa ujemanja med rodoslovcema {1} in {0}.',
+    matches_truncated: 'Prikazanih je {0} najmočnejših od {1} ujemanj.',
+    matches_load_all: 'Naloži vsa',
     contributor_surnames_intro: 'Rodoslovec',
     contributor_surnames_outro: 'ima v svojem drevesu naslednje najpogostejše priimke:',
     contributor_matricula_surnames_intro: 'Indeksirane matične knjige vsebujejo naslednje najpogostejše priimke:',

@@ -162,6 +162,8 @@ export default {
     matches_found_intro: 'Abbiamo trovato i seguenti genealogisti che hanno dati corrispondenti o simili a',
     matches_found_outro: 'Seleziona un genealogista corrispondente per visualizzare tutte le corrispondenze tra i due.',
     matches_detail_intro: 'Tutte le corrispondenze tra {1} e {0} sono mostrate di seguito.',
+    matches_truncated: 'Sono mostrate le {0} corrispondenze più forti su {1}.',
+    matches_load_all: 'Carica tutte',
     contributor_surnames_intro: 'Il genealogista',
     contributor_surnames_outro: 'ha i seguenti cognomi più frequenti nel suo albero:',
     contributor_matricula_surnames_intro: 'I registri parrocchiali trascritti contengono i seguenti cognomi più frequenti:',
