@@ -583,9 +583,31 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       });
 
       detailEl.querySelectorAll('.export-matches-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const typeKey = btn.dataset.type;
-          const typeData = byType[typeKey];
+          // CSV must never be silently truncated by the server-side top-N cap:
+          // when the page holds a partial set, fetch the rest first (updating
+          // the visible table too), then export. On a failed fetch we fall
+          // back to exporting the loaded subset — same as the pre-cap behavior.
+          if (records.length < totals.person + totals.family) {
+            setTableBusy(true);
+            try {
+              await fetchRecords(0); // 0 = no cap
+              renderTables();
+            } catch (err) {
+              console.error('full fetch for CSV export failed; exporting loaded subset', err);
+            } finally {
+              setTableBusy(false);
+            }
+          }
+          // Recompute from `records` rather than the closure's byType: the
+          // fetch above may have replaced the record set. The sidebar filter
+          // still applies (an explicit user choice), and the rows are ordered
+          // like the visible table.
+          const typeData = records.filter(
+            r => r.record_type === typeKey && pairMatchesFilter(r, currentFilter)
+          );
+          sortGroup(typeData, sortState[typeKey]);
           const config = typeConfig.find(c => c.key === typeKey);
           const flatData = [];
           typeData.forEach(r => {
