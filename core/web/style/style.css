@@ -186,9 +186,12 @@ tr:hover { background: var(--srd-bg-subtle); }
    gives skipped rows an estimated height (the `auto` keyword lets the browser
    remember each row's real height once rendered, so the scrollbar settles). */
 .virtual-table { table-layout: fixed; }
-/* Long unbroken tokens (URLs, long place names) wrap instead of overflowing a
-   fixed-width column. */
-.virtual-table th, .virtual-table td { overflow-wrap: anywhere; }
+/* Long unbroken tokens (URLs, long place names) in data cells wrap instead of
+   overflowing a fixed-width column. Headers are excluded on purpose: their
+   words must only break at word boundaries (no "Pove-zava" splits), and the
+   pass-1 width measurement already sized each column to fit its header's
+   longest word. */
+.virtual-table td { overflow-wrap: anywhere; }
 .virtual-table tbody tr {
   content-visibility: auto;
   contain-intrinsic-size: auto 44px;
@@ -1029,6 +1032,15 @@ body.compact-nav .mobile-nav-section { display: flex; }
   }
 
   .table-responsive { overflow-x: auto; }
+
+  /* Virtualized tables carry their measured natural width in --vt-natural-width
+     (set by table.js / match-detail.js). Pinning it as min-width here stops the
+     fixed-layout columns from squeezing below readable on phones — the
+     .table-responsive wrapper above pans horizontally instead, while the page
+     keeps scrolling vertically through the rows. Desktop intentionally skips
+     this: its wrapper uses overflow:clip to preserve sticky headers, so a
+     min-width there would clip the table with no way to pan. */
+  .virtual-table { min-width: var(--vt-natural-width, 0); }
 
   #main-content { padding: 0 4px; }
 

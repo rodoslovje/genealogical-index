@@ -1,5 +1,5 @@
 import { t, formatTitleSuffix } from '../i18n.js';
-import { formatSpecialCell, exportToCSV, runWithBusy, remeasureVirtualColumns } from '../table.js';
+import { formatSpecialCell, exportToCSV, runWithBusy, remeasureVirtualColumns, setTableBusy } from '../table.js';
 import { formatLinks } from '../lib/links.js';
 import { parseDateForSort } from '../lib/dates.js';
 import {
@@ -27,6 +27,10 @@ const MATCHES_SPINNER_THRESHOLD = 2000;
 // `content-visibility` virtualization (the `.virtual-table` styles in style.css)
 // so off-screen rows are skipped by the browser.
 const MATCHES_VIRTUAL_THRESHOLD = 150;
+// Pairs (2 <tr> each) rendered synchronously per section on a full rebuild;
+// the rest stream in on setTimeout batches so first paint doesn't wait for
+// tens of thousands of rows.
+const MATCHES_CHUNK_PAIRS = 500;
 
 // Fields whose text is highlighted (diff'd) when comparing record_a vs record_b.
 const HIGHLIGHTABLE = new Set([
@@ -214,6 +218,10 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
     // rows instead of rebuilding the whole section. Keyed: { group, pairMap, tbody }.
     let renderedGroups = {};
 
+    // Bumped by every full renderTables() run; an in-flight chunk stream from a
+    // previous render compares its captured token and stops when stale.
+    let renderToken = 0;
+
     const recordSearchText = (rec) =>
       FILTER_FIELDS.map(f => rec[f] || '').join(' ').toLowerCase();
     const pairMatchesFilter = (r, q) => {
@@ -234,6 +242,11 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
     };
 
     function renderTables() {
+      const token = ++renderToken;
+      // Sections whose pair rows exceed the first synchronous chunk; their
+      // remainder streams in after the innerHTML swap. { key, group, buildPairRow, next }.
+      const pendingChunks = [];
+
       const byType = { person: [], family: [] };
       records.forEach(r => {
         if (pairMatchesFilter(r, currentFilter)) byType[r.record_type]?.push(r);
@@ -373,7 +386,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         if (state.primary.column === 'confidence') confIndicator = state.primary.ascending ? '&nbsp;▲' : '&nbsp;▼';
         else if (state.secondary?.column === 'confidence') confIndicator = state.secondary.ascending ? '&nbsp;△' : '&nbsp;▽';
 
-        const groupRows = group.map((r, idx) => {
+        const buildPairRow = (r, idx) => {
           const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
           const aCells = fields.map(({ f }) => makeCell(r.record_a, r.record_b, f)).join('');
           const bCells = fields.map(({ f }) => makeCell(r.record_b, r.record_a, f)).join('');
@@ -413,7 +426,16 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
                     ${bCells}
                     <td class="match-pair-label match-pair-label-b col-center">${partnerLink}</td>
                   </tr>`;
-        }).join('');
+        };
+
+        // First chunk renders synchronously for instant first paint; the
+        // remainder streams in after the innerHTML swap (chunk loop below).
+        const firstCount = Math.min(group.length, MATCHES_CHUNK_PAIRS);
+        let groupRows = '';
+        for (let i = 0; i < firstCount; i++) groupRows += buildPairRow(group[i], i);
+        if (firstCount < group.length) {
+          pendingChunks.push({ key, group, buildPairRow, next: firstCount });
+        }
 
         // Only show the expand-all toggle when this group's table actually contains
         // expandable cells (parents/partners/children).
@@ -479,33 +501,14 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         const colgroup = document.createElement('colgroup');
         colgroup.innerHTML = widths.map(w => `<col style="width:${((w / total) * 100).toFixed(3)}%">`).join('');
         table.insertBefore(colgroup, table.firstChild);
+        // Record the measured natural width; the mobile breakpoint applies it
+        // as min-width so phones pan via the .table-responsive wrapper instead
+        // of squeezing the columns.
+        table.style.setProperty('--vt-natural-width', `${Math.round(total)}px`);
         table.classList.add('virtual-table');
       });
 
-      if (openMap.size) {
-        detailEl.querySelectorAll('tr[data-row-key]').forEach(tr => {
-          const openCols = openMap.get(tr.dataset.rowKey);
-          if (!openCols) return;
-          openCols.forEach(col => {
-            const det = tr.querySelector(`td[data-col="${col}"] details.expandable-cell`);
-            if (det) det.open = true;
-          });
-        });
-
-        // Sync each section's expand-all toggle to match the restored state.
-        detailEl.querySelectorAll('.matches-section').forEach(section => {
-          const btn = section.querySelector('.expand-matches-btn');
-          if (!btn) return;
-          const allEls = section.querySelectorAll('details.expandable-cell');
-          const allOpen = allEls.length > 0 && Array.from(allEls).every(d => d.open);
-          btn.dataset.allOpen = allOpen ? '1' : '0';
-          const text = allOpen ? t('collapse_all') : t('expand_all');
-          btn.innerHTML = `${getExpandCollapseIcon(allOpen)}${text}`;
-          btn.title = text;
-        });
-      }
-
-      // --- listeners -----------------------------------------------------
+      // --- immediate listeners (don't depend on rows being complete) -------
       detailEl.querySelectorAll('.matches-section').forEach(section => {
         const typeKey = section.dataset.type;
         const header = section.querySelector('h4');
@@ -519,23 +522,6 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             collapseState[typeKey] = !isCollapsed;
           });
         }
-      });
-
-      detailEl.querySelectorAll('th.sortable').forEach(th => {
-        th.addEventListener('click', () => {
-          const col = th.dataset.col;
-          const type = th.dataset.type;
-          const state = sortState[type];
-          if (state.primary?.column === col) {
-            state.primary.ascending = !state.primary.ascending;
-          } else {
-            state.secondary = state.primary;
-            state.primary = { column: col, ascending: true };
-          }
-          // sortType() reorders the existing rows (no HTML rebuilt). On a large
-          // set even that takes a beat, so run it behind the spinner.
-          runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, () => sortType(type));
-        });
       });
 
       detailEl.querySelectorAll('.export-matches-btn').forEach(btn => {
@@ -553,38 +539,118 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         });
       });
 
-      detailEl.querySelectorAll('.expand-matches-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const section = btn.closest('.matches-section');
-          if (!section) return;
-          const targetOpen = btn.dataset.allOpen !== '1';
-          runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, () => {
-            section.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
-            // Expanded cells need more width than the collapsed-state colgroup
-            // allotted, so re-lock this table's column widths to the new content.
-            remeasureVirtualColumns(section.querySelector('table.virtual-table'));
-            btn.dataset.allOpen = targetOpen ? '1' : '0';
-            const text = targetOpen ? t('collapse_all') : t('expand_all');
-            btn.innerHTML = `${getExpandCollapseIcon(targetOpen)}${text}`;
+      // --- deferred wiring: needs every pair row in the DOM -----------------
+      // Runs synchronously when all sections fit in the first chunk; otherwise
+      // after the chunk stream below finishes. Sort/expand listeners are part of
+      // it, so those controls can't act on a half-populated tbody.
+      const finishWiring = () => {
+        if (openMap.size) {
+          detailEl.querySelectorAll('tr[data-row-key]').forEach(tr => {
+            const openCols = openMap.get(tr.dataset.rowKey);
+            if (!openCols) return;
+            openCols.forEach(col => {
+              const det = tr.querySelector(`td[data-col="${col}"] details.expandable-cell`);
+              if (det) det.open = true;
+            });
+          });
+
+          // Sync each section's expand-all toggle to match the restored state.
+          detailEl.querySelectorAll('.matches-section').forEach(section => {
+            const btn = section.querySelector('.expand-matches-btn');
+            if (!btn) return;
+            const allEls = section.querySelectorAll('details.expandable-cell');
+            const allOpen = allEls.length > 0 && Array.from(allEls).every(d => d.open);
+            btn.dataset.allOpen = allOpen ? '1' : '0';
+            const text = allOpen ? t('collapse_all') : t('expand_all');
+            btn.innerHTML = `${getExpandCollapseIcon(allOpen)}${text}`;
             btn.title = text;
           });
-        });
-      });
+        }
 
-      // Snapshot each rendered section so a later sort can reorder its existing
-      // rows. tbody rows are in `group` order, two consecutive <tr> per record
-      // (record_a row, record_b row), so map record → [trA, trB].
-      renderedGroups = {};
-      for (const key of ['person', 'family']) {
-        const group = byType[key];
-        if (!group.length) continue;
-        const tbody = detailEl.querySelector(`.matches-section[data-type="${key}"] table.matches-detail-table tbody`);
-        if (!tbody) continue;
-        const rows = tbody.children;
-        const pairMap = new Map();
-        group.forEach((r, i) => pairMap.set(r, [rows[2 * i], rows[2 * i + 1]]));
-        renderedGroups[key] = { group, pairMap, tbody };
+        detailEl.querySelectorAll('th.sortable').forEach(th => {
+          th.addEventListener('click', () => {
+            const col = th.dataset.col;
+            const type = th.dataset.type;
+            const state = sortState[type];
+            if (state.primary?.column === col) {
+              state.primary.ascending = !state.primary.ascending;
+            } else {
+              state.secondary = state.primary;
+              state.primary = { column: col, ascending: true };
+            }
+            // sortType() reorders the existing rows (no HTML rebuilt). On a large
+            // set even that takes a beat, so run it behind the spinner.
+            runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, () => sortType(type));
+          });
+        });
+
+        detailEl.querySelectorAll('.expand-matches-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const section = btn.closest('.matches-section');
+            if (!section) return;
+            const targetOpen = btn.dataset.allOpen !== '1';
+            runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, () => {
+              section.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
+              // Expanded cells need more width than the collapsed-state colgroup
+              // allotted, so re-lock this table's column widths to the new content.
+              remeasureVirtualColumns(section.querySelector('table.virtual-table'));
+              btn.dataset.allOpen = targetOpen ? '1' : '0';
+              const text = targetOpen ? t('collapse_all') : t('expand_all');
+              btn.innerHTML = `${getExpandCollapseIcon(targetOpen)}${text}`;
+              btn.title = text;
+            });
+          });
+        });
+
+        // Snapshot each rendered section so a later sort can reorder its existing
+        // rows. tbody rows are in `group` order, two consecutive <tr> per record
+        // (record_a row, record_b row), so map record → [trA, trB].
+        renderedGroups = {};
+        for (const key of ['person', 'family']) {
+          const group = byType[key];
+          if (!group.length) continue;
+          const tbody = detailEl.querySelector(`.matches-section[data-type="${key}"] table.matches-detail-table tbody`);
+          if (!tbody) continue;
+          const rows = tbody.children;
+          const pairMap = new Map();
+          group.forEach((r, i) => pairMap.set(r, [rows[2 * i], rows[2 * i + 1]]));
+          renderedGroups[key] = { group, pairMap, tbody };
+        }
+      };
+
+      if (!pendingChunks.length) {
+        finishWiring();
+        return;
       }
+
+      // Stream the remaining pair rows into their tbodies in setTimeout batches
+      // behind the spinner — first paint showed the first chunk already. The
+      // captured token detects a newer render (filter rebuild, navigation) and
+      // stops; the stale-DOM check covers the page being torn down entirely.
+      for (const job of pendingChunks) {
+        job.tbody = detailEl.querySelector(`.matches-section[data-type="${job.key}"] table.matches-detail-table tbody`);
+      }
+      setTableBusy(true);
+      const appendNext = () => {
+        if (token !== renderToken || !detailEl.isConnected) {
+          setTableBusy(false);
+          return;
+        }
+        const job = pendingChunks[0];
+        const end = Math.min(job.group.length, job.next + MATCHES_CHUNK_PAIRS);
+        let chunkHtml = '';
+        for (let i = job.next; i < end; i++) chunkHtml += job.buildPairRow(job.group[i], i);
+        job.tbody.insertAdjacentHTML('beforeend', chunkHtml);
+        job.next = end;
+        if (job.next >= job.group.length) pendingChunks.shift();
+        if (pendingChunks.length) {
+          setTimeout(appendNext, 0);
+        } else {
+          setTableBusy(false);
+          finishWiring();
+        }
+      };
+      setTimeout(appendNext, 0);
     }
 
     // Fast path for a header-sort click: the visible row set is unchanged, only
@@ -603,9 +669,17 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
     renderTables();
 
     // Expose a refilter callback so the sidebar input can re-filter live.
+    // Debounced: each keystroke triggers a full rebuild, which on a large match
+    // set is the expensive path — wait for a typing pause, then rebuild behind
+    // the spinner. A rebuild bumps renderToken, so any chunk stream still
+    // running from the previous render stops itself.
+    let filterTimer = null;
     setDetailRefilter((q) => {
-      currentFilter = (q || '').trim().toLowerCase();
-      renderTables();
+      clearTimeout(filterTimer);
+      filterTimer = setTimeout(() => {
+        currentFilter = (q || '').trim().toLowerCase();
+        runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, renderTables);
+      }, 250);
     });
   } finally {
     // overlay is handled cleanly by renderMatchesPage's outer try/finally

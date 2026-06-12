@@ -44,32 +44,53 @@ const VIRTUAL_SAMPLE_ROWS = 40;
 // (which would otherwise add a frame of latency and a visible flicker).
 const BUSY_SPINNER_ROW_THRESHOLD = 2000;
 
-// Toggles a shared, centered spinner overlay. Used while a large table sorts:
-// the spinner's CSS rotate animation is composited, so it keeps spinning even
-// while the main thread is blocked by the sort — unlike a CSS `cursor` change,
-// which most browsers only re-evaluate on the next mouse move.
+// Toggles a shared, centered spinner overlay. Used while a large table sorts or
+// streams rows in: the spinner's CSS rotate animation is composited, so it keeps
+// spinning even while the main thread is blocked — unlike a CSS `cursor` change,
+// which most browsers only re-evaluate on the next mouse move. Calls are counted
+// so overlapping busy sessions (e.g. a progressive row load plus a queued sort)
+// don't hide the spinner early; it clears when the last session ends.
+let _busyCount = 0;
 export function setTableBusy(busy) {
+  _busyCount = Math.max(0, _busyCount + (busy ? 1 : -1));
   let el = document.getElementById('table-busy-spinner');
-  if (busy && !el) {
+  if (_busyCount > 0 && !el) {
     el = document.createElement('div');
     el.id = 'table-busy-spinner';
     el.innerHTML = '<div class="srd-spinner"></div>';
     document.body.appendChild(el);
   }
-  if (el) el.classList.toggle('active', busy);
+  if (el) el.classList.toggle('active', _busyCount > 0);
 }
 
 // Runs `work` behind the busy spinner when `heavy` is true, deferring two frames
 // so the spinner actually paints before the (blocking) work runs. Otherwise runs
 // synchronously. Shared by sort and expand/collapse-all across the tables.
+//
+// Re-entrant calls while an op is pending coalesce to the *latest* work — the
+// right semantics for impatient repeat clicks: each handler mutates its state
+// synchronously at click time, and the single deferred run reads that final
+// state (e.g. two quick sort clicks toggle direction twice, then one reorder
+// applies the net result).
+let _pendingBusyWork = null;
 export function runWithBusy(heavy, work) {
   if (!heavy) { work(); return; }
+  if (_pendingBusyWork) { _pendingBusyWork = work; return; }
+  _pendingBusyWork = work;
   setTableBusy(true);
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    try { work(); }
+  const step = () => {
+    const job = _pendingBusyWork;
+    try { job(); }
     catch (err) { console.error('table op failed', err); }
-    finally { setTableBusy(false); }
-  }));
+    if (_pendingBusyWork !== job) {
+      // Newer work arrived while this ran — keep the spinner up and run it.
+      requestAnimationFrame(() => requestAnimationFrame(step));
+    } else {
+      _pendingBusyWork = null;
+      setTableBusy(false);
+    }
+  };
+  requestAnimationFrame(() => requestAnimationFrame(step));
 }
 
 // Re-measures and re-locks a virtualized table's column widths against its
@@ -82,11 +103,15 @@ export function remeasureVirtualColumns(table) {
   if (!table || !table.classList.contains('virtual-table')) return;
   table.querySelector('colgroup')?.remove();
   table.style.tableLayout = 'auto';
+  table.style.removeProperty('--vt-natural-width');
   const widths = Array.from(table.querySelectorAll('thead th'), th => th.offsetWidth);
   const total = widths.reduce((a, b) => a + b, 0) || 1;
   const colgroup = document.createElement('colgroup');
   colgroup.innerHTML = widths.map(w => `<col style="width:${((w / total) * 100).toFixed(3)}%">`).join('');
   table.insertBefore(colgroup, table.firstChild);
+  // Re-pin the natural width (applied as min-width at the mobile breakpoint so
+  // phones pan via the .table-responsive wrapper instead of squeezing columns).
+  table.style.setProperty('--vt-natural-width', `${Math.round(total)}px`);
   table.style.tableLayout = '';
 }
 
@@ -608,18 +633,25 @@ function renderRowsHtml(data, columns) {
   ).join('');
 }
 
-// Mounts the table HTML into the container. For large result sets, renders a
-// small sample first to measure natural column widths, then re-renders the full
-// set with those widths locked (as percentages, so it stays responsive) and the
-// `.virtual-table` class — which switches the table to fixed layout and applies
-// `content-visibility:auto` per row. Fixed layout is required so off-screen rows
-// (skipped by content-visibility) don't influence column sizing and cause jitter
-// while scrolling. Small tables skip all this and render with auto layout.
-function mountTableHtml(container, data, columns, theadHtml) {
-  const bodyHtml = renderRowsHtml(data, columns);
+// Rows appended per async batch while progressively mounting a large table.
+// Big enough that a 20k-row table needs ~20 batches, small enough that each
+// batch's HTML build + parse stays well under a frame budget.
+const PROGRESSIVE_CHUNK_ROWS = 1000;
 
+// Mounts the table HTML into the container, then calls `onRowsReady` once every
+// row is in the DOM. Small tables render in one shot (auto layout) and the
+// callback runs synchronously. Large tables get the virtualized treatment:
+// a small sample is rendered first to measure natural column widths, those are
+// locked as percentages via a <colgroup> (fixed layout + content-visibility,
+// `.virtual-table` in style.css), the first chunk of rows renders synchronously,
+// and the rest stream in on setTimeout batches behind the busy spinner — first
+// paint is bounded by the chunk size, not the result count. Interactive wiring
+// (sort listeners, expand toggle) belongs in onRowsReady so it never sees a
+// half-populated tbody.
+function mountTableHtml(container, data, columns, theadHtml, onRowsReady) {
   if (data.length <= VIRTUAL_ROW_THRESHOLD) {
-    container.innerHTML = `<table>${theadHtml}<tbody>${bodyHtml}</tbody></table>`;
+    container.innerHTML = `<table>${theadHtml}<tbody>${renderRowsHtml(data, columns)}</tbody></table>`;
+    onRowsReady();
     return;
   }
 
@@ -633,9 +665,44 @@ function mountTableHtml(container, data, columns, theadHtml) {
     widths.map((w) => `<col style="width:${((w / total) * 100).toFixed(3)}%">`).join('') +
     '</colgroup>';
 
-  // Pass 2: full row set with widths locked + virtualization class.
+  // Pass 2: first chunk with widths locked + virtualization class; any
+  // remaining rows stream in asynchronously below. --vt-natural-width records
+  // the measured natural width; the mobile breakpoint applies it as min-width
+  // so on phones the columns stop squeezing and the .table-responsive wrapper
+  // pans horizontally instead (headers and cells stay readable). Desktop keeps
+  // width:100% + sticky headers, which an always-on min-width would break by
+  // forcing the clip-overflow wrapper to cut the table off.
+  const firstChunk = renderRowsHtml(data.slice(0, PROGRESSIVE_CHUNK_ROWS), columns);
   container.innerHTML =
-    `<table class="virtual-table">${colgroup}${theadHtml}<tbody>${bodyHtml}</tbody></table>`;
+    `<table class="virtual-table" style="--vt-natural-width:${Math.round(total)}px">${colgroup}${theadHtml}<tbody>${firstChunk}</tbody></table>`;
+  if (data.length <= PROGRESSIVE_CHUNK_ROWS) {
+    onRowsReady();
+    return;
+  }
+
+  const tbody = container.querySelector('tbody');
+  let next = PROGRESSIVE_CHUNK_ROWS;
+  setTableBusy(true);
+  const appendChunk = () => {
+    // A newer render replaced the table, or the user navigated away — stop.
+    // onRowsReady is deliberately skipped: its wiring would target dead nodes.
+    if (!tbody.isConnected) {
+      setTableBusy(false);
+      return;
+    }
+    tbody.insertAdjacentHTML(
+      'beforeend',
+      renderRowsHtml(data.slice(next, next + PROGRESSIVE_CHUNK_ROWS), columns)
+    );
+    next += PROGRESSIVE_CHUNK_ROWS;
+    if (next < data.length) {
+      setTimeout(appendChunk, 0);
+    } else {
+      setTableBusy(false);
+      onRowsReady();
+    }
+  };
+  setTimeout(appendChunk, 0);
 }
 
 export function renderTable(data, containerId, columns, defaultSortColumn = null, defaultSortAscending = true, defaultSecondarySortColumn = null) {
@@ -690,127 +757,130 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   });
   theadHtml += '</tr></thead>';
 
-  mountTableHtml(container, data, columns, theadHtml);
-
-  // Map each row object to its freshly-rendered <tr>. Sorting then reorders
-  // these existing nodes (see the sort handler) instead of regenerating the
-  // whole <tbody> — no cell HTML is rebuilt and open <details> survive because
-  // the same nodes move. The map is rebuilt on every full render, when the
-  // tbody row order still matches `data`.
-  const rowTrs = new Map();
-  {
-    const trs = container.querySelector('tbody').children;
-    for (let i = 0; i < data.length; i++) rowTrs.set(data[i], trs[i]);
-  }
-
-  // Hoisted so the sort handler can reset the expand toggle after a re-render
-  // (rebuilt <tbody> always starts with all <details> collapsed).
-  let expandBtn = null;
-  let setExpandLabel = () => {};
-
-  if (isHeaderValid) {
-    if (headerEl.tagName === 'H2' && !headerEl.classList.contains('collapsible-header')) {
-      headerEl.classList.add('collapsible-header');
-      headerEl.addEventListener('click', (e) => {
-        if (e.target.closest('button') || e.target.closest('a')) return;
-        const isCollapsed = container.style.display === 'none';
-        container.style.display = isCollapsed ? '' : 'none';
-        headerEl.classList.toggle('collapsed', !isCollapsed);
-      });
+  // All interactive wiring waits for the (possibly progressive) mount to finish
+  // so it never operates on a half-populated tbody — sort headers and toolbar
+  // buttons appear once every row is in the DOM (spinner covers the meantime).
+  mountTableHtml(container, data, columns, theadHtml, () => {
+    // Map each row object to its freshly-rendered <tr>. Sorting then reorders
+    // these existing nodes (see the sort handler) instead of regenerating the
+    // whole <tbody> — no cell HTML is rebuilt and open <details> survive because
+    // the same nodes move. The map is rebuilt on every full render, when the
+    // tbody row order still matches `data`.
+    const rowTrs = new Map();
+    {
+      const trs = container.querySelector('tbody').children;
+      for (let i = 0; i < data.length; i++) rowTrs.set(data[i], trs[i]);
     }
 
-    headerEl.querySelectorAll('.export-btn, .expand-toggle-btn').forEach(b => b.remove());
+    // Hoisted so the sort handler can reset the expand toggle after a re-render
+    // (rebuilt <tbody> always starts with all <details> collapsed).
+    let expandBtn = null;
+    let setExpandLabel = () => {};
 
-    // Expand/collapse-all toggle — only show when the rendered table actually
-    // has expandable cells (parents/partners/children).  Skipping it on tables
-    // that don't keeps the header uncluttered.
-    const expandables = container.querySelectorAll('details.expandable-cell');
-    if (expandables.length) {
-      expandBtn = document.createElement('button');
-      expandBtn.className = 'export-btn expand-toggle-btn';
-      setExpandLabel = (allOpen) => {
-        const labelText = t(allOpen ? 'collapse_all' : 'expand_all');
-        expandBtn.innerHTML = `${getExpandCollapseIcon(allOpen)}${labelText}`;
-        expandBtn.title = labelText;
-        expandBtn.dataset.allOpen = allOpen ? '1' : '0';
-      };
-      // Initial state reflects current details (typically all collapsed).
-      const initialAllOpen = Array.from(expandables).every(d => d.open);
-      setExpandLabel(initialAllOpen);
-      expandBtn.addEventListener('click', () => {
-        const targetOpen = expandBtn.dataset.allOpen !== '1';
-        runWithBusy(data.length > BUSY_SPINNER_ROW_THRESHOLD, () => {
-          container.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
-          // Expanded cells need more width than the collapsed-state colgroup
-          // allotted, so re-lock column widths against the new content.
-          remeasureVirtualColumns(container.querySelector('table.virtual-table'));
-          setExpandLabel(targetOpen);
+    if (isHeaderValid) {
+      if (headerEl.tagName === 'H2' && !headerEl.classList.contains('collapsible-header')) {
+        headerEl.classList.add('collapsible-header');
+        headerEl.addEventListener('click', (e) => {
+          if (e.target.closest('button') || e.target.closest('a')) return;
+          const isCollapsed = container.style.display === 'none';
+          container.style.display = isCollapsed ? '' : 'none';
+          headerEl.classList.toggle('collapsed', !isCollapsed);
         });
-      });
-    }
-
-    const btn = createExportButton({
-      label: 'CSV',
-      title: t('download_csv'), // Keeps the tooltip translation for accessibility
-      onClick: () => {
-        const baseName = containerId.replace('table-', '');
-        exportToCSV(data, columns, formatExportFilename(baseName, 'csv'));
-      },
-    });
-
-    if (headerEl.classList.contains('totals-bar')) {
-      if (expandBtn) headerEl.appendChild(expandBtn);
-      headerEl.appendChild(btn);
-    } else {
-      // Prepended in reverse order so the visible left-to-right order is: CSV, Expand
-      if (expandBtn) headerEl.insertBefore(expandBtn, headerEl.firstChild);
-      headerEl.insertBefore(btn, headerEl.firstChild);
-    }
-  }
-
-  container.querySelectorAll('th.sortable').forEach(th => {
-    th.addEventListener('click', () => {
-      const col = th.dataset.col;
-      const state = container._sortState;
-      if (state.primary?.column === col) {
-        // Toggle direction on already-primary column
-        state.primary.ascending = !state.primary.ascending;
-      } else {
-        // Clicked column becomes primary; old primary becomes secondary
-        state.secondary = state.primary;
-        state.primary = { column: col, ascending: true };
       }
-      // Re-sort in place, update <thead> arrows, then reorder the existing <tr>
-      // nodes to match. <thead> stays put so the click listeners survive;
-      // headerEl buttons (CSV / expand-all) are outside `container` and
-      // untouched.
-      const applySort = () => {
-        sortData(data, state.primary, state.secondary);
-        container.querySelectorAll('thead th.sortable').forEach(thNode => {
-          const c = thNode.dataset.col;
-          thNode.innerHTML = `${t(`col_${c}`)}${buildArrowIndicator(c, state)}`;
+
+      headerEl.querySelectorAll('.export-btn, .expand-toggle-btn').forEach(b => b.remove());
+
+      // Expand/collapse-all toggle — only show when the rendered table actually
+      // has expandable cells (parents/partners/children).  Skipping it on tables
+      // that don't keeps the header uncluttered.
+      const expandables = container.querySelectorAll('details.expandable-cell');
+      if (expandables.length) {
+        expandBtn = document.createElement('button');
+        expandBtn.className = 'export-btn expand-toggle-btn';
+        setExpandLabel = (allOpen) => {
+          const labelText = t(allOpen ? 'collapse_all' : 'expand_all');
+          expandBtn.innerHTML = `${getExpandCollapseIcon(allOpen)}${labelText}`;
+          expandBtn.title = labelText;
+          expandBtn.dataset.allOpen = allOpen ? '1' : '0';
+        };
+        // Initial state reflects current details (typically all collapsed).
+        const initialAllOpen = Array.from(expandables).every(d => d.open);
+        setExpandLabel(initialAllOpen);
+        expandBtn.addEventListener('click', () => {
+          const targetOpen = expandBtn.dataset.allOpen !== '1';
+          runWithBusy(data.length > BUSY_SPINNER_ROW_THRESHOLD, () => {
+            container.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
+            // Expanded cells need more width than the collapsed-state colgroup
+            // allotted, so re-lock column widths against the new content.
+            remeasureVirtualColumns(container.querySelector('table.virtual-table'));
+            setExpandLabel(targetOpen);
+          });
         });
+      }
 
-        // Move the existing rows into the new order via one fragment append,
-        // instead of rebuilding the <tbody> HTML. appendChild relocates the live
-        // nodes, so no cells are re-rendered and any open <details> stay open —
-        // which is why the old capture/restore dance is gone.
-        const tbody = container.querySelector('tbody');
-        const frag = document.createDocumentFragment();
-        for (const row of data) {
-          const tr = rowTrs.get(row);
-          if (tr) frag.appendChild(tr);
+      const btn = createExportButton({
+        label: 'CSV',
+        title: t('download_csv'), // Keeps the tooltip translation for accessibility
+        onClick: () => {
+          const baseName = containerId.replace('table-', '');
+          exportToCSV(data, columns, formatExportFilename(baseName, 'csv'));
+        },
+      });
+
+      if (headerEl.classList.contains('totals-bar')) {
+        if (expandBtn) headerEl.appendChild(expandBtn);
+        headerEl.appendChild(btn);
+      } else {
+        // Prepended in reverse order so the visible left-to-right order is: CSV, Expand
+        if (expandBtn) headerEl.insertBefore(expandBtn, headerEl.firstChild);
+        headerEl.insertBefore(btn, headerEl.firstChild);
+      }
+    }
+
+    container.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        const state = container._sortState;
+        if (state.primary?.column === col) {
+          // Toggle direction on already-primary column
+          state.primary.ascending = !state.primary.ascending;
+        } else {
+          // Clicked column becomes primary; old primary becomes secondary
+          state.secondary = state.primary;
+          state.primary = { column: col, ascending: true };
         }
-        tbody.appendChild(frag);
+        // Re-sort in place, update <thead> arrows, then reorder the existing <tr>
+        // nodes to match. <thead> stays put so the click listeners survive;
+        // headerEl buttons (CSV / expand-all) are outside `container` and
+        // untouched.
+        const applySort = () => {
+          sortData(data, state.primary, state.secondary);
+          container.querySelectorAll('thead th.sortable').forEach(thNode => {
+            const c = thNode.dataset.col;
+            thNode.innerHTML = `${t(`col_${c}`)}${buildArrowIndicator(c, state)}`;
+          });
 
-        // Sync the expand-all toggle to reflect the (preserved) state.
-        const allEls = container.querySelectorAll('details.expandable-cell');
-        setExpandLabel(allEls.length > 0 && Array.from(allEls).every(d => d.open));
-      };
+          // Move the existing rows into the new order via one fragment append,
+          // instead of rebuilding the <tbody> HTML. appendChild relocates the live
+          // nodes, so no cells are re-rendered and any open <details> stay open —
+          // which is why the old capture/restore dance is gone.
+          const tbody = container.querySelector('tbody');
+          const frag = document.createDocumentFragment();
+          for (const row of data) {
+            const tr = rowTrs.get(row);
+            if (tr) frag.appendChild(tr);
+          }
+          tbody.appendChild(frag);
 
-      // For large tables the sort blocks the main thread long enough to feel
-      // unresponsive, so run it behind the spinner (deferred so it paints first).
-      runWithBusy(data.length > BUSY_SPINNER_ROW_THRESHOLD, applySort);
+          // Sync the expand-all toggle to reflect the (preserved) state.
+          const allEls = container.querySelectorAll('details.expandable-cell');
+          setExpandLabel(allEls.length > 0 && Array.from(allEls).every(d => d.open));
+        };
+
+        // For large tables the sort blocks the main thread long enough to feel
+        // unresponsive, so run it behind the spinner (deferred so it paints first).
+        runWithBusy(data.length > BUSY_SPINNER_ROW_THRESHOLD, applySort);
+      });
     });
   });
 }
