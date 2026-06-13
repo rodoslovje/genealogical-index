@@ -239,9 +239,12 @@ function countAddedParentPair(listA, listB) {
   return n;
 }
 
-// Counts entries in `listB` (partners or children) that have no name/surname
-// counterpart anywhere in `listA` — i.e. only known to B.
-function countAddedRelatives(listA, listB) {
+// Counts entries in `listB` (partners or children) that have no counterpart
+// anywhere in `listA` — i.e. only known to B. `requireName` restricts matching
+// to the first name only — used for children, where every sibling shares the
+// family surname, so a surname-only "match" would pair an added child with an
+// unrelated sibling and miss it as new data.
+function countAddedRelatives(listA, listB, requireName = false) {
   const a = parseList(listA);
   const b = parseList(listB);
   let n = 0;
@@ -251,7 +254,7 @@ function countAddedRelatives(listA, listB) {
     const pSur = String(p.surname || '').toLowerCase();
     const match = a.some(o => hasNameOrSurname(o) &&
       ((pName && String(o.name || '').toLowerCase() === pName) ||
-       (pSur && String(o.surname || '').toLowerCase() === pSur)));
+       (!requireName && pSur && String(o.surname || '').toLowerCase() === pSur)));
     if (!match) n += 1;
   }
   return n;
@@ -296,7 +299,7 @@ export function classifyMatchPair(recA, recB, fields) {
       continue;
     }
     if (f === 'children') {
-      addCount += countAddedRelatives(recA.children_list, recB.children_list);
+      addCount += countAddedRelatives(recA.children_list, recB.children_list, true);
       continue;
     }
     if (!HIGHLIGHTABLE.has(f)) continue;

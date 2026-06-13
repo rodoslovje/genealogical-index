@@ -221,11 +221,16 @@ function matchToken(s) {
 // A matching year breaks ties between equally-strong name/surname matches —
 // without this, duplicate-name children (e.g. two Ivanas) could pair to the
 // wrong sibling and falsely flag the year as a diff.
-function findBestMatch(p, otherList) {
+// `requireName` disables surname-only matches — used for children, where every
+// sibling shares the family surname, so a surname-only "match" would just pair
+// an added child with an unrelated sibling and flag its name as a conflict
+// instead of new data.
+function findBestMatch(p, otherList, requireName = false) {
   if (!p || !otherList?.length) return null;
   const name = matchToken(p.name);
   const sur  = matchToken(p.surname);
   if (!name && !sur) return null;
+  if (requireName && !name) return null;
   const year = String(childYearOf(p) || '');
 
   let best = null, bestScore = -1;
@@ -235,6 +240,7 @@ function findBestMatch(p, otherList) {
     const nameMatch = !!name && oName === name;
     const surMatch  = !!sur  && oSur  === sur;
     if (!nameMatch && !surMatch) continue;
+    if (requireName && !nameMatch) continue;
 
     // Base score by match strength; year bonus (5) is smaller than the gap
     // between strength tiers (10), so it never overrides a stronger structural
@@ -419,7 +425,7 @@ export function formatSpecialCell(col, row, otherRow, isB = false) {
         const cy = childYearOf(c);
         const yearTok = cy ? `*${cy}` : '';
 
-        const match = diffMode ? findBestMatch(c, otherChildren) : null;
+        const match = diffMode ? findBestMatch(c, otherChildren, true) : null;
         const noMatch = diffMode && !cPriv && !match && (c.name || c.surname);
         const yearDiff = !!match && yearsDiffer(cy, childYearOf(match));
 

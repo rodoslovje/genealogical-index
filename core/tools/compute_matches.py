@@ -242,14 +242,16 @@ _PERSON_INSERT = text(r"""
     ),
     bonused AS (
         SELECT a_id, b_id, s_sur, s_name, s_bplace, s_dplace, b_yr_diff, d_yr_diff, s_parents, s_partners,
-            -- Identity-key bonus: an exact surname + given-name + birth-year
-            -- match is near-conclusive, so the confidence is floored even if
-            -- a corroborating field (e.g. death info) is missing or differs.
-            -- If, in addition, both sides record the same full birth or death
-            -- date (not just the same year), that's stronger corroboration
-            -- and gets a higher floor.
-            CASE WHEN s_sur = 1.0 AND s_name = 1.0 AND b_yr_diff = 0
-                 THEN CASE WHEN full_birth_match OR full_death_match
+            -- Identity-key bonus: exact surname + given name + a *full* (day+
+            -- month+year) birth or death date match is near-conclusive, so
+            -- the confidence is floored even if some other field is missing
+            -- or differs. A shared birth *year* alone is not enough — two
+            -- different people with a common name born the same year is
+            -- unremarkable, so that case is left to base_conf instead of
+            -- being floored. When both birth and death dates match fully,
+            -- that's even stronger and gets a higher floor.
+            CASE WHEN s_sur = 1.0 AND s_name = 1.0 AND (full_birth_match OR full_death_match)
+                 THEN CASE WHEN full_birth_match AND full_death_match
                            THEN GREATEST(base_conf, :identity_conf_full)
                            ELSE GREATEST(base_conf, :identity_conf)
                       END
@@ -380,16 +382,13 @@ _FAMILY_INSERT = text(r"""
     bonused AS (
         SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff, s_hp, s_wp, s_cl,
             -- Identity-key bonus: exact husband + wife surname and given-name
-            -- matches plus an exact marriage-year match are near-conclusive.
-            -- If both sides also record the same full marriage date (not just
-            -- the same year), that's stronger corroboration and gets a higher
-            -- floor.
+            -- matches plus a *full* (day+month+year) marriage-date match are
+            -- near-conclusive. A shared marriage *year* alone is not enough —
+            -- left to base_conf instead of being floored (see persons gate
+            -- above for the same reasoning).
             CASE WHEN s_hsur = 1.0 AND s_wsur = 1.0
-                  AND s_hname = 1.0 AND s_wname = 1.0 AND yr_diff = 0
-                 THEN CASE WHEN full_marriage_match
-                           THEN GREATEST(base_conf, :identity_conf_full)
-                           ELSE GREATEST(base_conf, :identity_conf)
-                      END
+                  AND s_hname = 1.0 AND s_wname = 1.0 AND full_marriage_match
+                 THEN GREATEST(base_conf, :identity_conf)
                  ELSE base_conf
             END AS conf
         FROM scored
