@@ -35,7 +35,13 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # --- tuning knobs ---
-YEAR_TOLERANCE = 5  # max year difference still considered a match
+YEAR_TOLERANCE = 5  # max year difference still considered a match for exact dates
+YEAR_TOLERANCE_APPROX = 15  # widened tolerance when either side's date carries an
+# ABT/EST/CAL/BEF/AFT/~ qualifier — those years are often back-derived from a
+# child's or parent's birth/death and can be off by a decade or more.
+IDENTITY_KEY_CONFIDENCE = 0.97  # confidence floor when surname + given name +
+# birth year all match exactly — a near-conclusive identity key, applied even
+# if a corroborating field (e.g. death info) is missing or differs slightly.
 CONFIDENCE_MIN = 0.80  # records below this threshold are not stored
 TRGM_THRESHOLD = 0.72  # pg_trgm.similarity_threshold for the % join operator
 # kept below CONFIDENCE_MIN so pairs where one surname/name
@@ -96,8 +102,14 @@ _PERSON_INSERT = text(r"""
         SELECT
             p1.id AS a_id,
             p2.id AS b_id,
+            p1.birth_year AS a_birth_year, p1.death_year AS a_death_year,
+            p2.birth_year AS b_birth_year, p2.death_year AS b_death_year,
             sm.s_sur,
-            CASE WHEN p1.name = p2.name THEN 1.0 ELSE similarity(p1.name, p2.name) END AS s_name,
+            -- name_fold (lower-cased, accent-stripped given name) makes
+            -- e.g. "Žan"/"Zan" compare equal; <> '' avoids two blank given
+            -- names scoring as a perfect match.
+            CASE WHEN p1.name_fold = p2.name_fold AND p1.name_fold <> '' THEN 1.0
+                 ELSE similarity(p1.name_fold, p2.name_fold) END AS s_name,
             CASE WHEN COALESCE(p1.place_of_birth,'') != ''
                       AND COALESCE(p2.place_of_birth,'') != ''
                  THEN CASE WHEN p1.place_of_birth = p2.place_of_birth THEN 1.0 ELSE similarity(p1.place_of_birth, p2.place_of_birth) END
@@ -127,29 +139,48 @@ _PERSON_INSERT = text(r"""
                  ELSE NULL END AS b_yr_diff,
             CASE WHEN p1.death_year IS NOT NULL AND p2.death_year IS NOT NULL
                  THEN ABS(p1.death_year - p2.death_year)
-                 ELSE NULL END AS d_yr_diff
+                 ELSE NULL END AS d_yr_diff,
+            -- Per-record year tolerance: widened to :yr_tol_approx when the
+            -- GEDCOM date carries an approximation qualifier (ABT/EST/CAL/...),
+            -- since those years are often back-derived from a relative's
+            -- birth/death and can be off by a decade or more.
+            CASE WHEN is_approx_date(p1.date_of_birth) THEN :yr_tol_approx ELSE :yr_tol END AS bt1,
+            CASE WHEN is_approx_date(p2.date_of_birth) THEN :yr_tol_approx ELSE :yr_tol END AS bt2,
+            CASE WHEN is_approx_date(p1.date_of_death) THEN :yr_tol_approx ELSE :yr_tol END AS dt1,
+            CASE WHEN is_approx_date(p2.date_of_death) THEN :yr_tol_approx ELSE :yr_tol END AS dt2
         FROM sur_matches sm
         JOIN persons p1 ON p1.contributor = :contrib_a
-                       AND (p1.surname = sm.sur1
-                            OR (p1.alt_surname <> '' AND p1.alt_surname = sm.sur1))
+                       AND (p1.surname_fold = sm.sur1
+                            OR (p1.alt_surname_fold <> '' AND p1.alt_surname_fold = sm.sur1))
         JOIN persons p2 ON p2.contributor = :contrib_b
-                       AND (p2.surname = sm.sur2
-                            OR (p2.alt_surname <> '' AND p2.alt_surname = sm.sur2))
+                       AND (p2.surname_fold = sm.sur2
+                            OR (p2.alt_surname_fold <> '' AND p2.alt_surname_fold = sm.sur2))
+        WHERE (p1.name_fold = p2.name_fold OR similarity(p1.name_fold, p2.name_fold) >= :trgm_thresh)
+    ),
+    -- Year-tolerance and lifespan-plausibility gates. Tolerances are the wider
+    -- of the two records' (possibly approximate) dates for that comparison.
+    plausible AS (
+        SELECT *,
+               GREATEST(bt1, bt2) AS b_tol,
+               GREATEST(dt1, dt2) AS d_tol
+        FROM cands
         WHERE (
-                (p1.birth_year IS NULL OR p2.birth_year IS NULL
-                    OR ABS(p1.birth_year - p2.birth_year) <= :yr_tol)
-                OR
-                (p1.death_year IS NOT NULL AND p2.death_year IS NOT NULL
-                    AND ABS(p1.death_year - p2.death_year) <= :yr_tol)
+                (b_yr_diff IS NULL OR b_yr_diff <= GREATEST(bt1, bt2))
+                OR (d_yr_diff IS NOT NULL AND d_yr_diff <= GREATEST(dt1, dt2))
               )
-          AND (p1.name = p2.name OR similarity(p1.name, p2.name) >= :trgm_thresh)
+          -- Lifespan impossibility: the same person can't die before the
+          -- other record's birth.
+          AND NOT (a_death_year IS NOT NULL AND b_birth_year IS NOT NULL
+                   AND a_death_year < b_birth_year - GREATEST(dt1, bt2))
+          AND NOT (b_death_year IS NOT NULL AND a_birth_year IS NOT NULL
+                   AND b_death_year < a_birth_year - GREATEST(dt2, bt1))
     ),
     -- A person may match the same partner via several surname/alt_surname
     -- combinations; keep only the strongest (highest s_sur) per pair so the
     -- downstream scoring sees a single canonical candidate.
     cands_dedup AS (
         SELECT DISTINCT ON (a_id, b_id) *
-        FROM cands
+        FROM plausible
         ORDER BY a_id, b_id, s_sur DESC
     ),
     scored AS (
@@ -166,9 +197,9 @@ _PERSON_INSERT = text(r"""
                 s_sur  * 35.0 +
                 s_name * 30.0 +
                 COALESCE(s_bplace, 0.5) * 10.0 +
-                COALESCE(GREATEST(0.0, 1.0 - b_yr_diff::float / :yr_tol), 0.5) * 15.0 +
+                COALESCE(GREATEST(0.0, 1.0 - b_yr_diff::float / b_tol), 0.5) * 15.0 +
                 COALESCE(s_dplace, 0.0) * 10.0 +
-                COALESCE(GREATEST(0.0, 1.0 - d_yr_diff::float / :yr_tol), 0.0) * 10.0 +
+                COALESCE(GREATEST(0.0, 1.0 - d_yr_diff::float / d_tol), 0.0) * 10.0 +
                 COALESCE(s_parents,  0.0) * 20.0 +
                 COALESCE(s_partners, 0.0) * 15.0
             ) / (
@@ -177,8 +208,19 @@ _PERSON_INSERT = text(r"""
                 CASE WHEN d_yr_diff   IS NOT NULL THEN 10.0 ELSE 0.0 END +
                 CASE WHEN s_parents   IS NOT NULL THEN 20.0 ELSE 0.0 END +
                 CASE WHEN s_partners  IS NOT NULL THEN 15.0 ELSE 0.0 END
-            ) AS conf
+            ) AS base_conf
         FROM cands_dedup
+    ),
+    bonused AS (
+        SELECT a_id, b_id, s_sur, s_name, s_bplace, s_dplace, b_yr_diff, d_yr_diff, s_parents, s_partners,
+            -- Identity-key bonus: an exact surname + given-name + birth-year
+            -- match is near-conclusive, so the confidence is floored even if
+            -- a corroborating field (e.g. death info) is missing or differs.
+            CASE WHEN s_sur = 1.0 AND s_name = 1.0 AND b_yr_diff = 0
+                 THEN GREATEST(base_conf, :identity_conf)
+                 ELSE base_conf
+            END AS conf
+        FROM scored
     ),
     filtered AS (
         SELECT a_id, b_id, conf, jsonb_build_object(
@@ -191,7 +233,7 @@ _PERSON_INSERT = text(r"""
             'parents',     CASE WHEN s_parents  IS NOT NULL THEN round(s_parents::numeric, 3) END,
             'partners',    CASE WHEN s_partners IS NOT NULL THEN round(s_partners::numeric, 3) END
         )::text AS match_fields
-        FROM scored WHERE conf >= :conf_min
+        FROM bonused WHERE conf >= :conf_min
     )
     SELECT :contrib_a, :contrib_b, 'person', a_id, b_id, conf, match_fields FROM filtered
     UNION ALL
@@ -208,13 +250,11 @@ _FAMILY_INSERT = text(r"""
             f2.id AS b_id,
             hm.s_sur AS s_hsur,
             wm.s_sur AS s_wsur,
-            CASE WHEN COALESCE(f1.husband_name,'') != ''
-                      AND COALESCE(f2.husband_name,'') != ''
-                 THEN CASE WHEN f1.husband_name = f2.husband_name THEN 1.0 ELSE similarity(f1.husband_name, f2.husband_name) END
+            CASE WHEN f1.husband_name_fold <> '' AND f2.husband_name_fold <> ''
+                 THEN CASE WHEN f1.husband_name_fold = f2.husband_name_fold THEN 1.0 ELSE similarity(f1.husband_name_fold, f2.husband_name_fold) END
                  ELSE NULL END AS s_hname,
-            CASE WHEN COALESCE(f1.wife_name,'') != ''
-                      AND COALESCE(f2.wife_name,'') != ''
-                 THEN CASE WHEN f1.wife_name = f2.wife_name THEN 1.0 ELSE similarity(f1.wife_name, f2.wife_name) END
+            CASE WHEN f1.wife_name_fold <> '' AND f2.wife_name_fold <> ''
+                 THEN CASE WHEN f1.wife_name_fold = f2.wife_name_fold THEN 1.0 ELSE similarity(f1.wife_name_fold, f2.wife_name_fold) END
                  ELSE NULL END AS s_wname,
             CASE WHEN COALESCE(f1.place_of_marriage,'') != ''
                       AND COALESCE(f2.place_of_marriage,'') != ''
@@ -240,26 +280,34 @@ _FAMILY_INSERT = text(r"""
                  ELSE NULL END AS s_cl,
             CASE WHEN f1.marriage_year IS NOT NULL AND f2.marriage_year IS NOT NULL
                  THEN ABS(f1.marriage_year - f2.marriage_year)
-                 ELSE NULL END AS yr_diff
+                 ELSE NULL END AS yr_diff,
+            -- Widen marriage-year tolerance when either side's marriage date
+            -- carries an approximation qualifier (see persons gate above).
+            GREATEST(
+                CASE WHEN is_approx_date(f1.date_of_marriage) THEN :yr_tol_approx ELSE :yr_tol END,
+                CASE WHEN is_approx_date(f2.date_of_marriage) THEN :yr_tol_approx ELSE :yr_tol END
+            ) AS m_tol
         FROM families f1
-        JOIN sur_matches hm ON f1.husband_surname = hm.sur1
-                             OR (f1.husband_alt_surname <> '' AND f1.husband_alt_surname = hm.sur1)
-        JOIN sur_matches wm ON f1.wife_surname = wm.sur1
-                             OR (f1.wife_alt_surname <> '' AND f1.wife_alt_surname = wm.sur1)
+        JOIN sur_matches hm ON f1.husband_surname_fold = hm.sur1
+                             OR (f1.husband_alt_surname_fold <> '' AND f1.husband_alt_surname_fold = hm.sur1)
+        JOIN sur_matches wm ON f1.wife_surname_fold = wm.sur1
+                             OR (f1.wife_alt_surname_fold <> '' AND f1.wife_alt_surname_fold = wm.sur1)
         JOIN families f2 ON f2.contributor = :contrib_b
-                        AND (f2.husband_surname = hm.sur2
-                             OR (f2.husband_alt_surname <> '' AND f2.husband_alt_surname = hm.sur2))
-                        AND (f2.wife_surname = wm.sur2
-                             OR (f2.wife_alt_surname <> '' AND f2.wife_alt_surname = wm.sur2))
+                        AND (f2.husband_surname_fold = hm.sur2
+                             OR (f2.husband_alt_surname_fold <> '' AND f2.husband_alt_surname_fold = hm.sur2))
+                        AND (f2.wife_surname_fold = wm.sur2
+                             OR (f2.wife_alt_surname_fold <> '' AND f2.wife_alt_surname_fold = wm.sur2))
         WHERE f1.contributor = :contrib_a
-          AND (f1.marriage_year IS NULL OR f2.marriage_year IS NULL
-                 OR ABS(f1.marriage_year - f2.marriage_year) <= :yr_tol)
+    ),
+    plausible AS (
+        SELECT * FROM cands
+        WHERE yr_diff IS NULL OR yr_diff <= m_tol
     ),
     -- Up to four surname/alt_surname combinations can hit the same (a_id, b_id);
     -- keep the combo with the strongest combined surname signal.
     cands_dedup AS (
         SELECT DISTINCT ON (a_id, b_id) *
-        FROM cands
+        FROM plausible
         ORDER BY a_id, b_id, (s_hsur + s_wsur) DESC
     ),
     scored AS (
@@ -270,7 +318,7 @@ _FAMILY_INSERT = text(r"""
                 COALESCE(s_hname, 0.5) * 15.0 +
                 COALESCE(s_wname, 0.5) * 15.0 +
                 COALESCE(s_place, 0.5) * 10.0 +
-                COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / :yr_tol), 0.5) * 10.0 +
+                COALESCE(GREATEST(0.0, 1.0 - yr_diff::float / m_tol), 0.5) * 10.0 +
                 COALESCE(s_hp, 0.0) * 15.0 +
                 COALESCE(s_wp, 0.0) * 15.0 +
                 COALESCE(s_cl, 0.0) * 15.0
@@ -279,8 +327,19 @@ _FAMILY_INSERT = text(r"""
                 CASE WHEN s_hp IS NOT NULL THEN 15.0 ELSE 0.0 END +
                 CASE WHEN s_wp IS NOT NULL THEN 15.0 ELSE 0.0 END +
                 CASE WHEN s_cl IS NOT NULL THEN 15.0 ELSE 0.0 END
-            ) AS conf
+            ) AS base_conf
         FROM cands_dedup
+    ),
+    bonused AS (
+        SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff, s_hp, s_wp, s_cl,
+            -- Identity-key bonus: exact husband + wife surname and given-name
+            -- matches plus an exact marriage-year match are near-conclusive.
+            CASE WHEN s_hsur = 1.0 AND s_wsur = 1.0
+                  AND s_hname = 1.0 AND s_wname = 1.0 AND yr_diff = 0
+                 THEN GREATEST(base_conf, :identity_conf)
+                 ELSE base_conf
+            END AS conf
+        FROM scored
     ),
     filtered AS (
         SELECT a_id, b_id, conf, jsonb_build_object(
@@ -294,7 +353,7 @@ _FAMILY_INSERT = text(r"""
             'wife_parents',    CASE WHEN s_wp IS NOT NULL THEN round(s_wp::numeric, 3) END,
             'children',        CASE WHEN s_cl IS NOT NULL THEN round(s_cl::numeric, 3) END
         )::text AS match_fields
-        FROM scored WHERE conf >= :conf_min
+        FROM bonused WHERE conf >= :conf_min
     )
     SELECT :contrib_a, :contrib_b, 'family', a_id, b_id, conf, match_fields FROM filtered
     UNION ALL
@@ -327,6 +386,8 @@ def process_job(contrib_a, contrib_b):
         "contrib_a": contrib_a,
         "contrib_b": contrib_b,
         "yr_tol": YEAR_TOLERANCE,
+        "yr_tol_approx": YEAR_TOLERANCE_APPROX,
+        "identity_conf": IDENTITY_KEY_CONFIDENCE,
         "conf_min": CONFIDENCE_MIN,
         "trgm_thresh": TRGM_THRESHOLD,
     }
@@ -349,24 +410,26 @@ def process_job(contrib_a, contrib_b):
             text("""
             -- alt_surname rows feed the candidate-surname pool too, so a
             -- person whose canonical surname differs from the partner's
-            -- canonical surname can still match via either alt.
+            -- canonical surname can still match via either alt. *_fold
+            -- columns are lower-cased/accent-stripped, so diacritic variants
+            -- (e.g. "Žagar" vs "Zagar") land in the same surname bucket.
             CREATE TEMP TABLE a_sur ON COMMIT DROP AS
-            SELECT surname AS sur FROM persons WHERE contributor = :contrib_a AND surname IS NOT NULL
-            UNION SELECT alt_surname FROM persons WHERE contributor = :contrib_a AND alt_surname IS NOT NULL AND alt_surname <> ''
-            UNION SELECT husband_surname FROM families WHERE contributor = :contrib_a AND husband_surname IS NOT NULL
-            UNION SELECT husband_alt_surname FROM families WHERE contributor = :contrib_a AND husband_alt_surname IS NOT NULL AND husband_alt_surname <> ''
-            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_a AND wife_surname IS NOT NULL
-            UNION SELECT wife_alt_surname FROM families WHERE contributor = :contrib_a AND wife_alt_surname IS NOT NULL AND wife_alt_surname <> '';
+            SELECT surname_fold AS sur FROM persons WHERE contributor = :contrib_a AND surname_fold <> ''
+            UNION SELECT alt_surname_fold FROM persons WHERE contributor = :contrib_a AND alt_surname_fold <> ''
+            UNION SELECT husband_surname_fold FROM families WHERE contributor = :contrib_a AND husband_surname_fold <> ''
+            UNION SELECT husband_alt_surname_fold FROM families WHERE contributor = :contrib_a AND husband_alt_surname_fold <> ''
+            UNION SELECT wife_surname_fold FROM families WHERE contributor = :contrib_a AND wife_surname_fold <> ''
+            UNION SELECT wife_alt_surname_fold FROM families WHERE contributor = :contrib_a AND wife_alt_surname_fold <> '';
 
             ALTER TABLE a_sur ADD PRIMARY KEY (sur);
 
             CREATE TEMP TABLE b_sur ON COMMIT DROP AS
-            SELECT surname AS sur FROM persons WHERE contributor = :contrib_b AND surname IS NOT NULL
-            UNION SELECT alt_surname FROM persons WHERE contributor = :contrib_b AND alt_surname IS NOT NULL AND alt_surname <> ''
-            UNION SELECT husband_surname FROM families WHERE contributor = :contrib_b AND husband_surname IS NOT NULL
-            UNION SELECT husband_alt_surname FROM families WHERE contributor = :contrib_b AND husband_alt_surname IS NOT NULL AND husband_alt_surname <> ''
-            UNION SELECT wife_surname FROM families WHERE contributor = :contrib_b AND wife_surname IS NOT NULL
-            UNION SELECT wife_alt_surname FROM families WHERE contributor = :contrib_b AND wife_alt_surname IS NOT NULL AND wife_alt_surname <> '';
+            SELECT surname_fold AS sur FROM persons WHERE contributor = :contrib_b AND surname_fold <> ''
+            UNION SELECT alt_surname_fold FROM persons WHERE contributor = :contrib_b AND alt_surname_fold <> ''
+            UNION SELECT husband_surname_fold FROM families WHERE contributor = :contrib_b AND husband_surname_fold <> ''
+            UNION SELECT husband_alt_surname_fold FROM families WHERE contributor = :contrib_b AND husband_alt_surname_fold <> ''
+            UNION SELECT wife_surname_fold FROM families WHERE contributor = :contrib_b AND wife_surname_fold <> ''
+            UNION SELECT wife_alt_surname_fold FROM families WHERE contributor = :contrib_b AND wife_alt_surname_fold <> '';
 
             ALTER TABLE b_sur ADD PRIMARY KEY (sur);
 

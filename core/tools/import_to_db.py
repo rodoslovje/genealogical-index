@@ -34,11 +34,31 @@ if DATABASE_URL:
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Helper functions used by generated fold columns (matching) and by
+# compute_matches.py's approximate-date tolerance. unaccent() is STABLE
+# (dictionary-dependent), so it's wrapped in an IMMUTABLE function — required
+# for use in generated columns / indexes.
+_FOLD_HELPERS_SQL = """
+    CREATE EXTENSION IF NOT EXISTS unaccent;
+
+    CREATE OR REPLACE FUNCTION fold_text(t text) RETURNS text
+        LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
+    $$ SELECT lower(unaccent('unaccent', COALESCE(t, ''))) $$;
+
+    -- True when a GEDCOM date string carries an approximation qualifier
+    -- (ABT/EST/CAL/BEF/AFT/CIRCA/~). Such years are often back-derived from a
+    -- relative's birth/death and can be off by a decade or more.
+    CREATE OR REPLACE FUNCTION is_approx_date(d text) RETURNS boolean
+        LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
+    $$ SELECT COALESCE(d, '') ~* '\\y(ABT|ABOUT|EST|ESTIMATED|CAL|CALC|CALCULATED|BEF|BEFORE|AFT|AFTER|CIRCA|CA)\\y|~' $$;
+"""
+
 
 def setup_full(db):
     """Drop and recreate all tables (full mode)."""
     print("Setting up database tables and extensions (full rebuild)...")
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text(_FOLD_HELPERS_SQL))
     db.execute(text("""
         DROP TABLE IF EXISTS persons, births, families, deaths, contributors, match_jobs, matches, matricula_books, geneanet_cemeteries CASCADE;
 
@@ -58,7 +78,13 @@ def setup_full(db):
             date_of_death TEXT, death_year SMALLINT, place_of_death TEXT,
             date_of_burial TEXT, burial_year SMALLINT, place_of_burial TEXT,
             parents_list JSONB, partners_list JSONB,
-            notes TEXT, contributor TEXT, links JSONB
+            notes TEXT, contributor TEXT, links JSONB,
+            -- Folded (lower-cased, accent-stripped) name columns: let
+            -- compute_matches treat e.g. "Žagar"/"Zagar"/"ZAGAR" as the same
+            -- surname for trigram blocking and similarity.
+            surname_fold     TEXT GENERATED ALWAYS AS (fold_text(surname))     STORED,
+            alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(alt_surname)) STORED,
+            name_fold        TEXT GENERATED ALWAYS AS (fold_text(name))        STORED
         );
         CREATE TABLE families (
             id SERIAL PRIMARY KEY,
@@ -68,7 +94,13 @@ def setup_full(db):
             wife_alt_surname TEXT, wife_birth TEXT, wife_birth_year SMALLINT,
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
             children_list JSONB, husband_parents JSONB, wife_parents JSONB,
-            notes TEXT, contributor TEXT, links JSONB
+            notes TEXT, contributor TEXT, links JSONB,
+            husband_surname_fold     TEXT GENERATED ALWAYS AS (fold_text(husband_surname))     STORED,
+            husband_alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(husband_alt_surname)) STORED,
+            husband_name_fold        TEXT GENERATED ALWAYS AS (fold_text(husband_name))        STORED,
+            wife_surname_fold        TEXT GENERATED ALWAYS AS (fold_text(wife_surname))        STORED,
+            wife_alt_surname_fold    TEXT GENERATED ALWAYS AS (fold_text(wife_alt_surname))    STORED,
+            wife_name_fold           TEXT GENERATED ALWAYS AS (fold_text(wife_name))           STORED
         );
 
         -- GIN trigram indexes serve ILIKE / `%>` searches on the
@@ -114,6 +146,17 @@ def setup_full(db):
             ON families(contributor, husband_alt_surname) WHERE husband_alt_surname <> '';
         CREATE INDEX idx_family_contrib_w_alt_sur
             ON families(contributor, wife_alt_surname) WHERE wife_alt_surname <> '';
+
+        -- Folded-surname equivalents of the above, used by compute_matches to
+        -- build its a_sur/b_sur candidate-surname pools diacritic-insensitively.
+        CREATE INDEX idx_person_contrib_sur_fold  ON persons(contributor, surname_fold);
+        CREATE INDEX idx_family_contrib_surs_fold ON families(contributor, husband_surname_fold, wife_surname_fold);
+        CREATE INDEX idx_person_contrib_alt_sur_fold
+            ON persons(contributor, alt_surname_fold) WHERE alt_surname_fold <> '';
+        CREATE INDEX idx_family_contrib_h_alt_sur_fold
+            ON families(contributor, husband_alt_surname_fold) WHERE husband_alt_surname_fold <> '';
+        CREATE INDEX idx_family_contrib_w_alt_sur_fold
+            ON families(contributor, wife_alt_surname_fold) WHERE wife_alt_surname_fold <> '';
 
         -- GEDCOM xref id lookup: ext_id is unique within a contributor's file,
         -- so this serves as the primary key for find_parent_record() when the
@@ -238,6 +281,7 @@ def setup_update(db):
     print("Setting up database tables and extensions (update mode)...")
 
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    db.execute(text(_FOLD_HELPERS_SQL))
     db.commit()
 
     # Detect legacy schema and drop it — the data shape change is fundamental,
@@ -359,6 +403,20 @@ def setup_update(db):
         ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_ext_id         TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_alt_surname    TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS notes               TEXT;
+
+        -- Folded (lower-cased, accent-stripped) name columns used by
+        -- compute_matches for diacritic-insensitive surname/given-name
+        -- matching. NOTE: adding a GENERATED ... STORED column to a populated
+        -- table rewrites it (AccessExclusiveLock) — same cost as migration 001.
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS surname_fold     TEXT GENERATED ALWAYS AS (fold_text(surname))     STORED;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(alt_surname)) STORED;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS name_fold        TEXT GENERATED ALWAYS AS (fold_text(name))        STORED;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_surname_fold     TEXT GENERATED ALWAYS AS (fold_text(husband_surname))     STORED;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(husband_alt_surname)) STORED;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_name_fold        TEXT GENERATED ALWAYS AS (fold_text(husband_name))        STORED;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_surname_fold        TEXT GENERATED ALWAYS AS (fold_text(wife_surname))        STORED;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_alt_surname_fold    TEXT GENERATED ALWAYS AS (fold_text(wife_alt_surname))    STORED;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_name_fold           TEXT GENERATED ALWAYS AS (fold_text(wife_name))           STORED;
     """))
     db.commit()
 
@@ -398,6 +456,17 @@ def setup_update(db):
             ON families(contributor, husband_alt_surname) WHERE husband_alt_surname <> '';
         CREATE INDEX IF NOT EXISTS idx_family_contrib_w_alt_sur
             ON families(contributor, wife_alt_surname) WHERE wife_alt_surname <> '';
+
+        -- Folded-surname equivalents, used by compute_matches for
+        -- diacritic-insensitive candidate-surname pools.
+        CREATE INDEX IF NOT EXISTS idx_person_contrib_sur_fold  ON persons(contributor, surname_fold);
+        CREATE INDEX IF NOT EXISTS idx_family_contrib_surs_fold ON families(contributor, husband_surname_fold, wife_surname_fold);
+        CREATE INDEX IF NOT EXISTS idx_person_contrib_alt_sur_fold
+            ON persons(contributor, alt_surname_fold) WHERE alt_surname_fold <> '';
+        CREATE INDEX IF NOT EXISTS idx_family_contrib_h_alt_sur_fold
+            ON families(contributor, husband_alt_surname_fold) WHERE husband_alt_surname_fold <> '';
+        CREATE INDEX IF NOT EXISTS idx_family_contrib_w_alt_sur_fold
+            ON families(contributor, wife_alt_surname_fold) WHERE wife_alt_surname_fold <> '';
 
         -- ext_id lookup for ancestor/descendant resolution (partial: sparse column).
         CREATE INDEX IF NOT EXISTS idx_person_contrib_ext_id

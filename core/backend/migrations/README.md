@@ -221,6 +221,43 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/010_family_spouse_birth_year.sql
 ```
 
+### 011 — `name_fold_and_match_helpers`
+
+Adds two SQL helper functions and a set of generated "folded" name columns
+used by `compute_matches.py`:
+
+- `fold_text(text)`: lower-cased, accent-stripped form (via `unaccent`), so
+  e.g. "Žagar" / "Zagar" / "ZAGAR" are treated as the same surname for
+  trigram blocking and similarity.
+- `is_approx_date(text)`: true when a GEDCOM date string carries an
+  approximation qualifier (`ABT`/`EST`/`CAL`/`BEF`/`AFT`/`CIRCA`/`~`).
+  compute_matches widens its year tolerance for such dates (often
+  back-derived from a relative's birth/death, and can be off by a decade
+  or more).
+- `persons.surname_fold` / `alt_surname_fold` / `name_fold`, and the
+  husband/wife equivalents on `families`, plus folded-surname composite
+  btree indexes mirroring the existing `idx_*_contrib_*_sur` ones.
+
+- `ADD COLUMN ... GENERATED ALWAYS AS (...) STORED` rewrites the whole
+  table (`AccessExclusiveLock`), same cost profile as migration 001 (5-15
+  min for ~4M rows). Run during a maintenance window with the API stopped.
+- `CREATE INDEX CONCURRENTLY` for the new composite indexes — online, no
+  table lock.
+- Must run **outside** a transaction block (the column rewrites and the
+  concurrent index builds each need their own implicit transaction).
+- Re-runnable (`IF NOT EXISTS` everywhere).
+
+Both `import_to_db.py` paths (`setup_full` / `setup_update`) already create
+these for fresh DBs — this file is only for upgrading an existing production
+DB in place.
+
+```bash
+docker compose stop api
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/011_name_fold_and_match_helpers.sql
+docker compose up -d api
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the
