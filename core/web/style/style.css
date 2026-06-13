@@ -186,12 +186,10 @@ tr:hover { background: var(--srd-bg-subtle); }
    gives skipped rows an estimated height (the `auto` keyword lets the browser
    remember each row's real height once rendered, so the scrollbar settles). */
 .virtual-table { table-layout: fixed; }
-/* Long unbroken tokens (URLs, long place names) in data cells wrap instead of
-   overflowing a fixed-width column. Headers are excluded on purpose: their
-   words must only break at word boundaries (no "Pove-zava" splits), and the
-   pass-1 width measurement already sized each column to fit its header's
-   longest word. */
-.virtual-table td { overflow-wrap: anywhere; }
+/* Long words in data cells wrap onto the next line instead of overflowing a
+   fixed-width column, but only break at word boundaries (no "Pove-zava"
+   splits). */
+.virtual-table td { overflow-wrap: break-word; }
 .virtual-table tbody tr {
   content-visibility: auto;
   contain-intrinsic-size: auto 44px;
