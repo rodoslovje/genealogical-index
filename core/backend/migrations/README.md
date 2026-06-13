@@ -288,6 +288,28 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/012_contributor_surnames.sql
 ```
 
+### 013 — `has_day_precision`
+
+Adds `has_day_precision(text)`, a SQL helper used by `compute_matches.py` to
+detect a full `DD MON YYYY`-style date, as opposed to a bare year (`1892`) or
+month+year (`NOV 1892`). Used to give an exact full-date match (both sides
+record e.g. "20 NOV 1892") a higher confidence floor
+(`IDENTITY_KEY_CONFIDENCE_FULL = 0.99`) than a year-only coincidence
+(`IDENTITY_KEY_CONFIDENCE = 0.97`), for both persons (birth/death date) and
+families (marriage date).
+
+- Plain `CREATE OR REPLACE FUNCTION` — no locks, instant, safe to run online
+  with the API up.
+- Re-runnable.
+- `import_to_db.py` (`setup_full` / `setup_update`) already creates this
+  function for fresh/updated DBs — this file is only for upgrading an
+  existing production DB in place.
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/013_has_day_precision.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

@@ -42,6 +42,10 @@ YEAR_TOLERANCE_APPROX = 15  # widened tolerance when either side's date carries 
 IDENTITY_KEY_CONFIDENCE = 0.97  # confidence floor when surname + given name +
 # birth year all match exactly — a near-conclusive identity key, applied even
 # if a corroborating field (e.g. death info) is missing or differs slightly.
+IDENTITY_KEY_CONFIDENCE_FULL = 0.99  # higher floor when, in addition to the
+# identity key, both sides record the *same full date* (day+month+year) for
+# birth, death or (for families) marriage — much stronger evidence than a
+# year-only coincidence, which only floors to IDENTITY_KEY_CONFIDENCE.
 COARSE_YEAR_TOLERANCE = YEAR_TOLERANCE_APPROX + 5  # cheap pre-filter applied as
 # a JOIN condition, before the expensive name/place similarity() calls. A
 # strict superset of the real (per-record) tolerance used by the `plausible`
@@ -147,6 +151,13 @@ _PERSON_INSERT = text(r"""
             CASE WHEN p1.death_year IS NOT NULL AND p2.death_year IS NOT NULL
                  THEN ABS(p1.death_year - p2.death_year)
                  ELSE NULL END AS d_yr_diff,
+            -- Full date (day+month+year) agreement: stronger corroboration
+            -- than a year-only match (b_yr_diff/d_yr_diff = 0 alone doesn't
+            -- distinguish "1892" from "20 NOV 1892").
+            (has_day_precision(p1.date_of_birth) AND has_day_precision(p2.date_of_birth)
+             AND lower(trim(p1.date_of_birth)) = lower(trim(p2.date_of_birth))) AS full_birth_match,
+            (has_day_precision(p1.date_of_death) AND has_day_precision(p2.date_of_death)
+             AND lower(trim(p1.date_of_death)) = lower(trim(p2.date_of_death))) AS full_death_match,
             -- Per-record year tolerance: widened to :yr_tol_approx when the
             -- GEDCOM date carries an approximation qualifier (ABT/EST/CAL/...),
             -- since those years are often back-derived from a relative's
@@ -203,6 +214,7 @@ _PERSON_INSERT = text(r"""
     scored AS (
         SELECT a_id, b_id, s_sur, s_name, s_bplace, s_dplace,
                b_yr_diff, d_yr_diff, s_parents, s_partners,
+               full_birth_match, full_death_match,
             -- Always-counted (sum = 90): surname 35 + name 30 + birth_place 10 + birth_year 15.
             -- Birth fields are essential identity signals, so missing values get the
             -- COALESCE(0.5) "neutral" treatment rather than being skipped — a record
@@ -233,8 +245,14 @@ _PERSON_INSERT = text(r"""
             -- Identity-key bonus: an exact surname + given-name + birth-year
             -- match is near-conclusive, so the confidence is floored even if
             -- a corroborating field (e.g. death info) is missing or differs.
+            -- If, in addition, both sides record the same full birth or death
+            -- date (not just the same year), that's stronger corroboration
+            -- and gets a higher floor.
             CASE WHEN s_sur = 1.0 AND s_name = 1.0 AND b_yr_diff = 0
-                 THEN GREATEST(base_conf, :identity_conf)
+                 THEN CASE WHEN full_birth_match OR full_death_match
+                           THEN GREATEST(base_conf, :identity_conf_full)
+                           ELSE GREATEST(base_conf, :identity_conf)
+                      END
                  ELSE base_conf
             END AS conf
         FROM scored
@@ -303,7 +321,11 @@ _FAMILY_INSERT = text(r"""
             GREATEST(
                 CASE WHEN is_approx_date(f1.date_of_marriage) THEN :yr_tol_approx ELSE :yr_tol END,
                 CASE WHEN is_approx_date(f2.date_of_marriage) THEN :yr_tol_approx ELSE :yr_tol END
-            ) AS m_tol
+            ) AS m_tol,
+            -- Full marriage-date agreement (day+month+year), stronger than a
+            -- year-only match — see persons gate above.
+            (has_day_precision(f1.date_of_marriage) AND has_day_precision(f2.date_of_marriage)
+             AND lower(trim(f1.date_of_marriage)) = lower(trim(f2.date_of_marriage))) AS full_marriage_match
         FROM families f1
         JOIN sur_matches hm ON f1.husband_surname_fold = hm.sur1
                              OR (f1.husband_alt_surname_fold <> '' AND f1.husband_alt_surname_fold = hm.sur1)
@@ -336,6 +358,7 @@ _FAMILY_INSERT = text(r"""
     ),
     scored AS (
         SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff, s_hp, s_wp, s_cl,
+               full_marriage_match,
             (
                 s_hsur * 25.0 +
                 s_wsur * 25.0 +
@@ -358,9 +381,15 @@ _FAMILY_INSERT = text(r"""
         SELECT a_id, b_id, s_hsur, s_wsur, s_hname, s_wname, s_place, yr_diff, s_hp, s_wp, s_cl,
             -- Identity-key bonus: exact husband + wife surname and given-name
             -- matches plus an exact marriage-year match are near-conclusive.
+            -- If both sides also record the same full marriage date (not just
+            -- the same year), that's stronger corroboration and gets a higher
+            -- floor.
             CASE WHEN s_hsur = 1.0 AND s_wsur = 1.0
                   AND s_hname = 1.0 AND s_wname = 1.0 AND yr_diff = 0
-                 THEN GREATEST(base_conf, :identity_conf)
+                 THEN CASE WHEN full_marriage_match
+                           THEN GREATEST(base_conf, :identity_conf_full)
+                           ELSE GREATEST(base_conf, :identity_conf)
+                      END
                  ELSE base_conf
             END AS conf
         FROM scored
@@ -413,6 +442,7 @@ def process_job(contrib_a, contrib_b):
         "yr_tol_approx": YEAR_TOLERANCE_APPROX,
         "coarse_yr_tol": COARSE_YEAR_TOLERANCE,
         "identity_conf": IDENTITY_KEY_CONFIDENCE,
+        "identity_conf_full": IDENTITY_KEY_CONFIDENCE_FULL,
         "conf_min": CONFIDENCE_MIN,
         "trgm_thresh": TRGM_THRESHOLD,
     }

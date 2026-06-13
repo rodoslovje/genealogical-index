@@ -51,6 +51,14 @@ _FOLD_HELPERS_SQL = """
     CREATE OR REPLACE FUNCTION is_approx_date(d text) RETURNS boolean
         LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
     $$ SELECT COALESCE(d, '') ~* '\\y(ABT|ABOUT|EST|ESTIMATED|CAL|CALC|CALCULATED|BEF|BEFORE|AFT|AFTER|CIRCA|CA)\\y|~' $$;
+
+    -- True when a GEDCOM date string carries day+month precision (e.g.
+    -- "20 NOV 1892"), as opposed to a bare year ("1892") or month+year
+    -- ("NOV 1892"). compute_matches uses this to spot a full-date match as
+    -- stronger corroboration than a year-only coincidence.
+    CREATE OR REPLACE FUNCTION has_day_precision(d text) RETURNS boolean
+        LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
+    $$ SELECT COALESCE(d, '') ~* '\\d{1,2}\\s+[a-z]{3,9}\\s+\\d{4}' $$;
 """
 
 
