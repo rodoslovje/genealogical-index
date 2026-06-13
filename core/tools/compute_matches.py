@@ -42,6 +42,13 @@ YEAR_TOLERANCE_APPROX = 15  # widened tolerance when either side's date carries 
 IDENTITY_KEY_CONFIDENCE = 0.97  # confidence floor when surname + given name +
 # birth year all match exactly — a near-conclusive identity key, applied even
 # if a corroborating field (e.g. death info) is missing or differs slightly.
+COARSE_YEAR_TOLERANCE = YEAR_TOLERANCE_APPROX + 5  # cheap pre-filter applied as
+# a JOIN condition, before the expensive name/place similarity() calls. A
+# strict superset of the real (per-record) tolerance used by the `plausible`
+# CTE, so it never excludes a pair that would otherwise pass — it just lets
+# common-surname cross-products (e.g. hundreds x hundreds of "Novak"s) skip
+# trigram similarity work for pairs whose years are wildly apart on both
+# birth and death.
 CONFIDENCE_MIN = 0.80  # records below this threshold are not stored
 TRGM_THRESHOLD = 0.72  # pg_trgm.similarity_threshold for the % join operator
 # kept below CONFIDENCE_MIN so pairs where one surname/name
@@ -155,6 +162,16 @@ _PERSON_INSERT = text(r"""
         JOIN persons p2 ON p2.contributor = :contrib_b
                        AND (p2.surname_fold = sm.sur2
                             OR (p2.alt_surname_fold <> '' AND p2.alt_surname_fold = sm.sur2))
+                       -- Cheap integer pre-filter before the trigram similarity
+                       -- below: skip pairs whose birth AND death years are both
+                       -- wildly apart (or absent on one side). See
+                       -- COARSE_YEAR_TOLERANCE.
+                       AND (
+                           p1.birth_year IS NULL OR p2.birth_year IS NULL
+                           OR ABS(p1.birth_year - p2.birth_year) <= :coarse_yr_tol
+                           OR (p1.death_year IS NOT NULL AND p2.death_year IS NOT NULL
+                               AND ABS(p1.death_year - p2.death_year) <= :coarse_yr_tol)
+                       )
         WHERE (p1.name_fold = p2.name_fold OR similarity(p1.name_fold, p2.name_fold) >= :trgm_thresh)
     ),
     -- Year-tolerance and lifespan-plausibility gates. Tolerances are the wider
@@ -297,6 +314,13 @@ _FAMILY_INSERT = text(r"""
                              OR (f2.husband_alt_surname_fold <> '' AND f2.husband_alt_surname_fold = hm.sur2))
                         AND (f2.wife_surname_fold = wm.sur2
                              OR (f2.wife_alt_surname_fold <> '' AND f2.wife_alt_surname_fold = wm.sur2))
+                        -- Cheap pre-filter before the name/place/list similarity()
+                        -- calls below: skip pairs with wildly different marriage
+                        -- years. See COARSE_YEAR_TOLERANCE.
+                        AND (
+                            f1.marriage_year IS NULL OR f2.marriage_year IS NULL
+                            OR ABS(f1.marriage_year - f2.marriage_year) <= :coarse_yr_tol
+                        )
         WHERE f1.contributor = :contrib_a
     ),
     plausible AS (
@@ -387,6 +411,7 @@ def process_job(contrib_a, contrib_b):
         "contrib_b": contrib_b,
         "yr_tol": YEAR_TOLERANCE,
         "yr_tol_approx": YEAR_TOLERANCE_APPROX,
+        "coarse_yr_tol": COARSE_YEAR_TOLERANCE,
         "identity_conf": IDENTITY_KEY_CONFIDENCE,
         "conf_min": CONFIDENCE_MIN,
         "trgm_thresh": TRGM_THRESHOLD,
