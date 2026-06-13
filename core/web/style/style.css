@@ -134,8 +134,7 @@ h2 .export-btn {
  * ============================================================= */
 
 .table-responsive {
-  overflow-x: auto;
-  overflow-y: clip;
+  overflow: clip;
   margin-bottom: 2rem;
   background: var(--srd-surface);
   box-shadow: var(--srd-shadow-1);
@@ -153,6 +152,25 @@ h2 .export-btn {
   background: transparent;
   box-shadow: none;
   border-radius: 0;
+}
+
+/* The per-pair matches table can have many columns and overflow the viewport
+   width. Unlike the other .table-responsive tables, it becomes its own
+   scrollable box (both axes) with a header sticky to the top of that box —
+   overflow-x:auto would otherwise make this element the sticky containing
+   block, breaking the page-level sticky header used elsewhere. */
+.matches-section-content.table-responsive {
+  overflow: auto;
+  max-height: calc(100vh - var(--nav-height) - 80px);
+}
+.matches-section-content.table-responsive th {
+  top: 0;
+}
+/* Pin the measured natural width as min-width so fixed-layout columns don't
+   squeeze below readable when the table is wider than its box — the
+   .table-responsive wrapper above pans horizontally instead. */
+.matches-section-content.table-responsive .virtual-table {
+  min-width: var(--vt-natural-width, 0);
 }
 table {
   width: 100%;
@@ -186,10 +204,7 @@ tr:hover { background: var(--srd-bg-subtle); }
    find-in-page, CSV export, and sort all keep working). `contain-intrinsic-size`
    gives skipped rows an estimated height (the `auto` keyword lets the browser
    remember each row's real height once rendered, so the scrollbar settles). */
-/* Pin the measured natural width as min-width so fixed-layout columns don't
-   squeeze below readable when the table is wider than its container — the
-   .table-responsive wrapper pans horizontally instead. */
-.virtual-table { table-layout: fixed; min-width: var(--vt-natural-width, 0); }
+.virtual-table { table-layout: fixed; }
 /* Long words in data cells wrap onto the next line instead of overflowing a
    fixed-width column, but only break at word boundaries (no "Pove-zava"
    splits). */
@@ -1098,6 +1113,17 @@ body.compact-nav .mobile-nav-section { display: flex; }
     order: -1;
     padding: 8px 20px 12px;
   }
+
+  .table-responsive { overflow-x: auto; }
+
+  /* Virtualized tables carry their measured natural width in --vt-natural-width
+     (set by table.js / match-detail.js). Pinning it as min-width here stops the
+     fixed-layout columns from squeezing below readable on phones — the
+     .table-responsive wrapper above pans horizontally instead, while the page
+     keeps scrolling vertically through the rows. Desktop intentionally skips
+     this: its wrapper uses overflow:clip to preserve sticky headers, so a
+     min-width there would clip the table with no way to pan. */
+  .virtual-table { min-width: var(--vt-natural-width, 0); }
 
   #main-content { padding: 0 4px; }
 

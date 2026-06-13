@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './lib/links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isSpecialContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList } from './lib/utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isSpecialContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList, pairRelatives } from './lib/utils.js';
 import { childYearOf, parseDateForSort } from './lib/dates.js';
 import { toUnicodeHref } from './lib/url.js';
 import { createExportButton } from './lib/icons.js';
@@ -206,53 +206,6 @@ function sortData(data, primary, secondary) {
   });
 }
 
-// Canonicalizes a name/surname token for matching. All private-placeholder
-// variants ('<private>', 'private', 'unknown') collapse to one key so they
-// pair across sides regardless of which placeholder each side stores.
-function matchToken(s) {
-  const v = String(s || '').trim().toLowerCase();
-  if (!v) return '';
-  if (isPrivate(v)) return '<private>';
-  return v;
-}
-
-// Pairs an entry on one match-side with its best counterpart on the other side
-// for diff highlighting. Match quality: name+surname > surname only > name only.
-// A matching year breaks ties between equally-strong name/surname matches —
-// without this, duplicate-name children (e.g. two Ivanas) could pair to the
-// wrong sibling and falsely flag the year as a diff.
-// `requireName` disables surname-only matches — used for children, where every
-// sibling shares the family surname, so a surname-only "match" would just pair
-// an added child with an unrelated sibling and flag its name as a conflict
-// instead of new data.
-function findBestMatch(p, otherList, requireName = false) {
-  if (!p || !otherList?.length) return null;
-  const name = matchToken(p.name);
-  const sur  = matchToken(p.surname);
-  if (!name && !sur) return null;
-  if (requireName && !name) return null;
-  const year = String(childYearOf(p) || '');
-
-  let best = null, bestScore = -1;
-  for (const o of otherList) {
-    const oName = matchToken(o?.name);
-    const oSur  = matchToken(o?.surname);
-    const nameMatch = !!name && oName === name;
-    const surMatch  = !!sur  && oSur  === sur;
-    if (!nameMatch && !surMatch) continue;
-    if (requireName && !nameMatch) continue;
-
-    // Base score by match strength; year bonus (5) is smaller than the gap
-    // between strength tiers (10), so it never overrides a stronger structural
-    // match — only breaks ties within a tier.
-    let score = nameMatch && surMatch ? 30 : surMatch ? 20 : 10;
-    if (year && String(childYearOf(o) || '') === year) score += 5;
-
-    if (score > bestScore) { bestScore = score; best = o; }
-  }
-  return best;
-}
-
 const yearsDiffer = (a, b) => String(a || '') !== String(b || '');
 
 // Counts derived from children/parents/partners lists are looked up many times
@@ -419,13 +372,14 @@ export function formatSpecialCell(col, row, otherRow, isB = false) {
     const otherChildren = diffMode ? parseList(otherRow?.children_list) : [];
     const pList = parseList(row.children_list);
     const count = pList.length;
+    const childMatches = diffMode ? pairRelatives(pList, otherChildren, true) : null;
     const formattedList = pList.map(c => {
         const cPriv = isPrivate(c.name) || isPrivate(c.surname);
         const showSurname = !cPriv && c.surname && c.surname !== row.husband_surname;
         const cy = childYearOf(c);
         const yearTok = cy ? `*${cy}` : '';
 
-        const match = diffMode ? findBestMatch(c, otherChildren, true) : null;
+        const match = childMatches ? childMatches.get(c) : null;
         const noMatch = diffMode && !cPriv && !match && (c.name || c.surname);
         const yearDiff = !!match && yearsDiffer(cy, childYearOf(match));
 
@@ -530,6 +484,7 @@ export function formatSpecialCell(col, row, otherRow, isB = false) {
     }) : '';
     const otherPartners = diffMode ? parseList(otherRow?.partners_list) : [];
     const pList = parseList(row.partners_list);
+    const partnerMatches = diffMode ? pairRelatives(pList, otherPartners) : null;
     const formattedList = pList.map(p => {
         const isHusband = p.sex === 'm';
         const famParams = new URLSearchParams();
@@ -550,7 +505,7 @@ export function formatSpecialCell(col, row, otherRow, isB = false) {
         const pPriv = isPrivate(p.name);
         const yearTok = py ? `*${py}` : '';
 
-        const match = diffMode ? findBestMatch(p, otherPartners) : null;
+        const match = partnerMatches ? partnerMatches.get(p) : null;
         const noMatch = diffMode && !pPriv && !match && (p.name || p.surname);
         const yearDiff = !!match && yearsDiffer(py, childYearOf(match));
 

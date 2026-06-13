@@ -1,5 +1,6 @@
 import siteConfig from '@site-config';
 import { parseLinksList, diffKey } from './links.js';
+import { childYearOf } from './dates.js';
 
 /**
  * Returns the HTML for an `<input type=text>` paired with a clear (×) button,
@@ -239,6 +240,64 @@ function countAddedParentPair(listA, listB) {
   return n;
 }
 
+// Canonicalizes a name/surname token for matching. All private-placeholder
+// variants ('<private>', 'private', 'unknown') collapse to one key so they
+// pair across sides regardless of which placeholder each side stores.
+export function matchToken(s) {
+  const v = String(s || '').trim().toLowerCase();
+  if (!v) return '';
+  if (isPrivate(v)) return '<private>';
+  return v;
+}
+
+// Computes a one-to-one pairing between entries of `listA` and `listB` for
+// diff highlighting / counting. Each entry is paired with at most one
+// counterpart on the other side, picked globally by best match score — so
+// e.g. two same-named siblings on one side don't both get matched to the
+// single same-named sibling on the other side, leaving the genuinely new one
+// mis-flagged as a "year diff" against an already-claimed counterpart.
+// Match quality: name+surname > surname only > name only, with a small year
+// bonus that only breaks ties between equally-strong matches.
+// `requireName` disables surname-only matches — used for children, where
+// every sibling shares the family surname, so a surname-only "match" would
+// just pair an added child with an unrelated sibling.
+// Returns a Map from entries of `listA` to their matched entry in `listB`.
+export function pairRelatives(listA, listB, requireName = false) {
+  const map = new Map();
+  if (!listA?.length || !listB?.length) return map;
+
+  const candidates = [];
+  listA.forEach((a, i) => {
+    const aName = matchToken(a?.name);
+    const aSur  = matchToken(a?.surname);
+    if (!aName && !aSur) return;
+    if (requireName && !aName) return;
+    const aYear = String(childYearOf(a) || '');
+
+    listB.forEach((b, j) => {
+      const bName = matchToken(b?.name);
+      const bSur  = matchToken(b?.surname);
+      const nameMatch = !!aName && aName === bName;
+      const surMatch  = !!aSur  && aSur  === bSur;
+      if (!nameMatch && !surMatch) return;
+      if (requireName && !nameMatch) return;
+
+      let score = nameMatch && surMatch ? 30 : surMatch ? 20 : 10;
+      if (aYear && aYear === String(childYearOf(b) || '')) score += 5;
+      candidates.push({ a, b, i, j, score });
+    });
+  });
+
+  candidates.sort((x, y) => y.score - x.score || (x.i + x.j) - (y.i + y.j));
+  const usedA = new Set(), usedB = new Set();
+  for (const c of candidates) {
+    if (usedA.has(c.i) || usedB.has(c.j)) continue;
+    usedA.add(c.i); usedB.add(c.j);
+    map.set(c.a, c.b);
+  }
+  return map;
+}
+
 // Counts entries in `listB` (partners or children) that have no counterpart
 // anywhere in `listA` — i.e. only known to B. `requireName` restricts matching
 // to the first name only — used for children, where every sibling shares the
@@ -247,15 +306,11 @@ function countAddedParentPair(listA, listB) {
 function countAddedRelatives(listA, listB, requireName = false) {
   const a = parseList(listA);
   const b = parseList(listB);
+  const pairs = pairRelatives(a, b, requireName);
+  const matchedB = new Set(pairs.values());
   let n = 0;
   for (const p of b) {
-    if (!hasNameOrSurname(p)) continue;
-    const pName = String(p.name || '').toLowerCase();
-    const pSur = String(p.surname || '').toLowerCase();
-    const match = a.some(o => hasNameOrSurname(o) &&
-      ((pName && String(o.name || '').toLowerCase() === pName) ||
-       (!requireName && pSur && String(o.surname || '').toLowerCase() === pSur)));
-    if (!match) n += 1;
+    if (hasNameOrSurname(p) && !matchedB.has(p)) n += 1;
   }
   return n;
 }
