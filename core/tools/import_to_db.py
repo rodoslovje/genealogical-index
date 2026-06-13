@@ -406,17 +406,21 @@ def setup_update(db):
 
         -- Folded (lower-cased, accent-stripped) name columns used by
         -- compute_matches for diacritic-insensitive surname/given-name
-        -- matching. NOTE: adding a GENERATED ... STORED column to a populated
+        -- matching. NOTE: adding GENERATED ... STORED columns to a populated
         -- table rewrites it (AccessExclusiveLock) — same cost as migration 001.
-        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS surname_fold     TEXT GENERATED ALWAYS AS (fold_text(surname))     STORED;
-        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(alt_surname)) STORED;
-        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS name_fold        TEXT GENERATED ALWAYS AS (fold_text(name))        STORED;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_surname_fold     TEXT GENERATED ALWAYS AS (fold_text(husband_surname))     STORED;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(husband_alt_surname)) STORED;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_name_fold        TEXT GENERATED ALWAYS AS (fold_text(husband_name))        STORED;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_surname_fold        TEXT GENERATED ALWAYS AS (fold_text(wife_surname))        STORED;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_alt_surname_fold    TEXT GENERATED ALWAYS AS (fold_text(wife_alt_surname))    STORED;
-        ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_name_fold           TEXT GENERATED ALWAYS AS (fold_text(wife_name))           STORED;
+        -- Each table's columns are added in one ALTER TABLE so the rewrite
+        -- happens once per table, not once per column.
+        ALTER TABLE persons
+            ADD COLUMN IF NOT EXISTS surname_fold     TEXT GENERATED ALWAYS AS (fold_text(surname))     STORED,
+            ADD COLUMN IF NOT EXISTS alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(alt_surname)) STORED,
+            ADD COLUMN IF NOT EXISTS name_fold        TEXT GENERATED ALWAYS AS (fold_text(name))        STORED;
+        ALTER TABLE families
+            ADD COLUMN IF NOT EXISTS husband_surname_fold     TEXT GENERATED ALWAYS AS (fold_text(husband_surname))     STORED,
+            ADD COLUMN IF NOT EXISTS husband_alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(husband_alt_surname)) STORED,
+            ADD COLUMN IF NOT EXISTS husband_name_fold        TEXT GENERATED ALWAYS AS (fold_text(husband_name))        STORED,
+            ADD COLUMN IF NOT EXISTS wife_surname_fold        TEXT GENERATED ALWAYS AS (fold_text(wife_surname))        STORED,
+            ADD COLUMN IF NOT EXISTS wife_alt_surname_fold    TEXT GENERATED ALWAYS AS (fold_text(wife_alt_surname))    STORED,
+            ADD COLUMN IF NOT EXISTS wife_name_fold           TEXT GENERATED ALWAYS AS (fold_text(wife_name))           STORED;
     """))
     db.commit()
 

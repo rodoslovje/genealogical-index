@@ -45,17 +45,22 @@ CREATE OR REPLACE FUNCTION is_approx_date(d text) RETURNS boolean
 $$ SELECT COALESCE(d, '') ~* '\y(ABT|ABOUT|EST|ESTIMATED|CAL|CALC|CALCULATED|BEF|BEFORE|AFT|AFTER|CIRCA|CA)\y|~' $$;
 
 -- Folded surname/given-name columns for persons.
-ALTER TABLE persons ADD COLUMN IF NOT EXISTS surname_fold     TEXT GENERATED ALWAYS AS (fold_text(surname))     STORED;
-ALTER TABLE persons ADD COLUMN IF NOT EXISTS alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(alt_surname)) STORED;
-ALTER TABLE persons ADD COLUMN IF NOT EXISTS name_fold        TEXT GENERATED ALWAYS AS (fold_text(name))        STORED;
+-- All three are added in a single ALTER TABLE so the (unavoidable) table
+-- rewrite happens once, not once per column.
+ALTER TABLE persons
+    ADD COLUMN IF NOT EXISTS surname_fold     TEXT GENERATED ALWAYS AS (fold_text(surname))     STORED,
+    ADD COLUMN IF NOT EXISTS alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(alt_surname)) STORED,
+    ADD COLUMN IF NOT EXISTS name_fold        TEXT GENERATED ALWAYS AS (fold_text(name))        STORED;
 
--- Folded surname/given-name columns for families (husband & wife sides).
-ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_surname_fold     TEXT GENERATED ALWAYS AS (fold_text(husband_surname))     STORED;
-ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(husband_alt_surname)) STORED;
-ALTER TABLE families ADD COLUMN IF NOT EXISTS husband_name_fold        TEXT GENERATED ALWAYS AS (fold_text(husband_name))        STORED;
-ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_surname_fold        TEXT GENERATED ALWAYS AS (fold_text(wife_surname))        STORED;
-ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_alt_surname_fold    TEXT GENERATED ALWAYS AS (fold_text(wife_alt_surname))    STORED;
-ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_name_fold           TEXT GENERATED ALWAYS AS (fold_text(wife_name))           STORED;
+-- Folded surname/given-name columns for families (husband & wife sides),
+-- likewise combined into a single ALTER TABLE / rewrite.
+ALTER TABLE families
+    ADD COLUMN IF NOT EXISTS husband_surname_fold     TEXT GENERATED ALWAYS AS (fold_text(husband_surname))     STORED,
+    ADD COLUMN IF NOT EXISTS husband_alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(husband_alt_surname)) STORED,
+    ADD COLUMN IF NOT EXISTS husband_name_fold        TEXT GENERATED ALWAYS AS (fold_text(husband_name))        STORED,
+    ADD COLUMN IF NOT EXISTS wife_surname_fold        TEXT GENERATED ALWAYS AS (fold_text(wife_surname))        STORED,
+    ADD COLUMN IF NOT EXISTS wife_alt_surname_fold    TEXT GENERATED ALWAYS AS (fold_text(wife_alt_surname))    STORED,
+    ADD COLUMN IF NOT EXISTS wife_name_fold           TEXT GENERATED ALWAYS AS (fold_text(wife_name))           STORED;
 
 -- Folded-surname equivalents of idx_*_contrib_*_sur, used by compute_matches
 -- to build its a_sur/b_sur candidate-surname pools diacritic-insensitively.
