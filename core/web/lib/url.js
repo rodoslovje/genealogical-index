@@ -36,6 +36,9 @@ export const PARAM_MAP = {
   with:             'w',
   filter:           'f',
   source:           'src',
+  // Matches detail "New"/"Different"/"Links" checkbox filters, per section.
+  match_filter_person: 'mfp',
+  match_filter_family: 'mff',
 };
 
 /** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point at the unified person tab. */

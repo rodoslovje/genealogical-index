@@ -34,6 +34,7 @@
   --srd-warn-bg:        #fff8e1;
   --srd-error:          #e53e3e;
   --srd-ok:             #2f855a;
+  --srd-ok-bg:          #e6f4ea;
 
   /* ---- Type ---- */
   --srd-font-sans:  "IBM Plex Sans", "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;

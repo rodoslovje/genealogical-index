@@ -944,6 +944,56 @@ body.tree-view .section-bar {
   border-radius: 2px;
 }
 
+/* Data present on one side of a match but missing on the other — new
+   information this record contributes, as opposed to a conflicting value. */
+.match-add {
+  background: #aae6c0;
+  padding: 0 0.2em;
+  border-radius: 2px;
+}
+
+/* Link icons unique to one side get a larger highlight area so a new
+   source link stands out at a glance. */
+.match-add-link {
+  padding: 0.15em 0.3em;
+  margin: -0.15em -0.1em;
+}
+
+/* Per-pair "+N"/"🔗N"/"≠N" badges, shown on their own line below the
+   confidence percentage, counting how many fields the pair contributes new
+   data for (.match-add), new links for, and/or conflicting differences for
+   (.match-diff). Also used (without counts) as legend icons on the
+   "New"/"Different"/"Links" filter checkboxes. */
+.match-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 3px;
+}
+.match-badge {
+  display: inline-block;
+  padding: 0 0.35em;
+  border-radius: 3px;
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.match-badge-add  { background: var(--srd-ok-bg); color: var(--srd-ok); }
+.match-badge-link { background: var(--srd-ok-bg); color: var(--srd-ok); font-size: 0.8em; }
+.match-badge-diff { background: var(--srd-warn-bg); color: var(--srd-warn); }
+
+.match-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--srd-ink-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.match-filter-toggle input { cursor: pointer; }
+
 /* --- Connections panel --- */
 .connections-table {
   font-size: 0.78rem;

@@ -1,14 +1,15 @@
 import { t, formatTitleSuffix } from '../i18n.js';
 import { formatSpecialCell, exportToCSV, runWithBusy, remeasureVirtualColumns, setTableBusy } from '../table.js';
 import { formatLinks } from '../lib/links.js';
+import { csvRow } from '../lib/csv.js';
 import { parseDateForSort } from '../lib/dates.js';
 import {
   isPrivate, getExpandCollapseIcon, shortenUrlLabel, baseContributorName,
   matriculaIndicatorHtml, geneanetIndicatorHtml, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
-  escapeHtml, highlightDifferences, formatExportFilename,
+  escapeHtml, highlightDifferences, formatExportFilename, classifyMatchPair, HIGHLIGHTABLE,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
-import { toUnicodeHref } from '../lib/url.js';
+import { toUnicodeHref, currentParams, toUnicodeSearch } from '../lib/url.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
 
@@ -35,14 +36,6 @@ const MATCHES_CHUNK_PAIRS = 500;
 // default. Server time scales ~linearly with record count (~0.8ms each), so a
 // cemetery-scale pair (25k+) drops from ~25s to ~2s. "Load all" lifts the cap.
 const MATCHES_DETAIL_LIMIT = 2000;
-
-// Fields whose text is highlighted (diff'd) when comparing record_a vs record_b.
-const HIGHLIGHTABLE = new Set([
-  'name', 'surname', 'husband_name', 'husband_surname', 'wife_name', 'wife_surname',
-  'date_of_birth', 'place_of_birth', 'date_of_death', 'place_of_death',
-  'date_of_burial', 'place_of_burial',
-  'date_of_marriage', 'place_of_marriage', 'husband_birth', 'wife_birth',
-]);
 
 // Text fields scanned when filtering match-detail rows. Genealogist IDs and
 // ext_ids/links are deliberately excluded — the user filters by what they see.
@@ -237,6 +230,44 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
     const collapseState = { person: false, family: false };
 
+    // "New" / "Different" / "Links" checkbox filters, per section. Persisted
+    // to the URL (?mfp=/?mff=, each a string containing any of "a"/"l"/"d")
+    // so the active filters can be shared.
+    const MATCH_FILTER_PARAMS = { person: 'mfp', family: 'mff' };
+    const decodeMatchFilter = (val) => ({
+      add:  val.includes('a'),
+      link: val.includes('l'),
+      diff: val.includes('d'),
+    });
+    const encodeMatchFilter = (filt) =>
+      (filt.add ? 'a' : '') + (filt.link ? 'l' : '') + (filt.diff ? 'd' : '');
+    const syncAddDiffFilterToUrl = () => {
+      const u = new URL(window.location.href);
+      for (const [type, paramKey] of Object.entries(MATCH_FILTER_PARAMS)) {
+        const encoded = encodeMatchFilter(addDiffFilter[type]);
+        if (encoded) u.searchParams.set(paramKey, encoded);
+        else u.searchParams.delete(paramKey);
+      }
+      const search = toUnicodeSearch(u.searchParams);
+      history.replaceState(null, '', u.pathname + (search ? '?' + search : ''));
+    };
+    const addDiffFilter = {
+      person: decodeMatchFilter(currentParams().get(MATCH_FILTER_PARAMS.person) || ''),
+      family: decodeMatchFilter(currentParams().get(MATCH_FILTER_PARAMS.family) || ''),
+    };
+
+    // classifyMatchPair() result per record-pair, cached since `records` is
+    // stable across re-renders (sort/filter/checkbox toggles).
+    const classificationCache = new WeakMap();
+    const classifyPair = (r, fieldKeys) => {
+      let c = classificationCache.get(r);
+      if (!c) {
+        c = classifyMatchPair(r.record_a, r.record_b, fieldKeys);
+        classificationCache.set(r, c);
+      }
+      return c;
+    };
+
     // Per-type display order + DOM pair nodes from the last full render, so a
     // subsequent *sort* (row set unchanged, only order) can reorder existing
     // rows instead of rebuilding the whole section. Keyed: { group, pairMap, tbody }.
@@ -270,22 +301,6 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       // Sections whose pair rows exceed the first synchronous chunk; their
       // remainder streams in after the innerHTML swap. { key, group, buildPairRow, next }.
       const pendingChunks = [];
-
-      const byType = { person: [], family: [] };
-      const loadedCounts = { person: 0, family: 0 };
-      records.forEach(r => {
-        if (loadedCounts[r.record_type] !== undefined) loadedCounts[r.record_type] += 1;
-        if (pairMatchesFilter(r, currentFilter)) byType[r.record_type]?.push(r);
-      });
-      // True when the server held back rows beyond the top-N cap.
-      const truncated = {
-        person: totals.person > loadedCounts.person,
-        family: totals.family > loadedCounts.family,
-      };
-
-      for (const key of ['person', 'family']) {
-        sortGroup(byType[key], sortState[key]);
-      }
 
       const buildSearchUrl = (tab, pairs) => {
         const p = new URLSearchParams({ t: tab, ex: '1' });
@@ -345,6 +360,42 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         },
       ];
 
+      const fieldKeysByType = Object.fromEntries(typeConfig.map(c => [c.key, c.fields.map(f => f.f)]));
+
+      const byType = { person: [], family: [] };
+      const loadedCounts = { person: 0, family: 0 };
+      // How many records (matching the search/sidebar filters) have at least
+      // one "new"/"different"/"link" field — shown as counts next to the
+      // checkbox labels below.
+      const addDiffCounts = {
+        person: { add: 0, diff: 0, link: 0 },
+        family: { add: 0, diff: 0, link: 0 },
+      };
+      records.forEach(r => {
+        if (loadedCounts[r.record_type] === undefined) return;
+        loadedCounts[r.record_type] += 1;
+        if (!pairMatchesFilter(r, currentFilter)) return;
+        const cls = classifyPair(r, fieldKeysByType[r.record_type]);
+        const counts = addDiffCounts[r.record_type];
+        if (cls.addCount) counts.add += 1;
+        if (cls.diffCount) counts.diff += 1;
+        if (cls.linkAddCount) counts.link += 1;
+        const filt = addDiffFilter[r.record_type];
+        if (filt.add && !cls.addCount) return;
+        if (filt.diff && !cls.diffCount) return;
+        if (filt.link && !cls.linkAddCount) return;
+        byType[r.record_type].push(r);
+      });
+      // True when the server held back rows beyond the top-N cap.
+      const truncated = {
+        person: totals.person > loadedCounts.person,
+        family: totals.family > loadedCounts.family,
+      };
+
+      for (const key of ['person', 'family']) {
+        sortGroup(byType[key], sortState[key]);
+      }
+
       let html = baseHtml;
 
       if (truncated.person || truncated.family) {
@@ -369,18 +420,21 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
       for (const { key, label, fields, searchUrl, linkedFields } of typeConfig) {
         const group = byType[key];
-        if (!group.length) continue;
+        if (!loadedCounts[key]) continue;
 
         const state = sortState[key];
 
-        const makeCell = (rec, otherRec, f) => {
+        // `isB` is true for the second genealogist's row — "new" data
+        // (.match-add / .match-add-link) is only highlighted on that side,
+        // i.e. data B has that A is missing.
+        const makeCell = (rec, otherRec, f, isB) => {
           if (f === 'parents' || f === 'children' || f === 'partners') {
-            const inner = formatSpecialCell(f, rec, otherRec);
+            const inner = formatSpecialCell(f, rec, otherRec, isB);
             // data-col lets the sort-rerender capture/restore open <details> state.
             return `<td data-col="${f}">${inner || ''}</td>`;
           }
           if (f === 'links') {
-            const icons = formatLinks(rec.links, otherRec.links);
+            const icons = formatLinks(rec.links, otherRec.links, isB);
             return `<td class="link-cell">${icons || ''}</td>`;
           }
           const val = rec[f] || '';
@@ -392,7 +446,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
               const altF = f === 'surname' ? 'alt_surname' : f.replace('surname', 'alt_surname');
               if (otherRec[altF]) otherText += ' ' + otherRec[altF];
             }
-            safeVal = highlightDifferences(val, otherText);
+            safeVal = highlightDifferences(val, otherText, isB);
           } else {
             safeVal = escapeHtml(val);
           }
@@ -428,8 +482,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
         const buildPairRow = (r, idx) => {
           const pairCls = idx % 2 === 0 ? 'match-pair-even' : 'match-pair-odd';
-          const aCells = fields.map(({ f }) => makeCell(r.record_a, r.record_b, f)).join('');
-          const bCells = fields.map(({ f }) => makeCell(r.record_b, r.record_a, f)).join('');
+          const aCells = fields.map(({ f }) => makeCell(r.record_a, r.record_b, f, false)).join('');
+          const bCells = fields.map(({ f }) => makeCell(r.record_b, r.record_a, f, true)).join('');
           const conf = Math.round((r.confidence || 0) * 100);
 
           const aContrib = r.record_a.contributor || contributor;
@@ -457,10 +511,21 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           const partnerIndicator = matriculaIndicatorHtml(bContrib, t('icon_matricula_index')) + geneanetIndicatorHtml(bContrib, t('icon_geneanet_index'));
           const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', c: contribBaseL })}" data-spa-nav>${contribBaseL}</a>${contribIndicator}`;
           const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', c: partnerBaseL })}" data-spa-nav>${partnerBaseL}</a>${partnerIndicator}`;
+
+          // Badges counting how many fields this pair contributes new data
+          // for ("+N") from the partner, new links ("🔗N") from the partner,
+          // and/or has conflicting values for ("≠N").
+          const { addCount, diffCount, linkAddCount } = classifyPair(r, fields.map(f => f.f));
+          let badgesHtml = '';
+          if (addCount)     badgesHtml += `<span class="match-badge match-badge-add" title="${t('tip_match_add').replace(/"/g, '&quot;')}">+${addCount}</span>`;
+          if (linkAddCount) badgesHtml += `<span class="match-badge match-badge-link" title="${t('tip_match_link_add').replace(/"/g, '&quot;')}">🔗${linkAddCount}</span>`;
+          if (diffCount)    badgesHtml += `<span class="match-badge match-badge-diff" title="${t('tip_match_diff').replace(/"/g, '&quot;')}">≠${diffCount}</span>`;
+          const badgesRowHtml = badgesHtml ? `<div class="match-badges">${badgesHtml}</div>` : '';
+
           return `<tr class="match-pair-row ${pairCls}" data-row-key="${keyFor(r.record_a)}">
                     ${aCells}
                     <td class="match-pair-label match-pair-label-a col-center">${contributorLink}</td>
-                    <td rowspan="2" class="match-conf col-center">${conf}%${compareLinkHtml}</td>
+                    <td rowspan="2" class="match-conf col-center">${conf}%${badgesRowHtml}${compareLinkHtml}</td>
                   </tr>
                   <tr class="match-pair-row ${pairCls}" data-row-key="${keyFor(r.record_b)}">
                     ${bCells}
@@ -490,17 +555,27 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         const collapsedClass = isCollapsed ? ' collapsible-header collapsed' : ' collapsible-header';
         const contentDisplay = isCollapsed ? ' style="display: none;"' : '';
 
-        html += `<div class="matches-section" data-type="${key}">
-          <div class="section-bar section-bar--top-sm">
-            <h4 class="${collapsedClass}" style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${
-              truncated[key] ? `${group.length.toLocaleString()} / ${totals[key].toLocaleString()}` : group.length.toLocaleString()
-            })</h4>
-            <div class="matches-section-actions" style="display: flex; gap: 10px;">
-              ${expandBtnHtml}
-              <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
-            </div>
-          </div>
-          <div class="matches-section-content table-responsive"${contentDisplay}>
+        const filt = addDiffFilter[key];
+        const adCounts = addDiffCounts[key];
+        // Hide a filter toggle entirely if nothing in the current (search/
+        // sidebar-filtered) set qualifies — unless it's already checked, so
+        // the user can still uncheck it.
+        const addToggleHtml = (adCounts.add || filt.add) ? `<label class="match-filter-toggle">
+            <input type="checkbox" class="add-diff-filter" data-type="${key}" data-kind="add"${filt.add ? ' checked' : ''}>
+            <span class="match-badge match-badge-add">+</span>${t('filter_new')} (${adCounts.add})
+          </label>` : '';
+        const diffToggleHtml = (adCounts.diff || filt.diff) ? `<label class="match-filter-toggle">
+            <input type="checkbox" class="add-diff-filter" data-type="${key}" data-kind="diff"${filt.diff ? ' checked' : ''}>
+            <span class="match-badge match-badge-diff">≠</span>${t('filter_different')} (${adCounts.diff})
+          </label>` : '';
+        const linkToggleHtml = (adCounts.link || filt.link) ? `<label class="match-filter-toggle">
+            <input type="checkbox" class="add-diff-filter" data-type="${key}" data-kind="link"${filt.link ? ' checked' : ''}>
+            <span class="match-badge match-badge-link">🔗</span>${t('filter_links')} (${adCounts.link})
+          </label>` : '';
+        const filterToggleHtml = `${addToggleHtml}${linkToggleHtml}${diffToggleHtml}`;
+
+        const tableOrEmptyHtml = group.length
+          ? `<div class="matches-section-content table-responsive"${contentDisplay}>
             <table class="matches-detail-table">
               <thead><tr>
                 ${headerCells}
@@ -509,7 +584,21 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
               </tr></thead>
               <tbody>${groupRows}</tbody>
             </table>
+          </div>`
+          : `<div class="matches-section-content"${contentDisplay}><p>${t('matches_filtered_none')}</p></div>`;
+
+        html += `<div class="matches-section" data-type="${key}">
+          <div class="section-bar section-bar--top-sm">
+            <h4 class="${collapsedClass}" style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${
+              truncated[key] ? `${group.length.toLocaleString()} / ${totals[key].toLocaleString()}` : group.length.toLocaleString()
+            })</h4>
+            <div class="matches-section-actions" style="display: flex; gap: 10px; align-items: center;">
+              ${filterToggleHtml}
+              ${expandBtnHtml}
+              <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
+            </div>
           </div>
+          ${tableOrEmptyHtml}
         </div>`;
       }
 
@@ -567,6 +656,14 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         });
       }
 
+      detailEl.querySelectorAll('.add-diff-filter').forEach(cb => {
+        cb.addEventListener('change', () => {
+          addDiffFilter[cb.dataset.type][cb.dataset.kind] = cb.checked;
+          syncAddDiffFilterToUrl();
+          runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, renderTables);
+        });
+      });
+
       detailEl.querySelectorAll('.matches-section').forEach(section => {
         const typeKey = section.dataset.type;
         const header = section.querySelector('h4');
@@ -602,20 +699,35 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           }
           // Recompute from `records` rather than the closure's byType: the
           // fetch above may have replaced the record set. The sidebar filter
-          // still applies (an explicit user choice), and the rows are ordered
-          // like the visible table.
-          const typeData = records.filter(
-            r => r.record_type === typeKey && pairMatchesFilter(r, currentFilter)
-          );
-          sortGroup(typeData, sortState[typeKey]);
+          // and the "has additions/differences" toggles still apply (explicit
+          // user choices), and the rows are ordered like the visible table.
           const config = typeConfig.find(c => c.key === typeKey);
+          const filt = addDiffFilter[typeKey];
+          const typeData = records.filter(r => {
+            if (r.record_type !== typeKey || !pairMatchesFilter(r, currentFilter)) return false;
+            if (filt.add || filt.diff || filt.link) {
+              const cls = classifyPair(r, config.fields.map(f => f.f));
+              if (filt.add && !cls.addCount) return false;
+              if (filt.diff && !cls.diffCount) return false;
+              if (filt.link && !cls.linkAddCount) return false;
+            }
+            return true;
+          });
+          sortGroup(typeData, sortState[typeKey]);
           const flatData = [];
           typeData.forEach(r => {
             flatData.push({ ...r.record_a, contributor_ID: contributor, confidence: Math.round((r.confidence || 0) * 100) });
             flatData.push({ ...r.record_b, contributor_ID: partner, confidence: Math.round((r.confidence || 0) * 100) });
           });
           const cols = [...config.fields.map(f => f.f), 'contributor_ID', 'confidence'];
-          exportToCSV(flatData, cols, formatExportFilename(`matches-${typeKey}-${contributor}-${partner}`, 'csv'));
+          const activeFilters = [];
+          if (filt.add)  activeFilters.push(t('filter_new'));
+          if (filt.diff) activeFilters.push(t('filter_different'));
+          if (filt.link) activeFilters.push(t('filter_links'));
+          const extraFooterRows = activeFilters.length
+            ? [csvRow([t('filter_active'), activeFilters.join(', ')])]
+            : [];
+          exportToCSV(flatData, cols, formatExportFilename(`matches-${typeKey}-${contributor}-${partner}`, 'csv'), extraFooterRows);
         });
       });
 

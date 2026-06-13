@@ -1,4 +1,5 @@
 import siteConfig from '@site-config';
+import { parseLinksList, diffKey } from './links.js';
 
 /**
  * Returns the HTML for an `<input type=text>` paired with a clear (×) button,
@@ -154,18 +155,29 @@ export function escapeHtml(value) {
 
 // Wraps each word in `val` that doesn't appear in `otherVal` in a diff-highlight
 // span; equal strings return plain escaped text. Used by match-pair views to
-// flag only the differing token(s) instead of the whole field.
-export function highlightDifferences(val, otherVal) {
+// flag only the differing token(s) instead of the whole field. When the other
+// side has nothing to compare against, `val` is new information rather than a
+// conflicting one, so — if `markAdd` is true — it's marked with `match-add`
+// instead of `match-diff`. `markAdd` should only be true for the "B" (second
+// genealogist) side, so additions are shown only as data B could contribute.
+// `emptyOtherIsDiff`: when `otherVal` is empty, normally that's treated as an
+// addition (or plain, per `markAdd`). Pass true when the *containing* entity
+// (e.g. a parent or partner) exists on both sides — so a missing field there
+// is a difference, not new data, even though its own value is empty.
+export function highlightDifferences(val, otherVal, markAdd = true, emptyOtherIsDiff = false) {
   if (!val) return '';
   const valStr = String(val);
-  if (!otherVal) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
+  if (!otherVal) {
+    if (emptyOtherIsDiff) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
+    return markAdd ? `<span class="match-add">${escapeHtml(valStr)}</span>` : escapeHtml(valStr);
+  }
 
   if (valStr.toLowerCase() === String(otherVal).toLowerCase()) {
     return escapeHtml(valStr);
   }
 
   const otherWords = new Set(String(otherVal).toLowerCase().match(/[\p{L}\d]+/gu) || []);
-  if (otherWords.size === 0) return `<span class="match-diff">${escapeHtml(valStr)}</span>`;
+  if (otherWords.size === 0) return markAdd ? `<span class="match-add">${escapeHtml(valStr)}</span>` : escapeHtml(valStr);
 
   const tokens = valStr.split(/([\p{L}\d]+)/u);
   return tokens.map(token => {
@@ -174,6 +186,133 @@ export function highlightDifferences(val, otherVal) {
     }
     return escapeHtml(token);
   }).join('');
+}
+
+// Fields whose text is highlighted (diff'd) when comparing record_a vs record_b
+// in the match-detail view. Shared with classifyMatchPair below so the per-pair
+// "has additions / has differences" badges and filters agree with what's
+// actually highlighted in the table.
+export const HIGHLIGHTABLE = new Set([
+  'name', 'surname', 'husband_name', 'husband_surname', 'wife_name', 'wife_surname',
+  'date_of_birth', 'place_of_birth', 'date_of_death', 'place_of_death',
+  'date_of_burial', 'place_of_burial',
+  'date_of_marriage', 'place_of_marriage', 'husband_birth', 'wife_birth',
+]);
+
+// Text used for "does val appear in the other record" comparisons — mirrors the
+// surname/alt_surname concatenation highlightDifferences relies on, so a value
+// that wouldn't actually be highlighted isn't reported as a difference here.
+function comparableText(rec, field) {
+  let text = rec[field] || '';
+  if (field.endsWith('surname')) {
+    const altField = field === 'surname' ? 'alt_surname' : field.replace('surname', 'alt_surname');
+    if (rec[altField]) text += ' ' + rec[altField];
+  }
+  return text;
+}
+
+// True if highlightDifferences(val, otherText) would mark at least one token of
+// `val` as a difference (i.e. both sides have content but it doesn't match).
+function fieldDiffers(val, otherText) {
+  if (!val || !otherText) return false;
+  const valStr = String(val);
+  if (valStr.toLowerCase() === String(otherText).toLowerCase()) return false;
+  const otherWords = new Set(String(otherText).toLowerCase().match(/[\p{L}\d]+/gu) || []);
+  if (otherWords.size === 0) return false;
+  const tokens = valStr.match(/[\p{L}\d]+/gu) || [];
+  return tokens.some(tok => !otherWords.has(tok.toLowerCase()));
+}
+
+// True if a parents-list / partners-list entry has a usable name or surname.
+function hasNameOrSurname(p) {
+  return !!(p && (p.name || p.surname));
+}
+
+// Counts how many of the two slots (father/mother, or husband/wife) in a
+// parents-pair list are present in `listB` but missing entirely from `listA`.
+function countAddedParentPair(listA, listB) {
+  const a = parseList(listA);
+  const b = parseList(listB);
+  let n = 0;
+  if (hasNameOrSurname(b[0]) && !hasNameOrSurname(a[0])) n += 1;
+  if (hasNameOrSurname(b[1]) && !hasNameOrSurname(a[1])) n += 1;
+  return n;
+}
+
+// Counts entries in `listB` (partners or children) that have no name/surname
+// counterpart anywhere in `listA` — i.e. only known to B.
+function countAddedRelatives(listA, listB) {
+  const a = parseList(listA);
+  const b = parseList(listB);
+  let n = 0;
+  for (const p of b) {
+    if (!hasNameOrSurname(p)) continue;
+    const pName = String(p.name || '').toLowerCase();
+    const pSur = String(p.surname || '').toLowerCase();
+    const match = a.some(o => hasNameOrSurname(o) &&
+      ((pName && String(o.name || '').toLowerCase() === pName) ||
+       (pSur && String(o.surname || '').toLowerCase() === pSur)));
+    if (!match) n += 1;
+  }
+  return n;
+}
+
+/**
+ * Classifies a match-detail record pair for the "has additions" / "has
+ * differences" badges and filters, counting how many fields fall into
+ * each category:
+ *  - addCount:  `recB` has a value for that field that `recA` is missing —
+ *    new information the second genealogist (B) contributes. Also covers
+ *    parents/spouse-parents/partners/children that exist only on B's side.
+ *  - linkAddCount: same, but specifically for `links` — counted separately
+ *    so they can get their own indicator.
+ *  - diffCount: a field is present on both sides with conflicting values
+ *    (as flagged by highlightDifferences).
+ * `fields` is the list of column keys for the section (person/family).
+ */
+export function classifyMatchPair(recA, recB, fields) {
+  let addCount = 0;
+  let diffCount = 0;
+  let linkAddCount = 0;
+
+  for (const f of fields) {
+    if (f === 'links') {
+      const linksA = parseLinksList(recA.links);
+      const linksB = parseLinksList(recB.links);
+      if (linksB.length) {
+        const setA = new Set(linksA.map(diffKey));
+        linkAddCount += linksB.filter(l => !setA.has(diffKey(l))).length;
+      }
+      continue;
+    }
+    if (f === 'parents') {
+      addCount += countAddedParentPair(recA.parents_list, recB.parents_list);
+      addCount += countAddedParentPair(recA.husband_parents, recB.husband_parents);
+      addCount += countAddedParentPair(recA.wife_parents, recB.wife_parents);
+      continue;
+    }
+    if (f === 'partners') {
+      addCount += countAddedRelatives(recA.partners_list, recB.partners_list);
+      continue;
+    }
+    if (f === 'children') {
+      addCount += countAddedRelatives(recA.children_list, recB.children_list);
+      continue;
+    }
+    if (!HIGHLIGHTABLE.has(f)) continue;
+
+    const valA = recA[f] || '';
+    const valB = recB[f] || '';
+    if (!valA && !valB) continue;
+    if (!valA && valB) { addCount += 1; continue; }
+    if (!valB) continue;
+
+    if (fieldDiffers(valA, comparableText(recB, f)) || fieldDiffers(valB, comparableText(recA, f))) {
+      diffCount += 1;
+    }
+  }
+
+  return { addCount, diffCount, linkAddCount };
 }
 
 /** Triggers a browser download for a Blob. Common shape used by CSV/SVG exports. */

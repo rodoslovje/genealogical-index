@@ -277,7 +277,7 @@ const diffWrap = (html) => `<span class="match-diff">${html}</span>`;
 // against the matched other-side entry. Private entries (where name/surname is
 // a placeholder like '<private>'/'unknown') skip the diff — comparing them
 // would just flag the placeholder text itself.
-function buildNameSurnameHtml(p, other, diffOn) {
+function buildNameSurnameHtml(p, other, diffOn, markAdd = true, emptyOtherIsDiff = false) {
   const name = p?.name || '';
   const sur  = p?.surname || '';
   const isPriv = isPrivate(name) || isPrivate(sur);
@@ -287,8 +287,8 @@ function buildNameSurnameHtml(p, other, diffOn) {
   }
   const otherName = other.name || '';
   const otherSur  = other.surname || '';
-  const nameHtml = name ? highlightDifferences(name, otherName) : '';
-  const surHtml  = sur  ? highlightDifferences(sur,  otherSur)  : '';
+  const nameHtml = name ? highlightDifferences(name, otherName, markAdd, emptyOtherIsDiff) : '';
+  const surHtml  = sur  ? highlightDifferences(sur,  otherSur,  markAdd, emptyOtherIsDiff) : '';
   return [nameHtml, surHtml].filter(Boolean).join(' ');
 }
 
@@ -310,7 +310,7 @@ function wrapPersonAnchor(name, surname, innerHtml, extId, contributor) {
   return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${innerHtml}</a>`;
 }
 
-function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParentsJson, contributor = null) {
+function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParentsJson, contributor = null, isB = false) {
   if (!parentsJson) return { html: '', count: 0 };
   try {
     const pList = typeof parentsJson === 'string' ? JSON.parse(parentsJson) : parentsJson;
@@ -328,8 +328,13 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParents
     const oList = diffOn ? parseList(otherParentsJson) : [];
     const otherFather = oList[0] || {};
     const otherMother = oList[1] || {};
-    const fatherYearDiff = diffOn && yearsDiffer(childYearOf(father), childYearOf(otherFather));
-    const motherYearDiff = diffOn && yearsDiffer(childYearOf(mother), childYearOf(otherMother));
+    // A parent that's entirely missing on the other side is "added" rather
+    // than "different" — name/surname/year are highlighted green-only on B's
+    // side (and plain on A's), never as a conflict.
+    const fatherOnly = diffOn && !(otherFather.name || otherFather.surname) && (father.name || father.surname);
+    const motherOnly = diffOn && !(otherMother.name || otherMother.surname) && (mother.name || mother.surname);
+    const fatherYearDiff = diffOn && !fatherOnly && yearsDiffer(childYearOf(father), childYearOf(otherFather));
+    const motherYearDiff = diffOn && !motherOnly && yearsDiffer(childYearOf(mother), childYearOf(otherMother));
     if (!father.name && !father.surname && !mother.name && !mother.surname) return { html: '', count: 0 };
 
     const fName = father.name || '';
@@ -354,10 +359,18 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParents
 
     const fYearTok = fYear ? `*${fYear}` : '';
     const mYearTok = mYear ? `*${mYear}` : '';
-    const fNameHtml = buildNameSurnameHtml(father, otherFather, diffOn);
-    const mNameHtml = buildNameSurnameHtml(mother, otherMother, diffOn);
-    const fInner = fNameHtml + (fYearTok ? ' ' + (fatherYearDiff ? diffWrap(escapeHtml(fYearTok)) : escapeHtml(fYearTok)) : '');
-    const mInner = mNameHtml + (mYearTok ? ' ' + (motherYearDiff ? diffWrap(escapeHtml(mYearTok)) : escapeHtml(mYearTok)) : '');
+    const fNameHtml = buildNameSurnameHtml(father, otherFather, diffOn, isB, !fatherOnly);
+    const mNameHtml = buildNameSurnameHtml(mother, otherMother, diffOn, isB, !motherOnly);
+    const fYearHtml = fYearTok
+      ? (fatherOnly ? (isB ? `<span class="match-add">${escapeHtml(fYearTok)}</span>` : escapeHtml(fYearTok))
+                    : (fatherYearDiff ? diffWrap(escapeHtml(fYearTok)) : escapeHtml(fYearTok)))
+      : '';
+    const mYearHtml = mYearTok
+      ? (motherOnly ? (isB ? `<span class="match-add">${escapeHtml(mYearTok)}</span>` : escapeHtml(mYearTok))
+                    : (motherYearDiff ? diffWrap(escapeHtml(mYearTok)) : escapeHtml(mYearTok)))
+      : '';
+    const fInner = fNameHtml + (fYearHtml ? ' ' + fYearHtml : '');
+    const mInner = mNameHtml + (mYearHtml ? ' ' + mYearHtml : '');
 
     let count = 0;
     if (fName || fSur) count++;
@@ -393,7 +406,7 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParents
   }
 }
 
-export function formatSpecialCell(col, row, otherRow) {
+export function formatSpecialCell(col, row, otherRow, isB = false) {
   const diffMode = otherRow !== undefined;
 
   if (col === 'children' && row.children_list) {
@@ -415,8 +428,8 @@ export function formatSpecialCell(col, row, otherRow) {
           const label = cPriv ? (c.name || c.surname || '') : (c.name || '') + (showSurname ? ' ' + c.surname : '');
           labelHtml = escapeHtml(label.trim());
         } else {
-          const nameHtml = c.name    ? highlightDifferences(c.name, match.name || '')       : '';
-          const surHtml  = showSurname ? highlightDifferences(c.surname, match.surname || '') : '';
+          const nameHtml = c.name    ? highlightDifferences(c.name, match.name || '', isB, true)       : '';
+          const surHtml  = showSurname ? highlightDifferences(c.surname, match.surname || '', isB, true) : '';
           labelHtml = [nameHtml, surHtml].filter(Boolean).join(' ');
         }
 
@@ -441,7 +454,8 @@ export function formatSpecialCell(col, row, otherRow) {
           entry = `<a href="${toUnicodeHref(params)}" data-spa-nav>${innerHtml}</a>`;
         }
 
-        if (noMatch) entry = diffWrap(entry);
+        // A child only known to B is "added" (green), not a conflict.
+        if (noMatch) entry = isB ? `<span class="match-add">${entry}</span>` : diffWrap(entry);
         return entry;
       });
 
@@ -467,7 +481,7 @@ export function formatSpecialCell(col, row, otherRow) {
 
   if (col === 'parents' && row.parents_list) {
     const otherParents = diffMode ? (otherRow?.parents_list ?? null) : undefined;
-    const { html, count } = renderParentPair(row.parents_list, null, null, otherParents, row.contributor);
+    const { html, count } = renderParentPair(row.parents_list, null, null, otherParents, row.contributor, isB);
     const treeBtn = (count > 0 && row.id) ? treeButton({
       kind: 'ancestors',
       n: row.name,
@@ -488,14 +502,14 @@ export function formatSpecialCell(col, row, otherRow) {
       date_of_birth: row.husband_birth,
       contributor: row.contributor,
       ext_id: row.husband_ext_id
-    }, otherHusbandParents, row.contributor);
+    }, otherHusbandParents, row.contributor, isB);
     const wife = renderParentPair(row.wife_parents, 'label_wife', {
       name: row.wife_name,
       surname: row.wife_surname,
       date_of_birth: row.wife_birth,
       contributor: row.contributor,
       ext_id: row.wife_ext_id
-    }, otherWifeParents, row.contributor);
+    }, otherWifeParents, row.contributor, isB);
     return wrapExpandable(husband.count + wife.count, '', husband.html + wife.html);
   }
 
@@ -539,16 +553,18 @@ export function formatSpecialCell(col, row, otherRow) {
           const text = pPriv ? p.name : (p.name || '') + (p.surname ? ' ' + p.surname : '');
           labelHtml = escapeHtml(String(text || '').trim());
         } else {
-          const nameHtml = p.name    ? highlightDifferences(p.name, match.name || '')       : '';
-          const surHtml  = p.surname ? highlightDifferences(p.surname, match.surname || '') : '';
+          const nameHtml = p.name    ? highlightDifferences(p.name, match.name || '', isB, true)       : '';
+          const surHtml  = p.surname ? highlightDifferences(p.surname, match.surname || '', isB, true) : '';
           labelHtml = [nameHtml, surHtml].filter(Boolean).join(' ');
         }
 
-        const innerHtml = labelHtml +
+        let innerHtml = labelHtml +
           (yearTok ? ' ' + (yearDiff ? diffWrap(escapeHtml(yearTok)) : escapeHtml(yearTok)) : '');
+        // A partner only known to B is "added" (green), not a conflict.
+        if (noMatch && isB) innerHtml = `<span class="match-add">${innerHtml}</span>`;
         const label = isHusband ? t('label_husband') : (p.sex === 'f' ? t('label_wife') : '');
         let entry = `<a href="${toUnicodeHref(famParams)}" data-spa-nav${label ? ` title="${label}"` : ''}>${innerHtml}</a>`;
-        if (noMatch) entry = diffWrap(entry);
+        if (noMatch && !isB) entry = diffWrap(entry);
         return entry;
     });
     return wrapExpandable(pList.length, treeBtn, formattedList.join('<br>'));

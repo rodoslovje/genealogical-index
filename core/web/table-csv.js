@@ -94,7 +94,7 @@ function searchCriteriaRows() {
   const params = new URLSearchParams(window.location.search);
   const rows = [];
   for (const [k, v] of params.entries()) {
-    if (k === 't') continue; // Skip the tab indicator
+    if (k === 't' || k === 'mfp' || k === 'mff') continue; // Skip the tab indicator and matches add/diff/link toggles (shown separately)
 
     const field = PARAM_MAP_REVERSE[k] || k;
     let label;
@@ -125,7 +125,7 @@ function searchCriteriaRows() {
   return [csvCell(t('tab_search')), ...rows];
 }
 
-export function exportToCSV(data, columns, filename) {
+export function exportToCSV(data, columns, filename, extraFooterRows = []) {
   if (!data || !data.length) return;
 
   const header = columns.map(col => csvCell(t('col_' + col))).join(',');
@@ -133,10 +133,11 @@ export function exportToCSV(data, columns, filename) {
 
   // The footer's optional block depends on which table this is: the
   // contributors table appends totals, every other table appends the active
-  // search criteria.
+  // search criteria. `extraFooterRows` (e.g. the matches add/diff/link
+  // toggles, which aren't reflected in the URL) are appended after that.
   const extraRows = filename.includes('contributors')
     ? contributorsSummaryRows(data)
     : searchCriteriaRows();
 
-  downloadCsv([header, ...body, '', ...csvFooter(extraRows)], filename);
+  downloadCsv([header, ...body, '', ...csvFooter([...extraRows, ...extraFooterRows])], filename);
 }

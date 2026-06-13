@@ -1,6 +1,6 @@
 import { t, getCurrentLang } from '../i18n.js';
 
-function parseLinksList(links) {
+export function parseLinksList(links) {
   if (!links) return [];
   if (Array.isArray(links)) return links;
   try {
@@ -13,13 +13,13 @@ function parseLinksList(links) {
 // component: /de/, /en/, /sl/, …) when the underlying record is the same —
 // strip it for cross-contributor diffing.
 const MATRICULA_LANG_RE = /^(https?:\/\/[^/]+)\/[a-z]{2}\//;
-function diffKey(url) {
+export function diffKey(url) {
   return url.includes('matricula-online.eu')
     ? url.replace(MATRICULA_LANG_RE, '$1/')
     : url;
 }
 
-export function formatLinks(links, diffAgainst) {
+export function formatLinks(links, diffAgainst, markAdd = true) {
   const linksList = parseLinksList(links);
   if (!linksList.length) return '';
 
@@ -57,8 +57,8 @@ export function formatLinks(links, diffAgainst) {
       ? url.replace(MATRICULA_LANG_RE, `$1/${getCurrentLang()}/`)
       : url;
     const anchor = `<a href="${href}" target="_blank" rel="noopener" title="${titleText}">${icon}</a>`;
-    if (otherSet && !otherSet.has(diffKey(url))) {
-      return `<span class="match-diff">${anchor}</span>`;
+    if (otherSet && !otherSet.has(diffKey(url)) && markAdd) {
+      return `<span class="match-add match-add-link">${anchor}</span>`;
     }
     return anchor;
   }).join(' ');
