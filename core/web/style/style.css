@@ -134,7 +134,8 @@ h2 .export-btn {
  * ============================================================= */
 
 .table-responsive {
-  overflow: clip;
+  overflow-x: auto;
+  overflow-y: clip;
   margin-bottom: 2rem;
   background: var(--srd-surface);
   box-shadow: var(--srd-shadow-1);
@@ -185,7 +186,10 @@ tr:hover { background: var(--srd-bg-subtle); }
    find-in-page, CSV export, and sort all keep working). `contain-intrinsic-size`
    gives skipped rows an estimated height (the `auto` keyword lets the browser
    remember each row's real height once rendered, so the scrollbar settles). */
-.virtual-table { table-layout: fixed; }
+/* Pin the measured natural width as min-width so fixed-layout columns don't
+   squeeze below readable when the table is wider than its container — the
+   .table-responsive wrapper pans horizontally instead. */
+.virtual-table { table-layout: fixed; min-width: var(--vt-natural-width, 0); }
 /* Long words in data cells wrap onto the next line instead of overflowing a
    fixed-width column, but only break at word boundaries (no "Pove-zava"
    splits). */
@@ -1094,17 +1098,6 @@ body.compact-nav .mobile-nav-section { display: flex; }
     order: -1;
     padding: 8px 20px 12px;
   }
-
-  .table-responsive { overflow-x: auto; }
-
-  /* Virtualized tables carry their measured natural width in --vt-natural-width
-     (set by table.js / match-detail.js). Pinning it as min-width here stops the
-     fixed-layout columns from squeezing below readable on phones — the
-     .table-responsive wrapper above pans horizontally instead, while the page
-     keeps scrolling vertically through the rows. Desktop intentionally skips
-     this: its wrapper uses overflow:clip to preserve sticky headers, so a
-     min-width there would clip the table with no way to pan. */
-  .virtual-table { min-width: var(--vt-natural-width, 0); }
 
   #main-content { padding: 0 4px; }
 
