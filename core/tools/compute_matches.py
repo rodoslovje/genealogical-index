@@ -408,40 +408,17 @@ def process_job(contrib_a, contrib_b):
 
         conn.execute(
             text("""
-            -- alt_surname rows feed the candidate-surname pool too, so a
-            -- person whose canonical surname differs from the partner's
-            -- canonical surname can still match via either alt. *_fold
-            -- columns are lower-cased/accent-stripped, so diacritic variants
-            -- (e.g. "Žagar" vs "Zagar") land in the same surname bucket.
-            CREATE TEMP TABLE a_sur ON COMMIT DROP AS
-            SELECT surname_fold AS sur FROM persons WHERE contributor = :contrib_a AND surname_fold <> ''
-            UNION SELECT alt_surname_fold FROM persons WHERE contributor = :contrib_a AND alt_surname_fold <> ''
-            UNION SELECT husband_surname_fold FROM families WHERE contributor = :contrib_a AND husband_surname_fold <> ''
-            UNION SELECT husband_alt_surname_fold FROM families WHERE contributor = :contrib_a AND husband_alt_surname_fold <> ''
-            UNION SELECT wife_surname_fold FROM families WHERE contributor = :contrib_a AND wife_surname_fold <> ''
-            UNION SELECT wife_alt_surname_fold FROM families WHERE contributor = :contrib_a AND wife_alt_surname_fold <> '';
-
-            ALTER TABLE a_sur ADD PRIMARY KEY (sur);
-
-            CREATE TEMP TABLE b_sur ON COMMIT DROP AS
-            SELECT surname_fold AS sur FROM persons WHERE contributor = :contrib_b AND surname_fold <> ''
-            UNION SELECT alt_surname_fold FROM persons WHERE contributor = :contrib_b AND alt_surname_fold <> ''
-            UNION SELECT husband_surname_fold FROM families WHERE contributor = :contrib_b AND husband_surname_fold <> ''
-            UNION SELECT husband_alt_surname_fold FROM families WHERE contributor = :contrib_b AND husband_alt_surname_fold <> ''
-            UNION SELECT wife_surname_fold FROM families WHERE contributor = :contrib_b AND wife_surname_fold <> ''
-            UNION SELECT wife_alt_surname_fold FROM families WHERE contributor = :contrib_b AND wife_alt_surname_fold <> '';
-
-            ALTER TABLE b_sur ADD PRIMARY KEY (sur);
-
-            CREATE INDEX b_sur_trgm ON b_sur USING gist(sur gist_trgm_ops);
-            ANALYZE a_sur;
-            ANALYZE b_sur;
-
+            -- contributor_surnames holds each contributor's distinct folded
+            -- surnames (own + alt, from persons and families), refreshed at
+            -- import time and backed by a permanent GIN trigram index. Reusing
+            -- it here avoids rebuilding that set + index from scratch for both
+            -- sides on every pair job.
             CREATE TEMP TABLE sur_matches ON COMMIT DROP AS
             SELECT a.sur AS sur1, b.sur AS sur2,
                    CASE WHEN a.sur = b.sur THEN 1.0 ELSE similarity(a.sur, b.sur) END AS s_sur
-            FROM a_sur a
-            JOIN b_sur b ON a.sur % b.sur;
+            FROM contributor_surnames a
+            JOIN contributor_surnames b ON a.sur % b.sur
+            WHERE a.contributor = :contrib_a AND b.contributor = :contrib_b;
 
             CREATE INDEX sur_matches_1 ON sur_matches(sur1);
             CREATE INDEX sur_matches_2 ON sur_matches(sur2);

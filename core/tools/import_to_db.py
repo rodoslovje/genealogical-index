@@ -204,6 +204,18 @@ def setup_full(db):
         CREATE INDEX idx_matches_b  ON matches(contributor_b);
         CREATE INDEX idx_matches_ab ON matches(contributor_a, contributor_b);
 
+        -- Per-contributor set of distinct folded surnames (own + alt, from
+        -- both persons and families), refreshed on import. compute_matches
+        -- joins this table against itself to find similar surnames between
+        -- two contributors, instead of rebuilding a_sur/b_sur from scratch
+        -- (a full UNION/DISTINCT scan + GIST index build) on every pair.
+        CREATE TABLE contributor_surnames (
+            contributor TEXT NOT NULL,
+            sur TEXT NOT NULL,
+            PRIMARY KEY (contributor, sur)
+        );
+        CREATE INDEX idx_contributor_surnames_trgm ON contributor_surnames USING gin (sur gin_trgm_ops);
+
         CREATE TABLE matricula_books (
             id SERIAL PRIMARY KEY,
             contributor TEXT NOT NULL,
@@ -342,6 +354,13 @@ def setup_update(db):
             queued_at TIMESTAMPTZ DEFAULT NOW(),
             completed_at TIMESTAMPTZ,
             PRIMARY KEY (contributor_a, contributor_b)
+        );
+        -- Per-contributor set of distinct folded surnames, refreshed on
+        -- import. See setup_full for details.
+        CREATE TABLE IF NOT EXISTS contributor_surnames (
+            contributor TEXT NOT NULL,
+            sur TEXT NOT NULL,
+            PRIMARY KEY (contributor, sur)
         );
         CREATE TABLE IF NOT EXISTS matricula_books (
             id SERIAL PRIMARY KEY,
@@ -491,6 +510,7 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_matches_b  ON matches(contributor_b);
         CREATE INDEX IF NOT EXISTS idx_matches_ab ON matches(contributor_a, contributor_b);
         CREATE INDEX IF NOT EXISTS idx_match_jobs_status ON match_jobs(status, queued_at);
+        CREATE INDEX IF NOT EXISTS idx_contributor_surnames_trgm ON contributor_surnames USING gin (sur gin_trgm_ops);
 
         -- Helper used by compute_matches: strips the per-file GEDCOM xref
         -- `id` from each element of a JSONB array so cross-contributor
@@ -671,6 +691,29 @@ def _flatten_family(f, contributor_id):
     }
 
 
+_REFRESH_CONTRIBUTOR_SURNAMES_SQL = """
+    DELETE FROM contributor_surnames WHERE contributor = :name;
+    INSERT INTO contributor_surnames (contributor, sur)
+    SELECT :name, sur FROM (
+        SELECT surname_fold AS sur FROM persons WHERE contributor = :name AND surname_fold <> ''
+        UNION SELECT alt_surname_fold FROM persons WHERE contributor = :name AND alt_surname_fold <> ''
+        UNION SELECT husband_surname_fold FROM families WHERE contributor = :name AND husband_surname_fold <> ''
+        UNION SELECT husband_alt_surname_fold FROM families WHERE contributor = :name AND husband_alt_surname_fold <> ''
+        UNION SELECT wife_surname_fold FROM families WHERE contributor = :name AND wife_surname_fold <> ''
+        UNION SELECT wife_alt_surname_fold FROM families WHERE contributor = :name AND wife_alt_surname_fold <> ''
+    ) s;
+"""
+
+
+def _refresh_contributor_surnames(db, contributor_id):
+    """Recompute the contributor_surnames rows for one contributor.
+
+    Called after (re)importing its persons and/or families, since both
+    feed into the surname set that compute_matches blocks on.
+    """
+    db.execute(text(_REFRESH_CONTRIBUTOR_SURNAMES_SQL), {"name": contributor_id})
+
+
 def import_contributor(
     db,
     contributor_id,
@@ -789,6 +832,9 @@ def import_contributor(
             print(
                 f"  -> WARNING: Could not find families file at {families_file}\n     (Docker sync issue? Container only sees: {visible})"
             )
+
+    if imp_persons or imp_families:
+        _refresh_contributor_surnames(db, contributor_id)
 
     db.commit()
     if _nul_stripped_count:
@@ -1000,6 +1046,10 @@ def main():
                         "DELETE FROM match_jobs "
                         "WHERE contributor_a = :name OR contributor_b = :name"
                     ),
+                    {"name": name},
+                )
+                db.execute(
+                    text("DELETE FROM contributor_surnames WHERE contributor = :name"),
                     {"name": name},
                 )
                 db.execute(

@@ -258,6 +258,36 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
 docker compose up -d api
 ```
 
+### 012 — `contributor_surnames`
+
+Adds `contributor_surnames(contributor, sur)`, a per-contributor table of
+distinct folded surnames (own + alt, from both `persons` and `families`),
+with a GIN trigram index on `sur`.
+
+`compute_matches.py` blocks candidate person/family pairs by finding similar
+surnames between two contributors. Previously each pair job rebuilt this set
+from scratch for *both* sides — a `UNION`/`DISTINCT` scan over `persons` +
+`families` plus a fresh GIST trigram index — even though a contributor's
+surname set is identical across every pair it appears in (N-1 times for N
+contributors). This table is computed once per contributor at import time
+(`_refresh_contributor_surnames` in `import_to_db.py`) and reused by every
+pair job via its persistent index, cutting the fixed per-job overhead that
+dominated total runtime for installations with many contributors.
+
+- Only creates a new table + index and backfills it — no lock on
+  `persons`/`families`. Safe to run online with the API up.
+- Re-runnable (`IF NOT EXISTS` / `ON CONFLICT DO NOTHING`).
+- `import_to_db.py` (`setup_full` / `setup_update`) already creates this
+  table for fresh/updated DBs and populates it on every contributor
+  (re)import — this file is only for upgrading an existing production DB
+  in place (backfilling rows for contributors not otherwise being
+  re-imported).
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/012_contributor_surnames.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the
