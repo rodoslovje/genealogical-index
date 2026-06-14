@@ -201,13 +201,16 @@ export const HIGHLIGHTABLE = new Set([
 ]);
 
 // Text used for "does val appear in the other record" comparisons — mirrors the
-// surname/alt_surname concatenation highlightDifferences relies on, so a value
+// surname/alt_surname fallback highlightDifferences relies on, so a value
 // that wouldn't actually be highlighted isn't reported as a difference here.
+// alt_surname is only used when the primary surname is missing: a surname
+// that matches the other side's alt_surname but not its primary surname is
+// still a genuine difference and should be flagged as such.
 function comparableText(rec, field) {
-  let text = rec[field] || '';
-  if (field.endsWith('surname')) {
+  const text = rec[field] || '';
+  if (field.endsWith('surname') && !text) {
     const altField = field === 'surname' ? 'alt_surname' : field.replace('surname', 'alt_surname');
-    if (rec[altField]) text += ' ' + rec[altField];
+    return rec[altField] || '';
   }
   return text;
 }
@@ -247,7 +250,11 @@ export function matchToken(s) {
   const v = String(s || '').trim().toLowerCase();
   if (!v) return '';
   if (isPrivate(v)) return '<private>';
-  return v;
+  // Strip diacritics so accent-only spelling differences (e.g. "Frančiška"
+  // vs "Franciska") still pair the same relative — remaining differences
+  // (e.g. surname "Hafner" vs "Hafnar") are then shown as a diff within the
+  // matched entry rather than as two separate added/missing entries.
+  return v.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 // Computes a one-to-one pairing between entries of `listA` and `listB` for
@@ -362,7 +369,16 @@ export function classifyMatchPair(recA, recB, fields) {
     const valA = recA[f] || '';
     const valB = recB[f] || '';
     if (!valA && !valB) continue;
-    if (!valA && valB) { addCount += 1; continue; }
+    if (!valA && valB) {
+      // A surname B reports that already appears as A's alt_surname isn't
+      // new information — comparableText() falls back to alt_surname when
+      // the primary surname is empty.
+      const altA = comparableText(recA, f);
+      if (!(f.endsWith('surname') && altA && !fieldDiffers(valB, altA))) {
+        addCount += 1;
+      }
+      continue;
+    }
     if (!valB) continue;
 
     if (fieldDiffers(valA, comparableText(recB, f)) || fieldDiffers(valB, comparableText(recA, f))) {

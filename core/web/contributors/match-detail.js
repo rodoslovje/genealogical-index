@@ -442,9 +442,12 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           let safeVal;
           if (HIGHLIGHTABLE.has(f)) {
             let otherText = otherRec[f] || '';
-            if (f.endsWith('surname')) {
+            // alt_surname is only a fallback when the other side has no
+            // primary surname — a surname that matches via alt_surname but
+            // differs from the primary surname is still a real difference.
+            if (f.endsWith('surname') && !otherText) {
               const altF = f === 'surname' ? 'alt_surname' : f.replace('surname', 'alt_surname');
-              if (otherRec[altF]) otherText += ' ' + otherRec[altF];
+              otherText = otherRec[altF] || '';
             }
             safeVal = highlightDifferences(val, otherText, isB);
           } else {
