@@ -53,6 +53,10 @@ COARSE_YEAR_TOLERANCE = YEAR_TOLERANCE_APPROX + 5  # cheap pre-filter applied as
 # common-surname cross-products (e.g. hundreds x hundreds of "Novak"s) skip
 # trigram similarity work for pairs whose years are wildly apart on both
 # birth and death.
+ALT_SURNAME_PENALTY = 0.85  # multiplier applied to s_sur when the surname match
+# involves an alt_surname (a recorded married/maiden/alternate name) on either
+# side rather than both sides' primary surname_fold — a surname-altsurname hit
+# is weaker corroboration than a surname-surname one.
 CONFIDENCE_MIN = 0.80  # records below this threshold are not stored
 TRGM_THRESHOLD = 0.72  # pg_trgm.similarity_threshold for the % join operator
 # kept below CONFIDENCE_MIN so pairs where one surname/name
@@ -115,7 +119,13 @@ _PERSON_INSERT = text(r"""
             p2.id AS b_id,
             p1.birth_year AS a_birth_year, p1.death_year AS a_death_year,
             p2.birth_year AS b_birth_year, p2.death_year AS b_death_year,
-            sm.s_sur,
+            -- A surname-surname hit is stronger corroboration than one
+            -- involving either side's alt_surname (married/maiden/alternate
+            -- name), so the latter is scored down by ALT_SURNAME_PENALTY.
+            CASE WHEN p1.surname_fold = sm.sur1 AND p2.surname_fold = sm.sur2
+                 THEN sm.s_sur
+                 ELSE sm.s_sur * :alt_surname_penalty
+            END AS s_sur,
             -- name_fold (lower-cased, accent-stripped given name) makes
             -- e.g. "Žan"/"Zan" compare equal; <> '' avoids two blank given
             -- names scoring as a perfect match.
@@ -285,8 +295,15 @@ _FAMILY_INSERT = text(r"""
         SELECT
             f1.id AS a_id,
             f2.id AS b_id,
-            hm.s_sur AS s_hsur,
-            wm.s_sur AS s_wsur,
+            -- See persons cands above: penalize alt_surname-involved hits.
+            CASE WHEN f1.husband_surname_fold = hm.sur1 AND f2.husband_surname_fold = hm.sur2
+                 THEN hm.s_sur
+                 ELSE hm.s_sur * :alt_surname_penalty
+            END AS s_hsur,
+            CASE WHEN f1.wife_surname_fold = wm.sur1 AND f2.wife_surname_fold = wm.sur2
+                 THEN wm.s_sur
+                 ELSE wm.s_sur * :alt_surname_penalty
+            END AS s_wsur,
             CASE WHEN f1.husband_name_fold <> '' AND f2.husband_name_fold <> ''
                  THEN CASE WHEN f1.husband_name_fold = f2.husband_name_fold THEN 1.0 ELSE similarity(f1.husband_name_fold, f2.husband_name_fold) END
                  ELSE NULL END AS s_hname,
@@ -444,6 +461,7 @@ def process_job(contrib_a, contrib_b):
         "identity_conf_full": IDENTITY_KEY_CONFIDENCE_FULL,
         "conf_min": CONFIDENCE_MIN,
         "trgm_thresh": TRGM_THRESHOLD,
+        "alt_surname_penalty": ALT_SURNAME_PENALTY,
     }
     pair_label = f"{contrib_a}↔{contrib_b}"
 
