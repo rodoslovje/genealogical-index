@@ -154,6 +154,13 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+// Strips combining diacritical marks after Unicode decomposition, so e.g.
+// "Štefe" and "Stefe" or "Frančiška" and "Franciska" compare equal — accent
+// transcription differences between contributors shouldn't read as diffs.
+function foldDiacritics(s) {
+  return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 // Wraps each word in `val` that doesn't appear in `otherVal` in a diff-highlight
 // span; equal strings return plain escaped text. Used by match-pair views to
 // flag only the differing token(s) instead of the whole field. When the other
@@ -173,16 +180,16 @@ export function highlightDifferences(val, otherVal, markAdd = true, emptyOtherIs
     return markAdd ? `<span class="match-add">${escapeHtml(valStr)}</span>` : escapeHtml(valStr);
   }
 
-  if (valStr.toLowerCase() === String(otherVal).toLowerCase()) {
+  if (foldDiacritics(valStr.toLowerCase()) === foldDiacritics(String(otherVal).toLowerCase())) {
     return escapeHtml(valStr);
   }
 
-  const otherWords = new Set(String(otherVal).toLowerCase().match(/[\p{L}\d]+/gu) || []);
+  const otherWords = new Set((String(otherVal).toLowerCase().match(/[\p{L}\d]+/gu) || []).map(foldDiacritics));
   if (otherWords.size === 0) return markAdd ? `<span class="match-add">${escapeHtml(valStr)}</span>` : escapeHtml(valStr);
 
   const tokens = valStr.split(/([\p{L}\d]+)/u);
   return tokens.map(token => {
-    if (/^[\p{L}\d]+$/u.test(token) && !otherWords.has(token.toLowerCase())) {
+    if (/^[\p{L}\d]+$/u.test(token) && !otherWords.has(foldDiacritics(token.toLowerCase()))) {
       return `<span class="match-diff">${escapeHtml(token)}</span>`;
     }
     return escapeHtml(token);
@@ -220,11 +227,11 @@ function comparableText(rec, field) {
 function fieldDiffers(val, otherText) {
   if (!val || !otherText) return false;
   const valStr = String(val);
-  if (valStr.toLowerCase() === String(otherText).toLowerCase()) return false;
-  const otherWords = new Set(String(otherText).toLowerCase().match(/[\p{L}\d]+/gu) || []);
+  if (foldDiacritics(valStr.toLowerCase()) === foldDiacritics(String(otherText).toLowerCase())) return false;
+  const otherWords = new Set((String(otherText).toLowerCase().match(/[\p{L}\d]+/gu) || []).map(foldDiacritics));
   if (otherWords.size === 0) return false;
   const tokens = valStr.match(/[\p{L}\d]+/gu) || [];
-  return tokens.some(tok => !otherWords.has(tok.toLowerCase()));
+  return tokens.some(tok => !otherWords.has(foldDiacritics(tok.toLowerCase())));
 }
 
 // True if a parents-list / partners-list entry has a usable name or surname.
@@ -254,7 +261,7 @@ export function matchToken(s) {
   // vs "Franciska") still pair the same relative — remaining differences
   // (e.g. surname "Hafner" vs "Hafnar") are then shown as a diff within the
   // matched entry rather than as two separate added/missing entries.
-  return v.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return foldDiacritics(v);
 }
 
 // Computes a one-to-one pairing between entries of `listA` and `listB` for
