@@ -1,52 +1,62 @@
 import { t } from './i18n.js';
 import { isPrivate, parseList } from './lib/utils.js';
-import { childYearOf } from './lib/dates.js';
 import { PARAM_MAP_REVERSE } from './lib/url.js';
 import { csvCell, csvRow, csvFooter, downloadCsv } from './lib/csv.js';
 
-// Plain-text "Name Surname *Year" rendering used by CSV export. Mirrors the
-// HTML display format so exports stay in sync with what's on screen.
+// Plain-text "Name Surname | date_of_birth" rendering used by CSV export.
+// The " | " before the date gives downstream parsers an unambiguous split
+// point, since names/surnames may themselves contain spaces.
 function personInlineText(p, hideSurnameIfEquals) {
   if (isPrivate(p.name) || isPrivate(p.surname)) return p.name || p.surname || '';
   let text = p.name || '';
   if (p.surname && p.surname !== hideSurnameIfEquals) text += ` ${p.surname}`;
-  const year = childYearOf(p);
-  if (year) text += ` *${year}`;
+  const dob = p.date_of_birth || p.year || '';
+  if (dob) text += ` | ${dob}`;
   return text;
 }
 
-// Renders a parent pair as plain text, optionally prefixed with a side label
-// (husband/wife) when both pairs are concatenated into one cell.
-function formatParentPair(jsonOrArr, label) {
+// Columns that a 'parents' column expands into, for person rows vs. family rows.
+const PERSON_PARENT_COLUMNS = ['father', 'mother'];
+const FAMILY_PARENT_COLUMNS = ['husband_father', 'husband_mother', 'wife_father', 'wife_mother'];
+
+// Expands the 'parents' column into separate father/mother columns so each
+// parent gets its own CSV field instead of being combined into one cell.
+function expandColumns(columns) {
+  const isFamilyTable = columns.includes('husband_name') || columns.includes('husband_surname');
+  return columns.flatMap(col => col === 'parents'
+    ? (isFamilyTable ? FAMILY_PARENT_COLUMNS : PERSON_PARENT_COLUMNS)
+    : [col]);
+}
+
+// Picks the father or mother from a parents list, preferring an explicit
+// sex field and falling back to the conventional [father, mother] order.
+function parentByRole(jsonOrArr, sex, fallbackIndex) {
   const arr = parseList(jsonOrArr);
   if (!arr.length) return '';
-  const parts = [arr[0], arr[1]].filter(Boolean).map(p => personInlineText(p, '')).filter(Boolean);
-  if (!parts.length) return '';
-  const inner = parts.join(', ');
-  return label ? `${label}: ${inner}` : inner;
+  let p = arr.find(x => x && x.sex === sex);
+  if (!p && arr.every(x => !x || !x.sex)) p = arr[fallbackIndex];
+  return p ? personInlineText(p, '') : '';
 }
 
 // Maps one data row to its CSV cell value for a given column, flattening the
 // nested parents/children/partners lists and appending the same optional
 // fields (alt surname, baptism, notes) the HTML table shows inline.
 function cellValue(col, row) {
-  if (col === 'parents') {
-    if (row.parents_list) return formatParentPair(row.parents_list);
-    const hp = formatParentPair(row.husband_parents, t('label_husband'));
-    const wp = formatParentPair(row.wife_parents,    t('label_wife'));
-    return [hp, wp].filter(Boolean).join(' | ');
-  }
+  if (col === 'father')         return parentByRole(row.parents_list, 'm', 0);
+  if (col === 'mother')         return parentByRole(row.parents_list, 'f', 1);
+  if (col === 'husband_father') return parentByRole(row.husband_parents, 'm', 0);
+  if (col === 'husband_mother') return parentByRole(row.husband_parents, 'f', 1);
+  if (col === 'wife_father')    return parentByRole(row.wife_parents, 'm', 0);
+  if (col === 'wife_mother')    return parentByRole(row.wife_parents, 'f', 1);
   if (col === 'children' && row.children_list) {
     return parseList(row.children_list)
-      .map(c => personInlineText(c, row.husband_surname))
-      .join(', ');
+      .map(c => personInlineText(c, ''))
+      .join('; ');
   }
   if (col === 'partners' && row.partners_list) {
-    return parseList(row.partners_list).map(p => {
-      const text = personInlineText(p, '').trim();
-      const label = p.sex === 'm' ? t('label_husband') : p.sex === 'f' ? t('label_wife') : '';
-      return label ? `${label}: ${text}` : text;
-    }).join(' | ');
+    return parseList(row.partners_list)
+      .map(p => personInlineText(p, '').trim())
+      .join('; ');
   }
   if (col === 'matches') {
     const n = row.matches_count || '';
@@ -128,8 +138,9 @@ function searchCriteriaRows() {
 export function exportToCSV(data, columns, filename, extraFooterRows = []) {
   if (!data || !data.length) return;
 
-  const header = columns.map(col => csvCell(t('col_' + col))).join(',');
-  const body = data.map(row => columns.map(col => csvCell(cellValue(col, row))).join(','));
+  const csvColumns = expandColumns(columns);
+  const header = csvColumns.map(col => csvCell(t('col_' + col))).join(',');
+  const body = data.map(row => csvColumns.map(col => csvCell(cellValue(col, row))).join(','));
 
   // The footer's optional block depends on which table this is: the
   // contributors table appends totals, every other table appends the active
