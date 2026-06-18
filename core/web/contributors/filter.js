@@ -37,6 +37,18 @@ export function setDetailRefilter(fn) {
   currentDetailRefilter = fn;
 }
 
+/** Snapshot of the partner-list filter state, read by the view cache so a
+ *  restored single-contributor view re-wires the sidebar filter correctly. */
+export function getCurrentMatches() {
+  return { data: currentMatchesData, contributor: currentMatchesContributor };
+}
+
+/** The active matches-detail refilter callback (or null), read by the view
+ *  cache so a restored matches-detail view re-wires the sidebar filter. */
+export function getDetailRefilter() {
+  return currentDetailRefilter;
+}
+
 /** Resets the per-view state. Called when entering a new contributors view. */
 export function resetViewState() {
   currentDetailRefilter = null;

@@ -22,8 +22,10 @@ import {
   readContributorParam, readWithParam,
   bindFilterInput, restoreFilterFromUrl, updateFilterPlaceholder,
   filterContributorData, resetViewState,
+  setCurrentMatches, setDetailRefilter, getCurrentMatches, getDetailRefilter,
 } from './contributors/filter.js';
 import { renderMatchesPage } from './contributors/matches.js';
+import { tryRestoreView, markCurrentView } from './lib/view-cache.js';
 
 // Public re-exports (consumed by main.js and search.js):
 export { prefetchContributors, getContributorUrlMap };
@@ -110,7 +112,29 @@ export async function renderContributors() {
     // page styling matches the main contributors list, where only the inner
     // tables wear that chrome.
     if (tableContainer) tableContainer.classList.add('contributor-detail');
+
+    // Browser back/forward into a contributor or matches-detail URL already
+    // rendered earlier this session: restore its cached DOM (and the small
+    // bit of sidebar-filter state tied to it) instead of re-fetching and
+    // rebuilding the whole table from scratch, so the page doesn't appear to
+    // reload and the user stays at their previous scroll position.
+    const viewKey = window.location.pathname + window.location.search;
+    const restored = tableContainer && tryRestoreView(viewKey, tableContainer, {
+      restoreExtra: (extra) => {
+        if (!extra) return;
+        setCurrentMatches(extra.matches.data, extra.matches.contributor);
+        setDetailRefilter(extra.detailRefilter);
+      },
+    });
+    if (restored) return;
+
     await renderMatchesPage(contributor, withPartner);
+    if (tableContainer) {
+      markCurrentView(viewKey, tableContainer, () => ({
+        matches: getCurrentMatches(),
+        detailRefilter: getDetailRefilter(),
+      }));
+    }
     return;
   }
 

@@ -11,6 +11,7 @@ import { initNavbar, checkNavOverflow } from './navbar.js';
 import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, maybeRouteGeneanet, maybeRouteCompare, tabIdFromParams } from './router.js';
 import { relocalizeCompare } from './tree/compare.js';
 import { setupClearableInput } from './lib/utils.js';
+import { clearViewCache } from './lib/view-cache.js';
 
 // --- Global styles injected from JS ---
 // (Anchor color/underline is handled per-area in style.css — `.intro-text a`,
@@ -110,6 +111,10 @@ async function init() {
     restoreFromURL();
 
     onLanguageChange(() => {
+      // Cached (not currently visible) views hold markup in the old
+      // language; drop them so a later back/forward into one re-renders
+      // instead of flashing stale text.
+      clearViewCache();
       renderIntros();
       refreshContributorsIfVisible();
       if (document.getElementById('tab-ancestors').classList.contains('active')) {

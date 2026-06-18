@@ -9,6 +9,7 @@ import { renderGeneanetStatsPage } from './contributors/geneanet-stats.js';
 import { getTabURLParams, restoreFromURL, clearAllSearchForms } from './search.js';
 import { hideIntro, showIntros } from './intros.js';
 import { tabsWithResults } from './tab-state.js';
+import { leaveCurrentView } from './lib/view-cache.js';
 
 const sidebar = document.getElementById('sidebar');
 
@@ -49,6 +50,7 @@ export function normalizeLegacyURL() {
  *  when handled so the caller can skip the normal tab routing. */
 export function maybeRouteMatricula(urlParams) {
   if (urlParams.get('t') !== 'matricula') return false;
+  leaveCurrentView();
 
   document.body.classList.remove('contributors-view', 'tree-view');
 
@@ -81,6 +83,7 @@ export function maybeRouteMatricula(urlParams) {
  *  Returns true when handled. */
 export function maybeRouteGeneanet(urlParams) {
   if (urlParams.get('t') !== 'geneanet') return false;
+  leaveCurrentView();
 
   document.body.classList.remove('contributors-view', 'tree-view');
 
@@ -114,6 +117,7 @@ export function maybeRouteGeneanet(urlParams) {
  *  handled so the caller can skip normal tab routing. */
 export function maybeRouteCompare(urlParams) {
   if (urlParams.get('t') !== 'compare') return false;
+  leaveCurrentView();
 
   if (isPremiumLocked()) {
     requireLogin('premium_gated_desc');
@@ -146,13 +150,16 @@ export function activateTab(targetTab, { skipHistory = false, initial = false } 
   if (isPremium && isPremiumLocked()) {
     if (!initial) {
       requireLogin('premium_gated_desc');
-      return false; // Do not switch tab
+      return false; // Do not switch tab — nothing left, so leave the view cache alone
     }
     // Direct URL into a premium tab while logged out: fall back to general, but
     // still surface the login prompt so the deep-link isn't silently dropped.
     requireLogin('premium_gated_desc');
     targetTab = 'tab-general';
   }
+
+  // Only past this point are we guaranteed to actually switch views.
+  leaveCurrentView();
 
   const urlT = TYPE_BY_TAB[targetTab];
   if (urlT && !initial && !skipHistory) {
