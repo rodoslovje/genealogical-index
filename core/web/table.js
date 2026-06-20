@@ -777,7 +777,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         setExpandLabel = (allOpen) => {
           const labelText = t(allOpen ? 'collapse_all' : 'expand_all');
           expandBtn.innerHTML = `${getExpandCollapseIcon(allOpen)}${labelText}`;
-          expandBtn.title = labelText;
+          expandBtn.title = t(allOpen ? 'tip_collapse_all' : 'tip_expand_all');
           expandBtn.dataset.allOpen = allOpen ? '1' : '0';
         };
         // Initial state reflects current details (typically all collapsed).
