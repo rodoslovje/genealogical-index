@@ -1253,6 +1253,83 @@ body.compact-nav .mobile-nav-section { display: flex; }
 .section-bar--top    { margin-top: 2rem; }
 .section-bar--top-sm { margin-top: 1.5rem; }
 
+/* Matches-detail section header (Persons / Families table): heading on the
+   left, filter controls (text search, New/Links/Different toggles) centered,
+   Expand/Collapse + CSV on the right. The heading and action columns share
+   the same flex-basis (0) and grow factor (1), so any extra width splits
+   evenly between them — that's what keeps the middle column visually
+   centered even though the heading and the action buttons aren't the same
+   width. `order` (not source order) decides left/center/right so the same
+   markup can be re-arranged for the narrow layout below. */
+.matches-section-bar {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.matches-section-bar > h4 {
+  flex: 1 1 0%;
+  min-width: max-content;
+  order: 1;
+}
+.matches-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  flex: 0 1 auto;
+  order: 2;
+}
+.matches-section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 1 1 0%;
+  min-width: max-content;
+  order: 3;
+}
+
+/* Below this width the three columns no longer fit on one line. Force the
+   filter group onto its own full-width row instead of letting flex-wrap
+   break the columns mid-content: heading and action buttons keep the row
+   above (pushed to opposite ends by .section-bar's space-between), and the
+   filter group — given a 100% flex-basis — drops to a row of its own. */
+@media (max-width: 860px) {
+  .matches-section-bar { flex-wrap: wrap; }
+  .matches-section-bar > h4,
+  .matches-section-actions {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  .matches-section-actions { order: 2; }
+  .matches-filter-group {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    order: 3;
+  }
+}
+
+.match-section-search-wrapper {
+  flex: 0 0 auto;
+}
+.match-section-search {
+  padding: 5px 28px 5px 9px;
+  font-family: var(--srd-font-sans);
+  font-size: 0.85rem;
+  color: var(--srd-ink);
+  border: 1px solid var(--srd-line-strong);
+  border-radius: var(--srd-radius);
+  background: var(--srd-surface);
+  outline: none;
+  width: 180px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.match-section-search:focus {
+  border-color: var(--srd-accent);
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+}
+
 .row-icon {
   font-size: 0.85em;
   margin-left: 0.25em;

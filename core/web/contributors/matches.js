@@ -11,7 +11,7 @@ import siteConfig from '@site-config';
 import { ensureData, getCachedData, getContributorUrlMap, fetchMatriculaBooks } from './data.js';
 import { loadSurnameCloud } from './cloud.js';
 import {
-  getContributorFilter, setCurrentMatches, setDetailRefilter,
+  getContributorFilter, setCurrentMatches,
 } from './filter.js';
 import { exportBooksToCSV } from './matricula-stats.js';
 import { renderMatchDetail } from './match-detail.js';
@@ -69,9 +69,6 @@ function renderContributorStats(contribData) {
 /** Renders either the per-contributor matches summary or the per-pair detail. */
 export async function renderMatchesPage(contributor, withPartner) {
   window.scrollTo(0, 0);
-
-  // The detail-view refilter is only valid while that view is mounted.
-  setDetailRefilter(null);
 
   const totalsBar = document.getElementById('totals-bar');
   if (totalsBar) totalsBar.style.display = 'none';

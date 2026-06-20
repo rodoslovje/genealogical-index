@@ -11,12 +11,11 @@ import { loadSurnameCloud } from './cloud.js';
 import { updateCurrentKey } from '../lib/view-cache.js';
 
 // --- View state owned by this module -----------------------------------------
-// These are shared between renderMatchesPage (writer) and the sidebar input
-// (reader), so they live here as the single owning seam.
+// Shared between renderMatchesPage (writer) and the sidebar input (reader),
+// so it lives here as the single owning seam.
 
 let currentMatchesData = null;
 let currentMatchesContributor = null;
-let currentDetailRefilter = null;
 
 export const contributorColumns = ['contributor_ID', 'total_persons', 'total_families', 'total', 'total_links', 'matches', 'last_modified'];
 
@@ -32,27 +31,10 @@ export function setCurrentMatches(data, contributor) {
   currentMatchesContributor = contributor;
 }
 
-/** Called by matches.js after renderTables() so the sidebar input can
- *  filter the per-record matches detail. Pass null on view-change. */
-export function setDetailRefilter(fn) {
-  currentDetailRefilter = fn;
-}
-
 /** Snapshot of the partner-list filter state, read by the view cache so a
  *  restored single-contributor view re-wires the sidebar filter correctly. */
 export function getCurrentMatches() {
   return { data: currentMatchesData, contributor: currentMatchesContributor };
-}
-
-/** The active matches-detail refilter callback (or null), read by the view
- *  cache so a restored matches-detail view re-wires the sidebar filter. */
-export function getDetailRefilter() {
-  return currentDetailRefilter;
-}
-
-/** Resets the per-view state. Called when entering a new contributors view. */
-export function resetViewState() {
-  currentDetailRefilter = null;
 }
 
 /** Current value of the sidebar filter input (trim + lowercase). */
@@ -95,12 +77,14 @@ export function restoreFilterFromUrl() {
   if (input.value !== f) input.value = f;
 }
 
-/** Updates the placeholder for the current view (list / summary / detail). */
+/** Updates the placeholder for the current view (list / summary). On the
+ *  per-pair matches detail view the sidebar input isn't wired to anything —
+ *  that page's text filters live inline in each table's header instead —
+ *  so it always shows the genealogist-name placeholder. */
 export function updateFilterPlaceholder() {
   const input = document.getElementById('contributors-query');
   if (!input) return;
-  const withPartner = readWithParam(currentParams());
-  const key = withPartner ? 'matches_filter_placeholder' : 'contributors_filter_placeholder';
+  const key = 'contributors_filter_placeholder';
   input.placeholder = t(key);
   input.dataset.i18nPlaceholder = key;
 }
@@ -143,9 +127,6 @@ export function bindFilterInput() {
         };
       });
       renderTable(tableData, 'matches-summary', ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'], 'total', false);
-    } else if (activeContributor && withPartner && currentDetailRefilter) {
-      // Matches detail view: delegate to renderTables closure from matches.js.
-      currentDetailRefilter(q);
     } else if (!activeContributor && getCachedData()) {
       // Contributors list view: re-render the table + surname cloud.
       const filtered = enrichWithMatchCounts(filterContributorData(getCachedData()));

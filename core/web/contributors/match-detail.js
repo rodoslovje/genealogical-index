@@ -15,7 +15,6 @@ import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
 
 import { getContributorUrlMap } from './data.js';
-import { getContributorFilter, setDetailRefilter } from './filter.js';
 
 // --- Match detail (per-record pair view) ------------------------------------
 
@@ -261,6 +260,26 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       family: decodeMatchFilter(currentParams().get(MATCH_FILTER_PARAMS.family) || ''),
     };
 
+    // Free-text filter, per section — independent inputs in each table's
+    // header (Persons / Families). Persisted to the URL (?mqp=/?mqf=) like
+    // the New/Different/Links toggles above.
+    const MATCH_QUERY_PARAMS = { person: 'mqp', family: 'mqf' };
+    const syncTextFilterToUrl = () => {
+      const u = new URL(window.location.href);
+      for (const [type, paramKey] of Object.entries(MATCH_QUERY_PARAMS)) {
+        if (textFilter[type]) u.searchParams.set(paramKey, textFilter[type]);
+        else u.searchParams.delete(paramKey);
+      }
+      const search = toUnicodeSearch(u.searchParams);
+      const newUrl = u.pathname + (search ? '?' + search : '');
+      history.replaceState(null, '', newUrl);
+      updateCurrentKey(newUrl);
+    };
+    const textFilter = {
+      person: (currentParams().get(MATCH_QUERY_PARAMS.person) || '').trim().toLowerCase(),
+      family: (currentParams().get(MATCH_QUERY_PARAMS.family) || '').trim().toLowerCase(),
+    };
+
     // classifyMatchPair() result per record-pair, cached since `records` is
     // stable across re-renders (sort/filter/checkbox toggles).
     const classificationCache = new WeakMap();
@@ -282,6 +301,9 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
     // previous render compares its captured token and stops when stale.
     let renderToken = 0;
 
+    // Debounce timers for the per-section text filter inputs, keyed by type.
+    const filterTimers = { person: null, family: null };
+
     const recordSearchText = (rec) =>
       FILTER_FIELDS.map(f => rec[f] || '').join(' ').toLowerCase();
     const pairMatchesFilter = (r, q) => {
@@ -289,8 +311,6 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       return recordSearchText(r.record_a).includes(q)
           || recordSearchText(r.record_b).includes(q);
     };
-
-    let currentFilter = getContributorFilter();
 
     // Synthetic per-record keys used to map DOM rows ↔ records across
     // sort/filter re-renders so we can preserve expanded <details> state.
@@ -369,7 +389,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
       const byType = { person: [], family: [] };
       const loadedCounts = { person: 0, family: 0 };
-      // How many records (matching the search/sidebar filters) have at least
+      // How many records (matching the text filter) have at least
       // one "new"/"different"/"link" field — shown as counts next to the
       // checkbox labels below.
       const addDiffCounts = {
@@ -379,7 +399,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       records.forEach(r => {
         if (loadedCounts[r.record_type] === undefined) return;
         loadedCounts[r.record_type] += 1;
-        if (!pairMatchesFilter(r, currentFilter)) return;
+        if (!pairMatchesFilter(r, textFilter[r.record_type])) return;
         const cls = classifyPair(r, fieldKeysByType[r.record_type]);
         const counts = addDiffCounts[r.record_type];
         if (cls.addCount) counts.add += 1;
@@ -554,7 +574,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         // expandable cells (parents/partners/children).
         const hasExpandable = fields.some(f => f.f === 'parents' || f.f === 'partners' || f.f === 'children');
         const expandBtnHtml = hasExpandable
-          ? `<button class="export-btn expand-toggle-btn expand-matches-btn" data-type="${key}" data-all-open="0" title="${t('expand_all')}">
+          ? `<button class="export-btn expand-toggle-btn expand-matches-btn" data-type="${key}" data-all-open="0" title="${t('tip_expand_all').replace(/"/g, '&quot;')}">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>${t('expand_all')}
             </button>`
           : '';
@@ -565,22 +585,26 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
         const filt = addDiffFilter[key];
         const adCounts = addDiffCounts[key];
-        // Hide a filter toggle entirely if nothing in the current (search/
-        // sidebar-filtered) set qualifies — unless it's already checked, so
+        // Hide a filter toggle entirely if nothing in the current
+        // (text-filtered) set qualifies — unless it's already checked, so
         // the user can still uncheck it.
-        const addToggleHtml = (adCounts.add || filt.add) ? `<label class="match-filter-toggle">
+        const addToggleHtml = (adCounts.add || filt.add) ? `<label class="match-filter-toggle" title="${t('tip_match_add').replace(/"/g, '&quot;')}">
             <input type="checkbox" class="add-diff-filter" data-type="${key}" data-kind="add"${filt.add ? ' checked' : ''}>
             <span class="match-badge match-badge-add">+</span>${t('filter_new')} (${adCounts.add})
           </label>` : '';
-        const diffToggleHtml = (adCounts.diff || filt.diff) ? `<label class="match-filter-toggle">
+        const diffToggleHtml = (adCounts.diff || filt.diff) ? `<label class="match-filter-toggle" title="${t('tip_match_diff').replace(/"/g, '&quot;')}">
             <input type="checkbox" class="add-diff-filter" data-type="${key}" data-kind="diff"${filt.diff ? ' checked' : ''}>
             <span class="match-badge match-badge-diff">≠</span>${t('filter_different')} (${adCounts.diff})
           </label>` : '';
-        const linkToggleHtml = (adCounts.link || filt.link) ? `<label class="match-filter-toggle">
+        const linkToggleHtml = (adCounts.link || filt.link) ? `<label class="match-filter-toggle" title="${t('tip_match_link_add').replace(/"/g, '&quot;')}">
             <input type="checkbox" class="add-diff-filter" data-type="${key}" data-kind="link"${filt.link ? ' checked' : ''}>
             <span class="match-badge match-badge-link">🔗</span>${t('filter_links')} (${adCounts.link})
           </label>` : '';
-        const filterToggleHtml = `${addToggleHtml}${linkToggleHtml}${diffToggleHtml}`;
+        const searchInputHtml = `<div class="input-wrapper match-section-search-wrapper">
+            <input type="search" class="match-section-search" data-type="${key}" value="${escapeHtml(textFilter[key])}" placeholder="${t('matches_filter_placeholder').replace(/"/g, '&quot;')}" title="${t('tip_matches_filter').replace(/"/g, '&quot;')}">
+            <button type="button" class="clear-btn match-section-search-clear" data-type="${key}" title="${t('clear_filter').replace(/"/g, '&quot;')}" style="display: ${textFilter[key] ? 'block' : 'none'}">&times;</button>
+          </div>`;
+        const filterToggleHtml = `${searchInputHtml}${addToggleHtml}${linkToggleHtml}${diffToggleHtml}`;
 
         const tableOrEmptyHtml = group.length
           ? `<div class="matches-section-content table-responsive"${contentDisplay}>
@@ -596,12 +620,14 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           : `<div class="matches-section-content"${contentDisplay}><p>${t('matches_filtered_none')}</p></div>`;
 
         html += `<div class="matches-section" data-type="${key}">
-          <div class="section-bar section-bar--top-sm">
+          <div class="section-bar section-bar--top-sm matches-section-bar">
             <h4 class="${collapsedClass}" style="margin: 0; font-size: 1.1rem; border: none; padding: 0;">${label} (${
               truncated[key] ? `${group.length.toLocaleString()} / ${totals[key].toLocaleString()}` : group.length.toLocaleString()
             })</h4>
-            <div class="matches-section-actions" style="display: flex; gap: 10px; align-items: center;">
+            <div class="matches-filter-group">
               ${filterToggleHtml}
+            </div>
+            <div class="matches-section-actions">
               ${expandBtnHtml}
               <button class="export-btn export-matches-btn" data-type="${key}" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
             </div>
@@ -626,7 +652,24 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         openMap.get(rowKey).add(col);
       });
 
+      // The text filter inputs live inside the rebuilt HTML, so a debounced
+      // rebuild while the user is still typing would otherwise steal focus.
+      // Capture which one (if any) is focused, and its cursor position, to
+      // restore right after the swap.
+      const focusedSearch = detailEl.querySelector('.match-section-search:focus');
+      const focusedSearchInfo = focusedSearch
+        ? { type: focusedSearch.dataset.type, selectionStart: focusedSearch.selectionStart, selectionEnd: focusedSearch.selectionEnd }
+        : null;
+
       detailEl.innerHTML = html;
+
+      if (focusedSearchInfo) {
+        const input = detailEl.querySelector(`.match-section-search[data-type="${focusedSearchInfo.type}"]`);
+        if (input) {
+          input.focus();
+          input.setSelectionRange(focusedSearchInfo.selectionStart, focusedSearchInfo.selectionEnd);
+        }
+      }
 
       // Virtualize large match tables: measure the freshly-rendered (auto-layout)
       // column widths, lock them as percentages via a <colgroup>, then switch to
@@ -663,6 +706,35 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           }
         });
       }
+
+      detailEl.querySelectorAll('.match-section-search').forEach(input => {
+        const clearBtn = detailEl.querySelector(`.match-section-search-clear[data-type="${input.dataset.type}"]`);
+        input.addEventListener('input', () => {
+          const type = input.dataset.type;
+          if (clearBtn) clearBtn.style.display = input.value ? 'block' : 'none';
+          clearTimeout(filterTimers[type]);
+          // Debounced: each keystroke triggers a full rebuild, which on a
+          // large match set is the expensive path — wait for a typing pause.
+          // A rebuild bumps renderToken, so any chunk stream still running
+          // from the previous render stops itself.
+          filterTimers[type] = setTimeout(() => {
+            textFilter[type] = input.value.trim().toLowerCase();
+            syncTextFilterToUrl();
+            runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, renderTables);
+          }, 250);
+        });
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            const type = input.dataset.type;
+            input.value = '';
+            clearBtn.style.display = 'none';
+            input.focus();
+            textFilter[type] = '';
+            syncTextFilterToUrl();
+            runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, renderTables);
+          });
+        }
+      });
 
       detailEl.querySelectorAll('.add-diff-filter').forEach(cb => {
         cb.addEventListener('change', () => {
@@ -706,13 +778,13 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             }
           }
           // Recompute from `records` rather than the closure's byType: the
-          // fetch above may have replaced the record set. The sidebar filter
+          // fetch above may have replaced the record set. The text filter
           // and the "has additions/differences" toggles still apply (explicit
           // user choices), and the rows are ordered like the visible table.
           const config = typeConfig.find(c => c.key === typeKey);
           const filt = addDiffFilter[typeKey];
           const typeData = records.filter(r => {
-            if (r.record_type !== typeKey || !pairMatchesFilter(r, currentFilter)) return false;
+            if (r.record_type !== typeKey || !pairMatchesFilter(r, textFilter[typeKey])) return false;
             if (filt.add || filt.diff || filt.link) {
               const cls = classifyPair(r, config.fields.map(f => f.f));
               if (filt.add && !cls.addCount) return false;
@@ -763,7 +835,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             btn.dataset.allOpen = allOpen ? '1' : '0';
             const text = allOpen ? t('collapse_all') : t('expand_all');
             btn.innerHTML = `${getExpandCollapseIcon(allOpen)}${text}`;
-            btn.title = text;
+            btn.title = allOpen ? t('tip_collapse_all') : t('tip_expand_all');
           });
         }
 
@@ -797,7 +869,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
               btn.dataset.allOpen = targetOpen ? '1' : '0';
               const text = targetOpen ? t('collapse_all') : t('expand_all');
               btn.innerHTML = `${getExpandCollapseIcon(targetOpen)}${text}`;
-              btn.title = text;
+              btn.title = targetOpen ? t('tip_collapse_all') : t('tip_expand_all');
             });
           });
         });
@@ -867,20 +939,6 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
     }
 
     renderTables();
-
-    // Expose a refilter callback so the sidebar input can re-filter live.
-    // Debounced: each keystroke triggers a full rebuild, which on a large match
-    // set is the expensive path — wait for a typing pause, then rebuild behind
-    // the spinner. A rebuild bumps renderToken, so any chunk stream still
-    // running from the previous render stops itself.
-    let filterTimer = null;
-    setDetailRefilter((q) => {
-      clearTimeout(filterTimer);
-      filterTimer = setTimeout(() => {
-        currentFilter = (q || '').trim().toLowerCase();
-        runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, renderTables);
-      }, 250);
-    });
   } finally {
     // overlay is handled cleanly by renderMatchesPage's outer try/finally
   }
