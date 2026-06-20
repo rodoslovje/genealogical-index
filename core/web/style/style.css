@@ -1417,6 +1417,22 @@ body.compact-nav .mobile-nav-section { display: flex; }
 .section-bar--top    { margin-top: 2rem; }
 .section-bar--top-sm { margin-top: 1.5rem; }
 
+/* `.matches-section` (Persons/Families wrapper) carries no visual styling
+   of its own — `display: contents` drops it from the render tree entirely
+   (its children lay out as if direct children of `detailEl`) while keeping
+   it fully queryable in JS (querySelector/closest/dataset all still work).
+   This matters for `.matches-table-box`'s sticky positioning below: a
+   sticky element can only stay "stuck" for as much extra height as its
+   *immediate parent* has beyond the element's own height. Wrapped in this
+   div, that parent is just bar+box (the box fills nearly all of it), so the
+   box gets only ~one bar-height of stuck-scroll before being forced to
+   release. Flattened via `display: contents`, the relevant parent becomes
+   `detailEl` — which holds every section — so there's plenty of headroom
+   for the box to stay stuck for its whole practical scroll range. */
+.matches-section {
+  display: contents;
+}
+
 /* Matches-detail section header (Persons / Families table): heading on the
    left, filter controls (text search, New/Links/Different toggles) centered,
    Expand/Collapse + CSV on the right. The heading and action columns share

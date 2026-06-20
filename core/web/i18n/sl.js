@@ -292,17 +292,18 @@ export default {
       </ul>
       <h4>Napredne nastavitve iskanja</h4>
       <ul>
-        <li><strong>Vir:</strong> V iskalno polje lahko vnesete priimek enega ali več rodoslovcev, ločenih z vejico. Iskanje privzeto vključuje tako osebna družinska drevesa kot indeks Matricula. S spustnim menijem lahko iskanje omejite samo na enega od teh virov.</li>
+        <li><strong>Vir:</strong> V iskalno polje lahko vnesete priimek enega ali več rodoslovcev, ločenih z vejico. S spustnim menijem poleg njega lahko iskanje omejite tudi na določen tip vira: <em>Družinska drevesa</em>, <em>Matricula indeks</em> ali <em>Geneanet pokopališča</em> (privzeto so vključeni vsi viri).</li>
         <li><strong>S povezavo:</strong> Prikaže samo tiste zadetke, ki vsebujejo zunanjo povezavo do izvirnih dokumentov (npr. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Točno / Približno:</strong> Nastavitev <strong>Točno</strong> išče natančna ujemanja celih besed (npr. iskanje <em>Kovač</em> ne bo našlo <em>Kovačič</em>). Nastavitev <strong>Približno</strong> pa s pomočjo algoritmov išče tudi dele besed (podnize) in podobne različice imen ter priimkov.</li>
       </ul>
       <h3>3. Pregledovanje rezultatov</h3>
       <ul>
         <li><strong>Razvrščanje:</strong> S klikom na naslov stolpca razvrstite rezultate abecedno ali kronološko. Ponoven klik na isti stolpec obrne smer razvrščanja (<strong>▲</strong> ↔ <strong>▼</strong>). Če nato kliknete drug stolpec, ta postane primarno merilo, prejšnji pa sekundarno (označeno z <strong>△</strong> ali <strong>▽</strong>).</li>
+        <li><strong>Filtriranje tabele:</strong> V iskalno polje ob naslovu tabele lahko vnesete poljubno besedilo, s katerim med prikazanimi rezultati obdržite le vrstice, ki ga vsebujejo v katerem koli stolpcu.</li>
         <li><strong>Razširljiva polja:</strong> Stolpci <em>Starši</em>, <em>Partnerji</em> in <em>Otroci</em> prikazujejo število oseb. S klikom na številko razširite seznam. Za hkratni prikaz vseh uporabite gumb <strong>⤢ Razširi</strong> nad tabelo, za skrivanje pa gumb <strong>⤡ Skrči</strong>.</li>
         <li><strong>Podrobnosti oseb in družin:</strong> S klikom na modro obarvano ime v tabeli izvedete novo iskanje in prikažete vse zapise le za to izbrano osebo ali družino. S klikom na partnerja poiščete njuno družino. Podobno pri prikazu staršev s klikom na oznako (<em>Starši</em>, <em>Mož</em> ali <em>Žena</em>) prikažete njuno družino, s klikom na ime posameznega starša pa poiščete samo to osebo.</li>
         <li><strong>Zasebni zapisi:</strong> Pri nekaterih osebah je namesto imena ali priimka prikazana oznaka <em>&lt;private&gt;</em>. Takšni zapisi nimajo povezave za nadaljnje iskanje.</li>
-        <li><strong>Drevo:</strong> Ob določenih osebah (starših, otrocih, partnerjih) boste opazili ikono drevesa (<strong>🌳</strong> za prednike, <strong>🌿</strong> za potomce). S klikom na ikono prikažete grafično in interaktivno rodovniško drevo izbrane osebe.{auth_tree}</li>
+        <li><strong>Drevo:</strong> Ob določenih osebah (starših, otrocih, partnerjih) boste opazili ikono drevesa (<strong>🌳</strong> za prednike, <strong>🌿</strong> za potomce). S klikom na ikono prikažete grafično in interaktivno rodovniško drevo prednikov ali potomcev izbrane osebe.{auth_tree}</li>
         <li><strong>Izvoz podatkov:</strong> S klikom na gumb <strong>CSV</strong> nad tabelo prenesete trenutne rezultate na svoj računalnik v tabelarični obliki.</li>
         <li><strong>Skrčljive tabele in razdelki:</strong> S klikom na naslov tabele ali razdelka (npr. <em>Osebe</em>, <em>Družine</em> ali <em>Ujemanja</em>) lahko vsebino začasno skrijete in jo z naslednjim klikom znova prikažete.</li>
       </ul>
@@ -322,7 +323,7 @@ export default {
       <ul>
         <li><strong>Povečava in pomanjšava:</strong> z gumboma <strong>➕</strong> in <strong>➖</strong> v spodnjem desnem kotu ali s kolescem miške.</li>
         <li><strong>Premikanje:</strong> drevo lahko vlečete z miško (oziroma s prstom na zaslonih na dotik).</li>
-        <li><strong>Izvoz:</strong> z gumbi v zgornjem desnem kotu lahko drevo prenesete kot sliko <strong>SVG</strong>, tabelo <strong>CSV</strong> ali datoteko <strong>GEDCOM</strong> za uvoz v druge rodoslovne programe.</li>
+        <li><strong>Izvoz:</strong> z gumbi v zgornjem desnem kotu lahko drevo prenesete kot sliko <strong>SVG</strong>, tabelo <strong>CSV</strong> ali datoteko <strong>GEDCOM</strong> za uvoz v druge rodoslovne programe. Izvoženo datoteko GEDCOM lahko z orodjem, kot je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>, združite s svojo lastno GEDCOM datoteko.</li>
         <li><strong>Pregledna karta:</strong> na večjih zaslonih je v zgornjem levem kotu prikazana majhna karta celotnega drevesa in trenutno vidnega dela; s klikom nanjo se premaknete na drug del.</li>
       </ul>
       <h3>4. Rodoslovci</h3>
@@ -331,7 +332,7 @@ export default {
         <li><strong>Statistika:</strong> Na vrhu sta prikazana grafa s prispevki po rodoslovcih in s časovnico zapisov.</li>
         <li><strong>Najpogostejši priimki:</strong> Prikazan je oblak najpogostejših priimkov. S klikom na gumb <strong>CSV</strong> ali <strong>SVG</strong> lahko te podatke prenesete na svoj računalnik.</li>
         <li><strong>Seznam rodoslovcev:</strong> Tabela prikazuje vse sodelujoče ter število njihovih oseb, družin, povezav in morebitnih ujemanj z drugimi rodoslovci. S klikom na gumb <strong>CSV</strong> izvozite tabelo, s klikom na ime rodoslovca pa odprete njegovo podrobno stran.</li>
-        <li><strong>Filtriranje seznama:</strong> V iskalnem polju v stranski vrstici (<strong>☰</strong>) lahko seznam hitro zožite po priimku rodoslovca. Oblak najpogostejših priimkov bo prikazal samo priimke iz dreves najdenih rodoslovcev.</li>
+        <li><strong>Filtriranje seznama:</strong> Iskalno polje ob naslovu tabele omogoča hitro zožanje seznama po priimku rodoslovca. Oblak najpogostejših priimkov bo prikazal samo priimke iz dreves najdenih rodoslovcev.</li>
       </ul>
       <h4>Podrobnosti rodoslovca</h4>
       <p>Na strani posameznega rodoslovca so zbrane informacije o njegovem prispevku:</p>
@@ -346,8 +347,9 @@ export default {
       <ul>
         <li><strong>Zgornja vrstica</strong> prikazuje zapis prvega rodoslovca, <strong>spodnja</strong> pa zapis drugega.</li>
         <li><strong>Ocena zaupanja:</strong> Vsak ujemek ima oceno v odstotkih, ki pove, kako verjetno gre za isto osebo ali družino.</li>
-        <li><strong>Označene razlike:</strong> Besede ali podatki, ki se med rodoslovcema razlikujejo, so v tabeli samodejno označene (obarvane z rumeno), kar olajša hitro iskanje neskladij ali novih informacij.</li>
-        <li><strong>Filtriranje ujemanj:</strong> V iskalnem polju v stranski vrstici lahko prikazana ujemanja dodatno zožite po imenu, priimku, datumu ali kraju.</li>
+        <li><strong>Označene razlike:</strong> Polja, kjer se vrednosti med rodoslovcema ne ujemajo, so v tabeli samodejno obarvana <span class="match-diff">rumeno</span>. Polja in povezave (ikona), ki obstajajo le pri drugem rodoslovcu, pa so obarvana <span class="match-add">zeleno</span> — to izpostavi novo informacijo, ki je v vašem drevesu še ni. Ob oceni zaupanja se poleg tega lahko prikažejo oznake <span class="match-badge match-badge-add">+</span> (drugi rodoslovec ima podatek, ki pri vas manjka), <span class="match-badge match-badge-link">🔗</span> (drugi rodoslovec ima povezavo, npr. do vira ali zapisa o grobu, ki pri vas manjka) in <span class="match-badge match-badge-diff">≠</span> (vrednosti se med rodoslovcema ne ujemajo), vsaka s številom polj, na katero se nanaša.</li>
+        <li><strong>Filtriranje ujemanj:</strong> Vsak razdelek (<em>Osebe</em>, <em>Družine</em>) ima ob svojem naslovu iskalno polje, s katerim prikazana ujemanja dodatno zožite po imenu, priimku, datumu ali kraju, ter gumbe <span class="match-badge match-badge-add">+</span> Novo, <span class="match-badge match-badge-link">🔗</span> Povezave in <span class="match-badge match-badge-diff">≠</span> Razlike za prikaz samo tistih parov, ki imajo ustrezno oznako.</li>
+        <li><strong>Izvoz ujemkov:</strong> S klikom na gumb <strong>CSV</strong> ob naslovu posameznega razdelka izvozite prikazane ujemajoče se zapise. Izvoz lahko uporabite za dopolnitev svojega drevesa, na primer z orodjem, kot je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Primerjava dreves:</strong> za ujemajočo se osebo gumb <strong>🌳 Primerjaj</strong> odpre vzporedni prikaz rodovniških dreves obeh rodoslovcev. Vsaka oseba je barvno označena — <em>ujemanje</em>, <em>manjša razlika</em>, <em>ključna razlika</em> (razlikujejo se ime, priimek ali datum rojstva) ali prisotna le v <em>enem</em> drevesu —, s klikom na osebo pa se prikaže podrobna primerjava po posameznih poljih, vključno s povezavami do virov. Preklapljate lahko med <em>predniki</em> in <em>potomci</em>, prek barvne legende skočite na poljubno osebo, primerjavo pa prenesete kot tabelo <strong>CSV</strong> ali sliko <strong>SVG</strong>.</li>
       </ul>
       {auth_section}
