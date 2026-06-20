@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Guide</title>
+    <meta name="description" content="__GUIDE_DESCRIPTION__" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- SRD typography (shared with genetic-atlas) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- SRD design system + app styles, same as index.html, so the page looks
+         native to the site even though it's static (no app JS, no SPA shell). -->
+    <link rel="stylesheet" href="/style/srd-tokens.css" />
+    <link rel="stylesheet" href="/style/srd.css" />
+    <link rel="stylesheet" href="/style/style.css" />
+  </head>
+  <body>
+    <header>
+      <nav class="srd-navbar">
+        <a href="/" class="srd-brand nav-title">
+          <img src="/srd-logo-transparent.png" alt="SRD" class="srd-brand-mark">
+          <span class="srd-brand-title">
+            <span class="app">__GUIDE_SITE_TITLE__</span>
+            <span class="org">__GUIDE_ORG_NAME__</span>
+          </span>
+        </a>
+        <span class="srd-nav-sep" aria-hidden="true"></span>
+        <div class="header-nav srd-nav-tabs">
+          <a class="tab-btn" href="/?t=general">__GUIDE_TAB_GENERAL__</a>
+          <a class="tab-btn" href="/?t=person">__GUIDE_TAB_PERSON__</a>
+          <a class="tab-btn" href="/?t=family">__GUIDE_TAB_FAMILY__</a>
+          <a class="tab-btn" href="/?t=contributors">__GUIDE_TAB_CONTRIBUTORS__</a>
+        </div>
+      </nav>
+    </header>
+    <main class="guide-page-main">
+      <a class="guide-back-link" href="/">&larr; __GUIDE_BACK_LABEL__</a>
+      <div class="help-content intro-text">__GUIDE_CONTENT__</div>
+    </main>
+  </body>
+</html>

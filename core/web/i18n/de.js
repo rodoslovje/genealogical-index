@@ -223,6 +223,7 @@ export default {
     // Footer
     footer_version: 'Version',
     footer_data_update: 'Daten',
+    footer_user_guide: 'Benutzerhandbuch',
 
     // Other indexes
     other_indexes: 'Genealogische Indizes:',

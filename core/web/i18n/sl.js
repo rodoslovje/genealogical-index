@@ -223,6 +223,7 @@ export default {
     // Footer
     footer_version: 'Različica',
     footer_data_update: 'Podatki',
+    footer_user_guide: 'Navodila za uporabo',
 
     // Other indexes
     other_indexes: 'Rodoslovni indeksi:',

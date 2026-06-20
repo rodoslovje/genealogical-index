@@ -6,7 +6,7 @@
 tgi.renko.fyi {
     root * /var/www/sites/tgi
     file_server
-    try_files {path} /index.html
+    try_files {path} {path}.html /index.html
     encode gzip
 }
 

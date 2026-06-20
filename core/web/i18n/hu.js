@@ -231,6 +231,7 @@ export default {
     // Footer
     footer_version: 'Verzió',
     footer_data_update: 'Adatok',
+    footer_user_guide: 'Felhasználói kézikönyv',
 
     // Other indexes
     other_indexes: 'Genealógiai indexek:',

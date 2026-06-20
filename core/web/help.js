@@ -1,55 +1,90 @@
 import { t, onLanguageChange } from './i18n.js';
 import { currentParams, toUnicodeSearch } from './lib/url.js';
+import { renderGuideManual } from './lib/guide-content.js';
 import siteConfig from '@site-config';
 
 const hasAuth = !!siteConfig.authUrl;
-const USER_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
 
 export function initHelp() {
   const navRight = document.querySelector('.srd-nav-right');
   if (!navRight) return;
 
-  // 1. Inject Help Button
-  const helpBtn = document.createElement('button');
+  // 1. Inject Help Button. A real <a href="/guide"> (rather than a <button>)
+  // so the user guide has a crawlable, shareable URL even though in-app
+  // clicks are intercepted below to open the modal instead.
+  const helpBtn = document.createElement('a');
   helpBtn.id = 'help-toggle-btn';
   helpBtn.className = 'srd-icon-btn';
+  helpBtn.href = '/guide';
   helpBtn.style.display = 'inline-flex';
   helpBtn.title = t('help');
   helpBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
   // Keep the URL in sync with the modal's open state so the address bar can
   // be copied/shared at any time and `?help=1` deep-links work both ways.
-  const setHelpParam = (open) => {
+  // Opening pushes a history entry (rather than replacing) so browser Back
+  // has something to land on — see the popstate listener below, which is
+  // what actually closes the modal when that entry is popped.
+  const HISTORY_MARK = 'guideModal';
+
+  const pushHelpParam = () => {
     const params = currentParams();
-    if (open) {
-      if (params.get('help') === '1') return;
-      params.set('help', '1');
-    } else {
-      if (!params.has('help')) return;
-      params.delete('help');
-    }
+    if (params.get('help') === '1') return;
+    params.set('help', '1');
     const search = toUnicodeSearch(params);
-    history.replaceState(null, '', window.location.pathname + (search ? '?' + search : ''));
+    history.pushState({ [HISTORY_MARK]: true }, '', window.location.pathname + (search ? '?' + search : ''));
   };
 
-  const openHelp = () => {
+  const dropHelpParam = () => {
+    const params = currentParams();
+    if (!params.has('help')) return;
+    // If we're the entry that pushed `?help=1`, Back lands cleanly on
+    // whatever preceded it. Otherwise (e.g. someone loaded `/?help=1`
+    // directly, so there's no "before" entry of ours to pop) just strip the
+    // param in place.
+    if (history.state?.[HISTORY_MARK]) {
+      history.back();
+    } else {
+      params.delete('help');
+      const search = toUnicodeSearch(params);
+      history.replaceState(null, '', window.location.pathname + (search ? '?' + search : ''));
+    }
+  };
+
+  const openHelp = ({ fromPopstate = false } = {}) => {
     const modal = document.getElementById('help-modal');
     modal.classList.add('open');
     const scrollArea = modal.querySelector('#help-scroll');
     if (scrollArea) scrollArea.scrollTop = 0;
-    setHelpParam(true);
+    if (!fromPopstate) pushHelpParam();
   };
 
-  const closeHelp = () => {
+  const closeHelp = ({ fromPopstate = false } = {}) => {
     const modal = document.getElementById('help-modal');
     modal.classList.remove('open');
-    setHelpParam(false);
+    if (!fromPopstate) dropHelpParam();
   };
 
-  helpBtn.addEventListener('click', (e) => {
+  // Back/Forward through a `?help=1` entry we (or a shared link) created:
+  // sync the modal to match instead of leaving it stuck open/closed while
+  // the address bar moves on without it.
+  window.addEventListener('popstate', () => {
+    const isOpen = document.getElementById('help-modal')?.classList.contains('open');
+    const wantOpen = currentParams().has('help');
+    if (wantOpen && !isOpen) openHelp({ fromPopstate: true });
+    else if (!wantOpen && isOpen) closeHelp({ fromPopstate: true });
+  });
+
+  // Intercept plain clicks to open the in-app modal instead of navigating to
+  // /guide; ctrl/cmd/middle-click and the footer's identical link still fall
+  // through to the real page (new tab, no-JS, crawlers).
+  const interceptToOpenHelp = (e) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
     e.preventDefault();
     openHelp();
-  });
+  };
+  helpBtn.addEventListener('click', interceptToOpenHelp);
+  document.getElementById('footer-guide-link')?.addEventListener('click', interceptToOpenHelp);
 
   // Navbar order: help, auth, lang, hamburger. We anchor on the leftmost of
   // the elements that come after us so help lands at the start of the cluster
@@ -75,34 +110,6 @@ export function initHelp() {
         </div>
       </div>
     </div>
-    <style>
-      .help-content { padding-top: 5px; }
-      .help-content p, .help-content ul, .help-content li { font-size: 1rem; line-height: 1.7; color: var(--srd-ink-muted); }
-      .help-content p, .help-content ul { margin-bottom: 1.2rem; }
-      .help-content li { margin-bottom: 0.4rem; }
-      .help-content h2 { margin-top: 0; margin-bottom: 1.2rem; font-size: 1.6rem; font-family: var(--srd-font-serif); font-weight: 500; color: var(--srd-brand); }
-      .help-content h3 { margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 6px; font-size: 1.3rem; font-family: var(--srd-font-serif); font-weight: 500; color: var(--srd-ink); border-bottom: 1px solid var(--srd-line); }
-      .help-content h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.05rem; font-weight: 600; color: var(--srd-ink); }
-      .help-content strong { color: var(--srd-ink); font-weight: 600; }
-      @media (max-width: 768px) {
-        #help-modal .srd-modal {
-          max-width: 100vw !important;
-          width: 100vw !important;
-          max-height: 100vh !important;
-          height: 100vh !important;
-          border-radius: 0 !important;
-          box-shadow: none !important;
-        }
-        #help-modal #help-scroll {
-          max-height: 100vh !important;
-          padding: 44px 8px 8px 8px !important;
-        }
-        #help-modal .srd-modal-close {
-          top: 8px !important;
-          right: 8px !important;
-        }
-      }
-    </style>
   `;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 
@@ -112,18 +119,12 @@ export function initHelp() {
   modal.addEventListener('click', (e) => { if (e.target === modal) closeHelp(); });
 
   // 3. Update localized content
+  const strings = {
+    help_manual: '', help_auth_nav: '', help_auth_tree: '', help_auth_match: '', help_auth_section: '',
+  };
   const updateHelpContent = () => {
-    const authNav = hasAuth ? (t('help_auth_nav') || '').replace('{USER_ICON}', USER_ICON) : '';
-    const authTree = hasAuth ? t('help_auth_tree') : '';
-    const authMatch = hasAuth ? t('help_auth_match') : '';
-    const authSection = hasAuth ? (t('help_auth_section') || '').replace('{USER_ICON}', USER_ICON) : '';
-
-    let content = t('help_manual') || '';
-    document.getElementById('help-content').innerHTML = content
-      .replace('{auth_nav}', authNav)
-      .replace('{auth_tree}', authTree)
-      .replace('{auth_match}', authMatch)
-      .replace('{auth_section}', authSection);
+    for (const key of Object.keys(strings)) strings[key] = t(key) || '';
+    document.getElementById('help-content').innerHTML = renderGuideManual(strings, hasAuth);
   };
 
   updateHelpContent();
@@ -132,8 +133,8 @@ export function initHelp() {
     helpBtn.title = t('help');
   });
 
-  // `?help=1` (or just `?help`) auto-opens the user guide on page load. The
-  // param stays in the URL while the modal is open and is cleared by closeHelp
-  // when the user dismisses it — so the URL always mirrors the modal state.
-  if (currentParams().has('help')) openHelp();
+  // `?help=1` (or just `?help`) auto-opens the user guide on page load.
+  // `fromPopstate: true` here too: this is the initial render, not a user
+  // action, so it must not push a history entry of its own.
+  if (currentParams().has('help')) openHelp({ fromPopstate: true });
 }

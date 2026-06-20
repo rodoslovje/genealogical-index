@@ -6,7 +6,7 @@
 indeks.rodoslovlje.hr {
     root * /var/www/cgi
     file_server
-    try_files {path} /index.html
+    try_files {path} {path}.html /index.html
     encode gzip
 }
 

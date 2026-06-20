@@ -6,7 +6,7 @@
 indeks.rodoslovje.si {
     root * /var/www/sites/sgi
     file_server
-    try_files {path} /index.html
+    try_files {path} {path}.html /index.html
     encode gzip
 }
 

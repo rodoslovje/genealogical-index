@@ -230,6 +230,7 @@ export default {
     // Footer
     footer_version: 'Versione',
     footer_data_update: 'Dati',
+    footer_user_guide: 'Guida utente',
 
     // Other indexes
     other_indexes: 'Indici genealogici:',
