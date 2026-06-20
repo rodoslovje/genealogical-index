@@ -13,7 +13,7 @@ import { toUnicodeHref, currentParams, toUnicodeSearch } from '../lib/url.js';
 import { updateCurrentKey } from '../lib/view-cache.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
-import { observeStickyHeader } from '../lib/table-filter.js';
+import { observeStickyHeader, normalizeQuery } from '../lib/table-filter.js';
 
 import { getContributorUrlMap } from './data.js';
 
@@ -277,8 +277,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       updateCurrentKey(newUrl);
     };
     const textFilter = {
-      person: (currentParams().get(MATCH_QUERY_PARAMS.person) || '').trim().toLowerCase(),
-      family: (currentParams().get(MATCH_QUERY_PARAMS.family) || '').trim().toLowerCase(),
+      person: normalizeQuery(currentParams().get(MATCH_QUERY_PARAMS.person) || ''),
+      family: normalizeQuery(currentParams().get(MATCH_QUERY_PARAMS.family) || ''),
     };
 
     // classifyMatchPair() result per record-pair, cached since `records` is
@@ -313,10 +313,14 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
     const recordSearchText = (rec) =>
       FILTER_FIELDS.map(f => rec[f] || '').join(' ').toLowerCase();
+    // `q` is already comma-joined by normalizeQuery; require every word to
+    // appear *somewhere* across either side of the pair (any field, any
+    // order) — same multi-word behavior as the generic table filter.
     const pairMatchesFilter = (r, q) => {
       if (!q) return true;
-      return recordSearchText(r.record_a).includes(q)
-          || recordSearchText(r.record_b).includes(q);
+      const terms = q.split(',');
+      const haystack = recordSearchText(r.record_a) + ' ' + recordSearchText(r.record_b);
+      return terms.every(term => haystack.includes(term));
     };
 
     // Synthetic per-record keys used to map DOM rows ↔ records across
@@ -731,10 +735,10 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           // A rebuild bumps renderToken, so any chunk stream still running
           // from the previous render stops itself.
           filterTimers[type] = setTimeout(() => {
-            textFilter[type] = input.value.trim().toLowerCase();
+            textFilter[type] = normalizeQuery(input.value);
             syncTextFilterToUrl();
             runWithBusy(records.length > MATCHES_SPINNER_THRESHOLD, renderTables);
-          }, 250);
+          }, 500);
         });
         if (clearBtn) {
           clearBtn.addEventListener('click', () => {

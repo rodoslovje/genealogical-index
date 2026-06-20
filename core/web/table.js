@@ -30,8 +30,13 @@ const NUMERIC_COLUMNS = new Set([
 const MATCHES_CONTEXT_COLS = new Set(['contributor_ID', 'total_persons', 'total_families', 'total']);
 
 // Columns holding structured/rendered data (JSON lists, link icons) rather
-// than plain text — skipped by the generic per-table filter below.
-const FILTER_SKIP_COLUMNS = new Set(['children', 'parents', 'partners', 'links']);
+// than plain text, plus `contributor` (the genealogist who submitted a
+// person/family record — metadata about provenance, not the record's
+// subject; matching it would make searching your own surname return every
+// record you contributed). The contributors list's own `contributor_ID`
+// column is deliberately NOT skipped — there it IS the subject being
+// searched.
+const FILTER_SKIP_COLUMNS = new Set(['children', 'parents', 'partners', 'links', 'contributor']);
 
 // Above this row count, the table is rendered "virtualized": fixed column
 // widths + per-row `content-visibility:auto` so the browser skips layout/paint
@@ -190,15 +195,23 @@ function getValue(row, col) {
   return String(row[col] || '').toLowerCase();
 }
 
-// Generic substring match for the per-table text filter: true if `query`
-// appears in any non-skipped column's raw value.
+// Generic match for the per-table text filter. Splits the query on
+// whitespace/commas (mountTableFilter normalizes typed spaces to commas for
+// the URL, but accept either here too) and requires every word to appear
+// *somewhere* in the row (each word can land in a different column, in any
+// order) — so "ivan kranjc" matches a row with name "Ivan" and surname
+// "Kranjc" even though neither column alone contains that phrase. A
+// single-term query keeps the simple substring behavior this had before.
 function rowMatchesQuery(row, columns, query) {
-  for (const col of columns) {
-    if (FILTER_SKIP_COLUMNS.has(col)) continue;
-    const val = row[col];
-    if (val != null && String(val).toLowerCase().includes(query)) return true;
-  }
-  return false;
+  const terms = query.split(/[\s,]+/).filter(Boolean);
+  if (!terms.length) return true;
+  const haystack = columns
+    .filter(col => !FILTER_SKIP_COLUMNS.has(col))
+    .map(col => row[col])
+    .filter(val => val != null)
+    .join(' ')
+    .toLowerCase();
+  return terms.every(term => haystack.includes(term));
 }
 
 function sortData(data, primary, secondary) {

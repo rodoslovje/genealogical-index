@@ -64,7 +64,18 @@ export function setupSortableTable({ tableId, headerSelector, contentSelector, c
         onChange: renderRows,
       });
     }
-    sorted = (query ? data.filter(row => filter.fields.some(f => String(f(row) || '').toLowerCase().includes(query))) : data).slice();
+    // Match every word in the query against the row's combined fields (each
+    // word can land in a different field, in any order) — same multi-word
+    // behavior as the generic table filter in table.js. mountTableFilter
+    // normalizes typed spaces to commas for the URL, but accept either here.
+    const terms = query.split(/[\s,]+/).filter(Boolean);
+    sorted = (terms.length
+      ? data.filter(row => {
+          const haystack = filter.fields.map(f => String(f(row) || '')).join(' ').toLowerCase();
+          return terms.every(term => haystack.includes(term));
+        })
+      : data
+    ).slice();
 
     const countEl = countId ? document.getElementById(countId) : null;
     if (countEl) countEl.textContent = sorted.length.toLocaleString();

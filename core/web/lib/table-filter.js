@@ -31,6 +31,16 @@ const SHORT_PARAM_MAP = {
  *  own `mqp`/`mqf`, which predate and aren't part of `SHORT_PARAM_MAP`. */
 export const TABLE_FILTER_PARAM_KEYS = new Set([...Object.values(SHORT_PARAM_MAP), 'mqp', 'mqf']);
 
+/** Treats whitespace and commas as interchangeable word separators (typing
+ *  "Luka Renko" or "Luka,Renko" means the same multi-word query — see
+ *  `rowMatchesQuery` in table.js), collapsing either into a single
+ *  comma-joined, trimmed, lowercased form. Commas are used for the
+ *  *stored* (URL) form specifically because they don't need URL-encoding
+ *  the way a space does (no `%20`/`+`), keeping shared links readable. */
+export function normalizeQuery(raw) {
+  return raw.trim().toLowerCase().split(/[\s,]+/).filter(Boolean).join(',');
+}
+
 /** Mirrors `value` into the URL under `paramKey` via replaceState, keeping
  *  other params untouched — the same idiom used by match-detail.js's own
  *  per-section filter. */
@@ -50,7 +60,7 @@ function syncParamToUrl(paramKey, value) {
 
 // Each keystroke would otherwise trigger a full table re-render; wait for a
 // typing pause instead (mirrors match-detail.js's per-section filter).
-const FILTER_DEBOUNCE_MS = 250;
+const FILTER_DEBOUNCE_MS = 500;
 
 /**
  * Mounts (or, on a re-render, reuses) a debounced text-filter input inside
@@ -70,11 +80,12 @@ export function mountTableFilter({ headerEl, paramKey: slug, placeholder, title,
   const paramKey = SHORT_PARAM_MAP[slug] || `q_${slug}`;
   let input = headerEl.querySelector(`input[data-filter-param="${paramKey}"]`);
   if (input) {
-    syncParamToUrl(paramKey, input.value.trim().toLowerCase());
-    return input.value.trim().toLowerCase();
+    const q = normalizeQuery(input.value);
+    syncParamToUrl(paramKey, q);
+    return q;
   }
 
-  const initial = (currentParams().get(paramKey) || '').trim().toLowerCase();
+  const initial = normalizeQuery(currentParams().get(paramKey) || '');
   const wrapperHtml = inputWithClear({ id: `tf-${paramKey}`, placeholder, value: initial, title });
   const template = document.createElement('div');
   template.innerHTML = wrapperHtml;
@@ -88,7 +99,7 @@ export function mountTableFilter({ headerEl, paramKey: slug, placeholder, title,
 
   let timer = null;
   const apply = (rawValue) => {
-    const q = rawValue.trim().toLowerCase();
+    const q = normalizeQuery(rawValue);
     syncParamToUrl(paramKey, q);
     onChange(q);
   };
@@ -122,8 +133,19 @@ export function mountTableFilter({ headerEl, paramKey: slug, placeholder, title,
   // reliably lands on the visually-first table either way; re-running it
   // from every newly-created filter is harmless since they all converge on
   // the same element.
+  //
+  // Skip hidden candidates: navigating from the contributors list straight
+  // to a contributor's detail view repurposes `#table-contributors` in place
+  // but leaves the list's own header (and its now-invisible filter input) in
+  // the DOM, still inside the same `.tab-content` — without this check that
+  // stale, off-screen input would win the race over the detail page's own
+  // (visible) filter.
   const scope = headerEl.closest('.tab-content') || document;
-  setTimeout(() => scope.querySelector('input[data-filter-param]')?.focus(), 0);
+  setTimeout(() => {
+    for (const candidate of scope.querySelectorAll('input[data-filter-param]')) {
+      if (candidate.offsetParent !== null) { candidate.focus(); break; }
+    }
+  }, 0);
 
   syncParamToUrl(paramKey, initial);
   return initial;
