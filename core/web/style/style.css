@@ -155,23 +155,72 @@ h2 .export-btn {
 }
 
 /* The per-pair matches table can have many columns and overflow the viewport
-   width. Unlike the other .table-responsive tables, it becomes its own
-   scrollable box (both axes) with a header sticky to the top of that box —
-   overflow-x:auto would otherwise make this element the sticky containing
-   block, breaking the page-level sticky header used elsewhere. */
-.matches-section-content.table-responsive {
+   width, so it becomes its own scrollable box (both axes) with a header
+   sticky to the top of that box. Deliberately its own class rather than
+   layered on top of the shared `.table-responsive` (overflow: clip by
+   default): overriding that base `clip` to `auto` via a more specific
+   selector reproduces a real Chromium bug where `position: sticky` silently
+   stops taking effect on the element, even though every computed style
+   value looks correct (confirmed by bisecting — swapping the override to an
+   unrelated fresh class with no competing `overflow: clip` rule fixed it
+   instantly). A dedicated class with its own complete, non-overridden
+   overflow declaration avoids the cascade shape that triggers it. Card
+   styling (background/shadow/radius/margin) is copied from
+   `.table-responsive` since this class no longer inherits it.
+   The box itself is also page-sticky (desktop only — see
+   `observeStickyHeader`'s `--thead-offset`, set by match-detail.js for this
+   box): without that, once `.matches-section-bar` above it freezes at the
+   top, this box (an ordinary document-flow sibling) keeps scrolling with
+   the page and slides *under* the now-frozen bar, taking its own sticky
+   <th> row out of view with it. */
+.matches-table-box {
   overflow: auto;
   max-height: calc(100vh - var(--nav-height) - 80px);
+  margin-bottom: 2rem;
+  background: var(--srd-surface);
+  box-shadow: var(--srd-shadow-1);
+  border-radius: var(--srd-radius);
 }
-.matches-section-content.table-responsive th {
+@media (min-width: 769px) {
+  .matches-table-box {
+    position: sticky;
+    top: var(--thead-offset, var(--nav-height));
+  }
+}
+.matches-table-box th {
   top: 0;
 }
 /* Pin the measured natural width as min-width so fixed-layout columns don't
    squeeze below readable when the table is wider than its box — the
-   .table-responsive wrapper above pans horizontally instead. */
-.matches-section-content.table-responsive .virtual-table {
+   box above pans horizontally instead. */
+.matches-table-box .virtual-table {
   min-width: var(--vt-natural-width, 0);
 }
+
+/* Keep each table's header bar (heading + filter input + CSV/Expand) visible
+   while scrolling on large screens, stacked right above the sticky <th> row
+   (see `th { top: var(--thead-offset, ...) }` above) — so the filter stays
+   reachable on a long scroll instead of disappearing with the rest of the
+   page. Mobile keeps the simpler today's-behavior (only <th> sticks), since
+   these bars can wrap to two lines there and a tall sticky bar would eat too
+   much of the viewport. */
+@media (min-width: 769px) {
+  h2.collapsible-header:has(+ .table-responsive),
+  .matches-summary-header,
+  .matricula-allbooks-header,
+  .geneanet-cemeteries-header,
+  .matricula-books-header,
+  .matches-section-bar {
+    position: sticky;
+    top: var(--nav-height);
+    z-index: 2;
+    /* Page background, not card/surface white — these bars sit directly on
+       the page (not inside a card), so an opaque white tile would look like
+       a mismatched patch once content scrolls underneath it. */
+    background: var(--srd-bg);
+  }
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -188,7 +237,12 @@ th {
   font-weight: 600;
   line-height: 1.2;
   position: sticky;
-  top: var(--nav-height);
+  /* `--thead-offset` (set by lib/table-filter.js's observeStickyHeader, on the
+     table's own container) accounts for the sticky header bar — heading +
+     filter input — that now sits above the table on desktop; it's unset on
+     narrow viewports, where that bar isn't sticky and this falls back to the
+     plain nav-height offset. */
+  top: var(--thead-offset, var(--nav-height));
   z-index: 1;
   border-bottom: 1px solid var(--srd-line-strong);
 }
@@ -474,6 +528,89 @@ h2 {
   display: flex;
   flex-grow: 1;
   align-items: center;
+}
+
+/* Per-table text filter (lib/table-filter.js's mountTableFilter), mounted
+   into a table's header bar alongside its heading and CSV/Expand buttons.
+   Fixed width instead of .input-wrapper's flex-grow:1, so it doesn't swallow
+   the whole bar. Input styling mirrors `.match-section-search` (the existing
+   per-section filter on the Matches page) so every text filter in the app
+   looks/feels the same, including its focus highlight; the clear (×) button
+   already gets the shared `.clear-btn` look for free. */
+.table-filter-wrapper {
+  display: inline-flex;
+  width: 200px;
+  max-width: 100%;
+  flex-grow: 0;
+  vertical-align: middle;
+}
+.table-filter-wrapper input {
+  padding: 5px 28px 5px 9px;
+  font-family: var(--srd-font-sans);
+  font-size: 0.85rem;
+  color: var(--srd-ink);
+  border: 1px solid var(--srd-line-strong);
+  border-radius: var(--srd-radius);
+  background: var(--srd-surface);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.table-filter-wrapper input:focus {
+  border-color: var(--srd-accent);
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+}
+/* Plain <h2> table headers lay their CSV/Expand buttons out via float (see
+   `h2 .export-btn` below), not flex, and their heading text is a bare text
+   node with no element to hang flex/order rules on — so centering it the
+   way `.matches-section-bar` does (flex-basis-0 zones) isn't available here.
+   Take the filter out of flow instead and center it absolutely over the bar;
+   it never collides with the float layout since it isn't part of it. */
+h2.collapsible-header {
+  position: relative;
+}
+h2 .table-filter-wrapper {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+/* `.section-bar` headers (matches-summary / matricula-books / geneanet-
+   cemeteries) ARE flex containers with the heading and CSV button as
+   separate children, so `order` alone (no flex-grow — that would stretch
+   the button's own bordered box across the gap) puts the filter between
+   them; the bar's existing `justify-content: space-between` keeps the
+   heading flush left and the button flush right, leaving the filter
+   roughly centered in between. */
+.section-bar > .section-heading {
+  order: 1;
+}
+.section-bar .table-filter-wrapper {
+  order: 2;
+}
+.section-bar > .export-btn {
+  order: 3;
+}
+
+/* Below this width a centered filter would collide with the heading or
+   button text, so it drops to its own full-width row under the header line
+   instead — same threshold `.matches-section-bar` already reflows at. */
+@media (max-width: 860px) {
+  h2 .table-filter-wrapper {
+    position: static;
+    transform: none;
+    display: flex;
+    width: 100%;
+    clear: both;
+    margin: 8px 0 0;
+  }
+  .section-bar {
+    flex-wrap: wrap;
+  }
+  .section-bar .table-filter-wrapper {
+    order: 4;
+    flex: 1 1 100%;
+  }
 }
 
 /* Advanced search lays out inputs in a column, add some space */

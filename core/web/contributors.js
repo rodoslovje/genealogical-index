@@ -20,8 +20,6 @@ import { loadSurnameCloud } from './contributors/cloud.js';
 import {
   contributorColumns,
   readContributorParam, readWithParam,
-  bindFilterInput, restoreFilterFromUrl, updateFilterPlaceholder,
-  filterContributorData,
   setCurrentMatches, getCurrentMatches,
 } from './contributors/filter.js';
 import { renderMatchesPage } from './contributors/matches.js';
@@ -66,12 +64,6 @@ export async function updateFooterDataDate() {
 }
 
 export async function renderContributors() {
-  // Bind input handler once (works for any sub-view because the handler
-  // dispatches off live URL params) and refresh placeholder for this view.
-  bindFilterInput();
-  updateFilterPlaceholder();
-  restoreFilterFromUrl();
-
   const urlParams = currentParams();
   const contributor = readContributorParam(urlParams);
   let withPartner = readWithParam(urlParams);
@@ -84,15 +76,6 @@ export async function renderContributors() {
     const newSearch = toUnicodeSearch(urlParams);
     history.replaceState(null, '', window.location.pathname + (newSearch ? '?' + newSearch : ''));
   }
-
-  // Auto-open the sidebar on desktop so the filter input is discoverable on
-  // the list / single-contributor views. On mobile the sidebar covers content
-  // — leave that to the hamburger so we don't trap the user. The per-pair
-  // matches detail view has no use for it (its text filters live inline in
-  // each table's header instead) — explicitly close it there, overriding the
-  // router's tab-activation default of opening it for any contributors tab.
-  const sidebar = document.getElementById('sidebar');
-  if (sidebar && window.innerWidth > 768) sidebar.classList.toggle('open', !withPartner);
 
   const chartsContainer = document.getElementById('charts-container');
   const surnameCloudSection = document.getElementById('surname-cloud-section');
@@ -218,13 +201,13 @@ export async function renderContributors() {
 
     renderChart(data);
     renderTimelineChart(timeline);
-    const initialFiltered = enrichWithMatchCounts(filterContributorData(data));
-    const tableData = initialFiltered.map(d => ({
+    const enriched = enrichWithMatchCounts(data);
+    const tableData = enriched.map(d => ({
       ...d,
       _contributor_href: toUnicodeHref({ t: 'contributors', c: d.contributor_ID }),
     }));
     renderTable(tableData, 'table-contributors', contributorColumns, 'total', false);
-    loadSurnameCloud(expandContributorNames(initialFiltered), 'surname-cloud');
+    loadSurnameCloud(expandContributorNames(enriched), 'surname-cloud');
   } catch {
     tableContainer.innerHTML = `<p>${t('contributors_failed')}</p>`;
   } finally {

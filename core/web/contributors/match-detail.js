@@ -13,6 +13,7 @@ import { toUnicodeHref, currentParams, toUnicodeSearch } from '../lib/url.js';
 import { updateCurrentKey } from '../lib/view-cache.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
+import { observeStickyHeader } from '../lib/table-filter.js';
 
 import { getContributorUrlMap } from './data.js';
 
@@ -252,7 +253,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       const newUrl = u.pathname + (search ? '?' + search : '');
       history.replaceState(null, '', newUrl);
       // Keep the view cache's tracked key in sync — see the matching comment
-      // in filter.js's syncFilterToUrl for why this matters.
+      // in lib/table-filter.js's syncParamToUrl for why this matters.
       updateCurrentKey(newUrl);
     };
     const addDiffFilter = {
@@ -301,6 +302,12 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
     // previous render compares its captured token and stops when stale.
     let renderToken = 0;
 
+    // Auto-focus the first (Persons) section's filter on the very first
+    // render of this page, mirroring the generic table filter's page-load
+    // behavior — but only then, so later re-renders (sort, toggle, typing)
+    // never steal focus from whatever the user is doing.
+    let isFirstRender = true;
+
     // Debounce timers for the per-section text filter inputs, keyed by type.
     const filterTimers = { person: null, family: null };
 
@@ -323,6 +330,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
     function renderTables() {
       const token = ++renderToken;
+      const wasFirstRender = isFirstRender;
+      isFirstRender = false;
       // Sections whose pair rows exceed the first synchronous chunk; their
       // remainder streams in after the innerHTML swap. { key, group, buildPairRow, next }.
       const pendingChunks = [];
@@ -601,13 +610,13 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             <span class="match-badge match-badge-link">🔗</span>${t('filter_links')} (${adCounts.link})
           </label>` : '';
         const searchInputHtml = `<div class="input-wrapper match-section-search-wrapper">
-            <input type="search" class="match-section-search" data-type="${key}" value="${escapeHtml(textFilter[key])}" placeholder="${t('matches_filter_placeholder').replace(/"/g, '&quot;')}" title="${t('tip_matches_filter').replace(/"/g, '&quot;')}">
+            <input type="search" class="match-section-search" data-type="${key}" value="${escapeHtml(textFilter[key])}" placeholder="${t('table_filter_placeholder').replace(/"/g, '&quot;')}" title="${t('tip_table_filter').replace(/"/g, '&quot;')}">
             <button type="button" class="clear-btn match-section-search-clear" data-type="${key}" title="${t('clear_filter').replace(/"/g, '&quot;')}" style="display: ${textFilter[key] ? 'block' : 'none'}">&times;</button>
           </div>`;
         const filterToggleHtml = `${searchInputHtml}${addToggleHtml}${linkToggleHtml}${diffToggleHtml}`;
 
         const tableOrEmptyHtml = group.length
-          ? `<div class="matches-section-content table-responsive"${contentDisplay}>
+          ? `<div class="matches-section-content matches-table-box"${contentDisplay}>
             <table class="matches-detail-table">
               <thead><tr>
                 ${headerCells}
@@ -669,6 +678,10 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           input.focus();
           input.setSelectionRange(focusedSearchInfo.selectionStart, focusedSearchInfo.selectionEnd);
         }
+      } else if (wasFirstRender) {
+        // First DOM-order section (Persons) — same "ready to type immediately"
+        // behavior as every other table's filter.
+        detailEl.querySelector('.match-section-search')?.focus();
       }
 
       // Virtualize large match tables: measure the freshly-rendered (auto-layout)
@@ -757,6 +770,13 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             collapseState[typeKey] = !isCollapsed;
           });
         }
+        // The section bar is page-sticky (style.css), but its table box below
+        // it isn't — without an offset it keeps scrolling with the page and
+        // slides under the now-frozen bar, taking its sticky <th> row with it.
+        // Anchor the box's own top to the bar's actual (possibly wrapped)
+        // height so it freezes flush below the bar instead.
+        const bar = section.querySelector('.matches-section-bar');
+        if (bar && content) observeStickyHeader(bar, content);
       });
 
       detailEl.querySelectorAll('.export-matches-btn').forEach(btn => {

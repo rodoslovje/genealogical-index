@@ -6,13 +6,12 @@ import {
 import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref } from '../lib/url.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
+import { mountTableFilter, observeStickyHeader } from '../lib/table-filter.js';
 import siteConfig from '@site-config';
 
 import { ensureData, getCachedData, getContributorUrlMap, fetchMatriculaBooks } from './data.js';
 import { loadSurnameCloud } from './cloud.js';
-import {
-  getContributorFilter, setCurrentMatches,
-} from './filter.js';
+import { setCurrentMatches } from './filter.js';
 import { exportBooksToCSV } from './matricula-stats.js';
 import { renderMatchDetail } from './match-detail.js';
 import { fetchErrorKey } from '../auth.js';
@@ -371,24 +370,6 @@ export async function renderMatchesPage(contributor, withPartner) {
       return;
     }
 
-    // Map to renderTable row format, applying any active filter
-    const q = getContributorFilter();
-    const filteredPartners = q ? partners.filter(p => p.contributor.toLowerCase().includes(q)) : partners;
-
-    const tableData = filteredPartners.map(p => {
-      const partnerData = cached.find(d => d.contributor_ID === baseContributorName(p.contributor));
-      const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
-      return {
-        contributor_ID: p.contributor,
-        _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor }),
-        total_persons:  p.persons_count  || 0,
-        total_families: p.families_count || 0,
-        total:          p.total_count,
-        confidence:     Math.round((p.max_confidence || 0) * 100),
-        _is_matricula_only: isMatOnly,
-      };
-    });
-
     container.innerHTML = heading +
       `<div class="matches-summary-section">
         <div class="matches-summary-header section-bar section-bar--top">
@@ -404,7 +385,8 @@ export async function renderMatchesPage(contributor, withPartner) {
     loadDetailClouds();
     setupBooksSection();
 
-    const summaryHeader = container.querySelector('.matches-summary-header h3');
+    const summaryHeaderEl = container.querySelector('.matches-summary-header');
+    const summaryHeader = summaryHeaderEl?.querySelector('h3');
     const summaryContent = container.querySelector('.matches-summary-content');
     if (summaryHeader && summaryContent) {
       summaryHeader.classList.add('collapsible-header');
@@ -416,13 +398,44 @@ export async function renderMatchesPage(contributor, withPartner) {
       });
     }
 
+    // Map to renderTable row format, applying the inline filter. The filter
+    // input lives in `.matches-summary-header`, which (unlike the table body)
+    // is only built once above — so re-running this on a filter keystroke
+    // just re-derives `tableData` and re-renders the table, never touching
+    // (or stealing focus from) the filter input itself.
     const summaryCols = ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'];
-    renderTable(tableData, 'matches-summary', summaryCols, 'total', false);
+    let currentTableData = [];
+    const renderSummaryTable = () => {
+      const query = mountTableFilter({
+        headerEl: summaryHeaderEl,
+        paramKey: 'matches-summary',
+        placeholder: t('table_filter_placeholder'),
+        title: t('tip_table_filter'),
+        onChange: renderSummaryTable,
+      });
+      const filteredPartners = query ? partners.filter(p => p.contributor.toLowerCase().includes(query)) : partners;
+      currentTableData = filteredPartners.map(p => {
+        const partnerData = cached.find(d => d.contributor_ID === baseContributorName(p.contributor));
+        const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
+        return {
+          contributor_ID: p.contributor,
+          _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor }),
+          total_persons:  p.persons_count  || 0,
+          total_families: p.families_count || 0,
+          total:          p.total_count,
+          confidence:     Math.round((p.max_confidence || 0) * 100),
+          _is_matricula_only: isMatOnly,
+        };
+      });
+      renderTable(currentTableData, 'matches-summary', summaryCols, 'total', false);
+    };
+    renderSummaryTable();
+    if (summaryHeaderEl) observeStickyHeader(summaryHeaderEl, document.getElementById('matches-summary'));
 
     const summaryBtn = container.querySelector('.export-matches-summary-btn');
     if (summaryBtn) {
       summaryBtn.addEventListener('click', () => {
-        exportToCSV(tableData, summaryCols, formatExportFilename(`matches-${displayName}`, 'csv'));
+        exportToCSV(currentTableData, summaryCols, formatExportFilename(`matches-${displayName}`, 'csv'));
       });
     }
 

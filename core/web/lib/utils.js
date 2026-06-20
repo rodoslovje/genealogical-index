@@ -59,44 +59,6 @@ export function setInputValue(input, value) {
   if (clearBtn?.matches('.clear-btn')) clearBtn.style.display = value ? 'block' : 'none';
 }
 
-/**
- * Wraps an existing `<input>` in an `.input-wrapper` with a clear (×) button and
- * wires up clear / Enter handling. Used for standalone sidebar filter inputs
- * that exist in the static HTML (vs. `inputWithClear()` which builds the markup
- * for dynamically-rendered forms).
- */
-export function setupClearableInput(inputElement, onEnterCallback) {
-  if (!inputElement) return;
-
-  const wrapper = document.createElement('div');
-  wrapper.className = 'input-wrapper';
-  inputElement.parentNode.insertBefore(wrapper, inputElement);
-  wrapper.appendChild(inputElement);
-
-  const clearBtn = document.createElement('button');
-  clearBtn.type = 'button';
-  clearBtn.className = 'clear-btn';
-  clearBtn.innerHTML = '&times;';
-  wrapper.appendChild(clearBtn);
-
-  const toggleClearBtn = () => {
-    clearBtn.style.display = inputElement.value ? 'block' : 'none';
-  };
-
-  clearBtn.addEventListener('click', () => {
-    inputElement.value = '';
-    toggleClearBtn();
-    inputElement.focus();
-    inputElement.dispatchEvent(new Event('input'));
-  });
-
-  inputElement.addEventListener('input', toggleClearBtn);
-  inputElement.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && onEnterCallback) onEnterCallback();
-  });
-  toggleClearBtn();
-}
-
 // --- CDN script loaders ------------------------------------------------------
 // Chart.js (~90 kB gzipped) and D3 (~200 kB gzipped) are only needed on the
 // contributors and ancestors/descendants views respectively. Loading them

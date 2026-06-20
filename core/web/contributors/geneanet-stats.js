@@ -161,8 +161,6 @@ function renderCemeteriesSection(cemeteries) {
       </div>
     </div>`,
     setup: () => {
-      let filtered = cemeteries;
-
       const tableApi = setupSortableTable({
         tableId: 'geneanet-cemeteries-table',
         headerSelector: '.geneanet-cemeteries-header h3',
@@ -171,33 +169,18 @@ function renderCemeteriesSection(cemeteries) {
         initialSort: { column: 'place', ascending: true },
         renderRow,
         fallbackSort: (a, b) => collator.compare(a.name || '', b.name || ''),
+        countId: 'geneanet-cemeteries-count',
+        filter: {
+          paramKey: 'geneanet-cemeteries',
+          placeholder: t('table_filter_placeholder'),
+          fields: [c => c.place, c => c.name, c => typeLabel(c.type)],
+        },
       });
-
-      const applyFilters = () => {
-        const query = document.getElementById('filter-geneanet-cemeteries')?.value.toLowerCase().trim() || '';
-        filtered = cemeteries.filter(c => {
-          if (!query) return true;
-          const place = (c.place || '').toLowerCase();
-          const name = (c.name || '').toLowerCase();
-          const type = typeLabel(c.type).toLowerCase();
-          return place.includes(query) || name.includes(query) || type.includes(query);
-        });
-        const countEl = document.getElementById('geneanet-cemeteries-count');
-        if (countEl) countEl.textContent = fmt(filtered.length);
-        if (tableApi) tableApi.updateData(filtered);
-      };
-
-      const filterInput = document.getElementById('filter-geneanet-cemeteries');
-      if (filterInput) {
-        filterInput.oninput = applyFilters;
-        filterInput.onchange = applyFilters;
-        if (filterInput.value) applyFilters();
-      }
 
       const csvBtn = document.querySelector('.geneanet-cemeteries-csv-btn');
       if (csvBtn) {
         csvBtn.addEventListener('click', () => {
-          exportCemeteriesToCSV(filtered, columns, formatExportFilename('geneanet-cemeteries', 'csv'));
+          exportCemeteriesToCSV(tableApi.getVisibleData(), columns, formatExportFilename('geneanet-cemeteries', 'csv'));
         });
       }
     },

@@ -5,6 +5,7 @@ import { childYearOf, parseDateForSort } from './lib/dates.js';
 import { toUnicodeHref } from './lib/url.js';
 import { createExportButton } from './lib/icons.js';
 import { exportToCSV } from './table-csv.js';
+import { mountTableFilter, observeStickyHeader } from './lib/table-filter.js';
 import siteConfig from '@site-config';
 
 // Re-exported so existing importers (`contributors/*`, surname cloud) can keep
@@ -27,6 +28,10 @@ const NUMERIC_COLUMNS = new Set([
 ]);
 
 const MATCHES_CONTEXT_COLS = new Set(['contributor_ID', 'total_persons', 'total_families', 'total']);
+
+// Columns holding structured/rendered data (JSON lists, link icons) rather
+// than plain text — skipped by the generic per-table filter below.
+const FILTER_SKIP_COLUMNS = new Set(['children', 'parents', 'partners', 'links']);
 
 // Above this row count, the table is rendered "virtualized": fixed column
 // widths + per-row `content-visibility:auto` so the browser skips layout/paint
@@ -183,6 +188,17 @@ function getValue(row, col) {
   if (RIGHT_COLUMNS.has(col))   return parseDateForSort(row[col]);
   if (NUMERIC_COLUMNS.has(col)) return Number(row[col] || 0);
   return String(row[col] || '').toLowerCase();
+}
+
+// Generic substring match for the per-table text filter: true if `query`
+// appears in any non-skipped column's raw value.
+function rowMatchesQuery(row, columns, query) {
+  for (const col of columns) {
+    if (FILTER_SKIP_COLUMNS.has(col)) continue;
+    const val = row[col];
+    if (val != null && String(val).toLowerCase().includes(query)) return true;
+  }
+  return false;
 }
 
 function sortData(data, primary, secondary) {
@@ -693,7 +709,24 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
     headerEl.classList.remove('collapsed');
   }
 
-  if (data.length === 0) {
+  // Full unfiltered set, kept across filter-only re-renders (see `query` below)
+  // so typing in the filter doesn't need the caller to re-fetch/re-supply data.
+  container._allData = data;
+
+  let query = '';
+  if (isHeaderValid) {
+    query = mountTableFilter({
+      headerEl,
+      paramKey: containerId.replace(/^table-/, ''),
+      placeholder: t('table_filter_placeholder'),
+      title: t('tip_table_filter'),
+      onChange: () => renderTable(container._allData, containerId, columns, defaultSortColumn, defaultSortAscending, defaultSecondarySortColumn),
+    });
+    observeStickyHeader(headerEl, container);
+  }
+  const rows = query ? data.filter(row => rowMatchesQuery(row, columns, query)) : data;
+
+  if (rows.length === 0) {
     container.innerHTML = `<p>${t('no_results')}</p>`;
     if (isHeaderValid) {
       let btn = headerEl.querySelector('.export-btn');
@@ -710,7 +743,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   }
 
   const { primary, secondary } = container._sortState;
-  if (primary) sortData(data, primary, secondary);
+  if (primary) sortData(rows, primary, secondary);
 
   // Detect family vs. person table by the presence of husband-side columns;
   // the matches-summary table is identified by its container id.
@@ -737,16 +770,16 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   // All interactive wiring waits for the (possibly progressive) mount to finish
   // so it never operates on a half-populated tbody — sort headers and toolbar
   // buttons appear once every row is in the DOM (spinner covers the meantime).
-  mountTableHtml(container, data, columns, theadHtml, () => {
+  mountTableHtml(container, rows, columns, theadHtml, () => {
     // Map each row object to its freshly-rendered <tr>. Sorting then reorders
     // these existing nodes (see the sort handler) instead of regenerating the
     // whole <tbody> — no cell HTML is rebuilt and open <details> survive because
     // the same nodes move. The map is rebuilt on every full render, when the
-    // tbody row order still matches `data`.
+    // tbody row order still matches `rows`.
     const rowTrs = new Map();
     {
       const trs = container.querySelector('tbody').children;
-      for (let i = 0; i < data.length; i++) rowTrs.set(data[i], trs[i]);
+      for (let i = 0; i < rows.length; i++) rowTrs.set(rows[i], trs[i]);
     }
 
     // Hoisted so the sort handler can reset the expand toggle after a re-render
@@ -760,6 +793,10 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         headerEl.addEventListener('click', (e) => {
           if (e.target.closest('button') || e.target.closest('a')) return;
           const isCollapsed = container.style.display === 'none';
+          // Clicking into the filter input should never collapse an already-
+          // open table (it's just placing a text cursor) — only expand a
+          // collapsed one, since you'd want to see the rows you're filtering.
+          if (e.target.closest('input') && !isCollapsed) return;
           container.style.display = isCollapsed ? '' : 'none';
           headerEl.classList.toggle('collapsed', !isCollapsed);
         });
@@ -785,7 +822,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         setExpandLabel(initialAllOpen);
         expandBtn.addEventListener('click', () => {
           const targetOpen = expandBtn.dataset.allOpen !== '1';
-          runWithBusy(data.length > BUSY_SPINNER_ROW_THRESHOLD, () => {
+          runWithBusy(rows.length > BUSY_SPINNER_ROW_THRESHOLD, () => {
             container.querySelectorAll('details.expandable-cell').forEach(d => { d.open = targetOpen; });
             // Expanded cells need more width than the collapsed-state colgroup
             // allotted, so re-lock column widths against the new content.
@@ -800,7 +837,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         title: t('download_csv'), // Keeps the tooltip translation for accessibility
         onClick: () => {
           const baseName = containerId.replace('table-', '');
-          exportToCSV(data, columns, formatExportFilename(baseName, 'csv'));
+          exportToCSV(rows, columns, formatExportFilename(baseName, 'csv'));
         },
       });
 
@@ -831,7 +868,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
         // headerEl buttons (CSV / expand-all) are outside `container` and
         // untouched.
         const applySort = () => {
-          sortData(data, state.primary, state.secondary);
+          sortData(rows, state.primary, state.secondary);
           container.querySelectorAll('thead th.sortable').forEach(thNode => {
             const c = thNode.dataset.col;
             thNode.innerHTML = `${t(`col_${c}`)}${buildArrowIndicator(c, state)}`;
@@ -843,7 +880,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
           // which is why the old capture/restore dance is gone.
           const tbody = container.querySelector('tbody');
           const frag = document.createDocumentFragment();
-          for (const row of data) {
+          for (const row of rows) {
             const tr = rowTrs.get(row);
             if (tr) frag.appendChild(tr);
           }
@@ -856,7 +893,7 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
 
         // For large tables the sort blocks the main thread long enough to feel
         // unresponsive, so run it behind the spinner (deferred so it paints first).
-        runWithBusy(data.length > BUSY_SPINNER_ROW_THRESHOLD, applySort);
+        runWithBusy(rows.length > BUSY_SPINNER_ROW_THRESHOLD, applySort);
       });
     });
   });

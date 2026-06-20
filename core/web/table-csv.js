@@ -2,6 +2,7 @@ import { t } from './i18n.js';
 import { isPrivate, parseList } from './lib/utils.js';
 import { PARAM_MAP_REVERSE } from './lib/url.js';
 import { csvCell, csvRow, csvFooter, downloadCsv } from './lib/csv.js';
+import { TABLE_FILTER_PARAM_KEYS } from './lib/table-filter.js';
 
 // Plain-text "Name Surname | date_of_birth" rendering used by CSV export.
 // The " | " before the date gives downstream parsers an unambiguous split
@@ -108,7 +109,9 @@ function searchCriteriaRows() {
 
     const field = PARAM_MAP_REVERSE[k] || k;
     let label;
-    if (field === 'q' || field === 'filter') {
+    if (TABLE_FILTER_PARAM_KEYS.has(k)) {
+      label = t('table_filter_csv_label');
+    } else if (field === 'q' || field === 'filter') {
       label = t('general_search_label');
     } else if (field === 'ex') {
       label = t('exact_search');

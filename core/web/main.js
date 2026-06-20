@@ -10,7 +10,6 @@ import { renderIntros } from './intros.js';
 import { initNavbar, checkNavOverflow } from './navbar.js';
 import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, maybeRouteGeneanet, maybeRouteCompare, tabIdFromParams } from './router.js';
 import { relocalizeCompare } from './tree/compare.js';
-import { setupClearableInput } from './lib/utils.js';
 import { clearViewCache } from './lib/view-cache.js';
 
 // --- Global styles injected from JS ---
@@ -61,21 +60,6 @@ async function init() {
     // help-btn and auth-wrapper now exist; re-evaluate so they land in the
     // sidebar slot if we're already in compact-nav mode.
     checkNavOverflow();
-
-    setupClearableInput(document.getElementById('contributors-query'), () => {
-      sidebar.classList.remove('open');
-      document.activeElement?.blur();
-    });
-
-    setupClearableInput(document.getElementById('filter-matricula-books'), () => {
-      sidebar.classList.remove('open');
-      document.activeElement?.blur();
-    });
-
-    setupClearableInput(document.getElementById('filter-geneanet-cemeteries'), () => {
-      sidebar.classList.remove('open');
-      document.activeElement?.blur();
-    });
 
     setupGeneralSearch();
     setupPersonSearchForm();

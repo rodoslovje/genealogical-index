@@ -509,8 +509,6 @@ export function clearAllSearchForms() {
   clearForm('general-', GENERAL_FIELDS);
   clearForm('adv-person-', searchFields(personColumns));
   clearForm('adv-family-', searchFields(familyColumns));
-  // The contributors / matricula sidebars have their own standalone filter inputs.
-  ['contributors-query', 'filter-matricula-books'].forEach(id => setInputValue(document.getElementById(id), ''));
 }
 
 export function restoreFromURL({ triggerSearch = true } = {}) {

@@ -1,5 +1,4 @@
 import { onLanguageChange } from './i18n.js';
-import { currentParams, getParam } from './lib/url.js';
 
 // Responsive navbar + hamburger/sidebar behavior.
 //
@@ -106,17 +105,18 @@ export function initNavbar() {
   onLanguageChange(checkNavOverflow);
 
   hamburgerBtn.addEventListener('click', () => {
-    // Tree pages, and the per-pair matches detail page, have no use for the
-    // sidebar's search controls (the latter's text filters now live inline
-    // in each table's header instead). The sidebar is normally a no-op there,
-    // but in compact-nav mode it also hosts the nav tabs and/or help /
-    // language / login utilities collapsed out of the navbar, so we still
-    // want it reachable.
+    // Tree pages, every contributors-tab view (list / single contributor /
+    // matches detail), and the Matricula/Geneanet stats pages have no use for
+    // the sidebar's search controls — their text filters all live inline in
+    // each table's header instead. The sidebar is normally a no-op there, but
+    // in compact-nav mode it also hosts the nav tabs and/or help / language /
+    // login utilities collapsed out of the navbar, so we still want it reachable.
     const isTreePage = document.getElementById('tab-ancestors').classList.contains('active') ||
                        document.getElementById('tab-descendants').classList.contains('active');
-    const isMatchesDetailPage = document.getElementById('tab-contributors').classList.contains('active') &&
-                       !!getParam(currentParams(), 'with');
-    if ((isTreePage || isMatchesDetailPage) && !document.body.classList.contains('compact-nav')) {
+    const isContributorsPage = document.getElementById('tab-contributors').classList.contains('active') ||
+                       document.getElementById('tab-matricula')?.classList.contains('active') ||
+                       document.getElementById('tab-geneanet')?.classList.contains('active');
+    if ((isTreePage || isContributorsPage) && !document.body.classList.contains('compact-nav')) {
       return;
     }
 

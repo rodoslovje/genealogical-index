@@ -4,6 +4,7 @@ import { escapeHtml, baseContributorName, ensureChartJs, formatExportFilename } 
 import { toUnicodeHref } from '../lib/url.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { csvCell, csvFooter, downloadCsv } from '../lib/csv.js';
+import { mountTableFilter, observeStickyHeader } from '../lib/table-filter.js';
 
 let cachedStats = null;
 let fetchPromise = null;
@@ -33,19 +34,41 @@ function typeLabel(type) {
   return escapeHtml(type || '');
 }
 
-/** Wires up a sortable, collapsible table that renders rows from `data` with
- *  the given column definitions. Mounts into the `<tbody>` inside `tableId`
- *  and toggles content visibility from the header inside `headerSelector`. */
-export function setupSortableTable({ tableId, headerSelector, contentSelector, columns, data, initialSort, renderRow, fallbackSort }) {
+/** Wires up a sortable, collapsible, filterable table that renders rows from
+ *  `data` with the given column definitions. Mounts into the `<tbody>` inside
+ *  `tableId` and toggles content visibility from the header inside
+ *  `headerSelector`. Optional `filter: { paramKey, placeholder, fields }`
+ *  mounts an inline text filter into the header bar (`fields` is an array of
+ *  `(row) => string` extractors checked against the query), synced to the URL
+ *  like every other table's filter (see lib/table-filter.js). `countId`, if
+ *  given, is kept in sync with the filtered row count. */
+export function setupSortableTable({ tableId, headerSelector, contentSelector, columns, data, initialSort, renderRow, fallbackSort, filter, countId }) {
   const tableEl = document.getElementById(tableId);
   if (!tableEl) return null;
   const tbody = tableEl.querySelector('tbody');
   if (!tbody) return null;
 
   const state = { ...initialSort };
-  let sorted = data.slice();
+  let sorted = [];
 
   const renderRows = () => {
+    let query = '';
+    const header = document.querySelector(headerSelector);
+    const headerBarEl = header?.closest('.section-bar') || header?.parentElement;
+    if (filter) {
+      query = mountTableFilter({
+        headerEl: headerBarEl,
+        paramKey: filter.paramKey,
+        placeholder: filter.placeholder,
+        title: t('tip_table_filter'),
+        onChange: renderRows,
+      });
+    }
+    sorted = (query ? data.filter(row => filter.fields.some(f => String(f(row) || '').toLowerCase().includes(query))) : data).slice();
+
+    const countEl = countId ? document.getElementById(countId) : null;
+    if (countEl) countEl.textContent = sorted.length.toLocaleString();
+
     const dir = state.ascending ? 1 : -1;
     sorted.sort((a, b) => {
       const col = columns.find(c => c.f === state.column);
@@ -65,6 +88,8 @@ export function setupSortableTable({ tableId, headerSelector, contentSelector, c
         : '';
       th.innerHTML = `${baseLabel}${indicator}`;
     });
+
+    if (headerBarEl) observeStickyHeader(headerBarEl, tableEl.closest('.table-responsive') || tableEl);
   };
 
   renderRows();
@@ -89,16 +114,16 @@ export function setupSortableTable({ tableId, headerSelector, contentSelector, c
     header.addEventListener('click', (e) => {
       if (e.target.closest('button') || e.target.closest('a')) return;
       const isCollapsed = header.classList.contains('collapsed');
+      // Clicking into the filter input should never collapse an already-open
+      // table — only expand a collapsed one.
+      if (e.target.closest('input') && !isCollapsed) return;
       content.style.display = isCollapsed ? '' : 'none';
       header.classList.toggle('collapsed', !isCollapsed);
     });
   }
 
   return {
-    updateData: (newData) => {
-      sorted = newData.slice();
-      renderRows();
-    }
+    getVisibleData: () => sorted,
   };
 }
 
@@ -170,8 +195,6 @@ function renderBooksSection(books) {
       </div>
     </div>`,
     setup: () => {
-      let filteredBooks = books;
-
       const tableApi = setupSortableTable({
         tableId: 'matricula-allbooks-table',
         headerSelector: '.matricula-allbooks-header h3',
@@ -180,36 +203,18 @@ function renderBooksSection(books) {
         initialSort: { column: 'parish', ascending: true },
         renderRow,
         fallbackSort: (a, b) => collator.compare(a.name || '', b.name || ''),
+        countId: 'matricula-books-count',
+        filter: {
+          paramKey: 'matricula-books',
+          placeholder: t('table_filter_placeholder'),
+          fields: [b => b.parish, b => typeLabel(b.type), b => b.date, b => baseContributorName(b.contributor)],
+        },
       });
-
-      const applyFilters = () => {
-        const query = document.getElementById('filter-matricula-books')?.value.toLowerCase().trim() || '';
-
-        filteredBooks = books.filter(b => {
-          if (!query) return true;
-          const parish = (b.parish || '').toLowerCase();
-          const type = typeLabel(b.type).toLowerCase();
-          const date = (b.date || '').toLowerCase();
-          const contrib = (baseContributorName(b.contributor) || '').toLowerCase();
-          return parish.includes(query) || type.includes(query) || date.includes(query) || contrib.includes(query);
-        });
-
-        const countEl = document.getElementById('matricula-books-count');
-        if (countEl) countEl.textContent = fmt(filteredBooks.length);
-        if (tableApi) tableApi.updateData(filteredBooks);
-      };
-
-      const filterInput = document.getElementById('filter-matricula-books');
-      if (filterInput) {
-        filterInput.oninput = applyFilters;
-        filterInput.onchange = applyFilters;
-        if (filterInput.value) applyFilters();
-      }
 
       const csvBtn = document.querySelector('.matricula-allbooks-csv-btn');
       if (csvBtn) {
         csvBtn.addEventListener('click', () => {
-          exportBooksToCSV(filteredBooks, columns, formatExportFilename('matricula-books', 'csv'));
+          exportBooksToCSV(tableApi.getVisibleData(), columns, formatExportFilename('matricula-books', 'csv'));
         });
       }
     },

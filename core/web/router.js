@@ -13,7 +13,7 @@ import { leaveCurrentView } from './lib/view-cache.js';
 
 const sidebar = document.getElementById('sidebar');
 
-const SEARCH_TABS = ['tab-general', 'tab-person', 'tab-family', 'tab-contributors'];
+const SEARCH_TABS = ['tab-general', 'tab-person', 'tab-family'];
 
 // URL ?t= value → DOM tab id (and the inverse used when serializing).
 const TAB_BY_TYPE = {
@@ -46,8 +46,9 @@ export function normalizeLegacyURL() {
 }
 
 /** Side route: ?t=matricula renders the global Matricula stats page outside
- *  of the regular tab system (no nav entry, no sidebar search). Returns true
- *  when handled so the caller can skip the normal tab routing. */
+ *  of the regular tab system (no nav entry, no sidebar search — its filter
+ *  lives inline in the books table's header instead). Returns true when
+ *  handled so the caller can skip the normal tab routing. */
 export function maybeRouteMatricula(urlParams) {
   if (urlParams.get('t') !== 'matricula') return false;
   leaveCurrentView();
@@ -61,26 +62,14 @@ export function maybeRouteMatricula(urlParams) {
   const sectionEl = document.getElementById('tab-matricula');
   if (sectionEl) sectionEl.classList.add('active');
 
-  const sidebarSection = document.getElementById('matricula-search-sidebar');
-  if (sidebarSection) {
-    sidebarSection.classList.add('active');
-    const input = document.getElementById('filter-matricula-books');
-    if (input && window.innerWidth > 768) setTimeout(() => input.focus(), 0);
-  }
-
-  if (window.innerWidth <= 768) {
-    sidebar?.classList.remove('open');
-  } else {
-    sidebar?.classList.add('open');
-  }
+  sidebar?.classList.remove('open');
 
   renderMatriculaStatsPage();
   return true;
 }
 
 /** Side route: ?t=geneanet renders the global Geneanet Cemeteries index page
- *  (with map) outside the regular tab system. Mirrors maybeRouteMatricula.
- *  Returns true when handled. */
+ *  (with map) outside the regular tab system. Mirrors maybeRouteMatricula. */
 export function maybeRouteGeneanet(urlParams) {
   if (urlParams.get('t') !== 'geneanet') return false;
   leaveCurrentView();
@@ -94,18 +83,7 @@ export function maybeRouteGeneanet(urlParams) {
   const sectionEl = document.getElementById('tab-geneanet');
   if (sectionEl) sectionEl.classList.add('active');
 
-  const sidebarSection = document.getElementById('geneanet-search-sidebar');
-  if (sidebarSection) {
-    sidebarSection.classList.add('active');
-    const input = document.getElementById('filter-geneanet-cemeteries');
-    if (input && window.innerWidth > 768) setTimeout(() => input.focus(), 0);
-  }
-
-  if (window.innerWidth <= 768) {
-    sidebar?.classList.remove('open');
-  } else {
-    sidebar?.classList.add('open');
-  }
+  sidebar?.classList.remove('open');
 
   renderGeneanetStatsPage();
   return true;
@@ -225,11 +203,7 @@ export function activateTab(targetTab, { skipHistory = false, initial = false } 
   }
 
   if (SEARCH_TABS.includes(targetTab)) {
-    if (targetTab === 'tab-contributors' && window.innerWidth <= 768) {
-      sidebar.classList.remove('open');
-    } else {
-      sidebar.classList.add('open');
-    }
+    sidebar.classList.add('open');
   } else {
     sidebar.classList.remove('open');
   }
@@ -239,10 +213,9 @@ export function activateTab(targetTab, { skipHistory = false, initial = false } 
   document.querySelectorAll('.sidebar-section').forEach(s => s.classList.remove('active'));
 
   const sidebarSectionMap = {
-    'tab-general':      'general-search-sidebar',
-    'tab-person':       'person-search-sidebar',
-    'tab-family':       'family-search-sidebar',
-    'tab-contributors': 'contributors-search-sidebar',
+    'tab-general': 'general-search-sidebar',
+    'tab-person':  'person-search-sidebar',
+    'tab-family':  'family-search-sidebar',
   };
   const sidebarSection = sidebarSectionMap[targetTab];
   if (sidebarSection) {
@@ -274,10 +247,7 @@ function navigateToURL({ triggerSearch = true } = {}) {
   if (maybeRouteGeneanet(urlParams)) return;
   if (maybeRouteCompare(urlParams)) return;
 
-  // Clear stale form state before activateTab renders the new view — it must
-  // run first, since activateTab's renderContributors() restores the
-  // contributors-query input from the URL (?f=...), and clearing afterward
-  // would wipe that restored value back to empty.
+  // Clear stale form state before activateTab renders the new view.
   clearAllSearchForms();
   if (!activateTab(tabIdFromParams(urlParams), { skipHistory: true })) {
     return;
