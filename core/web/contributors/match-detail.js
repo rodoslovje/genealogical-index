@@ -10,6 +10,7 @@ import {
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref, currentParams, toUnicodeSearch } from '../lib/url.js';
+import { updateCurrentKey } from '../lib/view-cache.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
 
@@ -249,7 +250,11 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
         else u.searchParams.delete(paramKey);
       }
       const search = toUnicodeSearch(u.searchParams);
-      history.replaceState(null, '', u.pathname + (search ? '?' + search : ''));
+      const newUrl = u.pathname + (search ? '?' + search : '');
+      history.replaceState(null, '', newUrl);
+      // Keep the view cache's tracked key in sync — see the matching comment
+      // in filter.js's syncFilterToUrl for why this matters.
+      updateCurrentKey(newUrl);
     };
     const addDiffFilter = {
       person: decodeMatchFilter(currentParams().get(MATCH_FILTER_PARAMS.person) || ''),

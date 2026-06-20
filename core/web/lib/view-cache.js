@@ -18,13 +18,20 @@ export function leaveCurrentView() {
   current = null;
   if (!container || !container.isConnected) return;
 
+  // Capture scroll position before detaching: removing the container's
+  // (possibly very tall) content shrinks the document height immediately,
+  // and the browser clamps window.scrollY to the new max right away — so
+  // reading it after detaching would record the clamped value, not where
+  // the user actually was.
+  const scrollY = window.scrollY;
+
   const frag = document.createDocumentFragment();
   while (container.firstChild) frag.appendChild(container.firstChild);
 
   cache.delete(key); // re-insert at the end so the Map stays in recency order
   cache.set(key, {
     frag,
-    scrollY: window.scrollY,
+    scrollY,
     title: document.title,
     extra: captureExtra ? captureExtra() : undefined,
   });
@@ -56,6 +63,15 @@ export function tryRestoreView(key, container, { restoreExtra, captureExtra } = 
  *  caches it. Call after a fresh (non-cached) render. */
 export function markCurrentView(key, container, captureExtra) {
   current = { key, container, captureExtra };
+}
+
+/** Re-points the currently-tracked view at `key` — call after a replaceState
+ *  that changes the URL (e.g. a sidebar filter) while that view stays mounted,
+ *  so a later leaveCurrentView() caches it under the URL it'll actually be
+ *  returned to on Back, not the stale one captured by markCurrentView. No-op
+ *  if no view is currently tracked (e.g. the contributors list view). */
+export function updateCurrentKey(key) {
+  if (current) current.key = key;
 }
 
 /** Drops every cached view — e.g. after a language switch, since cached

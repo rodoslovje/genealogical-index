@@ -250,7 +250,9 @@ export function activateTab(targetTab, { skipHistory = false, initial = false } 
     section.classList.add('active');
     const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
     const target = inputs.find(i => i.value.trim()) || inputs[0];
-    if (target && window.innerWidth > 768) setTimeout(() => target.focus(), 0);
+    // preventScroll: focusing this input would otherwise scroll it into view,
+    // undoing the scroll position the view cache just restored on Back/Forward.
+    if (target && window.innerWidth > 768) setTimeout(() => target.focus({ preventScroll: true }), 0);
   }
 
   document.querySelectorAll(`.tab-btn[data-target="${targetTab}"]`).forEach(b => b.classList.add('active'));
@@ -272,10 +274,14 @@ function navigateToURL({ triggerSearch = true } = {}) {
   if (maybeRouteGeneanet(urlParams)) return;
   if (maybeRouteCompare(urlParams)) return;
 
+  // Clear stale form state before activateTab renders the new view — it must
+  // run first, since activateTab's renderContributors() restores the
+  // contributors-query input from the URL (?f=...), and clearing afterward
+  // would wipe that restored value back to empty.
+  clearAllSearchForms();
   if (!activateTab(tabIdFromParams(urlParams), { skipHistory: true })) {
     return;
   }
-  clearAllSearchForms();
   restoreFromURL({ triggerSearch });
 }
 

@@ -8,6 +8,7 @@ import {
   expandContributorNames,
 } from './data.js';
 import { loadSurnameCloud } from './cloud.js';
+import { updateCurrentKey } from '../lib/view-cache.js';
 
 // --- View state owned by this module -----------------------------------------
 // These are shared between renderMatchesPage (writer) and the sidebar input
@@ -77,7 +78,13 @@ export function syncFilterToUrl(value) {
   if (value) u.searchParams.set('f', value);
   else u.searchParams.delete('f');
   const search = toUnicodeSearch(u.searchParams);
-  history.replaceState(null, '', u.pathname + (search ? '?' + search : ''));
+  const newUrl = u.pathname + (search ? '?' + search : '');
+  history.replaceState(null, '', newUrl);
+  // This view stays mounted across the edit — keep the view cache's idea of
+  // "where this view lives" in sync, or a later cache write (e.g. navigating
+  // to Compare Tree) would store it under the pre-filter URL and a Back
+  // navigation to the post-filter URL would miss the cache.
+  updateCurrentKey(newUrl);
 }
 
 /** Restores the filter input value from `?f=…` on (re-)render of a view. */
