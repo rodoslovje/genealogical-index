@@ -1199,7 +1199,7 @@ def main():
                     print("  -> Successfully cleared API cache.")
                 else:
                     print(f"  -> Failed to clear API cache. Status: {response.status}")
-        except urllib.error.URLError as e:
+        except (urllib.error.URLError, OSError) as e:
             print(
                 f"  -> Could not connect to API to clear cache. Is the API server running? Error: {e}"
             )
