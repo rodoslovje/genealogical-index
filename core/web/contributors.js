@@ -172,10 +172,19 @@ export async function renderContributors() {
     tableHeader.style.borderBottom = '1px solid var(--border)';
     tableHeader.style.paddingBottom = '5px';
     tableHeader.style.marginBottom = '10px';
+    tableHeader.appendChild(document.createElement('span'));
     tableContainer.parentNode.insertBefore(tableHeader, tableContainer);
   }
-  tableHeader.dataset.i18n = 'tab_contributors';
-  tableHeader.textContent = t('tab_contributors');
+  // The translatable label lives in its own child <span>, not directly on the
+  // <h2> — renderTable()/mountTableFilter() append the CSV/expand-all buttons
+  // and the filter input as siblings of that span, inside this same <h2>.
+  // Resetting the whole element's textContent here (as on every call to this
+  // function) would otherwise wipe those out; on a tryRestoreView() cache hit
+  // renderTable() never re-runs afterwards to re-add them, permanently losing
+  // the filter until a full re-fetch of this view.
+  const labelEl = tableHeader.querySelector('span');
+  labelEl.dataset.i18n = 'tab_contributors';
+  labelEl.textContent = t('tab_contributors');
 
   // Browser back/forward into the contributors list URL already rendered
   // earlier this session: restore its cached table instead of re-fetching and
