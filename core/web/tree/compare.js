@@ -8,7 +8,10 @@ import {
 import { csvCell, csvRow, csvFooter, downloadCsv } from '../lib/csv.js';
 import { formatLinks } from '../lib/links.js';
 import { authFetch } from '../auth.js';
-import { computeBounds, createSvgWithZoom, appendLinks, attachSvgExport } from './shared.js';
+import {
+  computeBounds, createSvgWithZoom, appendLinks, attachSvgExport,
+  attachGedExport, createGedcomModel, orderSpouses,
+} from './shared.js';
 
 // Tree comparison view (Phase 2: ancestors + descendants). Superimposes two
 // genealogists' trees rooted at a matched person pair into one merged tree,
@@ -28,6 +31,8 @@ const IDS = {
   zoomOut:     'btn-compare-zoom-out',
   downloadSvg: 'btn-compare-download-svg',
   downloadCsv: 'btn-compare-download-csv',
+  downloadGedA: 'btn-compare-download-ged-a',
+  downloadGedB: 'btn-compare-download-ged-b',
 };
 
 // Status → swatch colour. Kept in sync with the circle fill in decoratePersons().
@@ -113,6 +118,9 @@ export function renderComparePage() {
   if (svgBtn) svgBtn.title = t('tree_download_svg');
   const csvBtn = document.getElementById(IDS.downloadCsv);
   if (csvBtn) { csvBtn.title = t('tree_download_csv'); csvBtn.style.display = 'none'; csvBtn.onclick = null; }
+  const gedABtn = document.getElementById(IDS.downloadGedA);
+  const gedBBtn = document.getElementById(IDS.downloadGedB);
+  [gedABtn, gedBBtn].forEach(btn => { if (btn) btn.style.display = 'none'; });
 
   if (controls) controls.style.display = 'none';
   if (legend) renderLegend(legend, null, ctx);
@@ -157,6 +165,8 @@ export function renderComparePage() {
         csvBtn.style.display = '';
         csvBtn.onclick = () => exportDifferences(data, ctx);
       }
+      wireGedExport(gedABtn, data, ctx, 'a', data.contributor_a);
+      wireGedExport(gedBBtn, data, ctx, 'b', data.contributor_b);
     })
     .catch(err => {
       console.error(err);
@@ -179,6 +189,10 @@ export function relocalizeCompare() {
   setTitle(IDS.zoomOut, 'tree_zoom_out');
   setTitle(IDS.downloadSvg, 'tree_download_svg');
   setTitle(IDS.downloadCsv, 'tree_download_csv');
+  const gedABtn = document.getElementById(IDS.downloadGedA);
+  const gedBBtn = document.getElementById(IDS.downloadGedB);
+  if (gedABtn) gedABtn.title = `${t('tree_download_ged')} – ${baseContributorName(data.contributor_a || '')}`;
+  if (gedBBtn) gedBBtn.title = `${t('tree_download_ged')} – ${baseContributorName(data.contributor_b || '')}`;
 
   const legend = document.getElementById(IDS.legend);
   renderLegend(legend, data, ctx);
@@ -500,6 +514,98 @@ function showDetail(detail, node, data) {
     detail.style.display = 'none';
     openDetailNode = null;
   });
+}
+
+// --- GEDCOM export, one genealogist's tree only (not the merged comparison) ----
+
+// Sets the button's visible label + tooltip to the contributor's name and wires
+// the click handler to export just that side's tree.
+function wireGedExport(btn, data, ctx, side, contributorName) {
+  if (!btn) return;
+  const name = baseContributorName(contributorName || '');
+  const label = btn.querySelector('.ged-side-label');
+  if (label) label.textContent = `GEDCOM – ${name}`;
+  btn.title = `${t('tree_download_ged')} – ${name}`;
+  btn.style.display = '';
+  attachGedExport({
+    downloadBtnId: btn.id,
+    buildModel: () => buildCompareGedcom(data, side),
+    personName: ctx.personName,
+    contributorName: name,
+    filePrefix: `compare-${data.direction}-${name}`,
+  });
+}
+
+function buildCompareGedcom(data, side) {
+  return data.direction === 'descendants'
+    ? buildCompareDescendantGedcom(data.tree, side)
+    : buildCompareAncestorGedcom(data.tree, side);
+}
+
+// Builds one genealogist's ancestor tree from the merged comparison tree: walks
+// `parents`, keeping only nodes present on `side`. A subtree that exists for
+// just the other genealogist (status only_<otherSide>) has no data for `side`
+// at any depth, so checking the immediate node is enough to prune it whole.
+// The merged tree carries no marriage data for ancestors (see _align_ancestors),
+// so families here are spouse links only.
+function buildCompareAncestorGedcom(rootNode, side) {
+  const model = createGedcomModel();
+  const rootIndi = model.addIndividual(rootNode[side]);
+
+  const walk = (node, indi) => {
+    const parents = (node.parents || []).filter(p => p[side]);
+    if (!parents.length) return;
+    const parentIndis = parents.map(p => model.addIndividual(p[side]));
+
+    let husband = null, wife = null;
+    if (parentIndis.length === 2) {
+      [husband, wife] = orderSpouses(parentIndis[0], parentIndis[1]);
+    } else if (parentIndis[0].sex === 'f') {
+      wife = parentIndis[0];
+    } else {
+      husband = parentIndis[0];
+    }
+
+    const fam = model.addFamily(husband, wife, null);
+    fam.children.push(indi.id);
+    indi.famc = fam.id;
+
+    parents.forEach((p, i) => walk(p, parentIndis[i]));
+  };
+
+  walk(rootNode, rootIndi);
+  return model;
+}
+
+// Same idea for descendants: walks the interleaved family/person `children`,
+// keeping only the families and persons present on `side`.
+function buildCompareDescendantGedcom(rootNode, side) {
+  const model = createGedcomModel();
+  const rootIndi = model.addIndividual(rootNode[side]);
+
+  const walk = (node, indi) => {
+    const families = (node.children || []).filter(c => c.is_family && c[side]);
+    families.forEach(fam => {
+      const partnerIndi = model.addIndividual(fam[side]);
+
+      let husband, wife;
+      if (indi.sex === 'm') { husband = indi; wife = partnerIndi; }
+      else if (indi.sex === 'f') { husband = partnerIndi; wife = indi; }
+      else { [husband, wife] = orderSpouses(indi, partnerIndi); }
+
+      const famRec = model.addFamily(husband, wife, fam.marriage);
+
+      (fam.children || []).filter(c => !c.is_family && c[side]).forEach(child => {
+        const childIndi = model.addIndividual(child[side]);
+        childIndi.famc = famRec.id;
+        famRec.children.push(childIndi.id);
+        walk(child, childIndi);
+      });
+    });
+  };
+
+  walk(rootNode, rootIndi);
+  return model;
 }
 
 // --- CSV export of the differences ------------------------------------------
