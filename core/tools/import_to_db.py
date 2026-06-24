@@ -752,6 +752,11 @@ def import_contributor(
         },
     )
 
+    db.execute(
+        text("DELETE FROM matches WHERE contributor_a = :name OR contributor_b = :name"),
+        {"name": contributor_id},
+    )
+
     if imp_persons:
         db.execute(
             text("DELETE FROM persons WHERE contributor = :name"),

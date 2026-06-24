@@ -1,3 +1,4 @@
+import datetime
 import difflib
 import json
 import os
@@ -84,8 +85,12 @@ def get_match_counts(db: Session):
         SELECT REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', '') AS contributor,
                REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '') AS partner
         FROM matches
-        GROUP BY REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', ''),
-                 REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '')
+        GROUP BY 1, 2
+        UNION
+        SELECT REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '') AS contributor,
+               REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', '') AS partner
+        FROM matches
+        GROUP BY 1, 2
     """)).fetchall()
 
     counts = {}
@@ -572,19 +577,20 @@ def get_timeline_distribution(db: Session):
         .all()
     )
 
+    current_year = datetime.date.today().year
     timeline = {}
     for y, c in births:
-        if y and 1500 <= y <= 2025:
+        if y and 1500 <= y <= current_year:
             timeline.setdefault(
                 y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
             )["births"] = c
     for y, c in marriages:
-        if y and 1500 <= y <= 2025:
+        if y and 1500 <= y <= current_year:
             timeline.setdefault(
                 y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
             )["marriages"] = c
     for y, c in deaths:
-        if y and 1500 <= y <= 2025:
+        if y and 1500 <= y <= current_year:
             timeline.setdefault(
                 y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
             )["deaths"] = c
@@ -1198,13 +1204,7 @@ def search_advanced_families(
         models.Family.husband_birth, husband_birth, husband_birth_to, exact
     )
     if hb_cond is not None:
-        query = query.filter(
-            or_(
-                hb_cond,
-                models.Family.husband_birth.is_(None),
-                models.Family.husband_birth == "",
-            )
-        )
+        query = query.filter(hb_cond)
     if wife_name:
         query = query.filter(
             _text_filter(models.Family.wife_name, wife_name, exact, split_comma=True)
@@ -1220,13 +1220,7 @@ def search_advanced_families(
         )
     wb_cond = _date_filter(models.Family.wife_birth, wife_birth, wife_birth_to, exact)
     if wb_cond is not None:
-        query = query.filter(
-            or_(
-                wb_cond,
-                models.Family.wife_birth.is_(None),
-                models.Family.wife_birth == "",
-            )
-        )
+        query = query.filter(wb_cond)
     if children:
         if isinstance(children, str):
             children = unicodedata.normalize("NFC", children)
