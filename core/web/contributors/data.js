@@ -55,6 +55,7 @@ export function ensureData() {
           _tree: _toPart(m.tree),
           _matricula: _toPart(m.matricula),
           _geneanet: _toPart(m.geneanet),
+          _military: _toPart(m.military),
         }));
         return cachedData;
       });
@@ -100,7 +101,8 @@ export function expandContributorNames(rows) {
     if (r._tree)      names.push(r._tree.contributor_ID);
     if (r._matricula) names.push(r._matricula.contributor_ID);
     if (r._geneanet)  names.push(r._geneanet.contributor_ID);
-    if (!r._tree && !r._matricula && !r._geneanet) names.push(r.contributor_ID);
+    if (r._military)  names.push(r._military.contributor_ID);
+    if (!r._tree && !r._matricula && !r._geneanet && !r._military) names.push(r.contributor_ID);
   });
   return names;
 }
@@ -116,6 +118,7 @@ export function getContributorUrlMap() {
     if (d._tree?._url)      map[d._tree.contributor_ID]      = d._tree._url;
     if (d._matricula?._url) map[d._matricula.contributor_ID] = d._matricula._url;
     if (d._geneanet?._url)  map[d._geneanet.contributor_ID]  = d._geneanet._url;
+    if (d._military?._url)  map[d._military.contributor_ID]  = d._military._url;
   });
   return map;
 }

@@ -28,6 +28,7 @@ function renderSourceSelect(id, value) {
             ${opt('tree', 'source_tree')}
             ${opt('matricula', 'source_matricula')}
             ${opt('geneanet', 'source_geneanet')}
+            ${opt('military', 'source_military')}
           </select>`;
 }
 

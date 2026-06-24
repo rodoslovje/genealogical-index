@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './lib/links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isSpecialContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList, pairRelatives } from './lib/utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isSpecialContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList, pairRelatives } from './lib/utils.js';
 import { childYearOf, parseDateForSort } from './lib/dates.js';
 import { toUnicodeHref } from './lib/url.js';
 import { createExportButton } from './lib/icons.js';
@@ -588,7 +588,7 @@ function renderCellHtml(col, row) {
     const display = baseContributorName(name);
     const showIndicator = !row.hasOwnProperty('_tree');
     const indicator = showIndicator
-      ? matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index'))
+      ? matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index')) + militaryIndicatorHtml(name, t('icon_military_index'))
       : '';
     const internalHref = row._match_href || row._contributor_href || '';
     const externalUrl = row._url || '';
@@ -600,7 +600,7 @@ function renderCellHtml(col, row) {
     const name = row[col] || '';
     if (!name) return `<td></td>`;
     const display = baseContributorName(name);
-    const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index'));
+    const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index')) + militaryIndicatorHtml(name, t('icon_military_index'));
     return `<td><a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
   }
   if (CENTERED_COLUMNS.has(col)) {

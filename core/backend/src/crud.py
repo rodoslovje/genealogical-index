@@ -54,10 +54,11 @@ CACHE_TTL = 3600  # Cache duration in seconds (1 hour)
 MATCH_COUNTS_TTL = 60  # shorter TTL — counts change during match computation
 MATRICULA_SUFFIX = "-matricula"
 GENEANET_SUFFIX = "-geneanet"
+MILITARY_SUFFIX = "-military"
 # Suffixes that mark a contributor as a "special" non-tree source. They are
 # folded into their base name for display/match-count purposes and excluded
 # from the `tree` (family-tree) source filter.
-SPECIAL_SUFFIXES = (MATRICULA_SUFFIX, GENEANET_SUFFIX)
+SPECIAL_SUFFIXES = (MATRICULA_SUFFIX, GENEANET_SUFFIX, MILITARY_SUFFIX)
 _timeline_cache = {"data": None, "time": 0}
 _surnames_cache = {}  # keyed by contributor name (or "" for all)
 _match_counts_cache = {"data": None, "time": 0}
@@ -80,11 +81,11 @@ def get_match_counts(db: Session):
     ):
         return _match_counts_cache["data"]
     rows = db.execute(text("""
-        SELECT REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', '') AS contributor,
-               REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', '') AS partner
+        SELECT REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', '') AS contributor,
+               REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '') AS partner
         FROM matches
-        GROUP BY REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''),
-                 REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', '')
+        GROUP BY REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', ''),
+                 REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '')
     """)).fetchall()
 
     counts = {}
@@ -493,6 +494,8 @@ def get_contributors(db: Session):
             return "matricula"
         if name.endswith(GENEANET_SUFFIX):
             return "geneanet"
+        if name.endswith(MILITARY_SUFFIX):
+            return "military"
         return "tree"
 
     grouped: dict[str, dict] = {}
@@ -507,7 +510,7 @@ def get_contributors(db: Session):
             "url": links.get(row.name),
         }
         bucket = grouped.setdefault(
-            base, {"tree": None, "matricula": None, "geneanet": None}
+            base, {"tree": None, "matricula": None, "geneanet": None, "military": None}
         )
         bucket[_source_key(row.name)] = part
 
@@ -528,6 +531,7 @@ def get_contributors(db: Session):
                 "tree": parts["tree"],
                 "matricula": parts["matricula"],
                 "geneanet": parts["geneanet"],
+                "military": parts["military"],
             }
         )
     return merged
@@ -861,6 +865,8 @@ def _apply_source_and_contributor(
         query = query.filter(column.like(f"%{MATRICULA_SUFFIX}"))
     elif source == "geneanet":
         query = query.filter(column.like(f"%{GENEANET_SUFFIX}"))
+    elif source == "military":
+        query = query.filter(column.like(f"%{MILITARY_SUFFIX}"))
 
     if contributor:
         if isinstance(contributor, str):

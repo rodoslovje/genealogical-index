@@ -412,9 +412,11 @@ export function getExpandCollapseIcon(isOpen) {
 
 const MATRICULA_SUFFIX = '-matricula';
 const GENEANET_SUFFIX = '-geneanet';
-const SPECIAL_SUFFIXES = [MATRICULA_SUFFIX, GENEANET_SUFFIX];
+const MILITARY_SUFFIX = '-military';
+const SPECIAL_SUFFIXES = [MATRICULA_SUFFIX, GENEANET_SUFFIX, MILITARY_SUFFIX];
 const MATRICULA_INDICATOR = '⛪';
 const GENEANET_INDICATOR = '🪦';
+const MILITARY_INDICATOR = '🎖';
 
 /** Returns the base contributor name (strips a trailing special-source suffix
  *  -matricula / -geneanet), Unicode-normalized. */
@@ -437,10 +439,24 @@ export function isGeneanetContributor(name) {
   return name.normalize('NFC').endsWith(GENEANET_SUFFIX);
 }
 
-/** True for any non-tree special source (matricula, geneanet). These have no
+export function isMilitaryContributor(name) {
+  if (!name) return false;
+  return name.normalize('NFC').endsWith(MILITARY_SUFFIX);
+}
+
+/** True for any non-tree special source (matricula, geneanet, military). These have no
  *  stable per-person IDs for ancestor/descendant tree navigation. */
 export function isSpecialContributor(name) {
-  return isMatriculaContributor(name) || isGeneanetContributor(name);
+  return isMatriculaContributor(name) || isGeneanetContributor(name) || isMilitaryContributor(name);
+}
+
+/** Returns the i18n key for the contributor type label to use in headings/titles.
+ *  Special sources get their own label instead of the generic "Genealogist". */
+export function contributorTypeLabelKey(name) {
+  if (isMatriculaContributor(name)) return 'icon_matricula_index';
+  if (isGeneanetContributor(name))  return 'icon_geneanet_index';
+  if (isMilitaryContributor(name))  return 'icon_military_index';
+  return 'col_contributor';
 }
 
 /** Returns the HTML for the matricula indicator (with tooltip), or '' if not matricula. */
@@ -455,6 +471,13 @@ export function geneanetIndicatorHtml(name, tooltip) {
   if (!isGeneanetContributor(name)) return '';
   const safe = escapeHtml(tooltip || '');
   return ` <span class="geneanet-indicator" title="${safe}" aria-label="${safe}">${GENEANET_INDICATOR}</span>`;
+}
+
+/** Returns the HTML for the military indicator, or '' if not military. */
+export function militaryIndicatorHtml(name, tooltip) {
+  if (!isMilitaryContributor(name)) return '';
+  const safe = escapeHtml(tooltip || '');
+  return ` <span class="military-indicator" title="${safe}" aria-label="${safe}">${MILITARY_INDICATOR}</span>`;
 }
 
 // --- inline row icons for optional fields shown in result cells ---

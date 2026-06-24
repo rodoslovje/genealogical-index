@@ -5,7 +5,7 @@ import { csvRow } from '../lib/csv.js';
 import { parseDateForSort } from '../lib/dates.js';
 import {
   isPrivate, getExpandCollapseIcon, shortenUrlLabel, baseContributorName,
-  matriculaIndicatorHtml, geneanetIndicatorHtml, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
+  matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
   escapeHtml, highlightDifferences, formatExportFilename, classifyMatchPair, HIGHLIGHTABLE,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
@@ -158,8 +158,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
   const partnerUrl = urlMap[partner];
   const contribBase = baseContributorName(contributor);
   const partnerBase = baseContributorName(partner);
-  const contribInd  = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index'));
-  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index')) + geneanetIndicatorHtml(partner, t('icon_geneanet_index'));
+  const contribInd  = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index')) + militaryIndicatorHtml(contributor, t('icon_military_index'));
+  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index')) + geneanetIndicatorHtml(partner, t('icon_geneanet_index')) + militaryIndicatorHtml(partner, t('icon_military_index'));
 
   let urlsHtml = '';
   if (contribUrl || partnerUrl) {
@@ -548,8 +548,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           }
           const contribBaseL = baseContributorName(aContrib);
           const partnerBaseL = baseContributorName(bContrib);
-          const contribIndicator = matriculaIndicatorHtml(aContrib, t('icon_matricula_index')) + geneanetIndicatorHtml(aContrib, t('icon_geneanet_index'));
-          const partnerIndicator = matriculaIndicatorHtml(bContrib, t('icon_matricula_index')) + geneanetIndicatorHtml(bContrib, t('icon_geneanet_index'));
+          const contribIndicator = matriculaIndicatorHtml(aContrib, t('icon_matricula_index')) + geneanetIndicatorHtml(aContrib, t('icon_geneanet_index')) + militaryIndicatorHtml(aContrib, t('icon_military_index'));
+          const partnerIndicator = matriculaIndicatorHtml(bContrib, t('icon_matricula_index')) + geneanetIndicatorHtml(bContrib, t('icon_geneanet_index')) + militaryIndicatorHtml(bContrib, t('icon_military_index'));
           const contributorLink = `<a href="${toUnicodeHref({ t: 'contributors', c: contribBaseL })}" data-spa-nav>${contribBaseL}</a>${contribIndicator}`;
           const partnerLink = `<a href="${toUnicodeHref({ t: 'contributors', c: partnerBaseL })}" data-spa-nav>${partnerBaseL}</a>${partnerIndicator}`;
 

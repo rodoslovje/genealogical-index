@@ -1,7 +1,7 @@
 import { t, formatTitleSuffix } from '../i18n.js';
 import { renderTable, exportToCSV } from '../table.js';
 import {
-  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, escapeHtml, formatExportFilename,
+  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, escapeHtml, formatExportFilename, contributorTypeLabelKey,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref } from '../lib/url.js';
@@ -15,6 +15,26 @@ import { setCurrentMatches } from './filter.js';
 import { exportBooksToCSV } from './matricula-stats.js';
 import { renderMatchDetail } from './match-detail.js';
 import { fetchErrorKey } from '../auth.js';
+
+/** Returns the i18n key for the contributor type label based on which data
+ *  sources are present. When the contributor has exactly one special source
+ *  and no tree, use its specific label (e.g. "Vojaški viri") instead of
+ *  the generic "Rodoslovec". Falls back to contributorTypeLabelKey(rawName)
+ *  when contribData is not available (e.g. "not found" error path). */
+function contribDataTypeLabelKey(contribData, rawName) {
+  if (!contribData) return contributorTypeLabelKey(rawName);
+  const hasTree  = !!contribData._tree;
+  const hasMat   = !!contribData._matricula;
+  const hasGene  = !!contribData._geneanet;
+  const hasMil   = !!contribData._military;
+  const sourceCount = [hasTree, hasMat, hasGene, hasMil].filter(Boolean).length;
+  if (sourceCount === 1) {
+    if (hasMat)  return 'icon_matricula_index';
+    if (hasGene) return 'icon_geneanet_index';
+    if (hasMil)  return 'icon_military_index';
+  }
+  return 'col_contributor';
+}
 
 /** Renders the per-contributor stats grid (single column or 3-column Sum/Tree/Matricula). */
 function renderContributorStats(contribData) {
@@ -90,10 +110,10 @@ export async function renderMatchesPage(contributor, withPartner) {
 
     if (!contribData) {
       const safeContributor = escapeHtml(baseContributor);
-      const contribInd = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index'));
+      const contribInd = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index')) + militaryIndicatorHtml(contributor, t('icon_military_index'));
       document.title = `${t('no_results')} | ${t('site_title')}`;
       container.innerHTML = `<div class="matches-page-header">
-        <h2 class="matches-page-title">${safeContributor}${contribInd} - ${formatTitleSuffix(t('col_contributor'))}</h2>
+        <h2 class="matches-page-title">${safeContributor}${contribInd} - ${formatTitleSuffix(t(contributorTypeLabelKey(contributor)))}</h2>
       </div>
       <p>${t('no_results')}</p>`;
       return;
@@ -115,7 +135,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       const partnerData = cached.find(d => d.contributor_ID === basePartner);
       if (!partnerData) {
         const safePartner = escapeHtml(basePartner);
-        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index')) + geneanetIndicatorHtml(withPartner, t('icon_geneanet_index'));
+        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index')) + geneanetIndicatorHtml(withPartner, t('icon_geneanet_index')) + militaryIndicatorHtml(withPartner, t('icon_military_index'));
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
           <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${formatTitleSuffix(t('col_matches'))}</h2>
@@ -128,7 +148,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       return;
     }
 
-    document.title = `${displayName} - ${formatTitleSuffix(t('col_contributor'))} | ${t('site_title')}`;
+    document.title = `${displayName} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))} | ${t('site_title')}`;
 
     const urlMap = getContributorUrlMap();
     const url = urlMap[displayName] || (contribData._tree?._url) || (contribData._geneanet?._url) || (contribData._matricula?._url);
@@ -139,7 +159,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     let cloudSectionsHtml = '';
     if (primary) {
       cloudSectionsHtml += `<div class="surname-cloud-section" style="margin-bottom: 24px;">
-        <div class="surname-cloud-header section-bar">
+        <div class="surname-cloud-header">
           <h3 class="section-heading" data-i18n="section_surnames" style="margin: 0; padding: 0; border: none;">${t('section_surnames')}</h3>
         </div>
         <p>${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}</p>
@@ -175,7 +195,7 @@ export async function renderMatchesPage(contributor, withPartner) {
 
       const cloudHtml = hasMatricula
         ? `<div class="surname-cloud-section" style="margin-top: 1.5rem;">
-            <div class="surname-cloud-header section-bar section-bar--top" style="margin-bottom: 8px;">
+            <div class="surname-cloud-header" style="margin-bottom: 8px;">
               <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_surnames')}</h4>
             </div>
             <p style="margin-bottom: 12px;">${t('contributor_matricula_surnames_intro')}</p>
@@ -324,7 +344,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     };
 
     const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${displayName} - ${formatTitleSuffix(t('col_contributor'))}</h2>
+      <h2 class="matches-page-title">${displayName} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))}</h2>
     </div>
     ${statsHtml}
     ${urlHtml}

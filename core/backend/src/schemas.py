@@ -89,6 +89,7 @@ class Contributor(BaseModel):
     tree: Optional[ContributorPart] = None
     matricula: Optional[ContributorPart] = None
     geneanet: Optional[ContributorPart] = None
+    military: Optional[ContributorPart] = None
 
     class Config:
         from_attributes = True
