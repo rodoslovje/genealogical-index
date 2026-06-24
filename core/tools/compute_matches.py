@@ -450,7 +450,7 @@ def claim_jobs(batch_size=10):
         return [(r[0], r[1]) for r in rows]
 
 
-def process_job(contrib_a, contrib_b):
+def process_job(contrib_a, contrib_b, pg_parallel=PG_PARALLEL_WORKERS):
     params = {
         "contrib_a": contrib_a,
         "contrib_b": contrib_b,
@@ -467,6 +467,8 @@ def process_job(contrib_a, contrib_b):
 
     total = 0
     with engine.begin() as conn:
+        conn.execute(text(f"SET max_parallel_workers_per_gather = {pg_parallel}"))
+        t_step = time.monotonic()
         deleted = conn.execute(
             text("""
             DELETE FROM matches
@@ -476,8 +478,9 @@ def process_job(contrib_a, contrib_b):
             params,
         ).rowcount
         if deleted:
-            log.info(f"  [{pair_label}] removed {deleted} stale matches")
+            log.info(f"  [{pair_label}] removed {deleted} stale matches in {time.monotonic()-t_step:.1f}s")
 
+        t_step = time.monotonic()
         conn.execute(
             text("""
             -- contributor_surnames holds each contributor's distinct folded
@@ -498,15 +501,16 @@ def process_job(contrib_a, contrib_b):
         """),
             params,
         )
+        log.info(f"  [{pair_label}] sur_matches ready in {time.monotonic()-t_step:.1f}s")
 
         for sql, label in (
             (_PERSON_INSERT, "person"),
             (_FAMILY_INSERT, "family"),
         ):
-            t0 = time.monotonic()
+            t_step = time.monotonic()
             n = conn.execute(sql, params).rowcount
             log.info(
-                f"  [{pair_label}] {label}: {n} matches in {time.monotonic()-t0:.1f}s"
+                f"  [{pair_label}] {label}: {n} matches in {time.monotonic()-t_step:.1f}s"
             )
             total += n
 
@@ -521,7 +525,7 @@ def process_job(contrib_a, contrib_b):
     log.info(f"  [{pair_label}] done — {total} total matches stored")
 
 
-def worker(_):
+def worker(pg_parallel):
     """Claim and process pair jobs until none remain."""
     while True:
         jobs = claim_jobs(batch_size=10)
@@ -531,7 +535,7 @@ def worker(_):
             t0 = time.monotonic()
             log.info(f"Computing matches for: {contrib_a} ↔ {contrib_b}")
             try:
-                process_job(contrib_a, contrib_b)
+                process_job(contrib_a, contrib_b, pg_parallel=pg_parallel)
                 log.info(
                     f"Finished {contrib_a}↔{contrib_b} in {time.monotonic()-t0:.0f}s"
                 )
@@ -559,6 +563,13 @@ def main(workers=4):
     if not pending_count:
         log.info("No pending match jobs.")
         return
+
+    # Scale down per-query PG parallelism so total PG processes stay bounded.
+    # With N Python workers each spawning K PG workers: N*(K+1) processes compete
+    # for CPU and WAL bandwidth. Cap total at ~2× Python workers.
+    pg_parallel = max(1, 8 // workers)
+    if pg_parallel != PG_PARALLEL_WORKERS:
+        log.info(f"Scaling PG parallel workers to {pg_parallel} (Python workers={workers})")
 
     # Back-fill year columns for any rows that pre-date the schema migration.
     for table, year_col, date_col in (
@@ -595,7 +606,7 @@ def main(workers=4):
 
     t0 = time.monotonic()
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(worker, i) for i in range(workers)]
+        futures = [executor.submit(worker, pg_parallel) for _ in range(workers)]
         for f in as_completed(futures):
             f.result()  # re-raises any worker exception
 
