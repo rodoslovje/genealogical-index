@@ -121,11 +121,11 @@ export async function renderMatchesPage(contributor, withPartner) {
 
     const displayName = baseContributor;
     const hasMatricula = !!contribData._matricula;
-    // The "primary" record source — a family tree, or (when there's no tree)
-    // the Geneanet cemeteries source. Both carry persons/families and have
-    // computed matches, so they drive the surname cloud + matches section.
+    // The "primary" record source — a family tree, Geneanet cemeteries, or
+    // military records. All carry persons/families and have computed matches,
+    // so they drive the surname cloud + matches section.
     // Matricula is index-only and handled separately below.
-    const primary = contribData._tree || contribData._geneanet;
+    const primary = contribData._tree || contribData._geneanet || contribData._military;
     // Matches section needs primary record data AND the 'matches' feature not
     // being gated out of this build.
     const showMatchesSection = !!primary && !siteConfig.gatedFeatures?.includes('matches');
