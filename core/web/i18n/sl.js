@@ -274,7 +274,7 @@ export default {
         <li><strong>Iskanje:</strong> Omogoča splošno iskanje po vseh osebah in družinah hkrati.</li>
         <li><strong>Oseba:</strong> Omogoča podrobno iskanje samo po posameznikih.</li>
         <li><strong>Družina:</strong> Omogoča podrobno iskanje specifičnih družin (po možu, ženi in otrocih).</li>
-        <li><strong>Rodoslovci:</strong> Prikazuje seznam vseh rodoslovcev, ki so prispevali svoje podatke, in skupno statistiko.</li>
+        <li><strong>Viri:</strong> Prikazuje seznam rodoslovcev in drugih virov ter skupno statistiko.</li>
       </ul>
       <p>Na desni strani navigacijske vrstice boste našli ikono menija (<strong>☰</strong>) za odpiranje iskalnika ter gumbe za pomoč (<strong>?</strong>){auth_nav} in izbiro jezika. Na dnu strani je noga z različico aplikacije in datumom zadnje posodobitve podatkov.</p>
       <p><strong>Deljive povezave:</strong> Vsako iskanje in vsaka odprta stran se shrani v naslovno vrstico brskalnika (URL), zato lahko trenutni pogled enostavno kopirate, shranite med zaznamke ali posredujete drugim.</p>
@@ -287,14 +287,14 @@ export default {
       </ul>
       <h4>Pravila za vnos podatkov</h4>
       <ul>
-        <li><strong>Več vrednosti hkrati:</strong> V besedilna polja (imena, priimki, kraji, rodoslovec) lahko vnesete več besed, ločenih z vejico (npr. <em>Janez, Ivan</em> ali <em>Kovač, Kovačič</em>). Sistem bo poiskal zapise, ki vsebujejo katero koli izmed njih.</li>
+        <li><strong>Več vrednosti hkrati:</strong> V besedilna polja (imena, priimki, kraji, vir) lahko vnesete več besed, ločenih z vejico (npr. <em>Janez, Ivan</em> ali <em>Kovač, Kovačič</em>). Sistem bo poiskal zapise, ki vsebujejo katero koli izmed njih.</li>
         <li><strong>Datumi in letnice:</strong> V datumska polja lahko vnesete točne datume (npr. <em>15. 4. 1850</em>) ali zgolj letnice (npr. <em>1850</em>). Datumska polja omogočajo tudi iskanje po razponu (od – do), vendar se pri tem upoštevajo <strong>le letnice</strong>.</li>
         <li><strong>Natančno iskanje:</strong> Na začetku besede lahko uporabite znak <code>^</code>, da poiščete zapise, ki se z njo začnejo (npr. <code>^Kranj</code>), ali pa <code>$</code> na koncu, da poiščete tiste, ki se z njo končajo. Če uporabite oba (<code>^Kranj$</code>), iskalnik išče natančno ujemanje.</li>
         <li><strong>Čiščenje polja:</strong> Vsako vnosno polje ima ob desnem robu gumb <strong>×</strong>, s katerim hitro pobrišete vneseno vrednost.</li>
       </ul>
       <h4>Napredne nastavitve iskanja</h4>
       <ul>
-        <li><strong>Vir:</strong> V iskalno polje lahko vnesete priimek enega ali več rodoslovcev, ločenih z vejico. S spustnim menijem poleg njega lahko iskanje omejite tudi na določen tip vira: <em>Družinska drevesa</em>, <em>Matricula indeks</em> ali <em>Geneanet pokopališča</em> (privzeto so vključeni vsi viri).</li>
+        <li><strong>Vir:</strong> V iskalno polje lahko vnesete naziv enega ali več virov, ločenih z vejico. S spustnim menijem poleg njega lahko iskanje omejite tudi na določen tip vira: <em>Družinska drevesa</em>, <em>Matricula indeks</em> ali <em>Geneanet pokopališča</em> (privzeto so vključeni vsi viri).</li>
         <li><strong>S povezavo:</strong> Prikaže samo tiste zadetke, ki vsebujejo zunanjo povezavo do izvirnih dokumentov (npr. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Točno / Približno:</strong> Nastavitev <strong>Točno</strong> išče natančna ujemanja celih besed (npr. iskanje <em>Kovač</em> ne bo našlo <em>Kovačič</em>). Nastavitev <strong>Približno</strong> pa s pomočjo algoritmov išče tudi dele besed (podnize) in podobne različice imen ter priimkov.</li>
       </ul>
@@ -319,7 +319,7 @@ export default {
         <li><strong>📋</strong> – popisi prebivalstva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
       </ul>
-      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>⛪</strong> ob imenu rodoslovca pomeni, da gre za podatke iz indeksa Matricula Online in ne za osebno družinsko drevo, oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
+      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>⛪</strong> ob imenu vira pomeni, da gre za podatke iz indeksa Matricula Online in ne za osebno družinsko drevo, oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
       <h4>Drevo prednikov in potomcev</h4>
       <p>Stran z drevesom prikazuje grafično, interaktivno rodovniško drevo izbrane osebe. Na voljo so:</p>
       <ul>
@@ -328,31 +328,32 @@ export default {
         <li><strong>Izvoz:</strong> z gumbi v zgornjem desnem kotu lahko drevo prenesete kot sliko <strong>SVG</strong>, tabelo <strong>CSV</strong> ali datoteko <strong>GEDCOM</strong> za uvoz v druge rodoslovne programe. Izvoženo datoteko GEDCOM lahko z orodjem, kot je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>, združite s svojo lastno GEDCOM datoteko.</li>
         <li><strong>Pregledna karta:</strong> na večjih zaslonih je v zgornjem levem kotu prikazana majhna karta celotnega drevesa in trenutno vidnega dela; s klikom nanjo se premaknete na drug del.</li>
       </ul>
-      <h3>4. Rodoslovci</h3>
-      <p>V zavihku <strong>Rodoslovci</strong> je prikazana skupna statistika indeksa in seznam vseh rodoslovcev, ki so prispevali svoje podatke.</p>
+      <h3>4. Viri</h3>
+      <p>V zavihku <strong>Viri</strong> je prikazana skupna statistika indeksa in seznam vseh rodoslovcev in drugih virov.</p>
       <ul>
-        <li><strong>Statistika:</strong> Na vrhu sta prikazana grafa s prispevki po rodoslovcih in s časovnico zapisov.</li>
+        <li><strong>Statistika:</strong> Na vrhu sta prikazana grafa s prispevki po virih in s časovnico zapisov.</li>
         <li><strong>Najpogostejši priimki:</strong> Prikazan je oblak najpogostejših priimkov. S klikom na gumb <strong>CSV</strong> ali <strong>SVG</strong> lahko te podatke prenesete na svoj računalnik.</li>
-        <li><strong>Seznam rodoslovcev:</strong> Tabela prikazuje vse sodelujoče ter število njihovih oseb, družin, povezav in morebitnih ujemanj z drugimi rodoslovci. S klikom na gumb <strong>CSV</strong> izvozite tabelo, s klikom na ime rodoslovca pa odprete njegovo podrobno stran.</li>
-        <li><strong>Filtriranje seznama:</strong> Iskalno polje ob naslovu tabele omogoča hitro zožanje seznama po priimku rodoslovca. Oblak najpogostejših priimkov bo prikazal samo priimke iz dreves najdenih rodoslovcev.</li>
+        <li><strong>Seznam virov:</strong> Tabela prikazuje vse sodelujoče ter število njihovih oseb, družin, povezav in morebitnih ujemanj z drugimi viri. S klikom na gumb <strong>CSV</strong> izvozite tabelo, s klikom na ime vira pa odprete njegovo podrobno stran.</li>
+        <li><strong>Filtriranje seznama:</strong> Iskalno polje ob naslovu tabele omogoča hitro zožanje seznama po nazivu vira. Oblak najpogostejših priimkov bo prikazal samo priimke iz najdenih virov.</li>
       </ul>
-      <h4>Podrobnosti rodoslovca</h4>
-      <p>Na strani posameznega rodoslovca so zbrane informacije o njegovem prispevku:</p>
+      <h4>Podrobnosti vira</h4>
+      <p>Na strani posameznega vira so zbrane informacije o njegovem prispevku:</p>
       <ul>
-        <li><strong>Statistika prispevka:</strong> Mreža s številom oseb, družin in povezav ter datumom zadnje posodobitve. Če rodoslovec prispeva podatke tako iz lastnega drevesa kot iz indeksa Matricula, so vrednosti razdeljene v tri stolpce: <em>Skupaj</em>, <em>Drevo</em> in <em>Matricula</em>.</li>
-        <li><strong>Povezava:</strong> Če je rodoslovec podal svojo osebno spletno stran, se ta prikaže pod njegovim imenom.</li>
+        <li><strong>Statistika prispevka:</strong> Mreža s številom oseb, družin in povezav ter datumom zadnje posodobitve. Če vir prispeva podatke tako iz lastnega drevesa kot iz indeksa Matricula, so vrednosti razdeljene v tri stolpce: <em>Skupaj</em>, <em>Drevo</em> in <em>Matricula</em>.</li>
+        <li><strong>Povezava:</strong> Če je vir podal svojo osebno spletno stran, se ta prikaže pod njegovim imenom.</li>
         <li><strong>Najpogostejši priimki:</strong> Oblak besed in seznam prikazujeta priimke, ki se v njegovi bazi največkrat pojavijo.</li>
-        <li><strong>Možna ujemanja:</strong> Seznam drugih rodoslovcev, s katerimi ima ta rodoslovec skupne (ujemajoče) zgodovinske osebe ali družine.</li>
+        <li><strong>Možna ujemanja:</strong> Seznam drugih virov, s katerimi ima ta vir skupne (ujemajoče) zgodovinske osebe ali družine.</li>
       </ul>
-      <h4>Ujemanja med rodoslovci</h4>
-      <p>S klikom na eno izmed predlaganih ujemanj na strani rodoslovca prikažete podrobno primerjavo njunih podatkov{auth_match}. Rezultati so prikazani tako, da vsak ujemek zavzame dve sosednji vrstici:</p>
+      <h4>Ujemanja med viri</h4>
+      <p>S klikom na eno izmed predlaganih ujemanj na strani vira prikažete podrobno primerjavo njunih podatkov{auth_match}. Rezultati so prikazani tako, da vsak ujemek zavzame dve sosednji vrstici:</p>
       <ul>
-        <li><strong>Zgornja vrstica</strong> prikazuje zapis prvega rodoslovca, <strong>spodnja</strong> pa zapis drugega.</li>
+        <li><strong>Zgornja vrstica</strong> prikazuje zapis prvega vira, <strong>spodnja</strong> pa zapis drugega.</li>
         <li><strong>Ocena zaupanja:</strong> Vsak ujemek ima oceno v odstotkih, ki pove, kako verjetno gre za isto osebo ali družino.</li>
-        <li><strong>Označene razlike:</strong> Polja, kjer se vrednosti med rodoslovcema ne ujemajo, so v tabeli samodejno obarvana <span class="match-diff">rumeno</span>. Polja in povezave (ikona), ki obstajajo le pri drugem rodoslovcu, pa so obarvana <span class="match-add">zeleno</span> — to izpostavi novo informacijo, ki je v vašem drevesu še ni. Ob oceni zaupanja se poleg tega lahko prikažejo oznake <span class="match-badge match-badge-add">+</span> (drugi rodoslovec ima podatek, ki pri vas manjka), <span class="match-badge match-badge-link">🔗</span> (drugi rodoslovec ima povezavo, npr. do vira ali zapisa o grobu, ki pri vas manjka) in <span class="match-badge match-badge-diff">≠</span> (vrednosti se med rodoslovcema ne ujemajo), vsaka s številom polj, na katero se nanaša.</li>
+        <li><strong>Označene razlike:</strong> Polja, kjer se vrednosti med viroma ne ujemajo, so v tabeli samodejno obarvana <span class="match-diff">rumeno</span>. Polja in povezave (ikona), ki obstajajo le pri drugem viru, pa so obarvana <span class="match-add">zeleno</span> — to izpostavi novo informacijo, ki je v vašem drevesu še ni.</li>
+        <li><strong>Oznake ujemkov:</strong> Ob oceni zaupanja se lahko prikažejo oznake <span class="match-badge match-badge-add">+</span> (drugi vir ima podatek, ki pri vas manjka), <span class="match-badge match-badge-link">🔗</span> (drugi vir ima povezavo, npr. do zapisa o grobu, ki pri vas manjka) in <span class="match-badge match-badge-diff">≠</span> (vrednosti se med viroma ne ujemajo), vsaka s številom polj, na katero se nanaša.</li>
         <li><strong>Filtriranje ujemanj:</strong> Vsak razdelek (<em>Osebe</em>, <em>Družine</em>) ima ob svojem naslovu iskalno polje, s katerim prikazana ujemanja dodatno zožite po imenu, priimku, datumu ali kraju, ter gumbe <span class="match-badge match-badge-add">+</span> Novo, <span class="match-badge match-badge-link">🔗</span> Povezave in <span class="match-badge match-badge-diff">≠</span> Razlike za prikaz samo tistih parov, ki imajo ustrezno oznako.</li>
         <li><strong>Izvoz ujemkov:</strong> S klikom na gumb <strong>CSV</strong> ob naslovu posameznega razdelka izvozite prikazane ujemajoče se zapise. Izvoz lahko uporabite za dopolnitev svojega drevesa, na primer z orodjem, kot je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
-        <li><strong>Primerjava dreves:</strong> za ujemajočo se osebo gumb <strong>🌳 Primerjaj</strong> odpre vzporedni prikaz rodovniških dreves obeh rodoslovcev. Vsaka oseba je barvno označena — <em>ujemanje</em>, <em>manjša razlika</em>, <em>ključna razlika</em> (razlikujejo se ime, priimek ali datum rojstva) ali prisotna le v <em>enem</em> drevesu —, s klikom na osebo pa se prikaže podrobna primerjava po posameznih poljih, vključno s povezavami do virov. Preklapljate lahko med <em>predniki</em> in <em>potomci</em>, prek barvne legende skočite na poljubno osebo, primerjavo pa prenesete kot tabelo <strong>CSV</strong> ali sliko <strong>SVG</strong>.</li>
+        <li><strong>Primerjava dreves:</strong> za ujemajočo se osebo gumb <strong>🌳 Primerjaj</strong> odpre vzporedni prikaz rodovniških dreves obeh virov. Vsaka oseba je barvno označena — <em>ujemanje</em>, <em>manjša razlika</em>, <em>ključna razlika</em> (razlikujejo se ime, priimek ali datum rojstva) ali prisotna le v <em>enem</em> drevesu —, s klikom na osebo pa se prikaže podrobna primerjava po posameznih poljih, vključno s povezavami do virov. Preklapljate lahko med <em>predniki</em> in <em>potomci</em>, prek barvne legende skočite na poljubno osebo, primerjavo pa prenesete kot tabelo <strong>CSV</strong> ali sliko <strong>SVG</strong>.</li>
       </ul>
       {auth_section}
     `,

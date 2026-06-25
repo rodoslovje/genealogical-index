@@ -282,7 +282,7 @@ export default {
         <li><strong>Keresés:</strong> Általános keresést tesz lehetővé az összes személy és család között egyszerre.</li>
         <li><strong>Személy:</strong> Részletes keresést tesz lehetővé csak egyénekre.</li>
         <li><strong>Család:</strong> Részletes keresést tesz lehetővé adott családokra (férj, feleség és gyermekek szerint).</li>
-        <li><strong>Genealógusok:</strong> Megjeleníti az összes adatszolgáltató kutató listáját és az összesített statisztikákat.</li>
+        <li><strong>Források:</strong> Megjeleníti a genealógusok és más források listáját, valamint az összesített statisztikákat.</li>
       </ul>
       <p>A navigációs sáv jobb oldalán található a menüikon (<strong>☰</strong>) a kereső megnyitásához, valamint a súgót (<strong>?</strong>){auth_nav} és a nyelvválasztást szolgáló gombok. Az oldal alján található a lábléc az alkalmazás verziójával és az adatok utolsó frissítésének dátumával.</p>
       <p><strong>Megosztható hivatkozások:</strong> Minden keresés és minden megnyitott oldal mentésre kerül a böngésző címsorában (URL), így az aktuális nézetet könnyedén lemásolhatja, könyvjelzők közé mentheti vagy továbbíthatja másoknak.</p>
@@ -295,14 +295,14 @@ export default {
       </ul>
       <h4>Adatbeviteli szabályok</h4>
       <ul>
-        <li><strong>Több érték egyszerre:</strong> A szövegmezőkbe (nevek, vezetéknevek, helyek, genealógus) több szót is beírhat vesszővel elválasztva (pl. <em>Janez, Ivan</em> vagy <em>Mali, Mally</em>). A rendszer azokat a rekordokat fogja megkeresni, amelyek bármelyiket tartalmazzák.</li>
+        <li><strong>Több érték egyszerre:</strong> A szövegmezőkbe (nevek, vezetéknevek, helyek, forrás) több szót is beírhat vesszővel elválasztva (pl. <em>Janez, Ivan</em> vagy <em>Mali, Mally</em>). A rendszer azokat a rekordokat fogja megkeresni, amelyek bármelyiket tartalmazzák.</li>
         <li><strong>Dátumok és évek:</strong> A dátummezőkbe beírhat pontos dátumokat (pl. <em>1850. 4. 15.</em>) vagy csak éveket (pl. <em>1850</em>). A dátummezők lehetővé teszik a tartomány megadását is (tól - ig), de ez <strong>csak az évekre vonatkozik</strong>.</li>
         <li><strong>Pontos keresés:</strong> A szó elején használhatja a <code>^</code> karaktert az azzal kezdődő bejegyzések kereséséhez (pl. <code>^Kranj</code>), vagy a <code>$</code> karaktert a végén az azzal végződő bejegyzések kereséséhez. Mindkettő használatával (<code>^Kranj$</code>) pontos egyezést keres.</li>
         <li><strong>Mező törlése:</strong> Minden beviteli mező jobb szélén található egy <strong>×</strong> gomb, amellyel gyorsan törölheti a beírt értéket.</li>
       </ul>
       <h4>Speciális keresési beállítások</h4>
       <ul>
-        <li><strong>Forrás:</strong> A keresőmezőbe egy vagy több genealógus vezetéknevét is beírhatja, vesszővel elválasztva. A mellette lévő legördülő menü segítségével a keresést egy adott forrástípusra is korlátozhatja: <em>Családfák</em>, <em>Matricula index</em> vagy <em>Geneanet temetők</em> (alapértelmezés szerint minden forrás szerepel).</li>
+        <li><strong>Forrás:</strong> A keresőmezőbe egy vagy több forrás nevét is beírhatja, vesszővel elválasztva. A mellette lévő legördülő menü segítségével a keresést egy adott forrástípusra is korlátozhatja: <em>Családfák</em>, <em>Matricula index</em> vagy <em>Geneanet temetők</em> (alapértelmezés szerint minden forrás szerepel).</li>
         <li><strong>Hivatkozással:</strong> Csak azokat a találatokat jeleníti meg, amelyek külső hivatkozást tartalmaznak az eredeti forrásokra (pl. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Pontos / Közelítő:</strong> A <strong>Pontos</strong> beállítás a teljes szavak pontos egyezését keresi (pl. a <em>Mali</em> keresése nem találja meg a <em>Malic</em> szót). A <strong>Közelítő</strong> beállítás algoritmusokat használ a szórészletek (részkarakterláncok) és hasonló névvariációk keresésére is.</li>
       </ul>
@@ -327,7 +327,7 @@ export default {
         <li><strong>📋</strong> – népszámlálások (SIstory)</li>
         <li><strong>📰</strong> – Szlovénia Digitális Könyvtára (dLib)</li>
       </ul>
-      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a genealógus neve melletti <strong>⛪</strong> jel azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig személyes családfából, a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
+      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a forrás neve melletti <strong>⛪</strong> jel azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig személyes családfából, a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
       <h4>Ősök és leszármazottak családfája</h4>
       <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
       <ul>
@@ -336,31 +336,32 @@ export default {
         <li><strong>Exportálás:</strong> a jobb felső sarokban található gombokkal a fát letöltheti <strong>SVG</strong> képként, <strong>CSV</strong> táblázatként vagy <strong>GEDCOM</strong> fájlként más genealógiai programokba való importáláshoz. Az exportált GEDCOM fájlt egy olyan eszközzel, mint a <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>, összevonhatja a saját GEDCOM fájljával.</li>
         <li><strong>Áttekintő térkép:</strong> nagyobb képernyőkön a bal felső sarokban egy kis térkép mutatja a teljes fát és az éppen látható területet; rákattintva egy másik részre ugorhat.</li>
       </ul>
-      <h3>4. Genealógusok</h3>
-      <p>A <strong>Genealógusok</strong> fül megmutatja az index általános statisztikáit és az adataikat beküldő kutatók listáját.</p>
+      <h3>4. Források</h3>
+      <p>A <strong>Források</strong> fül megmutatja az index általános statisztikáit és a genealógusok és más források listáját.</p>
       <ul>
-        <li><strong>Statisztika:</strong> Felül diagramok találhatók a genealógusonkénti hozzájárulásokkal és a rekordok időrendjével.</li>
+        <li><strong>Statisztika:</strong> Felül diagramok találhatók a forrásonkénti hozzájárulásokkal és a rekordok időrendjével.</li>
         <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő mutatja a leggyakoribb vezetékneveket. A <strong>CSV</strong> vagy <strong>SVG</strong> gombra kattintva letöltheti ezeket az adatokat a számítógépére.</li>
-        <li><strong>Genealógusok listája:</strong> A táblázat megjeleníti az összes közreműködőt és a személyeik, családjaik, hivatkozásaik és más genealógusokkal való lehetséges egyezéseik számát. A <strong>CSV</strong> gombra kattintva exportálhatja a táblázatot, egy genealógus nevére kattintva pedig megnyitja a részletes oldalát.</li>
-        <li><strong>A lista szűrése:</strong> A táblázat címe melletti keresőmezőben gyorsan szűkítheti a listát a genealógus vezetékneve alapján. A leggyakoribb vezetéknevek szófelhője ezután csak a megtalált genealógusok családfáiból származó vezetékneveket jeleníti meg.</li>
+        <li><strong>Források listája:</strong> A táblázat megjeleníti az összes közreműködőt és a személyeik, családjaik, hivatkozásaik és más forrásokkal való lehetséges egyezéseik számát. A <strong>CSV</strong> gombra kattintva exportálhatja a táblázatot, egy forrás nevére kattintva pedig megnyitja a részletes oldalát.</li>
+        <li><strong>A lista szűrése:</strong> A táblázat címe melletti keresőmezőben gyorsan szűkítheti a listát a forrás neve alapján. A leggyakoribb vezetéknevek szófelhője ezután csak a megtalált forrásokból származó vezetékneveket jeleníti meg.</li>
       </ul>
-      <h4>Genealógus részletei</h4>
-      <p>Az egyes genealógusok oldala összegyűjti a hozzájárulásukkal kapcsolatos információkat:</p>
+      <h4>Forrás részletei</h4>
+      <p>Az egyes forrás oldala összegyűjti az annak hozzájárulásával kapcsolatos információkat:</p>
       <ul>
-        <li><strong>Hozzájárulási statisztika:</strong> Egy rács a személyek, családok és hivatkozások számával, valamint az utolsó frissítés dátumával. Ha a genealógus a saját fájából és a Matricula indexből is szolgáltat adatokat, az értékek három oszlopra oszlanak: <em>Összesen</em>, <em>Családfa</em> és <em>Matricula</em>.</li>
-        <li><strong>Hivatkozás:</strong> Ha a genealógus megadott személyes weboldalt, az a neve alatt jelenik meg.</li>
+        <li><strong>Hozzájárulási statisztika:</strong> Egy rács a személyek, családok és hivatkozások számával, valamint az utolsó frissítés dátumával. Ha a forrás a saját fájából és a Matricula indexből is szolgáltat adatokat, az értékek három oszlopra oszlanak: <em>Összesen</em>, <em>Családfa</em> és <em>Matricula</em>.</li>
+        <li><strong>Hivatkozás:</strong> Ha a forrás megadott személyes weboldalt, az a neve alatt jelenik meg.</li>
         <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő és egy lista mutatja az adatbázisában leggyakrabban előforduló vezetékneveket.</li>
-        <li><strong>Lehetséges egyezések:</strong> Azoknak a többi genealógusoknak a listája, akik egyező történelmi személyeket vagy családokat osztanak meg ezzel a genealógussal.</li>
+        <li><strong>Lehetséges egyezések:</strong> Azoknak a többi forrásoknak a listája, amelyek egyező történelmi személyeket vagy családokat osztanak meg ezzel a forrással.</li>
       </ul>
-      <h4>Egyezések a genealógusok között</h4>
-      <p>Ha a genealógus oldalán rákattint a javasolt egyezések valamelyikére, megjeleníti az adataik részletes összehasonlítását{auth_match}. Az eredmények úgy jelennek meg, hogy minden egyezés két egymás melletti sort foglal el:</p>
+      <h4>Egyezések a források között</h4>
+      <p>Ha a forrás oldalán rákattint a javasolt egyezések valamelyikére, megjeleníti az adataik részletes összehasonlítását{auth_match}. Az eredmények úgy jelennek meg, hogy minden egyezés két egymás melletti sort foglal el:</p>
       <ul>
-        <li>A <strong>felső sor</strong> az első genealógus rekordját, az <strong>alsó sor</strong> pedig a második rekordját mutatja.</li>
+        <li>A <strong>felső sor</strong> az első forrás rekordját, az <strong>alsó sor</strong> pedig a második rekordját mutatja.</li>
         <li><strong>Megbízhatóság:</strong> Minden egyezéshez tartozik egy százalékos pontszám, amely jelzi, hogy mekkora valószínűséggel ugyanarról a személyről vagy családról van szó.</li>
-        <li><strong>Kiemelt különbségek:</strong> Azok a mezők, amelyeknél a két genealógus értékei nem egyeznek, automatikusan <span class="match-diff">sárgával</span> kiemelésre kerülnek a táblázatban. Azok a mezők és hivatkozások (ikon), amelyek csak a másik genealógusnál léteznek, <span class="match-add">zölddel</span> jelennek meg — ez könnyen láthatóvá teszi a saját családfájából még hiányzó új információkat. A megbízhatósági pontszám mellett jelvények is megjelenhetnek: <span class="match-badge match-badge-add">+</span> (a másik genealógusnak van adata egy itt hiányzó mezőhöz), <span class="match-badge match-badge-link">🔗</span> (a másik genealógusnak van egy itt hiányzó hivatkozása, pl. forráshoz vagy síradathoz) és <span class="match-badge match-badge-diff">≠</span> (a két genealógus értékei nem egyeznek), mindegyik az érintett mezők számával.</li>
+        <li><strong>Kiemelt különbségek:</strong> Azok a mezők, amelyeknél a két forrás értékei nem egyeznek, automatikusan <span class="match-diff">sárgával</span> kiemelésre kerülnek a táblázatban. Azok a mezők és hivatkozások (ikon), amelyek csak a másik forrásnál léteznek, <span class="match-add">zölddel</span> jelennek meg — ez könnyen láthatóvá teszi a saját családfájából még hiányzó új információkat.</li>
+        <li><strong>Egyezésjelvények:</strong> A megbízhatósági pontszám mellett jelvények is megjelenhetnek: <span class="match-badge match-badge-add">+</span> (a másik forrásnak van adata egy itt hiányzó mezőhöz), <span class="match-badge match-badge-link">🔗</span> (a másik forrásnak van egy itt hiányzó hivatkozása, pl. síradathoz) és <span class="match-badge match-badge-diff">≠</span> (a két forrás értékei nem egyeznek), mindegyik az érintett mezők számával.</li>
         <li><strong>Egyezések szűrése:</strong> Minden szakasznak (<em>Személyek</em>, <em>Családok</em>) van a címe mellett egy keresőmezője, amellyel tovább szűkítheti a megjelenített egyezéseket név, vezetéknév, dátum vagy hely alapján, valamint <span class="match-badge match-badge-add">+</span> Új, <span class="match-badge match-badge-link">🔗</span> Hivatkozások és <span class="match-badge match-badge-diff">≠</span> Eltérő gombjai, amelyekkel csak a megfelelő jelvényt viselő párokat jelenítheti meg.</li>
         <li><strong>Egyezések exportálása:</strong> Az egyes szakaszok címe melletti <strong>CSV</strong> gombra kattintva exportálhatja a megjelenített egyező rekordokat. Az exportot felhasználhatja saját családfája kiegészítéséhez, például egy olyan eszközzel, mint a <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
-        <li><strong>Fák összehasonlítása:</strong> egy egyező személynél a <strong>🌳 Összehasonlítás</strong> gomb megnyitja mindkét genealógus családfájának egymás melletti nézetét. Minden személy színkóddal jelölt — <em>egyezés</em>, <em>kisebb eltérés</em>, <em>fő eltérés</em> (eltér a keresztnév, a vezetéknév vagy a születési dátum) vagy csak az <em>egyik</em> fában szerepel —, és egy személyre kattintva mezőnkénti összehasonlítás jelenik meg, beleértve a forráshivatkozásokat is. Válthat az <em>ősök</em> és az <em>utódok</em> között, a színes jelmagyarázatból bármely személyre ugorhat, az összehasonlítást pedig letöltheti <strong>CSV</strong> táblázatként vagy <strong>SVG</strong> képként.</li>
+        <li><strong>Fák összehasonlítása:</strong> egy egyező személynél a <strong>🌳 Összehasonlítás</strong> gomb megnyitja mindkét forrás családfájának egymás melletti nézetét. Minden személy színkóddal jelölt — <em>egyezés</em>, <em>kisebb eltérés</em>, <em>fő eltérés</em> (eltér a keresztnév, a vezetéknév vagy a születési dátum) vagy csak az <em>egyik</em> fában szerepel —, és egy személyre kattintva mezőnkénti összehasonlítás jelenik meg, beleértve a forráshivatkozásokat is. Válthat az <em>ősök</em> és az <em>utódok</em> között, a színes jelmagyarázatból bármely személyre ugorhat, az összehasonlítást pedig letöltheti <strong>CSV</strong> táblázatként vagy <strong>SVG</strong> képként.</li>
       </ul>
       {auth_section}
     `,

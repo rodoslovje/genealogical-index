@@ -274,7 +274,7 @@ export default {
         <li><strong>Pretraga:</strong> Omogućuje opću pretragu po svim osobama i obiteljima istovremeno.</li>
         <li><strong>Osoba:</strong> Omogućuje detaljnu pretragu samo po pojedincima.</li>
         <li><strong>Obitelj:</strong> Omogućuje detaljnu pretragu specifičnih obitelji (po mužu, ženi i djeci).</li>
-        <li><strong>Rodoslovci:</strong> Prikazuje popis svih istraživača koji su doprinijeli svojim podacima i ukupnu statistiku.</li>
+        <li><strong>Izvori:</strong> Prikazuje popis rodoslovaca i drugih izvora te ukupnu statistiku.</li>
       </ul>
       <p>Na desnoj strani navigacijske trake pronaći ćete ikonu izbornika (<strong>☰</strong>) za otvaranje tražilice te gumbe za pomoć (<strong>?</strong>){auth_nav} i odabir jezika. Na dnu stranice nalazi se podnožje s verzijom aplikacije i datumom posljednjeg ažuriranja podataka.</p>
       <p><strong>Djeljive poveznice:</strong> Svaka pretraga i svaka otvorena stranica sprema se u adresnu traku preglednika (URL), pa trenutni prikaz možete jednostavno kopirati, spremiti u oznake ili proslijediti drugima.</p>
@@ -287,14 +287,14 @@ export default {
       </ul>
       <h4>Pravila za unos podataka</h4>
       <ul>
-        <li><strong>Više vrijednosti odjednom:</strong> U tekstualna polja (imena, prezimena, mjesta, rodoslovac) možete unijeti više riječi odvojenih zarezom (npr. <em>Janez, Ivan</em> ili <em>Kovač, Kovačić</em>). Sustav će pronaći zapise koji sadrže bilo koju od njih.</li>
+        <li><strong>Više vrijednosti odjednom:</strong> U tekstualna polja (imena, prezimena, mjesta, izvor) možete unijeti više riječi odvojenih zarezom (npr. <em>Janez, Ivan</em> ili <em>Kovač, Kovačić</em>). Sustav će pronaći zapise koji sadrže bilo koju od njih.</li>
         <li><strong>Datumi i godine:</strong> U datumska polja možete unijeti točne datume (npr. <em>15. 4. 1850.</em>) ili samo godine (npr. <em>1850</em>). Datumska polja omogućuju i pretragu po rasponu (od - do), no pri tome se u obzir uzimaju <strong>samo godine</strong>.</li>
         <li><strong>Precizno pretraživanje:</strong> Na početku riječi možete upotrijebiti znak <code>^</code> kako biste pronašli zapise koji njome počinju (npr. <code>^Kranj</code>) ili pak <code>$</code> na kraju za pronalaženje onih koji njome završavaju. Upotrebom oba znaka (<code>^Kranj$</code>) traži se točno podudaranje.</li>
         <li><strong>Brisanje polja:</strong> Svako polje za unos na desnom rubu ima gumb <strong>×</strong> kojim brzo brišete unesenu vrijednost.</li>
       </ul>
       <h4>Napredne postavke pretrage</h4>
       <ul>
-        <li><strong>Izvor:</strong> U polje za pretragu možete unijeti prezime jednog ili više rodoslovaca odvojenih zarezom. Pomoću padajućeg izbornika pored njega možete pretragu ograničiti i na određeni tip izvora: <em>Obiteljska stabla</em>, <em>Matricula indeks</em> ili <em>Geneanet groblja</em> (prema zadanim postavkama uključeni su svi izvori).</li>
+        <li><strong>Izvor:</strong> U polje za pretragu možete unijeti naziv jednog ili više izvora odvojenih zarezom. Pomoću padajućeg izbornika pored njega možete pretragu ograničiti i na određeni tip izvora: <em>Obiteljska stabla</em>, <em>Matricula indeks</em> ili <em>Geneanet groblja</em> (prema zadanim postavkama uključeni su svi izvori).</li>
         <li><strong>S poveznicom:</strong> Prikazuje samo rezultate koji sadrže vanjsku poveznicu na izvorne dokumente (npr. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Točno / Približno:</strong> Postavka <strong>Točno</strong> traži precizna podudaranja cijelih riječi (npr. pretraga <em>Kovač</em> neće pronaći <em>Kovačič</em>). Postavka <strong>Približno</strong> pomoću algoritama pretražuje i dijelove riječi (podnizove) te slične inačice imena i prezimena.</li>
       </ul>
@@ -319,7 +319,7 @@ export default {
         <li><strong>📋</strong> – popisi stanovništva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
       </ul>
-      <p>Pored nekih drugih podataka pojavljuju se manje rubne ikone s dodatnim informacijama: oznaka <strong>⛪</strong> pored imena rodoslovca znači da podaci proizlaze iz indeksa Matricula Online a ne iz osobnog obiteljskog stabla, oznaka <strong>🏷</strong> pored prezimena prikazuje druge oblike prezimena (na primjer prezime nakon udaje), oznaka <strong>✝</strong> pored datuma rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> pored mjesta rođenja ili vjenčanja upozorava na zabilježene bilješke. Prelaskom miša preko njih prikazuju se detalji.</p>
+      <p>Pored nekih drugih podataka pojavljuju se manje rubne ikone s dodatnim informacijama: oznaka <strong>⛪</strong> pored imena izvora znači da podaci proizlaze iz indeksa Matricula Online a ne iz osobnog obiteljskog stabla, oznaka <strong>🏷</strong> pored prezimena prikazuje druge oblike prezimena (na primjer prezime nakon udaje), oznaka <strong>✝</strong> pored datuma rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> pored mjesta rođenja ili vjenčanja upozorava na zabilježene bilješke. Prelaskom miša preko njih prikazuju se detalji.</p>
       <h4>Stablo predaka i potomaka</h4>
       <p>Stranica sa stablom prikazuje grafičko, interaktivno rodoslovno stablo odabrane osobe. Dostupne su sljedeće mogućnosti:</p>
       <ul>
@@ -328,31 +328,32 @@ export default {
         <li><strong>Izvoz:</strong> gumbima u gornjem desnom kutu možete preuzeti stablo kao sliku <strong>SVG</strong>, tablicu <strong>CSV</strong> ili datoteku <strong>GEDCOM</strong> za uvoz u druge rodoslovne programe. Izvezenu datoteku GEDCOM možete alatom kao što je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a> spojiti sa svojom vlastitom GEDCOM datotekom.</li>
         <li><strong>Pregledna karta:</strong> na većim zaslonima u gornjem lijevom kutu prikazana je mala karta cijelog stabla i trenutno vidljivog dijela; klikom na nju pomičete se na drugi dio.</li>
       </ul>
-      <h3>4. Rodoslovci</h3>
-      <p>Kartica <strong>Rodoslovci</strong> prikazuje ukupnu statistiku indeksa i popis svih istraživača koji su doprinijeli svojim podacima.</p>
+      <h3>4. Izvori</h3>
+      <p>Kartica <strong>Izvori</strong> prikazuje ukupnu statistiku indeksa i popis svih rodoslovaca i drugih izvora.</p>
       <ul>
-        <li><strong>Statistika:</strong> Na vrhu su prikazani grafovi s doprinosima po rodoslovcu i s vremenskom raspodjelom zapisa.</li>
+        <li><strong>Statistika:</strong> Na vrhu su prikazani grafovi s doprinosima po izvoru i s vremenskom raspodjelom zapisa.</li>
         <li><strong>Najčešća prezimena:</strong> Prikazan je oblak najčešćih prezimena. Klikom na gumb <strong>CSV</strong> ili <strong>SVG</strong> možete te podatke preuzeti na svoje računalo.</li>
-        <li><strong>Popis rodoslovaca:</strong> Tablica prikazuje sve suradnike te broj njihovih osoba, obitelji, poveznica i potencijalnih podudaranja s drugim rodoslovcima. Klikom na gumb <strong>CSV</strong> izvozite tablicu, a klikom na ime rodoslovca otvarate njegovu detaljnu stranicu.</li>
-        <li><strong>Filtriranje popisa:</strong> Polje za pretragu pored naslova tablice omogućuje brzo sužavanje popisa prema prezimenu rodoslovca. Oblak najčešćih prezimena tada prikazuje samo prezimena iz stabala pronađenih rodoslovaca.</li>
+        <li><strong>Popis izvora:</strong> Tablica prikazuje sve suradnike te broj njihovih osoba, obitelji, poveznica i potencijalnih podudaranja s drugim izvorima. Klikom na gumb <strong>CSV</strong> izvozite tablicu, a klikom na ime izvora otvarate njegovu detaljnu stranicu.</li>
+        <li><strong>Filtriranje popisa:</strong> Polje za pretragu pored naslova tablice omogućuje brzo sužavanje popisa prema nazivu izvora. Oblak najčešćih prezimena tada prikazuje samo prezimena iz pronađenih izvora.</li>
       </ul>
-      <h4>Detalji o rodoslovcu</h4>
-      <p>Na stranici pojedinog rodoslovca okupljene su informacije o njegovom doprinosu:</p>
+      <h4>Detalji o izvoru</h4>
+      <p>Na stranici pojedinog izvora okupljene su informacije o njegovom doprinosu:</p>
       <ul>
-        <li><strong>Statistika doprinosa:</strong> Mreža s brojem osoba, obitelji i poveznica te datumom posljednjeg ažuriranja. Ako rodoslovac doprinosi podacima i iz vlastitog stabla i iz indeksa Matricula, vrijednosti su podijeljene u tri stupca: <em>Ukupno</em>, <em>Stablo</em> i <em>Matricula</em>.</li>
-        <li><strong>Poveznica:</strong> Ako je rodoslovac naveo svoju web stranicu, ona se prikazuje ispod njegovog imena.</li>
+        <li><strong>Statistika doprinosa:</strong> Mreža s brojem osoba, obitelji i poveznica te datumom posljednjeg ažuriranja. Ako izvor doprinosi podacima i iz vlastitog stabla i iz indeksa Matricula, vrijednosti su podijeljene u tri stupca: <em>Ukupno</em>, <em>Stablo</em> i <em>Matricula</em>.</li>
+        <li><strong>Poveznica:</strong> Ako je izvor naveo svoju web stranicu, ona se prikazuje ispod njegovog imena.</li>
         <li><strong>Najčešća prezimena:</strong> Oblak riječi i popis prikazuju prezimena koja se najčešće pojavljuju u njegovoj bazi.</li>
-        <li><strong>Moguća podudaranja:</strong> Popis drugih rodoslovaca s kojima ovaj rodoslovac dijeli zajedničke (podudarne) povijesne osobe ili obitelji.</li>
+        <li><strong>Moguća podudaranja:</strong> Popis drugih izvora s kojima ovaj izvor dijeli zajedničke (podudarne) povijesne osobe ili obitelji.</li>
       </ul>
-      <h4>Podudaranja između rodoslovaca</h4>
-      <p>Klikom na jedno od predloženih podudaranja na stranici rodoslovca prikazujete detaljnu usporedbu njihovih podataka{auth_match}. Rezultati su prikazani tako da svako podudaranje zauzima dva susjedna retka:</p>
+      <h4>Podudaranja između izvora</h4>
+      <p>Klikom na jedno od predloženih podudaranja na stranici izvora prikazujete detaljnu usporedbu njihovih podataka{auth_match}. Rezultati su prikazani tako da svako podudaranje zauzima dva susjedna retka:</p>
       <ul>
-        <li><strong>Gornji redak</strong> prikazuje zapis prvog rodoslovca, a <strong>donji</strong> zapis drugog.</li>
+        <li><strong>Gornji redak</strong> prikazuje zapis prvog izvora, a <strong>donji</strong> zapis drugog.</li>
         <li><strong>Ocjena pouzdanosti:</strong> Svako podudaranje ima ocjenu u postocima koja govori koliko je vjerojatno da se radi o istoj osobi ili obitelji.</li>
-        <li><strong>Označene razlike:</strong> Polja u kojima se vrijednosti ne podudaraju između dvaju rodoslovaca automatski su obojena <span class="match-diff">žuto</span> u tablici. Polja i poveznice (ikona) koje postoje samo kod drugog rodoslovca obojene su <span class="match-add">zeleno</span> — to olakšava uočavanje novih informacija koje još nemate u svom stablu. Pored ocjene pouzdanosti mogu se prikazati i oznake <span class="match-badge match-badge-add">+</span> (drugi rodoslovac ima podatak koji ovdje nedostaje), <span class="match-badge match-badge-link">🔗</span> (drugi rodoslovac ima poveznicu, npr. na izvor ili zapis o grobu, koja ovdje nedostaje) i <span class="match-badge match-badge-diff">≠</span> (vrijednosti se ne podudaraju između dvaju rodoslovaca), svaka s brojem polja na koja se odnosi.</li>
+        <li><strong>Označene razlike:</strong> Polja u kojima se vrijednosti ne podudaraju između dvaju izvora automatski su obojena <span class="match-diff">žuto</span> u tablici. Polja i poveznice (ikona) koje postoje samo kod drugog izvora obojene su <span class="match-add">zeleno</span> — to olakšava uočavanje novih informacija koje još nemate u svom stablu.</li>
+        <li><strong>Oznake podudaranja:</strong> Pored ocjene pouzdanosti mogu se prikazati oznake <span class="match-badge match-badge-add">+</span> (drugi izvor ima podatak koji ovdje nedostaje), <span class="match-badge match-badge-link">🔗</span> (drugi izvor ima poveznicu, npr. na zapis o grobu, koja ovdje nedostaje) i <span class="match-badge match-badge-diff">≠</span> (vrijednosti se ne podudaraju između dvaju izvora), svaka s brojem polja na koja se odnosi.</li>
         <li><strong>Filtriranje podudaranja:</strong> Svaki odjeljak (<em>Osobe</em>, <em>Obitelji</em>) ima pored svog naslova polje za pretragu kojim dodatno sužavate prikazana podudaranja po imenu, prezimenu, datumu ili mjestu, te gumbe <span class="match-badge match-badge-add">+</span> Novo, <span class="match-badge match-badge-link">🔗</span> Poveznice i <span class="match-badge match-badge-diff">≠</span> Razlike za prikaz samo onih parova koji imaju odgovarajuću oznaku.</li>
         <li><strong>Izvoz podudaranja:</strong> Klikom na gumb <strong>CSV</strong> pored naslova pojedinog odjeljka izvozite prikazane podudarajuće zapise. Izvoz možete iskoristiti za dopunu svog stabla, primjerice alatom kao što je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
-        <li><strong>Usporedba stabala:</strong> za osobu koja se podudara gumb <strong>🌳 Usporedi</strong> otvara usporedni prikaz rodoslovnih stabala obaju rodoslovaca. Svaka je osoba označena bojom — <em>podudaranje</em>, <em>manja razlika</em>, <em>ključna razlika</em> (razlikuju se ime, prezime ili datum rođenja) ili prisutna samo u <em>jednom</em> stablu —, a klikom na osobu prikazuje se detaljna usporedba po pojedinim poljima, uključujući poveznice na izvore. Možete prebacivati između <em>predaka</em> i <em>potomaka</em>, putem obojene legende skočiti na bilo koju osobu, a usporedbu preuzeti kao tablicu <strong>CSV</strong> ili sliku <strong>SVG</strong>.</li>
+        <li><strong>Usporedba stabala:</strong> za osobu koja se podudara gumb <strong>🌳 Usporedi</strong> otvara usporedni prikaz rodoslovnih stabala obaju izvora. Svaka je osoba označena bojom — <em>podudaranje</em>, <em>manja razlika</em>, <em>ključna razlika</em> (razlikuju se ime, prezime ili datum rođenja) ili prisutna samo u <em>jednom</em> stablu —, a klikom na osobu prikazuje se detaljna usporedba po pojedinim poljima, uključujući poveznice na izvore. Možete prebacivati između <em>predaka</em> i <em>potomaka</em>, putem obojene legende skočiti na bilo koju osobu, a usporedbu preuzeti kao tablicu <strong>CSV</strong> ili sliku <strong>SVG</strong>.</li>
       </ul>
       {auth_section}
     `,

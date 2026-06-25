@@ -274,7 +274,7 @@ export default {
         <li><strong>Search:</strong> Enables general search across all persons and families simultaneously.</li>
         <li><strong>Person:</strong> Enables detailed search for individuals only.</li>
         <li><strong>Family:</strong> Enables detailed search for specific families (by husband, wife, and children).</li>
-        <li><strong>Genealogists:</strong> Displays a list of all contributing researchers and overall statistics.</li>
+        <li><strong>Sources:</strong> Displays a list of genealogists and other sources and overall statistics.</li>
       </ul>
       <p>On the right side of the navigation bar, you will find the menu icon (<strong>☰</strong>) to open the search engine, as well as buttons for help (<strong>?</strong>){auth_nav}, and language selection. At the bottom of the page is a footer with the application version and the date of the last data update.</p>
       <p><strong>Shareable links:</strong> Every search and every opened page is saved in the browser's address bar (URL), so you can easily copy the current view, bookmark it, or share it with others.</p>
@@ -287,14 +287,14 @@ export default {
       </ul>
       <h4>Data Input Rules</h4>
       <ul>
-        <li><strong>Multiple values at once:</strong> In text fields (names, surnames, places, genealogist), you can enter multiple words separated by commas (e.g. <em>Janez, Ivan</em> or <em>Smith, Smithson</em>). The system will search for records containing any of them.</li>
+        <li><strong>Multiple values at once:</strong> In text fields (names, surnames, places, source), you can enter multiple words separated by commas (e.g. <em>Janez, Ivan</em> or <em>Smith, Smithson</em>). The system will search for records containing any of them.</li>
         <li><strong>Dates and years:</strong> In date fields, you can enter exact dates (e.g. <em>15. 4. 1850</em>) or just years (e.g. <em>1850</em>). Date fields also allow searching by a range (from - to), but this applies <strong>only to years</strong>.</li>
         <li><strong>Precise matching:</strong> You can use the <code>^</code> character at the beginning of a word to find entries that start with it (e.g. <code>^Kranj</code>), or <code>$</code> at the end to find entries that end with it. Using both (<code>^Kranj$</code>) searches for an exact match.</li>
         <li><strong>Clearing fields:</strong> Each input field has a <strong>×</strong> button on the right edge, which quickly clears the entered value.</li>
       </ul>
       <h4>Advanced Search Settings</h4>
       <ul>
-        <li><strong>Source:</strong> In the search field, you can enter the surname of one or more genealogists, separated by commas. Using the dropdown menu next to it, you can also restrict the search to a specific source type: <em>Family Trees</em>, <em>Matricula Index</em>, or <em>Geneanet Cemeteries</em> (all sources are included by default).</li>
+        <li><strong>Source:</strong> In the search field, you can enter the name of one or more sources, separated by commas. Using the dropdown menu next to it, you can also restrict the search to a specific source type: <em>Family Trees</em>, <em>Matricula Index</em>, or <em>Geneanet Cemeteries</em> (all sources are included by default).</li>
         <li><strong>With link:</strong> Displays only those results that contain an external link to original sources (e.g. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Exact / Approximate:</strong> The <strong>Exact</strong> setting searches for exact whole-word matches (e.g. searching for <em>Smith</em> will not find <em>Smithson</em>). The <strong>Approximate</strong> setting uses algorithms to search for partial words (substrings) and similar name variations.</li>
       </ul>
@@ -319,7 +319,7 @@ export default {
         <li><strong>📋</strong> – censuses (SIstory)</li>
         <li><strong>📰</strong> – Digital Library of Slovenia (dLib)</li>
       </ul>
-      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>⛪</strong> mark next to the genealogist's name indicates that the data comes from the Matricula Online index rather than from a personal family tree, the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
+      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>⛪</strong> mark next to the source's name indicates that the data comes from the Matricula Online index rather than from a personal family tree, the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
       <h4>Ancestors and Descendants Tree</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>
@@ -328,31 +328,32 @@ export default {
         <li><strong>Export:</strong> with the buttons in the top right corner you can download the tree as an <strong>SVG</strong> image, a <strong>CSV</strong> table, or a <strong>GEDCOM</strong> file for import into other genealogy software. The exported GEDCOM file can be merged with your own GEDCOM file using a tool such as <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Overview map:</strong> on larger screens a small map in the top-left corner shows the whole tree and the currently visible area; click it to jump to another part.</li>
       </ul>
-      <h3>4. Genealogists</h3>
-      <p>The <strong>Genealogists</strong> tab shows the overall statistics of the index and a list of all researchers who contributed their data.</p>
+      <h3>4. Sources</h3>
+      <p>The <strong>Sources</strong> tab shows the overall statistics of the index and a list of all genealogists and other sources.</p>
       <ul>
-        <li><strong>Statistics:</strong> At the top, there are graphs with contributions by genealogist and the timeline of records.</li>
+        <li><strong>Statistics:</strong> At the top, there are graphs with contributions by source and the timeline of records.</li>
         <li><strong>Top surnames:</strong> A cloud displays the most frequent surnames. By clicking the <strong>CSV</strong> or <strong>SVG</strong> button, you can download this data to your computer.</li>
-        <li><strong>List of genealogists:</strong> The table displays all contributors and the number of their persons, families, links, and possible matches with other genealogists. By clicking the <strong>CSV</strong> button, you export the table, and by clicking a genealogist's name, you open their detailed page.</li>
-        <li><strong>Filtering the list:</strong> The search field next to the table's title lets you quickly narrow down the list by the genealogist's surname. The cloud of top surnames will then display only the surnames from the trees of the matched genealogists.</li>
+        <li><strong>List of sources:</strong> The table displays all contributors and the number of their persons, families, links, and possible matches with other sources. By clicking the <strong>CSV</strong> button, you export the table, and by clicking a source name, you open its detailed page.</li>
+        <li><strong>Filtering the list:</strong> The search field next to the table's title lets you quickly narrow down the list by the source name. The cloud of top surnames will then display only the surnames from the matched sources.</li>
       </ul>
-      <h4>Genealogist Details</h4>
-      <p>The individual genealogist's page gathers information about their contribution:</p>
+      <h4>Source Details</h4>
+      <p>The individual source's page gathers information about its contribution:</p>
       <ul>
-        <li><strong>Contribution statistics:</strong> A grid with the number of persons, families, links, and the date of the last update. If the genealogist contributes data from both their own tree and the Matricula index, the values are divided into three columns: <em>Total</em>, <em>Tree</em>, and <em>Matricula</em>.</li>
-        <li><strong>Link:</strong> If the genealogist provided a personal website, it is displayed under their name.</li>
+        <li><strong>Contribution statistics:</strong> A grid with the number of persons, families, links, and the date of the last update. If the source contributes data from both its own tree and the Matricula index, the values are divided into three columns: <em>Total</em>, <em>Tree</em>, and <em>Matricula</em>.</li>
+        <li><strong>Link:</strong> If the source provided a personal website, it is displayed under its name.</li>
         <li><strong>Top surnames:</strong> A word cloud and list show the surnames that appear most frequently in their database.</li>
-        <li><strong>Possible matches:</strong> A list of other genealogists who share matching historical persons or families with this genealogist.</li>
+        <li><strong>Possible matches:</strong> A list of other sources that share matching historical persons or families with this source.</li>
       </ul>
-      <h4>Matches between Genealogists</h4>
-      <p>By clicking one of the suggested matches on a genealogist's page, you display a detailed comparison of their data{auth_match}. The results are displayed so that each match occupies two adjacent rows:</p>
+      <h4>Matches between Sources</h4>
+      <p>By clicking one of the suggested matches on a source's page, you display a detailed comparison of their data{auth_match}. The results are displayed so that each match occupies two adjacent rows:</p>
       <ul>
-        <li>The <strong>top row</strong> shows the record from the first genealogist, and the <strong>bottom row</strong> shows the record from the second.</li>
+        <li>The <strong>top row</strong> shows the record from the first source, and the <strong>bottom row</strong> shows the record from the second.</li>
         <li><strong>Confidence score:</strong> Each match has a percentage score indicating how likely it is to be the same person or family.</li>
-        <li><strong>Highlighted differences:</strong> Fields where the values don't match between the two genealogists are automatically highlighted in <span class="match-diff">yellow</span> in the table. Fields and links (icon) that exist only for the other genealogist are highlighted in <span class="match-add">green</span> — making it easy to spot new information not yet in your own tree. Next to the confidence score, badges may also appear for <span class="match-badge match-badge-add">+</span> (the other genealogist has data for a field that is missing here), <span class="match-badge match-badge-link">🔗</span> (the other genealogist has a link, e.g. to a source or grave record, that is missing here), and <span class="match-badge match-badge-diff">≠</span> (the values don't match between the two genealogists), each with a count of the fields it applies to.</li>
+        <li><strong>Highlighted differences:</strong> Fields where the values don't match between the two sources are automatically highlighted in <span class="match-diff">yellow</span> in the table. Fields and links (icon) that exist only for the other source are highlighted in <span class="match-add">green</span> — making it easy to spot new information not yet in your own tree.</li>
+        <li><strong>Match badges:</strong> Next to the confidence score, badges may appear: <span class="match-badge match-badge-add">+</span> (the other source has data for a field that is missing here), <span class="match-badge match-badge-link">🔗</span> (the other source has a link, e.g. to a grave record, that is missing here), and <span class="match-badge match-badge-diff">≠</span> (the values don't match between the two sources), each with a count of the fields it applies to.</li>
         <li><strong>Filtering matches:</strong> Each section (<em>Persons</em>, <em>Families</em>) has a search field next to its title for further narrowing the displayed matches by name, surname, date, or place, as well as <span class="match-badge match-badge-add">+</span> New, <span class="match-badge match-badge-link">🔗</span> Links, and <span class="match-badge match-badge-diff">≠</span> Different buttons to show only the pairs carrying the corresponding badge.</li>
         <li><strong>Exporting matches:</strong> Clicking the <strong>CSV</strong> button next to each section's title exports the displayed matching records. The export can be used to complete your own tree, for example with a tool such as <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
-        <li><strong>Tree comparison:</strong> for a matching person, the <strong>🌳 Compare</strong> button opens a side-by-side view of both genealogists' family trees. Every person is colour-coded — <em>match</em>, <em>minor difference</em>, <em>key difference</em> (name, surname or birth date differs), or present in <em>only one</em> of the trees — and clicking a person reveals a field-by-field comparison, including source links. You can switch between <em>ancestors</em> and <em>descendants</em>, jump to any person from the coloured legend, and download the comparison as a <strong>CSV</strong> table or an <strong>SVG</strong> image.</li>
+        <li><strong>Tree comparison:</strong> for a matching person, the <strong>🌳 Compare</strong> button opens a side-by-side view of both sources' family trees. Every person is colour-coded — <em>match</em>, <em>minor difference</em>, <em>key difference</em> (name, surname or birth date differs), or present in <em>only one</em> of the trees — and clicking a person reveals a field-by-field comparison, including source links. You can switch between <em>ancestors</em> and <em>descendants</em>, jump to any person from the coloured legend, and download the comparison as a <strong>CSV</strong> table or an <strong>SVG</strong> image.</li>
       </ul>
       {auth_section}
     `,

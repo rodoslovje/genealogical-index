@@ -274,7 +274,7 @@ export default {
         <li><strong>Suche:</strong> Ermöglicht die allgemeine Suche über alle Personen und Familien gleichzeitig.</li>
         <li><strong>Person:</strong> Ermöglicht die detaillierte Suche nur nach Einzelpersonen.</li>
         <li><strong>Familie:</strong> Ermöglicht die detaillierte Suche nach bestimmten Familien (nach Mann, Frau und Kindern).</li>
-        <li><strong>Genealogen:</strong> Zeigt eine Liste aller beitragenden Forscher und die Gesamtstatistik an.</li>
+        <li><strong>Quellen:</strong> Zeigt eine Liste aller Genealogen und anderen Quellen sowie die Gesamtstatistik an.</li>
       </ul>
       <p>Auf der rechten Seite der Navigationsleiste finden Sie das Menüsymbol (<strong>☰</strong>) zum Öffnen der Suchmaschine sowie Schaltflächen für Hilfe (<strong>?</strong>){auth_nav} und Sprachauswahl. Am unteren Rand der Seite befindet sich eine Fußzeile mit der Versionsnummer der Anwendung und dem Datum der letzten Datenaktualisierung.</p>
       <p><strong>Teilbare Links:</strong> Jede Suche und jede geöffnete Seite wird in der Adressleiste des Browsers (URL) gespeichert. Sie können die aktuelle Ansicht also einfach kopieren, als Lesezeichen speichern oder an andere weiterleiten.</p>
@@ -287,14 +287,14 @@ export default {
       </ul>
       <h4>Regeln für die Dateneingabe</h4>
       <ul>
-        <li><strong>Mehrere Werte gleichzeitig:</strong> In Textfelder (Vornamen, Nachnamen, Orte, Genealoge) können Sie mehrere durch Kommas getrennte Wörter eingeben (z. B. <em>Janez, Ivan</em> oder <em>Mali, Mally</em>). Das System sucht nach Datensätzen, die eines davon enthalten.</li>
+        <li><strong>Mehrere Werte gleichzeitig:</strong> In Textfelder (Vornamen, Nachnamen, Orte, Quelle) können Sie mehrere durch Kommas getrennte Wörter eingeben (z. B. <em>Janez, Ivan</em> oder <em>Mali, Mally</em>). Das System sucht nach Datensätzen, die eines davon enthalten.</li>
         <li><strong>Daten und Jahreszahlen:</strong> In Datumsfelder können Sie genaue Daten (z. B. <em>15. 4. 1850</em>) oder nur Jahreszahlen (z. B. <em>1850</em>) eingeben. Datumsfelder erlauben auch die Suche nach einem Bereich (von - bis), dies gilt jedoch <strong>nur für Jahreszahlen</strong>.</li>
         <li><strong>Präzise Suche:</strong> Sie können das Zeichen <code>^</code> am Anfang eines Wortes verwenden, um Einträge zu finden, die damit beginnen (z. B. <code>^Kranj</code>), oder <code>$</code> am Ende, um nach solchen zu suchen, die damit enden. Wenn Sie beide (<code>^Kranj$</code>) verwenden, wird nach einer genauen Übereinstimmung gesucht.</li>
         <li><strong>Feld leeren:</strong> Jedes Eingabefeld hat am rechten Rand eine <strong>×</strong>-Schaltfläche, mit der Sie den eingegebenen Wert schnell löschen können.</li>
       </ul>
       <h4>Erweiterte Sucheinstellungen</h4>
       <ul>
-        <li><strong>Quelle:</strong> In das Suchfeld können Sie den Nachnamen eines oder mehrerer Genealogen eingeben, getrennt durch Kommas. Über das Dropdown-Menü daneben können Sie die Suche zusätzlich auf einen bestimmten Quellentyp beschränken: <em>Stammbäume</em>, <em>Matricula-Index</em> oder <em>Geneanet Friedhöfe</em> (standardmäßig sind alle Quellen eingeschlossen).</li>
+        <li><strong>Quelle:</strong> In das Suchfeld können Sie den Namen einer oder mehrerer Quellen eingeben, getrennt durch Kommas. Über das Dropdown-Menü daneben können Sie die Suche zusätzlich auf einen bestimmten Quellentyp beschränken: <em>Stammbäume</em>, <em>Matricula-Index</em> oder <em>Geneanet Friedhöfe</em> (standardmäßig sind alle Quellen eingeschlossen).</li>
         <li><strong>Mit Link:</strong> Zeigt nur Ergebnisse an, die einen externen Link zu Originalquellen (z. B. Matricula Online, FamilySearch, Geneanet) enthalten.</li>
         <li><strong>Genau / Ungefähr:</strong> Die Einstellung <strong>Genau</strong> sucht nach exakten Übereinstimmungen ganzer Wörter (z. B. findet die Suche nach <em>Mali</em> nicht <em>Malic</em>). Die Einstellung <strong>Ungefähr</strong> verwendet Algorithmen, um auch nach Wortteilen (Teilzeichenfolgen) und ähnlichen Namensvarianten zu suchen.</li>
       </ul>
@@ -319,7 +319,7 @@ export default {
         <li><strong>📋</strong> – Volkszählungen (SIstory)</li>
         <li><strong>📰</strong> – Digitale Bibliothek Sloweniens (dLib)</li>
       </ul>
-      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: Das <strong>⛪</strong>-Zeichen neben dem Namen des Genealogen bedeutet, dass die Daten aus dem Matricula Online-Index stammen und nicht aus einem persönlichen Stammbaum, das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
+      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: Das <strong>⛪</strong>-Zeichen neben dem Namen der Quelle bedeutet, dass die Daten aus dem Matricula Online-Index stammen und nicht aus einem persönlichen Stammbaum, das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
       <h4>Vorfahren- und Nachkommenbaum</h4>
       <p>Die Stammbaum-Seite zeigt einen grafischen, interaktiven Stammbaum der ausgewählten Person an. Folgende Funktionen stehen zur Verfügung:</p>
       <ul>
@@ -328,31 +328,32 @@ export default {
         <li><strong>Exportieren:</strong> Mit den Schaltflächen in der oberen rechten Ecke können Sie den Baum als <strong>SVG</strong>-Bild, als <strong>CSV</strong>-Tabelle oder als <strong>GEDCOM</strong>-Datei zum Import in andere Genealogieprogramme herunterladen. Die exportierte GEDCOM-Datei können Sie mit einem Werkzeug wie <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a> mit Ihrer eigenen GEDCOM-Datei zusammenführen.</li>
         <li><strong>Übersichtskarte:</strong> Auf größeren Bildschirmen zeigt eine kleine Karte in der oberen linken Ecke den gesamten Baum und den aktuell sichtbaren Bereich; ein Klick darauf springt zu einem anderen Teil.</li>
       </ul>
-      <h3>4. Genealogen</h3>
-      <p>Der Reiter <strong>Genealogen</strong> zeigt die Gesamtstatistik des Index und eine Liste aller Forscher, die ihre Daten beigesteuert haben.</p>
+      <h3>4. Quellen</h3>
+      <p>Der Reiter <strong>Quellen</strong> zeigt die Gesamtstatistik des Index und eine Liste aller Genealogen und anderen Quellen.</p>
       <ul>
-        <li><strong>Statistik:</strong> Oben befinden sich Diagramme mit den Beiträgen pro Genealoge und dem zeitlichen Verlauf der Einträge.</li>
+        <li><strong>Statistik:</strong> Oben befinden sich Diagramme mit den Beiträgen pro Quelle und dem zeitlichen Verlauf der Einträge.</li>
         <li><strong>Häufigste Nachnamen:</strong> Eine Wortwolke zeigt die häufigsten Nachnamen an. Durch Klicken auf die Schaltfläche <strong>CSV</strong> oder <strong>SVG</strong> können Sie diese Daten auf Ihren Computer herunterladen.</li>
-        <li><strong>Liste der Genealogen:</strong> Die Tabelle zeigt alle Beitragenden und die Anzahl ihrer Personen, Familien, Links und möglicher Übereinstimmungen mit anderen Genealogen an. Durch Klicken auf die Schaltfläche <strong>CSV</strong> exportieren Sie die Tabelle, und durch Klicken auf den Namen eines Genealogen öffnen Sie seine Detailseite.</li>
-        <li><strong>Liste filtern:</strong> Das Suchfeld neben dem Tabellentitel ermöglicht es Ihnen, die Liste schnell nach dem Nachnamen des Genealogen einzugrenzen. Die Wortwolke der häufigsten Nachnamen zeigt dann nur Nachnamen aus den Stammbäumen der gefundenen Genealogen an.</li>
+        <li><strong>Liste der Quellen:</strong> Die Tabelle zeigt alle Beitragenden und die Anzahl ihrer Personen, Familien, Links und möglicher Übereinstimmungen mit anderen Quellen an. Durch Klicken auf die Schaltfläche <strong>CSV</strong> exportieren Sie die Tabelle, und durch Klicken auf den Namen einer Quelle öffnen Sie ihre Detailseite.</li>
+        <li><strong>Liste filtern:</strong> Das Suchfeld neben dem Tabellentitel ermöglicht es Ihnen, die Liste schnell nach dem Namen der Quelle einzugrenzen. Die Wortwolke der häufigsten Nachnamen zeigt dann nur Nachnamen aus den gefundenen Quellen an.</li>
       </ul>
-      <h4>Details zum Genealogen</h4>
-      <p>Die Seite des einzelnen Genealogen enthält Informationen über seinen Beitrag:</p>
+      <h4>Details zur Quelle</h4>
+      <p>Die Seite der einzelnen Quelle enthält Informationen über ihren Beitrag:</p>
       <ul>
-        <li><strong>Beitragsstatistik:</strong> Ein Raster mit der Anzahl von Personen, Familien und Links sowie dem Datum der letzten Aktualisierung. Steuert der Genealoge Daten sowohl aus seinem eigenen Baum als auch aus dem Matricula-Index bei, werden die Werte in drei Spalten unterteilt: <em>Gesamt</em>, <em>Stammbaum</em> und <em>Matricula</em>.</li>
-        <li><strong>Link:</strong> Wenn der Genealoge eine persönliche Website angegeben hat, wird diese unter seinem Namen angezeigt.</li>
+        <li><strong>Beitragsstatistik:</strong> Ein Raster mit der Anzahl von Personen, Familien und Links sowie dem Datum der letzten Aktualisierung. Steuert die Quelle Daten sowohl aus ihrem eigenen Baum als auch aus dem Matricula-Index bei, werden die Werte in drei Spalten unterteilt: <em>Gesamt</em>, <em>Stammbaum</em> und <em>Matricula</em>.</li>
+        <li><strong>Link:</strong> Wenn die Quelle eine persönliche Website angegeben hat, wird diese unter ihrem Namen angezeigt.</li>
         <li><strong>Häufigste Nachnamen:</strong> Eine Wortwolke und eine Liste zeigen die Nachnamen, die in seiner Datenbank am häufigsten vorkommen.</li>
-        <li><strong>Mögliche Übereinstimmungen:</strong> Eine Liste anderer Genealogen, die übereinstimmende historische Personen oder Familien mit diesem Genealogen teilen.</li>
+        <li><strong>Mögliche Übereinstimmungen:</strong> Eine Liste anderer Quellen, die übereinstimmende historische Personen oder Familien mit dieser Quelle teilen.</li>
       </ul>
-      <h4>Übereinstimmungen zwischen Genealogen</h4>
-      <p>Durch Klicken auf eine der vorgeschlagenen Übereinstimmungen auf der Seite eines Genealogen zeigen Sie einen detaillierten Vergleich ihrer Daten an{auth_match}. Die Ergebnisse werden so angezeigt, dass jede Übereinstimmung zwei benachbarte Zeilen einnimmt:</p>
+      <h4>Übereinstimmungen zwischen Quellen</h4>
+      <p>Durch Klicken auf eine der vorgeschlagenen Übereinstimmungen auf der Seite einer Quelle zeigen Sie einen detaillierten Vergleich ihrer Daten an{auth_match}. Die Ergebnisse werden so angezeigt, dass jede Übereinstimmung zwei benachbarte Zeilen einnimmt:</p>
       <ul>
-        <li>Die <strong>obere Zeile</strong> zeigt den Datensatz des ersten Genealogen und die <strong>untere Zeile</strong> den Datensatz des zweiten.</li>
+        <li>Die <strong>obere Zeile</strong> zeigt den Datensatz der ersten Quelle und die <strong>untere Zeile</strong> den Datensatz der zweiten.</li>
         <li><strong>Konfidenz:</strong> Jede Übereinstimmung hat einen Prozentwert, der angibt, wie wahrscheinlich es sich um dieselbe Person oder Familie handelt.</li>
-        <li><strong>Hervorgehobene Unterschiede:</strong> Felder, deren Werte zwischen den beiden Genealogen nicht übereinstimmen, werden in der Tabelle automatisch <span class="match-diff">gelb</span> hervorgehoben. Felder und Links (Symbol), die nur beim anderen Genealogen vorhanden sind, werden <span class="match-add">grün</span> hervorgehoben — das macht neue Informationen sichtbar, die in Ihrem eigenen Stammbaum noch fehlen. Neben dem Konfidenzwert können außerdem Kennzeichen erscheinen: <span class="match-badge match-badge-add">+</span> (der andere Genealoge hat Daten für ein Feld, das hier fehlt), <span class="match-badge match-badge-link">🔗</span> (der andere Genealoge hat einen Link, z. B. zu einer Quelle oder einem Grabeintrag, der hier fehlt) und <span class="match-badge match-badge-diff">≠</span> (die Werte stimmen zwischen den beiden Genealogen nicht überein), jeweils mit der Anzahl der betroffenen Felder.</li>
+        <li><strong>Hervorgehobene Unterschiede:</strong> Felder, deren Werte zwischen den beiden Quellen nicht übereinstimmen, werden in der Tabelle automatisch <span class="match-diff">gelb</span> hervorgehoben. Felder und Links (Symbol), die nur bei der anderen Quelle vorhanden sind, werden <span class="match-add">grün</span> hervorgehoben — das macht neue Informationen sichtbar, die in Ihrem eigenen Stammbaum noch fehlen.</li>
+        <li><strong>Übereinstimmungskennzeichen:</strong> Neben dem Konfidenzwert können Kennzeichen erscheinen: <span class="match-badge match-badge-add">+</span> (die andere Quelle hat Daten für ein Feld, das hier fehlt), <span class="match-badge match-badge-link">🔗</span> (die andere Quelle hat einen Link, z. B. zu einem Grabeintrag, der hier fehlt) und <span class="match-badge match-badge-diff">≠</span> (die Werte stimmen zwischen den beiden Quellen nicht überein), jeweils mit der Anzahl der betroffenen Felder.</li>
         <li><strong>Übereinstimmungen filtern:</strong> Jeder Abschnitt (<em>Personen</em>, <em>Familien</em>) hat neben seinem Titel ein Suchfeld, mit dem Sie die angezeigten Übereinstimmungen weiter nach Name, Nachname, Datum oder Ort eingrenzen können, sowie die Schaltflächen <span class="match-badge match-badge-add">+</span> Neu, <span class="match-badge match-badge-link">🔗</span> Links und <span class="match-badge match-badge-diff">≠</span> Unterschiedlich, um nur Paare mit dem entsprechenden Kennzeichen anzuzeigen.</li>
         <li><strong>Übereinstimmungen exportieren:</strong> Mit Klick auf die Schaltfläche <strong>CSV</strong> neben dem Titel eines Abschnitts exportieren Sie die angezeigten übereinstimmenden Datensätze. Den Export können Sie zur Ergänzung Ihres eigenen Stammbaums nutzen, zum Beispiel mit einem Werkzeug wie <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
-        <li><strong>Stammbaum-Vergleich:</strong> Für eine übereinstimmende Person öffnet die Schaltfläche <strong>🌳 Vergleichen</strong> eine Gegenüberstellung der Stammbäume beider Genealogen. Jede Person ist farblich gekennzeichnet — <em>Übereinstimmung</em>, <em>geringe Abweichung</em>, <em>wesentliche Abweichung</em> (Vorname, Nachname oder Geburtsdatum weichen ab) oder nur in <em>einem</em> der Bäume vorhanden —, und ein Klick auf eine Person zeigt einen feldweisen Vergleich einschließlich der Quellenlinks. Sie können zwischen <em>Vorfahren</em> und <em>Nachkommen</em> wechseln, über die farbige Legende zu jeder Person springen und den Vergleich als <strong>CSV</strong>-Tabelle oder <strong>SVG</strong>-Bild herunterladen.</li>
+        <li><strong>Stammbaum-Vergleich:</strong> Für eine übereinstimmende Person öffnet die Schaltfläche <strong>🌳 Vergleichen</strong> eine Gegenüberstellung der Stammbäume beider Quellen. Jede Person ist farblich gekennzeichnet — <em>Übereinstimmung</em>, <em>geringe Abweichung</em>, <em>wesentliche Abweichung</em> (Vorname, Nachname oder Geburtsdatum weichen ab) oder nur in <em>einem</em> der Bäume vorhanden —, und ein Klick auf eine Person zeigt einen feldweisen Vergleich einschließlich der Quellenlinks. Sie können zwischen <em>Vorfahren</em> und <em>Nachkommen</em> wechseln, über die farbige Legende zu jeder Person springen und den Vergleich als <strong>CSV</strong>-Tabelle oder <strong>SVG</strong>-Bild herunterladen.</li>
       </ul>
       {auth_section}
     `,
