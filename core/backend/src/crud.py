@@ -521,13 +521,19 @@ def get_contributors(db: Session):
             "url": meta.get("url"),
         }
         bucket = grouped.setdefault(
-            base, {"tree": None, "matricula": None, "geneanet": None, "military": None}
+            base,
+            {"tree": None, "matricula": None, "geneanet": None, "military": None, "_intro_db": None},
         )
         bucket[_source_key(row.name)] = part
+        # Pick up intro from whichever row has it — contributors that only
+        # exist as a suffixed variant (e.g. Borci-Maister-military) have no
+        # separate base row, so accept intro from any variant in the group.
+        if row.intro and not bucket["_intro_db"]:
+            bucket["_intro_db"] = row.intro
 
     merged = []
     for base, parts in grouped.items():
-        present = [p for p in parts.values() if p]
+        present = [p for p in [parts["tree"], parts["matricula"], parts["geneanet"], parts["military"]] if p]
         base_meta = metadata.get(base, {})
         merged.append(
             {
@@ -540,7 +546,7 @@ def get_contributors(db: Session):
                 "families_count": sum(p["families_count"] for p in present),
                 "links_count": sum(p["links_count"] for p in present),
                 "url": next((p["url"] for p in present if p["url"]), None),
-                "intro": base_meta.get("intro"),
+                "intro": parts["_intro_db"] or base_meta.get("intro"),
                 "tree": parts["tree"],
                 "matricula": parts["matricula"],
                 "geneanet": parts["geneanet"],

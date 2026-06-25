@@ -310,6 +310,21 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/013_has_day_precision.sql
 ```
 
+### 014 — `contributor_intro`
+
+Adds `intro TEXT` (nullable) to `contributors`. Stores a short HTML
+introduction for each contributor, displayed on their detail page before
+the "More info" link.
+
+- `ADD COLUMN IF NOT EXISTS` — fast metadata-only change; no table lock.
+- Re-runnable.
+- If you already added the column manually, this is a no-op.
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/014_contributor_intro.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

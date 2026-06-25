@@ -1,0 +1,1 @@
+ALTER TABLE contributors ADD COLUMN IF NOT EXISTS intro TEXT;

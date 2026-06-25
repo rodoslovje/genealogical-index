@@ -67,6 +67,7 @@ class Contributor(Base):
     persons_count = Column(Integer, default=0)
     families_count = Column(Integer, default=0)
     links_count = Column(Integer, default=0)
+    intro = Column(Text, nullable=True)
 
 
 class MatchJob(Base):

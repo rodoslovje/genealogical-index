@@ -76,7 +76,8 @@ def setup_full(db):
             last_modified VARCHAR(255),
             persons_count INTEGER DEFAULT 0,
             families_count INTEGER DEFAULT 0,
-            links_count INTEGER DEFAULT 0
+            links_count INTEGER DEFAULT 0,
+            intro TEXT
         );
         CREATE TABLE persons (
             id SERIAL PRIMARY KEY, ext_id TEXT,
@@ -406,6 +407,7 @@ def setup_update(db):
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS persons_count  INTEGER DEFAULT 0;
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS families_count INTEGER DEFAULT 0;
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS links_count    INTEGER DEFAULT 0;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS intro          TEXT;
         ALTER TABLE contributors DROP COLUMN IF EXISTS births_count;
         ALTER TABLE contributors DROP COLUMN IF EXISTS deaths_count;
 
