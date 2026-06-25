@@ -118,6 +118,7 @@ export async function renderContributors() {
     });
     if (restored) return;
 
+    window.scrollTo(0, 0);
     await renderMatchesPage(contributor, withPartner);
     if (tableContainer) {
       markCurrentView(viewKey, tableContainer, () => ({
