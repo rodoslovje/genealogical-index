@@ -525,11 +525,11 @@ def get_contributors(db: Session):
             {"tree": None, "matricula": None, "geneanet": None, "military": None, "_intro_db": None},
         )
         bucket[_source_key(row.name)] = part
-        # Pick up intro from whichever row has it — contributors that only
-        # exist as a suffixed variant (e.g. Borci-Maister-military) have no
-        # separate base row, so accept intro from any variant in the group.
-        if row.intro and not bucket["_intro_db"]:
-            bucket["_intro_db"] = row.intro
+        # Collect intro from DB or metadata, accepting any variant in the group
+        # (e.g. Borci-Maister-military has no separate base row).
+        intro_val = row.intro or meta.get("intro")
+        if intro_val and not bucket["_intro_db"]:
+            bucket["_intro_db"] = intro_val
 
     merged = []
     for base, parts in grouped.items():
