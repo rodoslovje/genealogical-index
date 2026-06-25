@@ -153,6 +153,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     const urlMap = getContributorUrlMap();
     const url = urlMap[displayName] || (contribData._tree?._url) || (contribData._geneanet?._url) || (contribData._matricula?._url);
     const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${displayName}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a></div></div>` : '';
+    const introHtml = contribData._intro ? `<div class="contributor-intro" style="margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6;">${contribData._intro}</div>` : '';
 
     const statsHtml = renderContributorStats(contribData);
 
@@ -347,6 +348,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       <h2 class="matches-page-title">${displayName} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))}</h2>
     </div>
     ${statsHtml}
+    ${introHtml}
     ${urlHtml}
     ${cloudSectionsHtml}
     ${matriculaSectionHtml}`;

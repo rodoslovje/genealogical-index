@@ -9,7 +9,7 @@ import { renderGeneanetStatsPage } from './contributors/geneanet-stats.js';
 import { getTabURLParams, restoreFromURL, clearAllSearchForms } from './search.js';
 import { hideIntro, showIntros } from './intros.js';
 import { tabsWithResults } from './tab-state.js';
-import { leaveCurrentView } from './lib/view-cache.js';
+import { leaveCurrentView, evictView } from './lib/view-cache.js';
 
 const sidebar = document.getElementById('sidebar');
 
@@ -296,6 +296,11 @@ export function initRouter() {
 
     const newUrlStr = url.pathname + (url.searchParams.toString() ? '?' + toUnicodeSearch(url.searchParams) : '');
     history.pushState(null, '', newUrlStr);
+    // Drop the destination from the cache so a forward navigation always
+    // starts at the top of the page rather than restoring a stale scroll
+    // position from a previous visit. Back/forward (popstate) still hits the
+    // cache and restores scroll as intended.
+    evictView(window.location.pathname + window.location.search);
     navigateToURL();
   });
 

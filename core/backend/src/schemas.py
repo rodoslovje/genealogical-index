@@ -86,6 +86,7 @@ class Contributor(BaseModel):
     families_count: int
     links_count: int
     url: Optional[str] = None
+    intro: Optional[str] = None
     tree: Optional[ContributorPart] = None
     matricula: Optional[ContributorPart] = None
     geneanet: Optional[ContributorPart] = None

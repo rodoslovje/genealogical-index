@@ -52,6 +52,7 @@ export function ensureData() {
           total_links: m.links_count || 0,
           last_modified: m.last_modified ? m.last_modified.slice(0, 10) : '',
           _url: m.url || '',
+          _intro: m.intro || '',
           _tree: _toPart(m.tree),
           _matricula: _toPart(m.matricula),
           _geneanet: _toPart(m.geneanet),

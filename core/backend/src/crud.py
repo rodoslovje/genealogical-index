@@ -39,13 +39,18 @@ METADATA_PATH = os.path.join(
 )
 
 
-def _load_contributor_links():
-    """Returns a dict of contributor name -> public URL extracted from metadata.json."""
+def _load_contributor_metadata():
+    """Returns a dict of contributor name -> {url, intro} extracted from metadata.json."""
     try:
         with open(METADATA_PATH, encoding="utf-8") as f:
             data = json.load(f)
         return {
-            entry["contributor"]: entry["url"] for entry in data if entry.get("url")
+            entry["contributor"]: {
+                "url": entry.get("url"),
+                "intro": entry.get("intro"),
+            }
+            for entry in data
+            if entry.get("contributor")
         }
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
@@ -492,7 +497,7 @@ def get_contributors(db: Session):
     per-source breakdown via ``tree`` / ``matricula`` / ``geneanet``.
     """
     rows = db.query(models.Contributor).all()
-    links = _load_contributor_links()
+    metadata = _load_contributor_metadata()
 
     def _source_key(name: str) -> str:
         if name.endswith(MATRICULA_SUFFIX):
@@ -506,13 +511,14 @@ def get_contributors(db: Session):
     grouped: dict[str, dict] = {}
     for row in rows:
         base = _base_contributor_name(row.name)
+        meta = metadata.get(row.name, {})
         part = {
             "name": row.name,
             "last_modified": row.last_modified or "",
             "persons_count": row.persons_count or 0,
             "families_count": row.families_count or 0,
             "links_count": row.links_count or 0,
-            "url": links.get(row.name),
+            "url": meta.get("url"),
         }
         bucket = grouped.setdefault(
             base, {"tree": None, "matricula": None, "geneanet": None, "military": None}
@@ -522,6 +528,7 @@ def get_contributors(db: Session):
     merged = []
     for base, parts in grouped.items():
         present = [p for p in parts.values() if p]
+        base_meta = metadata.get(base, {})
         merged.append(
             {
                 "name": base,
@@ -533,6 +540,7 @@ def get_contributors(db: Session):
                 "families_count": sum(p["families_count"] for p in present),
                 "links_count": sum(p["links_count"] for p in present),
                 "url": next((p["url"] for p in present if p["url"]), None),
+                "intro": base_meta.get("intro"),
                 "tree": parts["tree"],
                 "matricula": parts["matricula"],
                 "geneanet": parts["geneanet"],

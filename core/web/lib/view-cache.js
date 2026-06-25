@@ -74,6 +74,13 @@ export function updateCurrentKey(key) {
   if (current) current.key = key;
 }
 
+/** Removes a single entry from the cache — call before SPA-navigating forward
+ *  to a URL so the destination always renders fresh (scroll at top) instead of
+ *  restoring a stale scroll position from a previous visit. */
+export function evictView(key) {
+  cache.delete(key);
+}
+
 /** Drops every cached view — e.g. after a language switch, since cached
  *  markup would otherwise show in the previous language until re-visited. */
 export function clearViewCache() {
