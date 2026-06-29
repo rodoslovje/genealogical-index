@@ -68,7 +68,7 @@ def setup_full(db):
     db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
     db.execute(text(_FOLD_HELPERS_SQL))
     db.execute(text("""
-        DROP TABLE IF EXISTS persons, births, families, deaths, contributors, match_jobs, matches, matricula_books, geneanet_cemeteries CASCADE;
+        DROP TABLE IF EXISTS persons, births, families, deaths, contributors, match_jobs, matches, contributor_surnames, matricula_books, geneanet_cemeteries CASCADE;
 
         CREATE TABLE contributors (
             id SERIAL PRIMARY KEY,

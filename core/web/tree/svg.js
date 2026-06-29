@@ -2,6 +2,7 @@ import { toUnicodeSearch } from '../lib/url.js';
 import { t } from '../i18n.js';
 import { downloadBlob, formatExportFilename } from '../lib/utils.js';
 import { exportDateStr } from '../lib/csv.js';
+import siteConfig from '@site-config';
 
 // Tree layout, zoom/minimap chrome, and SVG export — shared by the ancestors
 // and descendants trees. d3 is loaded globally from the CDN (see ensureD3), so
@@ -333,7 +334,7 @@ export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contr
     let footerLeftX = exportX + padding;
     if (contributorName) {
       overlay.append('image')
-          .attr('href', window.location.origin + '/srd-logo-transparent.png')
+          .attr('href', window.location.origin + siteConfig.logo)
           .attr('x', footerLeftX)
           .attr('y', exportY + exportHeight - footerHeight / 2 - 16)
           .attr('width', 32)

@@ -42,6 +42,7 @@ function siteTitlePlugin(siteConfig) {
       if (ctx?.path?.endsWith('guide.html')) return html;
       return html
         .replace(/<title>[^<]*<\/title>/, `<title>${siteTitle}</title>`)
+        .replace('/__SITE_LOGO__', () => siteConfig.logo)
         .replace('</head>', `  <meta property="og:title" content="${siteTitle}" />\n  </head>`);
     },
   };
@@ -82,6 +83,7 @@ function guidePagePlugin(siteConfig) {
         .replace('<html lang="en">', () => `<html lang="${lang}">`)
         .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(title)}</title>`)
         .replace('__GUIDE_DESCRIPTION__', () => description)
+        .replace('/__GUIDE_LOGO__', () => siteConfig.logo)
         .replace('__GUIDE_SITE_TITLE__', () => escapeHtml(nativeTitle))
         .replace('__GUIDE_ORG_NAME__', () => escapeHtml(nativeOrg))
         .replace('__GUIDE_BACK_LABEL__', () => escapeHtml(nativeTitle))
