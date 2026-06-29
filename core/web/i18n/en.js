@@ -265,6 +265,9 @@ export default {
     help_auth_section: `
       <h3>5. System Login</h3>
       <p>To get full access to trees and matches, you need to log in. Open the login window by clicking the user icon (<strong>{USER_ICON}</strong>) in the top right corner. Enter the username and password you use to access the society's main portal.</p>`,
+    help_matricula_mark: `the <strong>⛪</strong> mark next to the source's name indicates that the data comes from the Matricula Online index rather than from a personal family tree, `,
+    help_source_type_item: `<li><strong>Source:</strong> In the search field, you can enter the name of one or more sources, separated by commas. Using the dropdown menu next to it, you can also restrict the search to a specific source type: <em>Family Trees</em>, <em>Matricula Index</em>, or <em>Geneanet Cemeteries</em> (all sources are included by default).</li>`,
+    help_matricula_cols: ` If the source contributes data from both its own tree and the Matricula index, the values are divided into three columns: <em>Total</em>, <em>Tree</em>, and <em>Matricula</em>.`,
     help_manual: `
       <h2>User Manual</h2>
       <p>Welcome to the Genealogical Index, an archival database of persons and families. This manual will help you search and browse genealogical data.</p>
@@ -294,7 +297,7 @@ export default {
       </ul>
       <h4>Advanced Search Settings</h4>
       <ul>
-        <li><strong>Source:</strong> In the search field, you can enter the name of one or more sources, separated by commas. Using the dropdown menu next to it, you can also restrict the search to a specific source type: <em>Family Trees</em>, <em>Matricula Index</em>, or <em>Geneanet Cemeteries</em> (all sources are included by default).</li>
+        {source_type_item}
         <li><strong>With link:</strong> Displays only those results that contain an external link to original sources (e.g. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Exact / Approximate:</strong> The <strong>Exact</strong> setting searches for exact whole-word matches (e.g. searching for <em>Smith</em> will not find <em>Smithson</em>). The <strong>Approximate</strong> setting uses algorithms to search for partial words (substrings) and similar name variations.</li>
       </ul>
@@ -319,7 +322,7 @@ export default {
         <li><strong>📋</strong> – censuses (SIstory)</li>
         <li><strong>📰</strong> – Digital Library of Slovenia (dLib)</li>
       </ul>
-      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>⛪</strong> mark next to the source's name indicates that the data comes from the Matricula Online index rather than from a personal family tree, the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
+      <p>Next to some other data, smaller marginal icons appear with additional information: {matricula_mark}the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
       <h4>Ancestors and Descendants Tree</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>
@@ -339,7 +342,7 @@ export default {
       <h4>Source Details</h4>
       <p>The individual source's page gathers information about its contribution:</p>
       <ul>
-        <li><strong>Contribution statistics:</strong> A grid with the number of persons, families, links, and the date of the last update. If the source contributes data from both its own tree and the Matricula index, the values are divided into three columns: <em>Total</em>, <em>Tree</em>, and <em>Matricula</em>.</li>
+        <li><strong>Contribution statistics:</strong> A grid with the number of persons, families, links, and the date of the last update.{matricula_cols}</li>
         <li><strong>Link:</strong> If the source provided a personal website, it is displayed under its name.</li>
         <li><strong>Top surnames:</strong> A word cloud and list show the surnames that appear most frequently in their database.</li>
         <li><strong>Possible matches:</strong> A list of other sources that share matching historical persons or families with this source.</li>

@@ -118,7 +118,6 @@ export default {
     col_links: 'Hivatkozások',
     col_total_links: 'Hivatkozások',
     col_url: 'URL',
-    col_sum: 'Összeg',
     col_tree: 'Családfa',
     col_matricula: 'Matricula',
 
@@ -165,8 +164,6 @@ export default {
     col_confidence: 'Megbízhatóság',
     matches_loading: 'Betöltés…',
     matches_none: 'Nem találhatók egyezések.',
-    matches_confidence: 'Megbízhatóság',
-    matches_for: 'Egyezések:',
     matches_found_intro: 'A következő forrásokat találtuk, amelyek egyező vagy hasonló adatokkal rendelkeznek, mint a forrás',
     matches_found_outro: 'Válasszon ki egy egyező forrást a kettejük közötti összes egyezés megtekintéséhez.',
     matches_detail_intro: 'A {1} és {0} közötti összes egyezés alább látható.',
@@ -192,19 +189,14 @@ export default {
     col_book_type: 'Típus',
     col_book_count: 'Bejegyzések',
     col_books_count: 'Könyvek',
-    col_total_records: 'Bejegyzések',
-    col_contributors_count: 'Genealógusok',
     matricula_page_title: 'Matricula index',
     matricula_page_intro: 'Globális statisztika az indexben szereplő genealógusok által átírt összes Matricula Online könyvről',
-    matricula_books_label: 'könyv',
-    matricula_records_label: 'bejegyzés',
     matricula_section_books: 'Átírt könyvek',
     matricula_section_contributors: 'Források',
     matricula_section_parishes: 'Plébániák',
     contributors_index_links_intro: 'A(z) {0} és a(z) {1} részletes statisztikája is elérhető.',
     matricula_intro: 'A(z) <a href="{0}" target="_blank" rel="noopener">Indeks matičnih knjig NŠA-LJ, NŠAM in ŠAK</a> projekt keretében az egyes genealógusok teljes anyakönyvek (keresztelési, házassági vagy halotti) indexével járulhatnak hozzá a(z) <a href="{1}" target="_blank" rel="noopener">Matricula Online</a> oldalon.',
     geneanet_intro: 'A(z) <a href="{0}" target="_blank" rel="noopener">Register slovenskih pokopališč</a> projekt keretében az egyes genealógusok sírkövek fényképeivel járulhatnak hozzá, amelyeket a projekt keretében a(z) <a href="{1}" target="_blank" rel="noopener">Geneanet temetők</a> oldalon indexelnek.',
-    matricula_more_stats: 'Globális Matricula statisztika',
     book_type_birth: 'Keresztelés',
     book_type_marriage: 'Esküvő',
     book_type_death: 'Halál',
@@ -273,6 +265,9 @@ export default {
     help_auth_section: `
       <h3>5. Bejelentkezés</h3>
       <p>A családfákhoz és egyezésekhez való teljes hozzáféréshez be kell jelentkeznie. Nyissa meg a bejelentkezési ablakot a jobb felső sarokban található felhasználó ikonra (<strong>{USER_ICON}</strong>) kattintva. Adja meg azt a felhasználónevet és jelszót, amelyet a társaság fő portáljának eléréséhez használ.</p>`,
+    help_matricula_mark: `a forrás neve melletti <strong>⛪</strong> jel azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig személyes családfából, `,
+    help_source_type_item: `<li><strong>Forrás:</strong> A keresőmezőbe egy vagy több forrás nevét is beírhatja, vesszővel elválasztva. A mellette lévő legördülő menü segítségével a keresést egy adott forrástípusra is korlátozhatja: <em>Családfák</em>, <em>Matricula index</em> vagy <em>Geneanet temetők</em> (alapértelmezés szerint minden forrás szerepel).</li>`,
+    help_matricula_cols: ` Ha a forrás a saját fájából és a Matricula indexből is szolgáltat adatokat, az értékek három oszlopra oszlanak: <em>Összesen</em>, <em>Családfa</em> és <em>Matricula</em>.`,
     help_manual: `
       <h2>Használati útmutató</h2>
       <p>Üdvözöljük a Genealógiai Indexben, amely a személyek és családok archív adatbázisa. Ez a kézikönyv segít a genealógiai adatok keresésében és böngészésében.</p>
@@ -302,7 +297,7 @@ export default {
       </ul>
       <h4>Speciális keresési beállítások</h4>
       <ul>
-        <li><strong>Forrás:</strong> A keresőmezőbe egy vagy több forrás nevét is beírhatja, vesszővel elválasztva. A mellette lévő legördülő menü segítségével a keresést egy adott forrástípusra is korlátozhatja: <em>Családfák</em>, <em>Matricula index</em> vagy <em>Geneanet temetők</em> (alapértelmezés szerint minden forrás szerepel).</li>
+        {source_type_item}
         <li><strong>Hivatkozással:</strong> Csak azokat a találatokat jeleníti meg, amelyek külső hivatkozást tartalmaznak az eredeti forrásokra (pl. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Pontos / Közelítő:</strong> A <strong>Pontos</strong> beállítás a teljes szavak pontos egyezését keresi (pl. a <em>Mali</em> keresése nem találja meg a <em>Malic</em> szót). A <strong>Közelítő</strong> beállítás algoritmusokat használ a szórészletek (részkarakterláncok) és hasonló névvariációk keresésére is.</li>
       </ul>
@@ -327,7 +322,7 @@ export default {
         <li><strong>📋</strong> – népszámlálások (SIstory)</li>
         <li><strong>📰</strong> – Szlovénia Digitális Könyvtára (dLib)</li>
       </ul>
-      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a forrás neve melletti <strong>⛪</strong> jel azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig személyes családfából, a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
+      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: {matricula_mark}a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
       <h4>Ősök és leszármazottak családfája</h4>
       <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
       <ul>
@@ -347,7 +342,7 @@ export default {
       <h4>Forrás részletei</h4>
       <p>Az egyes forrás oldala összegyűjti az annak hozzájárulásával kapcsolatos információkat:</p>
       <ul>
-        <li><strong>Hozzájárulási statisztika:</strong> Egy rács a személyek, családok és hivatkozások számával, valamint az utolsó frissítés dátumával. Ha a forrás a saját fájából és a Matricula indexből is szolgáltat adatokat, az értékek három oszlopra oszlanak: <em>Összesen</em>, <em>Családfa</em> és <em>Matricula</em>.</li>
+        <li><strong>Hozzájárulási statisztika:</strong> Egy rács a személyek, családok és hivatkozások számával, valamint az utolsó frissítés dátumával.{matricula_cols}</li>
         <li><strong>Hivatkozás:</strong> Ha a forrás megadott személyes weboldalt, az a neve alatt jelenik meg.</li>
         <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő és egy lista mutatja az adatbázisában leggyakrabban előforduló vezetékneveket.</li>
         <li><strong>Lehetséges egyezések:</strong> Azoknak a többi forrásoknak a listája, amelyek egyező történelmi személyeket vagy családokat osztanak meg ezzel a forrással.</li>

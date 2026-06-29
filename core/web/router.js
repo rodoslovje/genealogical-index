@@ -6,6 +6,7 @@ import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
 import { renderComparePage } from './tree/compare.js';
 import { renderMatriculaStatsPage } from './contributors/matricula-stats.js';
 import { renderGeneanetStatsPage } from './contributors/geneanet-stats.js';
+import siteConfig from '@site-config';
 import { getTabURLParams, restoreFromURL, clearAllSearchForms } from './search.js';
 import { hideIntro, showIntros } from './intros.js';
 import { tabsWithResults } from './tab-state.js';
@@ -51,6 +52,7 @@ export function normalizeLegacyURL() {
  *  handled so the caller can skip the normal tab routing. */
 export function maybeRouteMatricula(urlParams) {
   if (urlParams.get('t') !== 'matricula') return false;
+  if (siteConfig.gatedFeatures?.includes('matricula')) return false;
   leaveCurrentView();
 
   document.body.classList.remove('contributors-view', 'tree-view');
@@ -72,6 +74,7 @@ export function maybeRouteMatricula(urlParams) {
  *  (with map) outside the regular tab system. Mirrors maybeRouteMatricula. */
 export function maybeRouteGeneanet(urlParams) {
   if (urlParams.get('t') !== 'geneanet') return false;
+  if (siteConfig.gatedFeatures?.includes('geneanet')) return false;
   leaveCurrentView();
 
   document.body.classList.remove('contributors-view', 'tree-view');

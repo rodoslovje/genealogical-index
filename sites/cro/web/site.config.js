@@ -15,6 +15,11 @@ const siteConfig = {
   authUrl: null,
   filePrefix: 'cgi',
 
+  // The Croatian site has no Matricula Index, Geneanet Cemeteries or military
+  // special sources, so hide their UI (stats links, search source options,
+  // side routes).
+  gatedFeatures: ['matricula', 'geneanet', 'military'],
+
   // Languages shown in the dropdown, ordered alphabetically by language name
   languages: ['de', 'en', 'hr', 'hu', 'it', 'sl'],
 

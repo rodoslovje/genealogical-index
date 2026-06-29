@@ -265,6 +265,9 @@ export default {
     help_auth_section: `
       <h3>5. Prijava u sustav</h3>
       <p>Za potpuni pristup stablima i podudaranjima morate se prijaviti. Otvorite prozor za prijavu klikom na ikonu osobe (<strong>{USER_ICON}</strong>) gore desno. U prozor upišite korisničko ime i lozinku koju inače koristite za pristup matičnom portalu društva.</p>`,
+    help_matricula_mark: `oznaka <strong>⛪</strong> pored imena izvora znači da podaci proizlaze iz indeksa Matricula Online a ne iz osobnog obiteljskog stabla, `,
+    help_source_type_item: `<li><strong>Izvor:</strong> U polje za pretragu možete unijeti naziv jednog ili više izvora odvojenih zarezom. Pomoću padajućeg izbornika pored njega možete pretragu ograničiti i na određeni tip izvora: <em>Obiteljska stabla</em>, <em>Matricula indeks</em> ili <em>Geneanet groblja</em> (prema zadanim postavkama uključeni su svi izvori).</li>`,
+    help_matricula_cols: ` Ako izvor doprinosi podacima i iz vlastitog stabla i iz indeksa Matricula, vrijednosti su podijeljene u tri stupca: <em>Ukupno</em>, <em>Stablo</em> i <em>Matricula</em>.`,
     help_manual: `
       <h2>Upute za korištenje</h2>
       <p>Dobrodošli u Rodoslovni indeks, arhivsku zbirku podataka o osobama i obiteljima. Ove će vam upute pomoći u pretraživanju i pregledu rodoslovnih podataka.</p>
@@ -294,7 +297,7 @@ export default {
       </ul>
       <h4>Napredne postavke pretrage</h4>
       <ul>
-        <li><strong>Izvor:</strong> U polje za pretragu možete unijeti naziv jednog ili više izvora odvojenih zarezom. Pomoću padajućeg izbornika pored njega možete pretragu ograničiti i na određeni tip izvora: <em>Obiteljska stabla</em>, <em>Matricula indeks</em> ili <em>Geneanet groblja</em> (prema zadanim postavkama uključeni su svi izvori).</li>
+        {source_type_item}
         <li><strong>S poveznicom:</strong> Prikazuje samo rezultate koji sadrže vanjsku poveznicu na izvorne dokumente (npr. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Točno / Približno:</strong> Postavka <strong>Točno</strong> traži precizna podudaranja cijelih riječi (npr. pretraga <em>Kovač</em> neće pronaći <em>Kovačič</em>). Postavka <strong>Približno</strong> pomoću algoritama pretražuje i dijelove riječi (podnizove) te slične inačice imena i prezimena.</li>
       </ul>
@@ -319,7 +322,7 @@ export default {
         <li><strong>📋</strong> – popisi stanovništva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
       </ul>
-      <p>Pored nekih drugih podataka pojavljuju se manje rubne ikone s dodatnim informacijama: oznaka <strong>⛪</strong> pored imena izvora znači da podaci proizlaze iz indeksa Matricula Online a ne iz osobnog obiteljskog stabla, oznaka <strong>🏷</strong> pored prezimena prikazuje druge oblike prezimena (na primjer prezime nakon udaje), oznaka <strong>✝</strong> pored datuma rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> pored mjesta rođenja ili vjenčanja upozorava na zabilježene bilješke. Prelaskom miša preko njih prikazuju se detalji.</p>
+      <p>Pored nekih drugih podataka pojavljuju se manje rubne ikone s dodatnim informacijama: {matricula_mark}oznaka <strong>🏷</strong> pored prezimena prikazuje druge oblike prezimena (na primjer prezime nakon udaje), oznaka <strong>✝</strong> pored datuma rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> pored mjesta rođenja ili vjenčanja upozorava na zabilježene bilješke. Prelaskom miša preko njih prikazuju se detalji.</p>
       <h4>Stablo predaka i potomaka</h4>
       <p>Stranica sa stablom prikazuje grafičko, interaktivno rodoslovno stablo odabrane osobe. Dostupne su sljedeće mogućnosti:</p>
       <ul>
@@ -339,7 +342,7 @@ export default {
       <h4>Detalji o izvoru</h4>
       <p>Na stranici pojedinog izvora okupljene su informacije o njegovom doprinosu:</p>
       <ul>
-        <li><strong>Statistika doprinosa:</strong> Mreža s brojem osoba, obitelji i poveznica te datumom posljednjeg ažuriranja. Ako izvor doprinosi podacima i iz vlastitog stabla i iz indeksa Matricula, vrijednosti su podijeljene u tri stupca: <em>Ukupno</em>, <em>Stablo</em> i <em>Matricula</em>.</li>
+        <li><strong>Statistika doprinosa:</strong> Mreža s brojem osoba, obitelji i poveznica te datumom posljednjeg ažuriranja.{matricula_cols}</li>
         <li><strong>Poveznica:</strong> Ako je izvor naveo svoju web stranicu, ona se prikazuje ispod njegovog imena.</li>
         <li><strong>Najčešća prezimena:</strong> Oblak riječi i popis prikazuju prezimena koja se najčešće pojavljuju u njegovoj bazi.</li>
         <li><strong>Moguća podudaranja:</strong> Popis drugih izvora s kojima ovaj izvor dijeli zajedničke (podudarne) povijesne osobe ili obitelji.</li>

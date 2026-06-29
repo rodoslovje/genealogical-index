@@ -118,7 +118,6 @@ export default {
     col_links: 'Collegamenti',
     col_total_links: 'Collegamenti',
     col_url: 'URL',
-    col_sum: 'Somma',
     col_tree: 'Albero',
     col_matricula: 'Matricula',
 
@@ -165,8 +164,6 @@ export default {
     col_confidence: 'Confidenza',
     matches_loading: 'Caricamento…',
     matches_none: 'Nessuna corrispondenza trovata.',
-    matches_confidence: 'Confidenza',
-    matches_for: 'Corrispondenze per',
     matches_found_intro: 'Abbiamo trovato le seguenti fonti che hanno dati corrispondenti o simili alla fonte',
     matches_found_outro: 'Seleziona una fonte corrispondente per visualizzare tutte le corrispondenze tra i due.',
     matches_detail_intro: 'Tutte le corrispondenze tra {1} e {0} sono mostrate di seguito.',
@@ -192,12 +189,8 @@ export default {
     col_book_type: 'Tipo',
     col_book_count: 'Voci',
     col_books_count: 'Registri',
-    col_total_records: 'Voci',
-    col_contributors_count: 'Genealogisti',
     matricula_page_title: 'Indice Matricula',
     matricula_page_intro: 'Statistiche globali su tutti i registri Matricula Online trascritti dai genealogisti in questo indice',
-    matricula_books_label: 'registri',
-    matricula_records_label: 'voci',
     matricula_section_books: 'Registri trascritti',
     matricula_section_contributors: 'Fonti',
     matricula_section_parishes: 'Parrocchie',
@@ -272,6 +265,9 @@ export default {
     help_auth_section: `
       <h3>5. Accesso al sistema</h3>
       <p>Per avere pieno accesso agli alberi e alle corrispondenze, è necessario effettuare l'accesso. Apri la finestra di accesso cliccando sull'icona dell'utente (<strong>{USER_ICON}</strong>) nell'angolo in alto a destra. Inserisci il nome utente e la password che utilizzi per accedere al portale principale della società.</p>`,
+    help_matricula_mark: `il segno <strong>⛪</strong> accanto al nome della fonte indica che i dati provengono dall'indice Matricula Online piuttosto che da un albero genealogico personale, `,
+    help_source_type_item: `<li><strong>Fonte:</strong> Nel campo di ricerca è possibile inserire il nome di una o più fonti, separati da virgole. Utilizzando il menu a discesa accanto, è inoltre possibile limitare la ricerca a un tipo di fonte specifico: <em>Alberi genealogici</em>, <em>Indice Matricula</em> o <em>Cimiteri Geneanet</em> (per impostazione predefinita sono incluse tutte le fonti).</li>`,
+    help_matricula_cols: ` Se la fonte contribuisce con dati provenienti sia dal proprio albero che dall'indice Matricula, i valori sono divisi in tre colonne: <em>Totale</em>, <em>Albero</em> e <em>Matricula</em>.`,
     help_manual: `
       <h2>Manuale d'uso</h2>
       <p>Benvenuti nell'Indice genealogico, un database archivistico di persone e famiglie. Questo manuale vi aiuterà a cercare e navigare nei dati genealogici.</p>
@@ -301,7 +297,7 @@ export default {
       </ul>
       <h4>Impostazioni di ricerca avanzate</h4>
       <ul>
-        <li><strong>Fonte:</strong> Nel campo di ricerca è possibile inserire il nome di una o più fonti, separati da virgole. Utilizzando il menu a discesa accanto, è inoltre possibile limitare la ricerca a un tipo di fonte specifico: <em>Alberi genealogici</em>, <em>Indice Matricula</em> o <em>Cimiteri Geneanet</em> (per impostazione predefinita sono incluse tutte le fonti).</li>
+        {source_type_item}
         <li><strong>Con collegamento:</strong> Visualizza solo i risultati che contengono un collegamento esterno alle fonti originali (es. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Esatto / Approssimato:</strong> L'impostazione <strong>Esatto</strong> cerca corrispondenze esatte di parole intere (es. cercare <em>Mali</em> non troverà <em>Malic</em>). L'impostazione <strong>Approssimato</strong> utilizza algoritmi per cercare anche parti di parole (sottostringhe) e simili varianti di nome.</li>
       </ul>
@@ -326,7 +322,7 @@ export default {
         <li><strong>📋</strong> – censimenti (SIstory)</li>
         <li><strong>📰</strong> – Biblioteca digitale della Slovenia (dLib)</li>
       </ul>
-      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: il segno <strong>⛪</strong> accanto al nome della fonte indica che i dati provengono dall'indice Matricula Online piuttosto che da un albero genealogico personale, il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome (ad esempio il cognome acquisito con il matrimonio), il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
+      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: {matricula_mark}il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome (ad esempio il cognome acquisito con il matrimonio), il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
       <h4>Albero degli antenati e dei discendenti</h4>
       <p>La pagina dell'albero visualizza un albero genealogico grafico e interattivo della persona selezionata. Sono disponibili le seguenti funzioni:</p>
       <ul>
@@ -346,7 +342,7 @@ export default {
       <h4>Dettagli della fonte</h4>
       <p>La pagina della singola fonte raccoglie informazioni sul suo contributo:</p>
       <ul>
-        <li><strong>Statistiche del contributo:</strong> Una griglia con il numero di persone, famiglie, collegamenti e la data dell'ultimo aggiornamento. Se la fonte contribuisce con dati provenienti sia dal proprio albero che dall'indice Matricula, i valori sono divisi in tre colonne: <em>Totale</em>, <em>Albero</em> e <em>Matricula</em>.</li>
+        <li><strong>Statistiche del contributo:</strong> Una griglia con il numero di persone, famiglie, collegamenti e la data dell'ultimo aggiornamento.{matricula_cols}</li>
         <li><strong>Collegamento:</strong> Se la fonte ha fornito un sito web personale, viene visualizzato sotto il suo nome.</li>
         <li><strong>Cognomi più frequenti:</strong> Una nuvola di parole e un elenco mostrano i cognomi che compaiono più frequentemente nel suo database.</li>
         <li><strong>Possibili corrispondenze:</strong> Un elenco di altre fonti che condividono persone o famiglie storiche corrispondenti con questa fonte.</li>

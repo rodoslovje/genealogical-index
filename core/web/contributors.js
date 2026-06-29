@@ -138,7 +138,13 @@ export async function renderContributors() {
   if (statsHeading) statsHeading.style.display = '';
   if (chartsContainer) chartsContainer.style.display = statsCollapsed ? 'none' : 'grid';
   if (totalsBar && !readContributorParam(urlParams)) totalsBar.style.display = statsCollapsed ? 'none' : '';
-  if (matriculaLink) {
+  // Both special sources gated (e.g. the Croatian site): the intro sentence
+  // references both, so hide the whole line rather than break its grammar.
+  const specialSourcesGated = siteConfig.gatedFeatures?.includes('matricula')
+    && siteConfig.gatedFeatures?.includes('geneanet');
+  if (matriculaLink && specialSourcesGated) {
+    matriculaLink.style.display = 'none';
+  } else if (matriculaLink) {
     const matriculaHtml = `<a href="${toUnicodeHref({ t: 'matricula' })}" data-spa-nav>${t('matricula_page_title')}</a>`;
     const geneanetHtml = `<a href="${toUnicodeHref({ t: 'geneanet' })}" data-spa-nav>${t('geneanet_page_title')}</a>`;
     matriculaLink.innerHTML = t('contributors_index_links_intro')
@@ -161,7 +167,7 @@ export async function renderContributors() {
       const ml = document.getElementById('matricula-stats-link');
       if (tb) tb.style.display = willCollapse ? 'none' : '';
       if (cc) cc.style.display = willCollapse ? 'none' : 'grid';
-      if (ml) ml.style.display = willCollapse ? 'none' : '';
+      if (ml && !specialSourcesGated) ml.style.display = willCollapse ? 'none' : '';
     });
   }
 

@@ -265,6 +265,9 @@ export default {
     help_auth_section: `
       <h3>5. Prijava v sistem</h3>
       <p>Za poln dostop do dreves in ujemanj se morate prijaviti. Prijavno okno odprete s klikom na ikono osebe (<strong>{USER_ICON}</strong>) zgoraj desno. V okno vpišite uporabniško ime in geslo, ki ga sicer uporabljate za dostop do spletnega portala matičnega rodoslovnega društva.</p>`,
+    help_matricula_mark: `oznaka <strong>⛪</strong> ob imenu vira pomeni, da gre za podatke iz indeksa Matricula Online in ne za osebno družinsko drevo, `,
+    help_source_type_item: `<li><strong>Vir:</strong> V iskalno polje lahko vnesete naziv enega ali več virov, ločenih z vejico. S spustnim menijem poleg njega lahko iskanje omejite tudi na določen tip vira: <em>Družinska drevesa</em>, <em>Matricula indeks</em> ali <em>Geneanet pokopališča</em> (privzeto so vključeni vsi viri).</li>`,
+    help_matricula_cols: ` Če vir prispeva podatke tako iz lastnega drevesa kot iz indeksa Matricula, so vrednosti razdeljene v tri stolpce: <em>Skupaj</em>, <em>Drevo</em> in <em>Matricula</em>.`,
     help_manual: `
       <h2>Navodila za uporabo</h2>
       <p>Dobrodošli v rodoslovnem indeksu, arhivski zbirki podatkov o osebah in družinah. Ta navodila vam bodo pomagala pri iskanju in pregledovanju rodoslovnih podatkov.</p>
@@ -294,7 +297,7 @@ export default {
       </ul>
       <h4>Napredne nastavitve iskanja</h4>
       <ul>
-        <li><strong>Vir:</strong> V iskalno polje lahko vnesete naziv enega ali več virov, ločenih z vejico. S spustnim menijem poleg njega lahko iskanje omejite tudi na določen tip vira: <em>Družinska drevesa</em>, <em>Matricula indeks</em> ali <em>Geneanet pokopališča</em> (privzeto so vključeni vsi viri).</li>
+        {source_type_item}
         <li><strong>S povezavo:</strong> Prikaže samo tiste zadetke, ki vsebujejo zunanjo povezavo do izvirnih dokumentov (npr. Matricula Online, FamilySearch, Geneanet).</li>
         <li><strong>Točno / Približno:</strong> Nastavitev <strong>Točno</strong> išče natančna ujemanja celih besed (npr. iskanje <em>Kovač</em> ne bo našlo <em>Kovačič</em>). Nastavitev <strong>Približno</strong> pa s pomočjo algoritmov išče tudi dele besed (podnize) in podobne različice imen ter priimkov.</li>
       </ul>
@@ -319,7 +322,7 @@ export default {
         <li><strong>📋</strong> – popisi prebivalstva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
       </ul>
-      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>⛪</strong> ob imenu vira pomeni, da gre za podatke iz indeksa Matricula Online in ne za osebno družinsko drevo, oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
+      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: {matricula_mark}oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
       <h4>Drevo prednikov in potomcev</h4>
       <p>Stran z drevesom prikazuje grafično, interaktivno rodovniško drevo izbrane osebe. Na voljo so:</p>
       <ul>
@@ -339,7 +342,7 @@ export default {
       <h4>Podrobnosti vira</h4>
       <p>Na strani posameznega vira so zbrane informacije o njegovem prispevku:</p>
       <ul>
-        <li><strong>Statistika prispevka:</strong> Mreža s številom oseb, družin in povezav ter datumom zadnje posodobitve. Če vir prispeva podatke tako iz lastnega drevesa kot iz indeksa Matricula, so vrednosti razdeljene v tri stolpce: <em>Skupaj</em>, <em>Drevo</em> in <em>Matricula</em>.</li>
+        <li><strong>Statistika prispevka:</strong> Mreža s številom oseb, družin in povezav ter datumom zadnje posodobitve.{matricula_cols}</li>
         <li><strong>Povezava:</strong> Če je vir podal svojo osebno spletno stran, se ta prikaže pod njegovim imenom.</li>
         <li><strong>Najpogostejši priimki:</strong> Oblak besed in seznam prikazujeta priimke, ki se v njegovi bazi največkrat pojavijo.</li>
         <li><strong>Možna ujemanja:</strong> Seznam drugih virov, s katerimi ima ta vir skupne (ujemajoče) zgodovinske osebe ali družine.</li>

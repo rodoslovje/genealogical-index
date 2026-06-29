@@ -68,7 +68,7 @@ function guidePagePlugin(siteConfig) {
         .then(m => m.default)
         .catch(() => null);
       const strings = { ...en, ...(locale || {}) };
-      const content = renderGuideManual(strings, !!siteConfig.authUrl);
+      const content = renderGuideManual(strings, !!siteConfig.authUrl, siteConfig);
 
       const guideLabel = strings.footer_user_guide || 'User Guide';
       const title = `${guideLabel} – ${nativeTitle}`;

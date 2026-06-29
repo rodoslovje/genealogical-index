@@ -265,6 +265,9 @@ export default {
     help_auth_section: `
       <h3>5. Systemanmeldung</h3>
       <p>Um vollen Zugriff auf Stammbäume und Übereinstimmungen zu erhalten, müssen Sie sich anmelden. Öffnen Sie das Anmeldefenster, indem Sie auf das Benutzersymbol (<strong>{USER_ICON}</strong>) in der oberen rechten Ecke klicken. Geben Sie den Benutzernamen und das Passwort ein, die Sie für den Zugriff auf das Hauptportal der Gesellschaft verwenden.</p>`,
+    help_matricula_mark: `Das <strong>⛪</strong>-Zeichen neben dem Namen der Quelle bedeutet, dass die Daten aus dem Matricula Online-Index stammen und nicht aus einem persönlichen Stammbaum, `,
+    help_source_type_item: `<li><strong>Quelle:</strong> In das Suchfeld können Sie den Namen einer oder mehrerer Quellen eingeben, getrennt durch Kommas. Über das Dropdown-Menü daneben können Sie die Suche zusätzlich auf einen bestimmten Quellentyp beschränken: <em>Stammbäume</em>, <em>Matricula-Index</em> oder <em>Geneanet Friedhöfe</em> (standardmäßig sind alle Quellen eingeschlossen).</li>`,
+    help_matricula_cols: ` Steuert die Quelle Daten sowohl aus ihrem eigenen Baum als auch aus dem Matricula-Index bei, werden die Werte in drei Spalten unterteilt: <em>Gesamt</em>, <em>Stammbaum</em> und <em>Matricula</em>.`,
     help_manual: `
       <h2>Benutzerhandbuch</h2>
       <p>Willkommen beim Genealogischen Index, einer Archivdatenbank von Personen und Familien. Dieses Handbuch hilft Ihnen beim Suchen und Durchsuchen der genealogischen Daten.</p>
@@ -294,7 +297,7 @@ export default {
       </ul>
       <h4>Erweiterte Sucheinstellungen</h4>
       <ul>
-        <li><strong>Quelle:</strong> In das Suchfeld können Sie den Namen einer oder mehrerer Quellen eingeben, getrennt durch Kommas. Über das Dropdown-Menü daneben können Sie die Suche zusätzlich auf einen bestimmten Quellentyp beschränken: <em>Stammbäume</em>, <em>Matricula-Index</em> oder <em>Geneanet Friedhöfe</em> (standardmäßig sind alle Quellen eingeschlossen).</li>
+        {source_type_item}
         <li><strong>Mit Link:</strong> Zeigt nur Ergebnisse an, die einen externen Link zu Originalquellen (z. B. Matricula Online, FamilySearch, Geneanet) enthalten.</li>
         <li><strong>Genau / Ungefähr:</strong> Die Einstellung <strong>Genau</strong> sucht nach exakten Übereinstimmungen ganzer Wörter (z. B. findet die Suche nach <em>Mali</em> nicht <em>Malic</em>). Die Einstellung <strong>Ungefähr</strong> verwendet Algorithmen, um auch nach Wortteilen (Teilzeichenfolgen) und ähnlichen Namensvarianten zu suchen.</li>
       </ul>
@@ -319,7 +322,7 @@ export default {
         <li><strong>📋</strong> – Volkszählungen (SIstory)</li>
         <li><strong>📰</strong> – Digitale Bibliothek Sloweniens (dLib)</li>
       </ul>
-      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: Das <strong>⛪</strong>-Zeichen neben dem Namen der Quelle bedeutet, dass die Daten aus dem Matricula Online-Index stammen und nicht aus einem persönlichen Stammbaum, das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
+      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: {matricula_mark}das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
       <h4>Vorfahren- und Nachkommenbaum</h4>
       <p>Die Stammbaum-Seite zeigt einen grafischen, interaktiven Stammbaum der ausgewählten Person an. Folgende Funktionen stehen zur Verfügung:</p>
       <ul>
@@ -339,7 +342,7 @@ export default {
       <h4>Details zur Quelle</h4>
       <p>Die Seite der einzelnen Quelle enthält Informationen über ihren Beitrag:</p>
       <ul>
-        <li><strong>Beitragsstatistik:</strong> Ein Raster mit der Anzahl von Personen, Familien und Links sowie dem Datum der letzten Aktualisierung. Steuert die Quelle Daten sowohl aus ihrem eigenen Baum als auch aus dem Matricula-Index bei, werden die Werte in drei Spalten unterteilt: <em>Gesamt</em>, <em>Stammbaum</em> und <em>Matricula</em>.</li>
+        <li><strong>Beitragsstatistik:</strong> Ein Raster mit der Anzahl von Personen, Familien und Links sowie dem Datum der letzten Aktualisierung.{matricula_cols}</li>
         <li><strong>Link:</strong> Wenn die Quelle eine persönliche Website angegeben hat, wird diese unter ihrem Namen angezeigt.</li>
         <li><strong>Häufigste Nachnamen:</strong> Eine Wortwolke und eine Liste zeigen die Nachnamen, die in seiner Datenbank am häufigsten vorkommen.</li>
         <li><strong>Mögliche Übereinstimmungen:</strong> Eine Liste anderer Quellen, die übereinstimmende historische Personen oder Familien mit dieser Quelle teilen.</li>

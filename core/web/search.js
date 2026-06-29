@@ -6,6 +6,7 @@ import { updateURL, pushURL, PARAM_MAP, LEGACY_TAB_MAP, currentParams } from './
 import { hideIntro } from './intros.js';
 import { tabsWithResults } from './tab-state.js';
 import { inputWithClear, wireClearableContainer, setInputValue } from './lib/utils.js';
+import siteConfig from '@site-config';
 
 let lastGeneralResults = null;
 const lastAdvResults = { person: null, family: null };
@@ -20,15 +21,19 @@ function normalizeNameList(val) {
 
 // --- Shared form fragments (used by both the general and advanced forms) ---
 
-/** The source <select> (All / Family Trees / Matricula Index). */
+/** The source <select> (All / Family Trees / Matricula Index). When every
+ *  special source is gated only the tree source remains, making the selector
+ *  meaningless (All == Family Trees), so it renders nothing. */
 function renderSourceSelect(id, value) {
   const opt = (v, key) => `<option value="${v}"${value === v ? ' selected' : ''}>${t(key)}</option>`;
+  const gated = (feature) => siteConfig.gatedFeatures?.includes(feature);
+  if (gated('matricula') && gated('geneanet') && gated('military')) return '';
   return `<select id="${id}" style="margin-top: 4px;">
             ${opt('all', 'source_all')}
             ${opt('tree', 'source_tree')}
-            ${opt('matricula', 'source_matricula')}
-            ${opt('geneanet', 'source_geneanet')}
-            ${opt('military', 'source_military')}
+            ${gated('matricula') ? '' : opt('matricula', 'source_matricula')}
+            ${gated('geneanet') ? '' : opt('geneanet', 'source_geneanet')}
+            ${gated('military') ? '' : opt('military', 'source_military')}
           </select>`;
 }
 

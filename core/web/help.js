@@ -121,10 +121,11 @@ export function initHelp() {
   // 3. Update localized content
   const strings = {
     help_manual: '', help_auth_nav: '', help_auth_tree: '', help_auth_match: '', help_auth_section: '',
+    help_source_type_item: '', help_matricula_cols: '', help_matricula_mark: '',
   };
   const updateHelpContent = () => {
     for (const key of Object.keys(strings)) strings[key] = t(key) || '';
-    document.getElementById('help-content').innerHTML = renderGuideManual(strings, hasAuth);
+    document.getElementById('help-content').innerHTML = renderGuideManual(strings, hasAuth, siteConfig);
   };
 
   updateHelpContent();
