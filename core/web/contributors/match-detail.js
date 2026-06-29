@@ -774,11 +774,11 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
             collapseState[typeKey] = !isCollapsed;
           });
         }
-        // The section bar is page-sticky (style.css), but its table box below
-        // it isn't — without an offset it keeps scrolling with the page and
-        // slides under the now-frozen bar, taking its sticky <th> row with it.
-        // Anchor the box's own top to the bar's actual (possibly wrapped)
-        // height so it freezes flush below the bar instead.
+        // The section bar is page-sticky (style.css). Feed its actual (possibly
+        // wrapped) height into the box's `--thead-offset` so the table's sticky
+        // <th> row parks flush right below the bar instead of at a hardcoded
+        // offset. (`--thead-offset` is read by the general `th { top: ... }`
+        // rule; the box itself is no longer sticky — see style.css.)
         const bar = section.querySelector('.matches-section-bar');
         if (bar && content) observeStickyHeader(bar, content);
       });

@@ -154,25 +154,26 @@ h2 .export-btn {
   border-radius: 0;
 }
 
-/* The per-pair matches table can have many columns and overflow the viewport
-   width, so it becomes its own scrollable box (both axes) with a header
-   sticky to the top of that box. Deliberately its own class rather than
-   layered on top of the shared `.table-responsive` (overflow: clip by
-   default): overriding that base `clip` to `auto` via a more specific
-   selector reproduces a real Chromium bug where `position: sticky` silently
-   stops taking effect on the element, even though every computed style
-   value looks correct (confirmed by bisecting — swapping the override to an
-   unrelated fresh class with no competing `overflow: clip` rule fixed it
-   instantly). A dedicated class with its own complete, non-overridden
-   overflow declaration avoids the cascade shape that triggers it. Card
-   styling (background/shadow/radius/margin) is copied from
-   `.table-responsive` since this class no longer inherits it.
-   The box itself is also page-sticky (desktop only — see
-   `observeStickyHeader`'s `--thead-offset`, set by match-detail.js for this
-   box): without that, once `.matches-section-bar` above it freezes at the
-   top, this box (an ordinary document-flow sibling) keeps scrolling with
-   the page and slides *under* the now-frozen bar, taking its own sticky
-   <th> row out of view with it. */
+/* The per-pair matches table card. Card styling (background/shadow/radius/
+   margin) is copied from `.table-responsive` since this dedicated class
+   doesn't inherit it.
+
+   Mobile: a scrollable box (both axes) so a wide table pans inside the card.
+   Desktop (>=769px): `overflow: clip`, NOT a scroll container — exactly like
+   `.table-responsive`. This is what lets the table's own sticky `<th>` row
+   (`th { top: var(--thead-offset) }` below) stick to the *page* viewport,
+   parked right under the sticky `.matches-section-bar`, while staying bounded
+   by its own section so it releases when that section scrolls away.
+
+   Do NOT make this box `position: sticky` instead. A page-sticky box stays
+   pinned at the top across the gap between the next section's bar (which sticks
+   first) and the next section's own box (which only sticks once scrolled up to
+   it) — so the previous section's last rows bleed through that gap during a
+   downward scroll. `overflow: clip` + a page-sticky `<th>` (the standard
+   pattern here) has no pinned box and so no bleed. Earlier code used
+   `overflow: auto` here, which makes the box a scroll container and forces the
+   `<th>` to stick to the box instead of the page — that was the reason the box
+   itself was (mis)made sticky in the first place. */
 .matches-table-box {
   overflow: auto;
   max-height: calc(100vh - var(--nav-height) - 80px);
@@ -183,18 +184,17 @@ h2 .export-btn {
 }
 @media (min-width: 769px) {
   .matches-table-box {
-    position: sticky;
-    top: var(--thead-offset, var(--nav-height));
+    overflow: clip;
+    max-height: none;
   }
 }
-.matches-table-box th {
-  top: 0;
-}
-/* Pin the measured natural width as min-width so fixed-layout columns don't
-   squeeze below readable when the table is wider than its box — the
-   box above pans horizontally instead. */
-.matches-table-box .virtual-table {
-  min-width: var(--vt-natural-width, 0);
+/* Mobile only: pin the measured natural width as min-width so fixed-layout
+   columns don't squeeze below readable — the box pans horizontally instead.
+   Desktop clips (like every other table), so the columns fit to width:100%. */
+@media (max-width: 768px) {
+  .matches-table-box .virtual-table {
+    min-width: var(--vt-natural-width, 0);
+  }
 }
 
 /* Keep each table's header bar (heading + filter input + CSV/Expand) visible
