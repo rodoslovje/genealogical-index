@@ -1417,20 +1417,23 @@ body.compact-nav .mobile-nav-section { display: flex; }
 .section-bar--top    { margin-top: 2rem; }
 .section-bar--top-sm { margin-top: 1.5rem; }
 
-/* `.matches-section` (Persons/Families wrapper) carries no visual styling
-   of its own — `display: contents` drops it from the render tree entirely
-   (its children lay out as if direct children of `detailEl`) while keeping
-   it fully queryable in JS (querySelector/closest/dataset all still work).
-   This matters for `.matches-table-box`'s sticky positioning below: a
-   sticky element can only stay "stuck" for as much extra height as its
-   *immediate parent* has beyond the element's own height. Wrapped in this
-   div, that parent is just bar+box (the box fills nearly all of it), so the
-   box gets only ~one bar-height of stuck-scroll before being forced to
-   release. Flattened via `display: contents`, the relevant parent becomes
-   `detailEl` — which holds every section — so there's plenty of headroom
-   for the box to stay stuck for its whole practical scroll range. */
+/* `.matches-section` (Persons/Families wrapper) carries no visual styling of
+   its own, but it MUST generate a box: it is the sticky containing block for
+   its `.matches-section-bar` and `.matches-table-box` (both `position: sticky`
+   below). That bounds each section's sticky range to the section itself, so
+   when one section scrolls away its frozen table box releases with it.
+
+   Do NOT use `display: contents` here. That drops the wrapper from the render
+   tree, which promotes the sticky constraint rectangle to `detailEl` (it holds
+   *every* section). The Persons box then stays pinned at the top for the whole
+   page scroll — including while the Families section is on screen — so the
+   stale Persons rows bleed through under the Families header during the window
+   before the (later, opaque) Families box scrolls up to cover them. Tall tables
+   still scroll fully here: `.matches-table-box` has its own `overflow:auto`/
+   `max-height`, so it scrolls internally rather than needing extra stuck-range.
+   The wrapper stays fully queryable in JS (querySelector/closest/dataset). */
 .matches-section {
-  display: contents;
+  position: relative;
 }
 
 /* Matches-detail section header (Persons / Families table): heading on the
