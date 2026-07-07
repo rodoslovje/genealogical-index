@@ -619,7 +619,9 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
     """Returns the top surnames by record count, optionally filtered by contributor(s).
 
     Counts surnames from persons (births/baptisms) as well as from families
-    (marriages), where both the husband and wife surnames contribute."""
+    (marriages), where both the husband and wife surnames contribute. The "NN"
+    (Nomen Nescio / name-unknown) placeholder is excluded, like NULL/blank
+    surnames, since it isn't a real surname."""
     cache_key = ",".join(sorted(contributors)) if contributors else ""
     now = time.time()
     cached = _surnames_cache.get(cache_key)
@@ -671,6 +673,7 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
         db.query(union_sq.c.surname, total)
         .filter(union_sq.c.surname.isnot(None))
         .filter(func.btrim(union_sq.c.surname) != "")
+        .filter(func.upper(union_sq.c.surname) != "NN")
         .group_by(union_sq.c.surname)
         .order_by(total.desc())
         .all()
