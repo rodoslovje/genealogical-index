@@ -89,9 +89,11 @@ export function initHelp() {
   // Navbar order: help, auth, lang, hamburger. We anchor on the leftmost of
   // the elements that come after us so help lands at the start of the cluster
   // regardless of which neighbours exist (auth is only present on sites with
-  // authUrl configured).
+  // authUrl configured). The lang switcher lookup must be scoped to navRight:
+  // in compact-utils mode (phones) it has already been moved into the sidebar
+  // slot, and insertBefore with an anchor outside navRight throws.
   const authWrapper = navRight.querySelector('.auth-nav-wrapper');
-  const langSwitcher = document.getElementById('lang-switcher');
+  const langSwitcher = navRight.querySelector('#lang-switcher');
   const hamburger = navRight.querySelector('.hamburger-btn');
   const anchor = authWrapper || langSwitcher || hamburger;
   if (anchor) {
