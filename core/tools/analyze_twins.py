@@ -74,6 +74,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 ALL_KEY = "__ALL__"
 
+# "Special" non-tree sources (matricula scans, geneanet listings, military
+# records) don't represent real family trees, so they have little/no
+# families data and would just be noise here. Same convention as crud.py's
+# SPECIAL_SUFFIXES.
+SPECIAL_SUFFIXES = ("-matricula", "-geneanet", "-military")
+
 _MONTHS = {
     "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
     "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12,
@@ -338,6 +344,7 @@ def main():
             names = [
                 r.name
                 for r in db.execute(text("SELECT name FROM contributors ORDER BY name")).fetchall()
+                if not r.name.endswith(SPECIAL_SUFFIXES)
             ]
         if not names:
             print("No contributors found in database.")
