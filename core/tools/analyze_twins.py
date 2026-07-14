@@ -152,6 +152,7 @@ CHILD_ROWS_SQL = text("""
         ci.family_id,
         p.birth_year AS child_birth_year,
         has_day_precision(p.date_of_birth) AS has_day_precision,
+        is_approx_date(p.date_of_birth) AS is_approx,
         p.date_of_birth AS child_dob_text
     FROM child_ids ci
     LEFT JOIN persons p
@@ -229,10 +230,16 @@ def analyze_contributor(db, contributor):
         )
 
         # --- multiple-birth detection ---
-        precise = []  # (index, date)
-        imprecise = []  # (index, birth_year)
+        # Approximate dates (ABT/EST/CAL/BEF/AFT/CIRCA/~) are frequently
+        # back-derived estimates rather than recorded facts (same convention
+        # as compute_matches.py's is_approx_date usage) — several children
+        # can end up with the same guessed year for reasons that have
+        # nothing to do with them being born together, so they're excluded
+        # outright rather than fed into either the day or year fallback.
+        precise = []  # date objects
+        imprecise = []  # birth years
         for c in children:
-            if c.child_birth_year is None:
+            if c.child_birth_year is None or c.is_approx:
                 continue
             if c.has_day_precision:
                 d = _parse_full_date(c.child_dob_text)
