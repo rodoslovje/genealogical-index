@@ -3,22 +3,26 @@
 
 Not wired into the import pipeline — this is an exploratory report to gauge
 whether the numbers are interesting enough to justify a permanent post-import
-job + chart. Writes two CSVs and also prints them to stdout.
+job + chart. Writes three CSVs to --out-dir:
+  - twins_by_decade.csv        aggregated event counts per contributor/decade/size
+  - family_size_by_decade.csv  children-per-family stats per contributor/decade
+  - multiple_birth_events.csv  one row per individual event (2+), with a
+                                family link when --site-url is given
+The first two are also printed to stdout; the events file usually has too
+many rows for that, so it's only written.
 
 Definitions used:
   - "Family" = one `families` row (one husband+wife pair + their children_list).
     Same parents is therefore free — no matching/dedup needed.
-  - "Multiple birth" = 2+ children of the same family whose birth dates line up:
-      * both children have day-level precision (e.g. "20 NOV 1892") -> match
-        if their calendar dates are within 2 days of each other (clustered
-        with a union-find so triplets etc. group correctly, and so a
-        Dec 31 / Jan 1 pair across a year boundary is still caught).
-      * otherwise (either side is only a bare year or an approximate date,
-        e.g. "ABT 1850") -> match if they share the same birth_year.
-    These two groups are clustered independently and NOT merged, so a family
-    with e.g. one precisely-dated child and one year-only child sharing that
-    year will be undercounted rather than guessed at. Good enough for a first
-    read of the data; would need revisiting for a "real" feature.
+  - "Multiple birth" = 2+ children of the same family whose birth dates have
+    day+month precision (e.g. "20 NOV 1892") AND land within 2 days of each
+    other (clustered with a union-find so triplets etc. group correctly, and
+    so a Dec 31 / Jan 1 pair across a year boundary is still caught). No
+    year-only fallback: a bare year, an approximate date (ABT/EST/CAL/BEF/
+    AFT/CIRCA/~), or a range (BET...AND, FROM...TO) is excluded outright
+    rather than guessed at — those are frequently back-derived estimates
+    rather than recorded facts, and a shared estimated year says nothing
+    about whether children were actually born together.
   - Multiple size 2 = twins, 3 = triplets, 4+ reported as-is (n-tuplets).
   - "Children per family" only considers families with children_list present
     and non-empty (a family with zero listed children tells us nothing about
@@ -30,7 +34,7 @@ Definitions used:
 Usage:
     docker compose exec api python tools/analyze_twins.py
     docker compose exec api python tools/analyze_twins.py --contributor "Novak"
-    docker compose exec api python tools/analyze_twins.py --out-dir /app/data/output/twins_report
+    docker compose exec api python tools/analyze_twins.py --site-url https://indeks.rodoslovje.si
 """
 
 import argparse
@@ -86,6 +90,17 @@ _MONTHS = {
     "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12,
 }
 _FULL_DATE_RE = re.compile(r"(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})")
+
+# GEDCOM date ranges/periods ("BET 1935 AND 1942", "FROM 1935 TO 1942") aren't
+# caught by the DB's is_approx_date() (no BET/FROM keyword in that regex) and
+# can even false-positive has_day_precision() — "35 AND 1942" matches its
+# "\d{1,2} word \d{4}" shape, mistaking "AND" for a month. Treated the same
+# as an approximate date: excluded outright rather than guessed at.
+_RANGE_DATE_RE = re.compile(r"\b(BET|BETWEEN|FROM)\b", re.IGNORECASE)
+
+
+def _is_range_date(text_val):
+    return bool(text_val) and bool(_RANGE_DATE_RE.search(text_val))
 
 
 def _parse_full_date(text_val):
@@ -198,7 +213,7 @@ def _decade(year):
 def analyze_contributor(db, contributor):
     """Returns (multiple_events, family_size_rows).
 
-    multiple_events: list of dicts {decade, size, method}
+    multiple_events: list of dicts {decade, size, family_id, detail}
     family_size_rows: list of dicts {decade, children_count}
     """
     fam_rows = db.execute(FAMILY_ROWS_SQL, {"contributor": contributor}).fetchall()
@@ -230,23 +245,23 @@ def analyze_contributor(db, contributor):
         )
 
         # --- multiple-birth detection ---
-        # Approximate dates (ABT/EST/CAL/BEF/AFT/CIRCA/~) are frequently
-        # back-derived estimates rather than recorded facts (same convention
-        # as compute_matches.py's is_approx_date usage) — several children
-        # can end up with the same guessed year for reasons that have
-        # nothing to do with them being born together, so they're excluded
-        # outright rather than fed into either the day or year fallback.
+        # Only exact day+month dates count — no year-only fallback. A shared
+        # birth_year alone is too weak a signal (sparse-era records often
+        # back-fill/estimate a year for several undated siblings), and
+        # approximate dates (ABT/EST/CAL/BEF/AFT/CIRCA/~) or ranges
+        # (BET...AND, FROM...TO) are excluded outright rather than guessed at.
         precise = []  # date objects
-        imprecise = []  # birth years
         for c in children:
-            if c.child_birth_year is None or c.is_approx:
+            if (
+                c.child_birth_year is None
+                or c.is_approx
+                or _is_range_date(c.child_dob_text)
+                or not c.has_day_precision
+            ):
                 continue
-            if c.has_day_precision:
-                d = _parse_full_date(c.child_dob_text)
-                if d is not None:
-                    precise.append(d)
-                    continue
-            imprecise.append(c.child_birth_year)
+            d = _parse_full_date(c.child_dob_text)
+            if d is not None:
+                precise.append(d)
 
         if len(precise) >= 2:
             uf = UnionFind(len(precise))
@@ -263,25 +278,8 @@ def analyze_contributor(db, contributor):
                         {
                             "decade": _decade(members[0].year),
                             "size": len(members),
-                            "method": "day",
                             "family_id": family_id,
                             "detail": sorted(d.isoformat() for d in members),
-                        }
-                    )
-
-        if len(imprecise) >= 2:
-            by_year = defaultdict(int)
-            for y in imprecise:
-                by_year[y] += 1
-            for y, n in by_year.items():
-                if n >= 2:
-                    multiple_events.append(
-                        {
-                            "decade": _decade(y),
-                            "size": n,
-                            "method": "year",
-                            "family_id": family_id,
-                            "detail": [str(y)] * n,
                         }
                     )
 
@@ -298,25 +296,21 @@ def write_report(all_results, out_dir):
     size_path = os.path.join(out_dir, "family_size_by_decade.csv")
 
     # --- twins_by_decade.csv ---
-    twins_agg = defaultdict(lambda: {"day": 0, "year": 0})
+    twins_agg = defaultdict(int)
     for contributor, (events, _) in all_results.items():
         for e in events:
-            key = (contributor, e["decade"], e["size"])
-            twins_agg[key][e["method"]] += 1
-            all_key = (ALL_KEY, e["decade"], e["size"])
-            twins_agg[all_key][e["method"]] += 1
+            twins_agg[(contributor, e["decade"], e["size"])] += 1
+            twins_agg[(ALL_KEY, e["decade"], e["size"])] += 1
 
     twins_rows = []
-    for (contributor, decade, size), counts in twins_agg.items():
+    for (contributor, decade, size), count in twins_agg.items():
         twins_rows.append(
             {
                 "contributor": contributor,
                 "decade": decade,
                 "multiple_size": size,
                 "label": _multiple_label(size),
-                "day_precision_events": counts["day"],
-                "year_only_events": counts["year"],
-                "total_events": counts["day"] + counts["year"],
+                "events": count,
             }
         )
     twins_rows.sort(key=lambda r: (r["contributor"] != ALL_KEY, r["contributor"], r["decade"], r["multiple_size"]))
@@ -324,10 +318,7 @@ def write_report(all_results, out_dir):
     with open(twins_path, "w", newline="") as f:
         w = csv.DictWriter(
             f,
-            fieldnames=[
-                "contributor", "decade", "multiple_size", "label",
-                "day_precision_events", "year_only_events", "total_events",
-            ],
+            fieldnames=["contributor", "decade", "multiple_size", "label", "events"],
         )
         w.writeheader()
         w.writerows(twins_rows)
@@ -368,6 +359,49 @@ def write_report(all_results, out_dir):
         w.writerows(size_rows)
 
     return twins_path, size_path, twins_rows, size_rows
+
+
+EVENTS_FIELDNAMES = [
+    "contributor", "family_id", "decade", "multiple_size", "label", "dates",
+    "husband_name", "husband_surname", "husband_birth_year",
+    "wife_name", "wife_surname", "wife_birth_year", "url",
+]
+
+
+def write_events_csv(all_results, fam_details, site_url, out_dir):
+    """One row per individual multiple-birth event (2+), not aggregated —
+    for spot-checking / sharing / feeding a chart, unlike twins_by_decade.csv
+    which only carries per-decade counts."""
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, "multiple_birth_events.csv")
+
+    rows = []
+    for contributor, (events, _) in all_results.items():
+        for e in events:
+            fam = fam_details.get(e["family_id"])
+            rows.append({
+                "contributor": contributor,
+                "family_id": e["family_id"],
+                "decade": e["decade"],
+                "multiple_size": e["size"],
+                "label": _multiple_label(e["size"]),
+                "dates": ";".join(e["detail"]),
+                "husband_name": fam.husband_name if fam else "",
+                "husband_surname": fam.husband_surname if fam else "",
+                "husband_birth_year": fam.husband_birth_year if fam else "",
+                "wife_name": fam.wife_name if fam else "",
+                "wife_surname": fam.wife_surname if fam else "",
+                "wife_birth_year": fam.wife_birth_year if fam else "",
+                "url": build_family_url(site_url, fam) if (fam and site_url) else "",
+            })
+    rows.sort(key=lambda r: (r["contributor"], r["decade"], -r["multiple_size"]))
+
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=EVENTS_FIELDNAMES)
+        w.writeheader()
+        w.writerows(rows)
+
+    return path, rows
 
 
 def _print_csv(rows, fieldnames, title):
@@ -430,41 +464,45 @@ def main():
             )
         print(f"Done in {time.perf_counter() - start:.1f}s total.", file=sys.stderr)
 
-        large = [
+        all_ids = list({
+            e["family_id"]
+            for _, (events, _) in all_results.items()
+            for e in events
+        })
+        fam_details = {
+            r.family_id: r
+            for r in db.execute(FAMILY_DETAIL_SQL, {"ids": all_ids}).fetchall()
+        } if all_ids else {}
+
+        notable = [
             (contributor, e)
             for contributor, (events, _) in all_results.items()
             for e in events
-            if e["size"] >= 4
+            if e["size"] >= 3
         ]
-        if large:
+        if notable:
             print(
-                f"\n{len(large)} event(s) with 4+ children — sizes this large are rare "
-                "in practice, so spot-check these before trusting them:",
+                f"\n{len(notable)} triplet-or-larger event(s) — worth spot-checking:",
                 file=sys.stderr,
             )
-            fam_details = {}
-            if args.site_url:
-                ids = list({e["family_id"] for _, e in large})
-                fam_details = {
-                    r.family_id: r
-                    for r in db.execute(FAMILY_DETAIL_SQL, {"ids": ids}).fetchall()
-                }
-            for contributor, e in large:
+            for contributor, e in notable:
                 line = (
                     f"  {contributor} family_id={e['family_id']} decade={e['decade']} "
-                    f"size={e['size']} method={e['method']} dates={e['detail']}"
+                    f"size={e['size']} dates={e['detail']}"
                 )
                 fam = fam_details.get(e["family_id"])
-                if fam:
+                if fam and args.site_url:
                     line += f"\n    {build_family_url(args.site_url, fam)}"
                 print(line, file=sys.stderr)
 
         twins_path, size_path, twins_rows, size_rows = write_report(all_results, args.out_dir)
+        events_path, events_rows = write_events_csv(
+            all_results, fam_details, args.site_url, args.out_dir
+        )
 
         _print_csv(
             twins_rows,
-            ["contributor", "decade", "multiple_size", "label",
-             "day_precision_events", "year_only_events", "total_events"],
+            ["contributor", "decade", "multiple_size", "label", "events"],
             "twins_by_decade",
         )
         _print_csv(
@@ -473,7 +511,12 @@ def main():
              "avg_children", "median_children", "max_children", "min_children"],
             "family_size_by_decade",
         )
-        print(f"\nWritten to:\n  {twins_path}\n  {size_path}", file=sys.stderr)
+        print(
+            f"\n{len(events_rows)} individual multiple-birth event(s) written to {events_path} "
+            "(not printed here — open the CSV).",
+            file=sys.stderr,
+        )
+        print(f"\nWritten to:\n  {twins_path}\n  {size_path}\n  {events_path}", file=sys.stderr)
     finally:
         db.close()
 
