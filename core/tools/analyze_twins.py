@@ -42,6 +42,7 @@ import sys
 import time
 from collections import defaultdict
 from datetime import date
+from urllib.parse import urlencode
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -130,20 +131,63 @@ FAMILY_ROWS_SQL = text("""
 """)
 
 CHILD_ROWS_SQL = text("""
-    SELECT
-        f.id AS family_id,
+    -- child_ids: DISTINCT so a literal duplicate entry in children_list
+    -- (same child listed twice) doesn't get counted as two births.
+    WITH child_ids AS (
+        SELECT DISTINCT
+            f.id AS family_id,
+            COALESCE(elem.value ->> 'id', elem.value ->> 'ext_id') AS child_ext_id
+        FROM families f
+        CROSS JOIN LATERAL jsonb_array_elements(f.children_list) AS elem(value)
+        WHERE f.contributor = :contributor
+          AND f.children_list IS NOT NULL
+          AND f.children_list <> '[]'::jsonb
+    )
+    -- persons.ext_id has no uniqueness constraint, so a plain join can fan
+    -- out one child into several rows if the ext_id collides with more than
+    -- one persons row for this contributor. DISTINCT ON picks a single
+    -- (deterministic) match per child so that can't inflate a family's
+    -- child count or manufacture fake same-date siblings.
+    SELECT DISTINCT ON (ci.family_id, ci.child_ext_id)
+        ci.family_id,
         p.birth_year AS child_birth_year,
         has_day_precision(p.date_of_birth) AS has_day_precision,
         p.date_of_birth AS child_dob_text
-    FROM families f
-    CROSS JOIN LATERAL jsonb_array_elements(f.children_list) AS elem(value)
+    FROM child_ids ci
     LEFT JOIN persons p
-           ON p.contributor = f.contributor
-          AND p.ext_id = COALESCE(elem.value ->> 'id', elem.value ->> 'ext_id')
-    WHERE f.contributor = :contributor
-      AND f.children_list IS NOT NULL
-      AND f.children_list <> '[]'::jsonb
+           ON p.contributor = :contributor
+          AND p.ext_id = ci.child_ext_id
+    ORDER BY ci.family_id, ci.child_ext_id, p.id
 """)
+
+
+FAMILY_DETAIL_SQL = text("""
+    SELECT id AS family_id, husband_name, husband_surname, husband_birth_year,
+           wife_name, wife_surname, wife_birth_year, contributor
+    FROM families
+    WHERE id = ANY(:ids)
+""")
+
+
+def build_family_url(site_url, fam):
+    """fam is a row from FAMILY_DETAIL_SQL. Mirrors the short param names in
+    core/web/lib/url.js's PARAM_MAP (hn/hsn/hb/wn/wsn/wb/c)."""
+    params = {"t": "family"}
+    if fam.husband_name:
+        params["hn"] = fam.husband_name
+    if fam.husband_surname:
+        params["hsn"] = fam.husband_surname
+    if fam.husband_birth_year:
+        params["hb"] = fam.husband_birth_year
+    if fam.wife_name:
+        params["wn"] = fam.wife_name
+    if fam.wife_surname:
+        params["wsn"] = fam.wife_surname
+    if fam.wife_birth_year:
+        params["wb"] = fam.wife_birth_year
+    if fam.contributor:
+        params["c"] = fam.contributor
+    return f"{site_url.rstrip('/')}/?{urlencode(params)}"
 
 
 def _decade(year):
@@ -213,6 +257,8 @@ def analyze_contributor(db, contributor):
                             "decade": _decade(members[0].year),
                             "size": len(members),
                             "method": "day",
+                            "family_id": family_id,
+                            "detail": sorted(d.isoformat() for d in members),
                         }
                     )
 
@@ -223,7 +269,13 @@ def analyze_contributor(db, contributor):
             for y, n in by_year.items():
                 if n >= 2:
                     multiple_events.append(
-                        {"decade": _decade(y), "size": n, "method": "year"}
+                        {
+                            "decade": _decade(y),
+                            "size": n,
+                            "method": "year",
+                            "family_id": family_id,
+                            "detail": [str(y)] * n,
+                        }
                     )
 
     return multiple_events, family_size_rows
@@ -334,6 +386,13 @@ def main():
         default="/app/data/output/twins_report",
         help="Directory to write the two CSVs to (default: /app/data/output/twins_report)",
     )
+    parser.add_argument(
+        "--site-url",
+        default=None,
+        metavar="URL",
+        help="Site base URL (e.g. https://indeks.rodoslovje.si) used to build "
+        "clickable family links for large (4+) events. Omit to skip link generation.",
+    )
     args = parser.parse_args()
 
     db = SessionLocal()
@@ -363,6 +422,35 @@ def main():
                 file=sys.stderr,
             )
         print(f"Done in {time.perf_counter() - start:.1f}s total.", file=sys.stderr)
+
+        large = [
+            (contributor, e)
+            for contributor, (events, _) in all_results.items()
+            for e in events
+            if e["size"] >= 4
+        ]
+        if large:
+            print(
+                f"\n{len(large)} event(s) with 4+ children — sizes this large are rare "
+                "in practice, so spot-check these before trusting them:",
+                file=sys.stderr,
+            )
+            fam_details = {}
+            if args.site_url:
+                ids = list({e["family_id"] for _, e in large})
+                fam_details = {
+                    r.family_id: r
+                    for r in db.execute(FAMILY_DETAIL_SQL, {"ids": ids}).fetchall()
+                }
+            for contributor, e in large:
+                line = (
+                    f"  {contributor} family_id={e['family_id']} decade={e['decade']} "
+                    f"size={e['size']} method={e['method']} dates={e['detail']}"
+                )
+                fam = fam_details.get(e["family_id"])
+                if fam:
+                    line += f"\n    {build_family_url(args.site_url, fam)}"
+                print(line, file=sys.stderr)
 
         twins_path, size_path, twins_rows, size_rows = write_report(all_results, args.out_dir)
 
