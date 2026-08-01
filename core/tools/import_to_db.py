@@ -642,6 +642,27 @@ def _print_done(count, start):
     print(f"  -> DONE in {elapsed:.1f} sec ({rate:,.0f} records/sec)")
 
 
+INSERT_CHUNK_SIZE = 20_000
+
+
+def _insert_in_chunks(db, sql, data, flatten, contributor_id):
+    """Insert `data` in chunks so peak memory stays flat: only one chunk of
+    flattened rows exists at a time, and processed source objects are removed
+    from `data` (consumed destructively) so they can be garbage-collected.
+    Needed for large contributors (e.g. 847k-person Pokopališča-geneanet)
+    whose full flattened row list OOM-killed the import inside Docker.
+    Runs within the caller's transaction, so atomicity is unchanged."""
+    total = len(data)
+    inserted = 0
+    while data:
+        chunk = data[:INSERT_CHUNK_SIZE]
+        del data[:INSERT_CHUNK_SIZE]
+        db.execute(sql, [flatten(item, contributor_id) for item in chunk])
+        inserted += len(chunk)
+        if total > INSERT_CHUNK_SIZE:
+            print(f"  -> {inserted:,}/{total:,} inserted", flush=True)
+
+
 def _flatten_person(p, contributor_id):
     birth = p.get("birth") or {}
     baptism = p.get("baptism") or {}
@@ -769,10 +790,11 @@ def import_contributor(
             with open(persons_file, "r", encoding="utf-8") as f:
                 persons_data = json.load(f)
             if persons_data:
-                print(f"  -> Inserting {len(persons_data)} person records...")
+                count = len(persons_data)
+                print(f"  -> Inserting {count} person records...")
                 start = time.perf_counter()
-                rows = [_flatten_person(p, contributor_id) for p in persons_data]
-                db.execute(
+                _insert_in_chunks(
+                    db,
                     text("""
                         INSERT INTO persons (ext_id, name, surname, alt_surname, sex,
                             date_of_birth, birth_year, place_of_birth,
@@ -788,9 +810,11 @@ def import_contributor(
                             CAST(:parents_list AS jsonb), CAST(:partners_list AS jsonb),
                             :notes, :contributor, CAST(:links AS jsonb))
                     """),
-                    rows,
+                    persons_data,
+                    _flatten_person,
+                    contributor_id,
                 )
-                _print_done(len(persons_data), start)
+                _print_done(count, start)
         elif persons_count > 0:
             visible = [
                 f
@@ -811,10 +835,11 @@ def import_contributor(
             with open(families_file, "r", encoding="utf-8") as f:
                 families_data = json.load(f)
             if families_data:
-                print(f"  -> Inserting {len(families_data)} family records...")
+                count = len(families_data)
+                print(f"  -> Inserting {count} family records...")
                 start = time.perf_counter()
-                rows = [_flatten_family(fam, contributor_id) for fam in families_data]
-                db.execute(
+                _insert_in_chunks(
+                    db,
                     text("""
                         INSERT INTO families (
                             husband_ext_id, husband_name, husband_surname,
@@ -835,9 +860,11 @@ def import_contributor(
                             CAST(:wife_parents AS jsonb),
                             :notes, :contributor, CAST(:links AS jsonb))
                     """),
-                    rows,
+                    families_data,
+                    _flatten_family,
+                    contributor_id,
                 )
-                _print_done(len(families_data), start)
+                _print_done(count, start)
         elif families_count > 0:
             visible = [
                 f
