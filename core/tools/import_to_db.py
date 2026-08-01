@@ -645,22 +645,70 @@ def _print_done(count, start):
 INSERT_CHUNK_SIZE = 20_000
 
 
-def _insert_in_chunks(db, sql, data, flatten, contributor_id):
-    """Insert `data` in chunks so peak memory stays flat: only one chunk of
-    flattened rows exists at a time, and processed source objects are removed
-    from `data` (consumed destructively) so they can be garbage-collected.
-    Needed for large contributors (e.g. 847k-person Pokopališča-geneanet)
-    whose full flattened row list OOM-killed the import inside Docker.
-    Runs within the caller's transaction, so atomicity is unchanged."""
-    total = len(data)
+def _iter_json_array(path, read_size=1 << 20):
+    """Incrementally yield the elements of a JSON file whose top level is an
+    array, without materializing the whole document in memory. json.load of
+    the 467 MB Pokopališča-geneanet persons file was OOM-killed inside the
+    Docker container; this keeps only ~read_size of text buffered at a time.
+    """
+    decoder = json.JSONDecoder()
+    with open(path, "r", encoding="utf-8") as f:
+        buf = ""
+        pos = 0
+        started = False
+        while True:
+            while pos < len(buf) and buf[pos] in " \t\r\n,":
+                pos += 1
+            if pos >= len(buf):
+                buf = f.read(read_size)
+                pos = 0
+                if not buf:
+                    if started:
+                        raise ValueError(f"Unterminated JSON array in {path}")
+                    return
+                continue
+            if not started:
+                if buf[pos] != "[":
+                    raise ValueError(f"Expected top-level JSON array in {path}")
+                started = True
+                pos += 1
+                continue
+            if buf[pos] == "]":
+                return
+            try:
+                # Elements are objects, so raw_decode only succeeds once the
+                # closing brace is in the buffer — safe across read boundaries.
+                obj, pos = decoder.raw_decode(buf, pos)
+            except json.JSONDecodeError:
+                more = f.read(read_size)
+                if not more:
+                    raise
+                buf = buf[pos:] + more
+                pos = 0
+                continue
+            yield obj
+
+
+def _insert_in_chunks(db, sql, items, flatten, contributor_id, total=None):
+    """Flatten and insert records from the `items` iterable in chunks so peak
+    memory stays flat: only one chunk of flattened rows exists at a time.
+    Runs within the caller's transaction, so atomicity is unchanged.
+    Returns the number of records inserted; `total` (from metadata) is only
+    used to label progress output."""
     inserted = 0
-    while data:
-        chunk = data[:INSERT_CHUNK_SIZE]
-        del data[:INSERT_CHUNK_SIZE]
-        db.execute(sql, [flatten(item, contributor_id) for item in chunk])
-        inserted += len(chunk)
-        if total > INSERT_CHUNK_SIZE:
-            print(f"  -> {inserted:,}/{total:,} inserted", flush=True)
+    rows = []
+    for item in items:
+        rows.append(flatten(item, contributor_id))
+        if len(rows) >= INSERT_CHUNK_SIZE:
+            db.execute(sql, rows)
+            inserted += len(rows)
+            rows = []
+            suffix = f"/{total:,}" if total else ""
+            print(f"  -> {inserted:,}{suffix} inserted", flush=True)
+    if rows:
+        db.execute(sql, rows)
+        inserted += len(rows)
+    return inserted
 
 
 def _flatten_person(p, contributor_id):
@@ -787,15 +835,11 @@ def import_contributor(
         )
         persons_file = find_data_file(DATA_DIR, f"{contributor_id}-persons.json")
         if os.path.exists(persons_file):
-            with open(persons_file, "r", encoding="utf-8") as f:
-                persons_data = json.load(f)
-            if persons_data:
-                count = len(persons_data)
-                print(f"  -> Inserting {count} person records...")
-                start = time.perf_counter()
-                _insert_in_chunks(
-                    db,
-                    text("""
+            print(f"  -> Inserting person records (expecting {persons_count})...")
+            start = time.perf_counter()
+            count = _insert_in_chunks(
+                db,
+                text("""
                         INSERT INTO persons (ext_id, name, surname, alt_surname, sex,
                             date_of_birth, birth_year, place_of_birth,
                             date_of_baptism, place_of_baptism,
@@ -810,10 +854,12 @@ def import_contributor(
                             CAST(:parents_list AS jsonb), CAST(:partners_list AS jsonb),
                             :notes, :contributor, CAST(:links AS jsonb))
                     """),
-                    persons_data,
-                    _flatten_person,
-                    contributor_id,
-                )
+                _iter_json_array(persons_file),
+                _flatten_person,
+                contributor_id,
+                total=persons_count,
+            )
+            if count:
                 _print_done(count, start)
         elif persons_count > 0:
             visible = [
@@ -832,15 +878,11 @@ def import_contributor(
         )
         families_file = find_data_file(DATA_DIR, f"{contributor_id}-families.json")
         if os.path.exists(families_file):
-            with open(families_file, "r", encoding="utf-8") as f:
-                families_data = json.load(f)
-            if families_data:
-                count = len(families_data)
-                print(f"  -> Inserting {count} family records...")
-                start = time.perf_counter()
-                _insert_in_chunks(
-                    db,
-                    text("""
+            print(f"  -> Inserting family records (expecting {families_count})...")
+            start = time.perf_counter()
+            count = _insert_in_chunks(
+                db,
+                text("""
                         INSERT INTO families (
                             husband_ext_id, husband_name, husband_surname,
                             husband_alt_surname, husband_birth, husband_birth_year,
@@ -860,10 +902,12 @@ def import_contributor(
                             CAST(:wife_parents AS jsonb),
                             :notes, :contributor, CAST(:links AS jsonb))
                     """),
-                    families_data,
-                    _flatten_family,
-                    contributor_id,
-                )
+                _iter_json_array(families_file),
+                _flatten_family,
+                contributor_id,
+                total=families_count,
+            )
+            if count:
                 _print_done(count, start)
         elif families_count > 0:
             visible = [
