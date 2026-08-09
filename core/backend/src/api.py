@@ -1,4 +1,5 @@
 import os
+import threading
 from typing import List, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,6 +41,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Build the contributors-page caches before anyone asks for them. In a daemon
+# thread, so a multi-second scan doesn't delay the API accepting requests — the
+# first visitor after a restart would otherwise pay for it.
+threading.Thread(target=crud.warm_caches, name="api-warm-up", daemon=True).start()
 
 
 # Dependency to get DB session
