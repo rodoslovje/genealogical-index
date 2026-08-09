@@ -3,6 +3,7 @@ import difflib
 import json
 import os
 import re
+import threading
 import time
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
@@ -68,6 +69,22 @@ SPECIAL_SUFFIXES = (MATRICULA_SUFFIX, GENEANET_SUFFIX, MILITARY_SUFFIX)
 _timeline_cache = {"data": None, "time": 0}
 _surnames_cache = {}  # keyed by contributor name (or "" for all)
 _match_counts_cache = {"data": None, "time": 0}
+# One lock per cache, guarding *population* only. Reads stay lock-free. Without
+# these, every request that arrives while a TTL is expired runs the expensive
+# query concurrently (a cache stampede) — enough of them at once will drain the
+# connection pool and wedge the API.
+_timeline_lock = threading.Lock()
+_match_counts_lock = threading.Lock()
+# The surnames cache is keyed by contributor, so it gets a lock *per key* —
+# a single shared lock would make a request for one contributor wait on an
+# unrelated query for another. `_surnames_locks_guard` protects the dict itself.
+_surnames_locks_guard = threading.Lock()
+_surnames_locks = {}
+
+
+def _surname_lock_for(cache_key: str) -> threading.Lock:
+    with _surnames_locks_guard:
+        return _surnames_locks.setdefault(cache_key, threading.Lock())
 
 
 def clear_all_caches():
@@ -86,30 +103,43 @@ def get_match_counts(db: Session):
         and now - _match_counts_cache["time"] < MATCH_COUNTS_TTL
     ):
         return _match_counts_cache["data"]
-    rows = db.execute(text("""
-        SELECT REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', '') AS contributor,
-               REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '') AS partner
-        FROM matches
-        GROUP BY 1, 2
-        UNION
-        SELECT REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '') AS contributor,
-               REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', '') AS partner
-        FROM matches
-        GROUP BY 1, 2
-    """)).fetchall()
 
-    counts = {}
-    for r in rows:
-        c_base = r.contributor or ""
-        p_base = r.partner or ""
-        if c_base not in counts:
-            counts[c_base] = set()
-        counts[c_base].add(p_base)
+    with _match_counts_lock:
+        # Re-check under the lock: another thread may have populated the cache
+        # while this one was waiting, in which case there is nothing to do.
+        now = time.time()
+        if (
+            _match_counts_cache["data"] is not None
+            and now - _match_counts_cache["time"] < MATCH_COUNTS_TTL
+        ):
+            return _match_counts_cache["data"]
 
-    result = [{"contributor": k, "partners_count": len(v)} for k, v in counts.items()]
-    _match_counts_cache["data"] = result
-    _match_counts_cache["time"] = now
-    return result
+        rows = db.execute(text("""
+            SELECT REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', '') AS contributor,
+                   REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '') AS partner
+            FROM matches
+            GROUP BY 1, 2
+            UNION
+            SELECT REPLACE(REPLACE(REPLACE(contributor_b, '-matricula', ''), '-geneanet', ''), '-military', '') AS contributor,
+                   REPLACE(REPLACE(REPLACE(contributor_a, '-matricula', ''), '-geneanet', ''), '-military', '') AS partner
+            FROM matches
+            GROUP BY 1, 2
+        """)).fetchall()
+
+        counts = {}
+        for r in rows:
+            c_base = r.contributor or ""
+            p_base = r.partner or ""
+            if c_base not in counts:
+                counts[c_base] = set()
+            counts[c_base].add(p_base)
+
+        result = [
+            {"contributor": k, "partners_count": len(v)} for k, v in counts.items()
+        ]
+        _match_counts_cache["data"] = result
+        _match_counts_cache["time"] = now
+        return result
 
 
 def get_contributor_match_detail(
@@ -570,49 +600,57 @@ def get_timeline_distribution(db: Session):
     ):
         return _timeline_cache["data"]
 
-    births = (
-        db.query(models.Person.birth_year.label("year"), func.count())
-        .filter(models.Person.birth_year.isnot(None))
-        .group_by(models.Person.birth_year)
-        .all()
-    )
+    with _timeline_lock:
+        # Re-check under the lock — see get_match_counts.
+        now = time.time()
+        if _timeline_cache["data"] is not None and (
+            now - _timeline_cache["time"] < CACHE_TTL
+        ):
+            return _timeline_cache["data"]
 
-    marriages = (
-        db.query(models.Family.marriage_year.label("year"), func.count())
-        .filter(models.Family.marriage_year.isnot(None))
-        .group_by(models.Family.marriage_year)
-        .all()
-    )
+        births = (
+            db.query(models.Person.birth_year.label("year"), func.count())
+            .filter(models.Person.birth_year.isnot(None))
+            .group_by(models.Person.birth_year)
+            .all()
+        )
 
-    deaths = (
-        db.query(models.Person.death_year.label("year"), func.count())
-        .filter(models.Person.death_year.isnot(None))
-        .group_by(models.Person.death_year)
-        .all()
-    )
+        marriages = (
+            db.query(models.Family.marriage_year.label("year"), func.count())
+            .filter(models.Family.marriage_year.isnot(None))
+            .group_by(models.Family.marriage_year)
+            .all()
+        )
 
-    current_year = datetime.date.today().year
-    timeline = {}
-    for y, c in births:
-        if y and 1500 <= y <= current_year:
-            timeline.setdefault(
-                y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
-            )["births"] = c
-    for y, c in marriages:
-        if y and 1500 <= y <= current_year:
-            timeline.setdefault(
-                y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
-            )["marriages"] = c
-    for y, c in deaths:
-        if y and 1500 <= y <= current_year:
-            timeline.setdefault(
-                y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
-            )["deaths"] = c
+        deaths = (
+            db.query(models.Person.death_year.label("year"), func.count())
+            .filter(models.Person.death_year.isnot(None))
+            .group_by(models.Person.death_year)
+            .all()
+        )
 
-    result = list(timeline.values())
-    _timeline_cache["data"] = result
-    _timeline_cache["time"] = now
-    return result
+        current_year = datetime.date.today().year
+        timeline = {}
+        for y, c in births:
+            if y and 1500 <= y <= current_year:
+                timeline.setdefault(
+                    y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
+                )["births"] = c
+        for y, c in marriages:
+            if y and 1500 <= y <= current_year:
+                timeline.setdefault(
+                    y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
+                )["marriages"] = c
+        for y, c in deaths:
+            if y and 1500 <= y <= current_year:
+                timeline.setdefault(
+                    y, {"year": y, "births": 0, "marriages": 0, "deaths": 0}
+                )["deaths"] = c
+
+        result = list(timeline.values())
+        _timeline_cache["data"] = result
+        _timeline_cache["time"] = now
+        return result
 
 
 def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
@@ -628,6 +666,20 @@ def get_top_surnames(db: Session, contributors: list = None, limit: int = 100):
     if cached and (now - cached["time"] < CACHE_TTL):
         return cached["data"][:limit]
 
+    with _surname_lock_for(cache_key):
+        # Re-check under the lock — see get_match_counts.
+        now = time.time()
+        cached = _surnames_cache.get(cache_key)
+        if cached and (now - cached["time"] < CACHE_TTL):
+            return cached["data"][:limit]
+        return _compute_top_surnames(db, cache_key, contributors, limit, now)
+
+
+def _compute_top_surnames(
+    db: Session, cache_key: str, contributors: list, limit: int, now: float
+):
+    """Uncached body of get_top_surnames. Only ever called with that function's
+    per-key lock held, so exactly one thread builds any given cache entry."""
     expanded = None
     if contributors:
         expanded = []

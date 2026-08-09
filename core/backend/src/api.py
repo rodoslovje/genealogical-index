@@ -68,6 +68,34 @@ def require_user(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+@app.get("/api/health")
+def health():
+    """Liveness plus DB reachability, cheap enough to poll.
+
+    Returns 503 (never hangs) when the DB is unreachable or the connection pool
+    is exhausted, so an external check can tell "API up but DB unreachable"
+    apart from "API down" — the two look identical from a heavy endpoint.
+    """
+    pool = engine.pool
+    status = {
+        "api": "ok",
+        "pool": {
+            "size": pool.size(),
+            "checked_out": pool.checkedout(),
+            "overflow": pool.overflow(),
+        },
+    }
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        status["db"] = "error"
+        status["error"] = str(exc)[:200]
+        raise HTTPException(status_code=503, detail=status)
+    status["db"] = "ok"
+    return status
+
+
 @app.post("/api/cache/clear")
 def clear_cache():
     """
