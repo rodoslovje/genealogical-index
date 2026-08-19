@@ -14,6 +14,7 @@ import { loadSurnameCloud } from './cloud.js';
 import { setCurrentMatches } from './filter.js';
 import { exportBooksToCSV } from './matricula-stats.js';
 import { renderMatchDetail } from './match-detail.js';
+import { mountSurnameScope, readMatchSurnames } from './match-surname.js';
 import { fetchErrorKey } from '../auth.js';
 
 /** Returns the i18n key for the contributor type label based on which data
@@ -400,6 +401,8 @@ export async function renderMatchesPage(contributor, withPartner) {
         </div>
         <div class="matches-summary-content">
           <p>${t('matches_found_intro')} <strong>${displayName}</strong>.<br>${t('matches_found_outro')}</p>
+          <div id="matches-surname-scope"></div>
+          <p id="matches-surname-error" class="match-surname-error" style="display: none;"></p>
           <div id="matches-summary" class="table-responsive"></div>
         </div>
       </div>`;
@@ -425,8 +428,53 @@ export async function renderMatchesPage(contributor, withPartner) {
     // is only built once above — so re-running this on a filter keystroke
     // just re-derives `tableData` and re-renders the table, never touching
     // (or stealing focus from) the filter input itself.
-    const summaryCols = ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'];
+    const BASE_SUMMARY_COLS = ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'];
     let currentTableData = [];
+    let currentSummaryCols = BASE_SUMMARY_COLS;
+
+    // Active surname scope. `scopeCounts` is a partner → row map of the counts
+    // restricted to those surnames; null means no scope, and the table shows
+    // every partner with its overall counts as before. The overall counts stay
+    // in their own columns either way — the scoped figure gets an added column
+    // rather than quietly redefining `Total`, so it's visible that the
+    // genealogist filter hides rows while this one changes what's counted.
+    let scopeSurnames = readMatchSurnames();
+    let scopeCounts = null;
+    let scopeError = '';
+
+    const fetchScopeCounts = async (surnames) => {
+      if (!surnames.length) return null;
+      const res = await fetch(
+        `${API_BASE_URL}/api/contributors/${encodeURIComponent(primary.contributor_ID)}` +
+        `/matches?surname=${encodeURIComponent(surnames.join(','))}`
+      );
+      if (!res.ok) throw new Error('API failed');
+      const rows = await res.json();
+      return new Map(rows.map(r => [r.contributor, r]));
+    };
+
+    const applyScope = async (surnames) => {
+      scopeSurnames = surnames;
+      if (overlay) overlay.style.display = 'flex';
+      try {
+        scopeCounts = await fetchScopeCounts(surnames);
+        scopeError = '';
+      } catch {
+        // Don't fall back to an unscoped table silently — that would read as
+        // "this surname matches everyone" rather than "the lookup failed".
+        scopeCounts = new Map();
+        scopeError = t('search_failed');
+      } finally {
+        if (overlay) overlay.style.display = 'none';
+      }
+      // The column set changes with the scope, and renderTable keeps its sort
+      // state on the container — drop it so the new column can be the default
+      // sort instead of inheriting one keyed to the old columns.
+      const summaryEl = document.getElementById('matches-summary');
+      if (summaryEl) summaryEl._sortState = null;
+      renderSummaryTable();
+    };
+
     const renderSummaryTable = () => {
       const query = mountTableFilter({
         headerEl: summaryHeaderEl,
@@ -435,29 +483,67 @@ export async function renderMatchesPage(contributor, withPartner) {
         title: t('tip_table_filter'),
         onChange: renderSummaryTable,
       });
-      const filteredPartners = query ? partners.filter(p => p.contributor.toLowerCase().includes(query)) : partners;
+      mountSurnameScope({
+        mountEl: document.getElementById('matches-surname-scope'),
+        sourceName: primary.contributor_ID,
+        onChange: applyScope,
+      });
+
+      const errorEl = document.getElementById('matches-surname-error');
+      if (errorEl) {
+        errorEl.textContent = scopeError;
+        errorEl.style.display = scopeError ? '' : 'none';
+      }
+
+      let filteredPartners = query ? partners.filter(p => p.contributor.toLowerCase().includes(query)) : partners;
+      if (scopeCounts) filteredPartners = filteredPartners.filter(p => scopeCounts.has(p.contributor));
+
+      const isScoped = !!scopeCounts;
+      currentSummaryCols = isScoped ? [...BASE_SUMMARY_COLS, 'surname_matches'] : BASE_SUMMARY_COLS;
+      // Carry the surname into the pair view's own per-section filters, so
+      // clicking a partner lands on those records instead of on all several
+      // hundred matches with them.
+      const detailFilter = isScoped
+        ? { mqp: scopeSurnames.join(','), mqf: scopeSurnames.join(',') }
+        : {};
+
       currentTableData = filteredPartners.map(p => {
         const partnerData = cached.find(d => d.contributor_ID === baseContributorName(p.contributor));
         const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
-        return {
+        const row = {
           contributor_ID: p.contributor,
-          _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor }),
+          _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor, ...detailFilter }),
           total_persons:  p.persons_count  || 0,
           total_families: p.families_count || 0,
           total:          p.total_count,
           confidence:     Math.round((p.max_confidence || 0) * 100),
           _is_matricula_only: isMatOnly,
         };
+        if (isScoped) row.surname_matches = scopeCounts.get(p.contributor)?.total_count || 0;
+        return row;
       });
-      renderTable(currentTableData, 'matches-summary', summaryCols, 'total', false);
+
+      renderTable(currentTableData, 'matches-summary', currentSummaryCols,
+        isScoped ? 'surname_matches' : 'total', false);
     };
+
+    // A shared link can arrive with `ms=` already set — resolve it before the
+    // first render so the table never flashes the unscoped list.
+    if (scopeSurnames.length) {
+      try {
+        scopeCounts = await fetchScopeCounts(scopeSurnames);
+      } catch {
+        scopeCounts = new Map();
+        scopeError = t('search_failed');
+      }
+    }
     renderSummaryTable();
     if (summaryHeaderEl) observeStickyHeader(summaryHeaderEl, document.getElementById('matches-summary'));
 
     const summaryBtn = container.querySelector('.export-matches-summary-btn');
     if (summaryBtn) {
       summaryBtn.addEventListener('click', () => {
-        exportToCSV(currentTableData, summaryCols, formatExportFilename(`matches-${displayName}`, 'csv'));
+        exportToCSV(currentTableData, currentSummaryCols, formatExportFilename(`matches-${displayName}`, 'csv'));
       });
     }
 

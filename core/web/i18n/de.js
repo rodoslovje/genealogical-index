@@ -168,6 +168,16 @@ export default {
     matches_truncated: 'Es werden die {0} stärksten von {1} Übereinstimmungen angezeigt.',
     matches_load_all: 'Alle laden',
     matches_filtered_none: 'Keine Übereinstimmungen mit den ausgewählten Filtern.',
+    // Nachnamen-Eingrenzung der Übereinstimmungen — anders als der Filter in
+    // der Kopfzeile, der die Liste nach Genealogenname eingrenzt, grenzt
+    // dieser sie danach ein, um welche Nachnamen es in den Treffern geht.
+    match_surname_label: 'Nachname in Übereinstimmungen:',
+    match_surname_placeholder: 'z. B. Pezdirc, Porenta',
+    match_surname_tip: 'Zeigt nur Genealogen, deren Übereinstimmungen mit dieser Quelle diese Nachnamen enthalten. Mehrere Nachnamen mit Komma trennen.',
+    match_surname_remove: 'Diesen Nachnamen entfernen',
+    col_surname_matches: 'Nachnamen-Treffer',
+    tip_surname_matches: 'Anzahl der Übereinstimmungen mit diesem Genealogen, die die gewählten Nachnamen betreffen.',
+    col_match_surname: 'Nachname in Übereinstimmungen',
     filter_new: 'Neu',
     filter_different: 'Unterschiedlich',
     filter_links: 'Links',

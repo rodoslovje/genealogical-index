@@ -1689,3 +1689,85 @@ body.compact-nav .mobile-nav-section { display: flex; }
   color: var(--srd-accent);
   text-decoration: underline;
 }
+
+/* --- Surname scope on the matches summary ---------------------------------
+   The matches table carries two filters. The header bar's `.table-filter-
+   wrapper` narrows the list by *genealogist* name; this one narrows it by
+   *surname*, so it deliberately does not reuse that look: it sits in the
+   section body rather than the header bar, is labelled, and is wider — a
+   search you compose, not a list you sift. The added `Surname matches` column
+   and the chips below make the difference visible in the result too. */
+.match-surname-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 4px 0 14px;
+}
+.match-surname-label {
+  font-size: 0.9rem;
+  color: var(--srd-ink-muted);
+  white-space: nowrap;
+}
+.match-surname-input {
+  flex: 0 1 300px;
+  min-width: 180px;
+}
+.match-surname-input .input-wrapper {
+  position: relative;
+  display: block;
+}
+.match-surname-input input {
+  padding: 6px 30px 6px 10px;
+  font-family: var(--srd-font-sans);
+  font-size: 0.9rem;
+  color: var(--srd-ink);
+  border: 1px solid var(--srd-line-strong);
+  border-radius: var(--srd-radius);
+  background: var(--srd-surface);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.match-surname-input input:focus {
+  border-color: var(--srd-accent);
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+}
+/* Chips restate the active scope next to the results, so a table whose row
+   set and counts are restricted never looks like the full list. */
+.match-surname-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.match-surname-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-family: var(--srd-font-sans);
+  font-size: 0.85rem;
+  color: var(--srd-ink);
+  background: var(--srd-surface-alt, var(--srd-surface));
+  border: 1px solid var(--srd-line-strong);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.match-surname-chip:hover {
+  border-color: var(--srd-accent);
+  color: var(--srd-accent);
+}
+.match-surname-chip span {
+  opacity: 0.6;
+  font-size: 1rem;
+  line-height: 1;
+}
+.match-surname-error {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: var(--srd-danger, #b03030);
+}
+
+@media (max-width: 600px) {
+  .match-surname-input { flex: 1 1 100%; }
+}

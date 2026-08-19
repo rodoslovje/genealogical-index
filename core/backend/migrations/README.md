@@ -325,6 +325,36 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/014_contributor_intro.sql
 ```
 
+### 015 — `match_surnames`
+
+Adds `matches.surnames TEXT[]` — the folded surnames each match pair carries,
+from both sides — plus a GIN index, and backfills it from `persons`/`families`.
+
+Powers the "surname in matches" scope on a genealogist's page ("which of my
+100 matched genealogists overlap with me on *Pezdirc*?"). Denormalized rather
+than joined at query time: answering it from `matches` alone turns a join over
+the whole match set into an indexed containment scan. `compute_matches.py`
+fills the column for every match it writes from here on.
+
+- `ADD COLUMN IF NOT EXISTS` is metadata-only, but the two backfill `UPDATE`s
+  rewrite every match row: budget real time on a large `matches` table, and
+  expect its on-disk size to roughly double until the next `VACUUM`.
+- `CREATE INDEX CONCURRENTLY` + plain `UPDATE`s — readers are never blocked,
+  so the API can stay up. Rows not yet backfilled read as `NULL`, which the
+  surname filter treats as "no surname recorded" and excludes; the scope is
+  therefore incomplete, not wrong, while the migration runs.
+- Must run **outside** a transaction block (piped stdin works).
+- Re-runnable: `IF NOT EXISTS` throughout, and the backfill only touches rows
+  where `surnames IS NULL`.
+- Match rows written before this migration and never recomputed keep `NULL`
+  surnames. `trigger_matches.py --all` refills them properly; the backfill
+  here already covers rows whose underlying records still exist.
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/015_match_surnames.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

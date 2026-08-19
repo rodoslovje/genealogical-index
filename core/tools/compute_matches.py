@@ -112,7 +112,7 @@ def _apply_session_params(dbapi_conn, _record):
 _PERSON_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields)
+         confidence, match_fields, surnames)
     WITH cands AS (
         SELECT
             p1.id AS a_id,
@@ -281,16 +281,35 @@ _PERSON_INSERT = text(r"""
             'partners',    CASE WHEN s_partners IS NOT NULL THEN round(s_partners::numeric, 3) END
         )::text AS match_fields
         FROM bonused WHERE conf >= :conf_min
+    ),
+    -- Denormalize the pair's folded surnames onto the match row, so the
+    -- "which genealogists match me on surname X" filter can be answered from
+    -- `matches` alone (see crud.get_contributor_matches). Both sides are
+    -- stored: trigram matching means the two records can legitimately spell
+    -- the surname differently (Pezdirc/Pezdirec), and a search for either
+    -- spelling should still find the pair. The join is over the
+    -- already-thresholded `filtered` set — two PK lookups per surviving
+    -- match, not per candidate.
+    labeled AS (
+        SELECT fl.*, ARRAY(
+            SELECT DISTINCT s FROM unnest(ARRAY[
+                p1.surname_fold, p1.alt_surname_fold,
+                p2.surname_fold, p2.alt_surname_fold
+            ]) AS s WHERE s IS NOT NULL AND s <> ''
+        ) AS surs
+        FROM filtered fl
+        JOIN persons p1 ON p1.id = fl.a_id
+        JOIN persons p2 ON p2.id = fl.b_id
     )
-    SELECT :contrib_a, :contrib_b, 'person', a_id, b_id, conf, match_fields FROM filtered
+    SELECT :contrib_a, :contrib_b, 'person', a_id, b_id, conf, match_fields, surs FROM labeled
     UNION ALL
-    SELECT :contrib_b, :contrib_a, 'person', b_id, a_id, conf, match_fields FROM filtered
+    SELECT :contrib_b, :contrib_a, 'person', b_id, a_id, conf, match_fields, surs FROM labeled
 """)
 
 _FAMILY_INSERT = text(r"""
     INSERT INTO matches
         (contributor_a, contributor_b, record_type, record_a_id, record_b_id,
-         confidence, match_fields)
+         confidence, match_fields, surnames)
     WITH cands AS (
         SELECT
             f1.id AS a_id,
@@ -423,10 +442,25 @@ _FAMILY_INSERT = text(r"""
             'children',        CASE WHEN s_cl IS NOT NULL THEN round(s_cl::numeric, 3) END
         )::text AS match_fields
         FROM bonused WHERE conf >= :conf_min
+    ),
+    -- Both spouses' surnames from both sides — see the persons insert above
+    -- for why this is denormalized here rather than joined at query time.
+    labeled AS (
+        SELECT fl.*, ARRAY(
+            SELECT DISTINCT s FROM unnest(ARRAY[
+                f1.husband_surname_fold, f1.husband_alt_surname_fold,
+                f1.wife_surname_fold,    f1.wife_alt_surname_fold,
+                f2.husband_surname_fold, f2.husband_alt_surname_fold,
+                f2.wife_surname_fold,    f2.wife_alt_surname_fold
+            ]) AS s WHERE s IS NOT NULL AND s <> ''
+        ) AS surs
+        FROM filtered fl
+        JOIN families f1 ON f1.id = fl.a_id
+        JOIN families f2 ON f2.id = fl.b_id
     )
-    SELECT :contrib_a, :contrib_b, 'family', a_id, b_id, conf, match_fields FROM filtered
+    SELECT :contrib_a, :contrib_b, 'family', a_id, b_id, conf, match_fields, surs FROM labeled
     UNION ALL
-    SELECT :contrib_b, :contrib_a, 'family', b_id, a_id, conf, match_fields FROM filtered
+    SELECT :contrib_b, :contrib_a, 'family', b_id, a_id, conf, match_fields, surs FROM labeled
 """)
 
 

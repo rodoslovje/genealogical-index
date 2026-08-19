@@ -168,6 +168,16 @@ export default {
     matches_truncated: 'A(z) {1} egyezésből a(z) {0} legerősebb látható.',
     matches_load_all: 'Összes betöltése',
     matches_filtered_none: 'Nincs egyezés a kiválasztott szűrőkkel.',
+    // Vezetéknév szerinti szűkítés az egyezéseknél — a fejlécszűrő a
+    // genealógus neve szerint szűkít, ez pedig aszerint, hogy az egyezések
+    // mely vezetéknevekre vonatkoznak.
+    match_surname_label: 'Vezetéknév az egyezésekben:',
+    match_surname_placeholder: 'pl. Pezdirc, Porenta',
+    match_surname_tip: 'Csak azokat a genealógusokat mutatja, akiknek az ezzel a forrással való egyezései tartalmazzák ezeket a vezetékneveket. Több vezetéknevet vesszővel válasszon el.',
+    match_surname_remove: 'Vezetéknév eltávolítása',
+    col_surname_matches: 'Vezetéknév-egyezések',
+    tip_surname_matches: 'Az ezzel a genealógussal való egyezések száma, amelyek a kiválasztott vezetékneveket érintik.',
+    col_match_surname: 'Vezetéknév az egyezésekben',
     filter_new: 'Új',
     filter_different: 'Eltérő',
     filter_links: 'Hivatkozások',

@@ -208,10 +208,15 @@ def setup_full(db):
             record_b_id INTEGER NOT NULL,
             confidence REAL NOT NULL,
             match_fields TEXT,
+            -- Folded surnames the pair carries, from both sides. Written by
+            -- compute_matches so the surname-in-matches filter can group over
+            -- this table alone. See migration 015.
+            surnames TEXT[],
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
         CREATE INDEX idx_matches_b  ON matches(contributor_b);
         CREATE INDEX idx_matches_ab ON matches(contributor_a, contributor_b);
+        CREATE INDEX idx_matches_surnames ON matches USING gin (surnames);
 
         -- Per-contributor set of distinct folded surnames (own + alt, from
         -- both persons and families), refreshed on import. compute_matches
@@ -354,8 +359,12 @@ def setup_update(db):
             record_b_id INTEGER NOT NULL,
             confidence REAL NOT NULL,
             match_fields TEXT,
+            surnames TEXT[],
             computed_at TIMESTAMPTZ DEFAULT NOW()
         );
+        -- Pre-existing installs get the column via migration 015; this keeps
+        -- the additive path self-sufficient for one created before it.
+        ALTER TABLE matches ADD COLUMN IF NOT EXISTS surnames TEXT[];
         CREATE TABLE IF NOT EXISTS match_jobs (
             contributor_a TEXT NOT NULL,
             contributor_b TEXT NOT NULL,
@@ -519,6 +528,7 @@ def setup_update(db):
 
         CREATE INDEX IF NOT EXISTS idx_matches_b  ON matches(contributor_b);
         CREATE INDEX IF NOT EXISTS idx_matches_ab ON matches(contributor_a, contributor_b);
+        CREATE INDEX IF NOT EXISTS idx_matches_surnames ON matches USING gin (surnames);
         CREATE INDEX IF NOT EXISTS idx_match_jobs_status ON match_jobs(status, queued_at);
         CREATE INDEX IF NOT EXISTS idx_contributor_surnames_trgm ON contributor_surnames USING gin (sur gin_trgm_ops);
 

@@ -168,6 +168,16 @@ export default {
     matches_truncated: 'Sono mostrate le {0} corrispondenze più forti su {1}.',
     matches_load_all: 'Carica tutte',
     matches_filtered_none: 'Nessuna corrispondenza con i filtri selezionati.',
+    // Restrizione per cognome delle corrispondenze — a differenza del filtro
+    // nell'intestazione, che restringe l'elenco per nome del genealogista,
+    // questo lo restringe in base ai cognomi delle corrispondenze.
+    match_surname_label: 'Cognome nelle corrispondenze:',
+    match_surname_placeholder: 'es. Pezdirc, Porenta',
+    match_surname_tip: 'Mostra solo i genealogisti le cui corrispondenze con questa fonte includono questi cognomi. Separa più cognomi con una virgola.',
+    match_surname_remove: 'Rimuovi questo cognome',
+    col_surname_matches: 'Corrispondenze per cognome',
+    tip_surname_matches: 'Numero di corrispondenze con questo genealogista che riguardano i cognomi selezionati.',
+    col_match_surname: 'Cognome nelle corrispondenze',
     filter_new: 'Nuovo',
     filter_different: 'Diverso',
     filter_links: 'Link',

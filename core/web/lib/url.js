@@ -39,6 +39,11 @@ export const PARAM_MAP = {
   // Matches detail "New"/"Different"/"Links" checkbox filters, per section.
   match_filter_person: 'mfp',
   match_filter_family: 'mff',
+  // Matches summary: surname(s) the partner list is scoped to. Distinct from
+  // the summary's own `qms` text filter, which narrows the list by
+  // *genealogist* name — this one narrows it by whose surnames the matches
+  // are about.
+  match_surname:    'ms',
 };
 
 /** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point at the unified person tab. */

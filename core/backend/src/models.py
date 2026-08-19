@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, Text, Float, DateTime, SmallInteger
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 import datetime
 from .database import Base
 
@@ -92,6 +92,12 @@ class Match(Base):
     record_b_id = Column(Integer)
     confidence = Column(Float)
     match_fields = Column(Text)
+    # Folded surnames carried by the pair, from *both* sides. Denormalized by
+    # compute_matches.py so the "which genealogists match me on this surname"
+    # filter can group over `matches` alone, without joining back to
+    # persons/families. Nullable: rows predating migration 015 have no value
+    # until the next full recompute.
+    surnames = Column(ARRAY(Text), nullable=True)
     computed_at = Column(
         DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc)
     )

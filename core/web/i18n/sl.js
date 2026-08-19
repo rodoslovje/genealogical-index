@@ -168,6 +168,15 @@ export default {
     matches_truncated: 'Prikazanih je {0} najmočnejših od {1} ujemanj.',
     matches_load_all: 'Naloži vsa',
     matches_filtered_none: 'Ni ujemanj, ki bi ustrezala izbranim filtrom.',
+    // Omejitev ujemanj po priimku — za razliko od filtra v glavi tabele, ki
+    // zoži seznam po imenu rodoslovca, ta zoži seznam po priimkih v ujemanjih.
+    match_surname_label: 'Priimek v ujemanjih:',
+    match_surname_placeholder: 'npr. Pezdirc, Porenta',
+    match_surname_tip: 'Prikaže samo rodoslovce, katerih ujemanja s tem virom vsebujejo te priimke. Več priimkov ločite z vejico.',
+    match_surname_remove: 'Odstrani ta priimek',
+    col_surname_matches: 'Ujemanja s priimkom',
+    tip_surname_matches: 'Število ujemanj s tem rodoslovcem, ki vsebujejo izbrane priimke.',
+    col_match_surname: 'Priimek v ujemanjih',
     filter_new: 'Novo',
     filter_different: 'Razlike',
     filter_links: 'Povezave',

@@ -16,7 +16,7 @@ export { exportToCSV };
 const CENTERED_COLUMNS = new Set([
   'contributor', 'contributor_ID',
   'total_persons', 'total_families', 'total', 'total_links',
-  'last_modified', 'links', 'matches', 'confidence',
+  'last_modified', 'links', 'matches', 'confidence', 'surname_matches',
 ]);
 
 const RIGHT_COLUMNS = new Set([
@@ -25,6 +25,7 @@ const RIGHT_COLUMNS = new Set([
 
 const NUMERIC_COLUMNS = new Set([
   'total_persons', 'total_families', 'total', 'total_links', 'confidence', 'matches',
+  'surname_matches',
 ]);
 
 const MATCHES_CONTEXT_COLS = new Set(['contributor_ID', 'total_persons', 'total_families', 'total']);

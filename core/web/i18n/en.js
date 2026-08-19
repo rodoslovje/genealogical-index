@@ -168,6 +168,16 @@ export default {
     matches_truncated: 'Showing the {0} strongest of {1} matches.',
     matches_load_all: 'Load all',
     matches_filtered_none: 'No matches with the selected filters.',
+    // Surname scope on the matches summary — narrows the partner list by which
+    // surnames the matches are about, as opposed to the header filter, which
+    // narrows it by genealogist name.
+    match_surname_label: 'Surname in matches:',
+    match_surname_placeholder: 'e.g. Pezdirc, Porenta',
+    match_surname_tip: 'Show only genealogists whose matches with this source include these surnames. Separate several surnames with a comma.',
+    match_surname_remove: 'Remove this surname',
+    col_surname_matches: 'Surname matches',
+    tip_surname_matches: 'Number of matches with this genealogist that involve the selected surnames.',
+    col_match_surname: 'Surname in matches',
     filter_new: 'New',
     filter_different: 'Different',
     filter_links: 'Links',

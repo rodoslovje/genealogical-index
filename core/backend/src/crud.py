@@ -606,12 +606,36 @@ def get_geneanet_stats(db: Session):
     return {"cemeteries": cemeteries, "top_places": top_places, "totals": totals}
 
 
-def get_contributor_matches(db: Session, contributor: str):
+def get_contributor_matches(db: Session, contributor: str, surnames: list = None):
+    """Per-partner match counts for one contributor.
+
+    With `surnames`, the counts are scoped to match pairs carrying one of those
+    surnames — the "which of my matched genealogists overlap with me on
+    Pezdirc?" question. Partners with no such pair drop out of the result
+    entirely, so the caller can use membership alone to narrow its list.
+
+    Surnames are compared against the denormalized `matches.surnames` array
+    (migration 015), folded on both sides so case and diacritics don't matter.
+    The comparison is whole-surname, not substring: the array's GIN index
+    answers containment, and the UI feeds this from a picker of surnames that
+    actually occur, so a partial term would only ever be a typo.
+    """
     contrib_norm = unicodedata.normalize("NFC", contributor)
     c_forms = [contrib_norm, *(contrib_norm + s for s in SPECIAL_SUFFIXES)]
+    params = {"c_forms": c_forms}
+
+    # `surnames && ARRAY[...]` is what idx_matches_surnames serves, so a rare
+    # surname reads only its own match rows rather than all of contributor_a's.
+    sur_clause = ""
+    if surnames:
+        sur_clause = (
+            "AND surnames && ARRAY(SELECT fold_text(s) "
+            "FROM unnest(CAST(:surs AS text[])) AS s)"
+        )
+        params["surs"] = surnames
 
     rows = db.execute(
-        text("""
+        text(f"""
             SELECT
                 contributor_b                                             AS contributor,
                 SUM(CASE WHEN record_type = 'person' THEN 1 ELSE 0 END)   AS persons_count,
@@ -621,9 +645,10 @@ def get_contributor_matches(db: Session, contributor: str):
                 MAX(computed_at)::text                                      AS computed_at
             FROM matches
             WHERE contributor_a = ANY(:c_forms)
+            {sur_clause}
             GROUP BY contributor_b
         """),
-        {"c_forms": c_forms},
+        params,
     ).fetchall()
 
     return [dict(r._mapping) for r in rows]

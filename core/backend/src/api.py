@@ -122,8 +122,21 @@ def get_match_counts(db: Session = Depends(get_db)):
 
 
 @app.get("/api/contributors/{name}/matches", response_model=List[schemas.MatchPartner])
-def get_contributor_matches(name: str, db: Session = Depends(get_db)):
-    return crud.get_contributor_matches(db, name)
+def get_contributor_matches(
+    name: str,
+    surname: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Partners this contributor has matches with, and how many.
+
+    `surname` (comma-separated) scopes the counts to pairs carrying one of
+    those surnames and drops partners that have none — powering the
+    "genealogists who match me on Pezdirc" filter on the matches page.
+    """
+    surnames = None
+    if surname:
+        surnames = [s.strip() for s in surname.split(",") if s.strip()]
+    return crud.get_contributor_matches(db, name, surnames=surnames or None)
 
 
 @app.get(
