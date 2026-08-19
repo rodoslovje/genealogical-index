@@ -2,6 +2,14 @@ services:
   db:
     image: postgres:16-alpine
     container_name: sgi_postgres
+    # Docker defaults /dev/shm to 64MB, which is where PostgreSQL puts the
+    # shared state for parallel work: parallel VACUUM's dead-tuple array and
+    # parallel query workers' hash/sort space. compute_matches.py runs with
+    # max_parallel_workers_per_gather=4 and work_mem=256MB, and a VACUUM of
+    # the (large) matches table wants hundreds of MB — both overrun 64MB and
+    # fail with a misleading "No space left on device" naming a shm segment,
+    # not the data volume.
+    shm_size: 1gb
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
