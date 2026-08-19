@@ -28,10 +28,15 @@ export function formatLinks(links, diffAgainst, markAdd = true) {
     : null;
 
   return linksList.map(url => {
-    let icon = '📜';
-    let titleText = t('icon_matricula');
+    // Unrecognised domains are historical/archival sources of no particular
+    // kind — never label them as Matricula.
+    let icon = '📄';
+    let titleText = t('icon_source');
 
-    if (url.includes('familysearch.org')) {
+    if (url.includes('matricula-online.eu')) {
+      icon = '📜';
+      titleText = t('icon_matricula');
+    } else if (url.includes('familysearch.org')) {
       icon = '🌳';
       titleText = t('icon_familysearch');
     } else if (url.includes('geneanet.org') || url.includes('findagrave.com') || url.includes('billiongraves.com')) {

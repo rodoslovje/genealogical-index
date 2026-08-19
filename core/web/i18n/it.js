@@ -153,6 +153,7 @@ export default {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Indice Matricula',
     icon_dlib: 'Biblioteca digitale della Slovenia',
+    icon_source: 'Fonte storica',
     icon_alt_surname: 'Cognomi alternativi',
     icon_baptism: 'Battesimo',
     icon_notes: 'Note',
@@ -314,6 +315,7 @@ export default {
         <li><strong>🎖</strong> – vittime di guerra (SIstory)</li>
         <li><strong>📋</strong> – censimenti (SIstory)</li>
         <li><strong>📰</strong> – Biblioteca digitale della Slovenia (dLib)</li>
+        <li><strong>📄</strong> – altre fonti storiche (archivi, siti web parrocchiali e di associazioni)</li>
       </ul>
       <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: {matricula_mark}il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome (ad esempio il cognome acquisito con il matrimonio), il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
       <h4>Albero degli antenati e dei discendenti</h4>

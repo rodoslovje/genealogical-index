@@ -153,6 +153,7 @@ export default {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Matricula index',
     icon_dlib: 'Szlovénia Digitális Könyvtára',
+    icon_source: 'Történelmi forrás',
     icon_alt_surname: 'Alternatív vezetéknevek',
     icon_baptism: 'Keresztség',
     icon_notes: 'Megjegyzések',
@@ -314,6 +315,7 @@ export default {
         <li><strong>🎖</strong> – háborús áldozatok (SIstory)</li>
         <li><strong>📋</strong> – népszámlálások (SIstory)</li>
         <li><strong>📰</strong> – Szlovénia Digitális Könyvtára (dLib)</li>
+        <li><strong>📄</strong> – egyéb történelmi források (levéltárak, plébániai és egyesületi weboldalak)</li>
       </ul>
       <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: {matricula_mark}a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
       <h4>Ősök és leszármazottak családfája</h4>

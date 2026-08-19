@@ -153,6 +153,7 @@ export default {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Matricula indeks',
     icon_dlib: 'Digitalna knjižnica Slovenije',
+    icon_source: 'Povijesni izvor',
     icon_alt_surname: 'Druga prezimena',
     icon_baptism: 'Krštenje',
     icon_notes: 'Bilješke',
@@ -314,6 +315,7 @@ export default {
         <li><strong>🎖</strong> – žrtve ratova (SIstory)</li>
         <li><strong>📋</strong> – popisi stanovništva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
+        <li><strong>📄</strong> – ostali povijesni izvori (arhivi, župne i društvene internetske stranice)</li>
       </ul>
       <p>Pored nekih drugih podataka pojavljuju se manje rubne ikone s dodatnim informacijama: {matricula_mark}oznaka <strong>🏷</strong> pored prezimena prikazuje druge oblike prezimena (na primjer prezime nakon udaje), oznaka <strong>✝</strong> pored datuma rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> pored mjesta rođenja ili vjenčanja upozorava na zabilježene bilješke. Prelaskom miša preko njih prikazuju se detalji.</p>
       <h4>Stablo predaka i potomaka</h4>

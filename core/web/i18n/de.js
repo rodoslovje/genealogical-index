@@ -153,6 +153,7 @@ export default {
     icon_matricula: 'Matricula Online',
     icon_matricula_index: 'Matricula-Index',
     icon_dlib: 'Digitale Bibliothek Sloweniens',
+    icon_source: 'Historische Quelle',
     icon_alt_surname: 'Alternative Nachnamen',
     icon_baptism: 'Taufe',
     icon_notes: 'Notizen',
@@ -314,6 +315,7 @@ export default {
         <li><strong>🎖</strong> – Kriegsopfer (SIstory)</li>
         <li><strong>📋</strong> – Volkszählungen (SIstory)</li>
         <li><strong>📰</strong> – Digitale Bibliothek Sloweniens (dLib)</li>
+        <li><strong>📄</strong> – andere historische Quellen (Archive, Pfarr- und Vereinswebseiten)</li>
       </ul>
       <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: {matricula_mark}das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
       <h4>Vorfahren- und Nachkommenbaum</h4>
