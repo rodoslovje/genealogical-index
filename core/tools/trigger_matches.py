@@ -169,6 +169,20 @@ def main():
                 )
             ).rowcount
             db.commit()
+            # Also recover jobs a crashed run left stuck in 'running' —
+            # skipped automatically if a live compute backend is detected.
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            import compute_matches
+
+            reclaimed, active = compute_matches.reclaim_orphaned_running(db)
+            db.commit()
+            if reclaimed:
+                print(f"Reclaimed {reclaimed} job(s) stuck in 'running' from a crashed run.")
+            elif active:
+                print(
+                    f"Note: {active} active compute backend(s) detected — "
+                    "'running' jobs left untouched."
+                )
             print(f"Resumed {n} job(s). They are now pending.")
 
         if not args.all and not args.contributors and not args.resume:
