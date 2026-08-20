@@ -183,7 +183,7 @@ export default {
     filter_links: 'Link',
     filter_active: 'Filtri attivi',
     clear_filter: 'Cancella filtro',
-    tip_table_filter: 'Filtra le righe per qualsiasi valore visibile.',
+    tip_table_filter: 'Filtra le righe per qualsiasi valore visibile. Tutte le parole devono corrispondere; separa le alternative con una virgola.',
     tip_match_add: "L'altro genealogista ha dati per uno o più campi che qui sono assenti (ad es. una data di morte o sepoltura).",
     tip_match_link_add: "L'altro genealogista ha un link (ad es. una fonte o un registro di tomba) che qui è assente.",
     tip_match_diff: 'Questa coppia ha valori in conflitto per uno o più campi.',

@@ -13,7 +13,7 @@ import { toUnicodeHref, currentParams, toUnicodeSearch } from '../lib/url.js';
 import { updateCurrentKey } from '../lib/view-cache.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
-import { observeStickyHeader, normalizeQuery } from '../lib/table-filter.js';
+import { observeStickyHeader, normalizeQuery, queryMatchesText } from '../lib/table-filter.js';
 
 import { getContributorUrlMap } from './data.js';
 
@@ -313,15 +313,12 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
     const recordSearchText = (rec) =>
       FILTER_FIELDS.map(f => rec[f] || '').join(' ').toLowerCase();
-    // `q` is already comma-joined by normalizeQuery; require every word to
-    // appear *somewhere* across either side of the pair (any field, any
-    // order) — same multi-word behavior as the generic table filter.
-    const pairMatchesFilter = (r, q) => {
-      if (!q) return true;
-      const terms = q.split(',');
-      const haystack = recordSearchText(r.record_a) + ' ' + recordSearchText(r.record_b);
-      return terms.every(term => haystack.includes(term));
-    };
+    // Words must appear *somewhere* across either side of the pair (any field,
+    // any order), and comma-separated groups are alternatives — same semantics
+    // as the generic table filter, via the same helper. The alternatives case
+    // is what a surname list handed over from the matches page relies on.
+    const pairMatchesFilter = (r, q) =>
+      queryMatchesText(recordSearchText(r.record_a) + ' ' + recordSearchText(r.record_b), q);
 
     // Synthetic per-record keys used to map DOM rows ↔ records across
     // sort/filter re-renders so we can preserve expanded <details> state.

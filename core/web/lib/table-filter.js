@@ -31,14 +31,40 @@ const SHORT_PARAM_MAP = {
  *  own `mqp`/`mqf`, which predate and aren't part of `SHORT_PARAM_MAP`. */
 export const TABLE_FILTER_PARAM_KEYS = new Set([...Object.values(SHORT_PARAM_MAP), 'mqp', 'mqf']);
 
-/** Treats whitespace and commas as interchangeable word separators (typing
- *  "Luka Renko" or "Luka,Renko" means the same multi-word query — see
- *  `rowMatchesQuery` in table.js), collapsing either into a single
- *  comma-joined, trimmed, lowercased form. Commas are used for the
- *  *stored* (URL) form specifically because they don't need URL-encoding
- *  the way a space does (no `%20`/`+`), keeping shared links readable. */
+/** Normalizes a filter query to `group[,group…]`, each group a single-spaced
+ *  run of words, all lowercased.
+ *
+ *  Commas and whitespace mean different things (see `queryMatchesText`):
+ *  a comma separates alternatives, whitespace joins words that must all
+ *  appear. So "Luka Renko" stays one two-word group, while "Ramuta, Simonič"
+ *  becomes two one-word groups. They used to be interchangeable, which left
+ *  no way to ask for either-of — the case that matters when a list of
+ *  surnames is fed in from the matches page's surname scope.
+ *
+ *  Spaces survive into the stored (URL) form: `toUnicodeSearch` renders
+ *  `%20`/`+` back to a literal space, so shared links stay readable. */
 export function normalizeQuery(raw) {
-  return raw.trim().toLowerCase().split(/[\s,]+/).filter(Boolean).join(',');
+  return String(raw ?? '')
+    .toLowerCase()
+    .split(',')
+    .map(group => group.split(/\s+/).filter(Boolean).join(' '))
+    .filter(Boolean)
+    .join(',');
+}
+
+/** True when `haystack` (already lowercased) satisfies a `normalizeQuery`
+ *  form: **any** comma-separated group matches, and a group matches when
+ *  **all** of its words appear somewhere in the haystack, in any order.
+ *
+ *  So "novak kovač" wants both words on one row, "novak,kovač" wants either,
+ *  and "luka renko,marija novak" wants either whole pair. Shared by the
+ *  generic table filter and the matches detail view so the two never drift. */
+export function queryMatchesText(haystack, query) {
+  if (!query) return true;
+  return query.split(',').some(group => {
+    const terms = group.split(' ').filter(Boolean);
+    return terms.length > 0 && terms.every(term => haystack.includes(term));
+  });
 }
 
 /** Mirrors `value` into the URL under `paramKey` via replaceState, keeping

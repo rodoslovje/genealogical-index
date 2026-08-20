@@ -183,7 +183,7 @@ export default {
     filter_links: 'Hivatkozások',
     filter_active: 'Aktív szűrők',
     clear_filter: 'Szűrő törlése',
-    tip_table_filter: 'Sorok szűrése bármely látható érték szerint.',
+    tip_table_filter: 'Sorok szűrése bármely látható érték szerint. Minden szónak egyeznie kell; a változatokat vesszővel válassza el.',
     tip_match_add: 'A másik genealógus rendelkezik adattal egy vagy több mezőhöz, amely itt hiányzik (pl. halálozási vagy temetési dátum).',
     tip_match_link_add: 'A másik genealógusnak van egy hivatkozása (pl. forrás vagy sírrekord), amely itt hiányzik.',
     tip_match_diff: 'Ennek a párnak egy vagy több mezőben eltérő értékei vannak.',

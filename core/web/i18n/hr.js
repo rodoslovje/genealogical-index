@@ -182,7 +182,7 @@ export default {
     filter_links: 'Poveznice',
     filter_active: 'Aktivni filtri',
     clear_filter: 'Obriši filtar',
-    tip_table_filter: 'Filtriraj redove po bilo kojoj prikazanoj vrijednosti.',
+    tip_table_filter: 'Filtriraj redove po bilo kojoj prikazanoj vrijednosti. Sve se riječi moraju podudarati; alternative odvojite zarezom.',
     tip_match_add: 'Drugi rodoslovac ima podatke za jedno ili više polja koji ovdje nedostaju (npr. datum smrti ili pokopa).',
     tip_match_link_add: 'Drugi rodoslovac ima poveznicu (npr. izvor ili zapis o grobu) koja ovdje nedostaje.',
     tip_match_diff: 'Ovaj par ima neusklađene vrijednosti za jedno ili više polja.',

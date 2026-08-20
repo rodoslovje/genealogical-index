@@ -183,7 +183,7 @@ export default {
     filter_links: 'Links',
     filter_active: 'Active filters',
     clear_filter: 'Clear filter',
-    tip_table_filter: 'Filter rows by any visible column value.',
+    tip_table_filter: 'Filter rows by any visible column value. All words must match; separate alternatives with a comma.',
     tip_match_add: 'The other genealogist has data for one or more fields that is missing here (e.g. a death or burial date).',
     tip_match_link_add: 'The other genealogist has a link (e.g. a source or grave record) that is missing here.',
     tip_match_diff: 'This pair has conflicting values for one or more fields.',

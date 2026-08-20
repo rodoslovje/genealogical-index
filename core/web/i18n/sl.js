@@ -182,7 +182,7 @@ export default {
     filter_links: 'Povezave',
     filter_active: 'Aktivni filtri',
     clear_filter: 'Počisti filter',
-    tip_table_filter: 'Filtriraj vrstice po kateri koli prikazani vrednosti.',
+    tip_table_filter: 'Filtriraj vrstice po kateri koli prikazani vrednosti. Ujemati se morajo vse besede; različice ločite z vejico.',
     tip_match_add: 'Drugi rodoslovec ima podatke za eno ali več polj, ki tukaj manjkajo (npr. datum smrti ali pogreba).',
     tip_match_link_add: 'Drugi rodoslovec ima povezavo (npr. vir ali zapis o grobu), ki tukaj manjka.',
     tip_match_diff: 'Ta par ima neujemajoče vrednosti pri enem ali več poljih.',

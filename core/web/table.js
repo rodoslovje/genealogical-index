@@ -5,7 +5,7 @@ import { childYearOf, parseDateForSort } from './lib/dates.js';
 import { toUnicodeHref } from './lib/url.js';
 import { createExportButton } from './lib/icons.js';
 import { exportToCSV } from './table-csv.js';
-import { mountTableFilter, observeStickyHeader } from './lib/table-filter.js';
+import { mountTableFilter, observeStickyHeader, queryMatchesText } from './lib/table-filter.js';
 import siteConfig from '@site-config';
 
 // Re-exported so existing importers (`contributors/*`, surname cloud) can keep
@@ -204,15 +204,13 @@ function getValue(row, col) {
 // "Kranjc" even though neither column alone contains that phrase. A
 // single-term query keeps the simple substring behavior this had before.
 function rowMatchesQuery(row, columns, query) {
-  const terms = query.split(/[\s,]+/).filter(Boolean);
-  if (!terms.length) return true;
   const haystack = columns
     .filter(col => !FILTER_SKIP_COLUMNS.has(col))
     .map(col => row[col])
     .filter(val => val != null)
     .join(' ')
     .toLowerCase();
-  return terms.every(term => haystack.includes(term));
+  return queryMatchesText(haystack, query);
 }
 
 function sortData(data, primary, secondary) {

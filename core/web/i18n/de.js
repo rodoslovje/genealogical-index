@@ -183,7 +183,7 @@ export default {
     filter_links: 'Links',
     filter_active: 'Aktive Filter',
     clear_filter: 'Filter löschen',
-    tip_table_filter: 'Zeilen nach einem beliebigen angezeigten Wert filtern.',
+    tip_table_filter: 'Zeilen nach einem beliebigen angezeigten Wert filtern. Alle Wörter müssen übereinstimmen; Alternativen mit Komma trennen.',
     tip_match_add: 'Der andere Genealoge hat Daten für ein oder mehrere Felder, die hier fehlen (z. B. ein Sterbe- oder Begräbnisdatum).',
     tip_match_link_add: 'Der andere Genealoge hat einen Link (z. B. zu einer Quelle oder einem Grabeintrag), der hier fehlt.',
     tip_match_diff: 'Dieses Paar hat widersprüchliche Werte für ein oder mehrere Felder.',
