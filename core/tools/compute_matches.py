@@ -79,6 +79,14 @@ CONFIDENCE_MIN = 0.80  # records below this threshold are not stored
 TRGM_THRESHOLD = 0.72  # pg_trgm.similarity_threshold for the % join operator
 # kept below CONFIDENCE_MIN so pairs where one surname/name
 # field is weaker but year+place compensate are not missed
+FILL_BATCH_ROWS = 100_000  # rows per transaction when filling the precomputed
+# match columns. Batching matters operationally: a single full-table UPDATE on
+# millions of rows runs for an hour, and any interruption (container restart,
+# OOM) rolls the whole thing back — losing all progress AND leaving millions
+# of dead row versions that cripple the site's searches until vacuum catches
+# up. With batches, a killed run loses at most one batch: full recomputes
+# checkpoint their position in match_meta, incremental fills are driven by
+# the birth_q/marriage_q NULL markers.
 MATCH_COLUMN_SCHEMA_VERSION = 1  # bump when the definition of any
 # precomputed match column changes (name_canon_text(), list_match_text(),
 # date_qualifier(), the *_full_date normalisation, ...) — it is hashed into
@@ -210,12 +218,12 @@ NAME_SYNONYM_GROUPS = {
     "christina": ["kristina"],
 }
 
-# Seeds/refreshes the synonym machinery: the name_synonyms lookup table, the
-# *_name_canon columns, and name_canon_text() — which folds every token of a
-# given name through the synonym table and sorts the tokens, so
-# "Janez Krstnik"/"Krstnik Johannes" both canonicalise to
-# "johannes krstnik". STABLE (reads name_synonyms), so the result is stored
-# in real columns by main() rather than generated columns.
+# Seeds/refreshes the synonym machinery: the name_synonyms lookup table,
+# match_meta, and name_canon_text() — which folds every token of a given name
+# through the synonym table and sorts the tokens, so "Janez Krstnik"/
+# "Krstnik Johannes" both canonicalise to "johannes krstnik". STABLE (reads
+# name_synonyms), so the result is stored in real columns via _run_fill()
+# rather than generated columns.
 _NAME_CANON_SETUP_SQL = text(r"""
     CREATE TABLE IF NOT EXISTS name_synonyms (
         variant TEXT PRIMARY KEY,
@@ -225,18 +233,35 @@ _NAME_CANON_SETUP_SQL = text(r"""
         key   TEXT PRIMARY KEY,
         value TEXT
     );
-    -- Precomputed match columns. The hot candidate join used to evaluate
-    -- date_qualifier()/has_day_precision() (regexes) and list_match_text()
-    -- (JSONB rebuild) once per CANDIDATE PAIR — a person joined against 500
-    -- candidates re-ran all of them 500 times, in every pair job. They are
-    -- pure functions of the row, so main() computes them once per row here:
-    --   *_q               date_qualifier() code (0/1/2/3)
-    --   *_full_date       lower(trim(date)) when day-precise, else NULL —
-    --                     full_*_match becomes a plain equality
-    --   *_match_text      list_match_text() of the JSONB list
-    -- birth_q/marriage_q double as the "row is filled in" marker (they are
-    -- never NULL after a fill), so the incremental backfill only touches
-    -- freshly imported rows.
+    CREATE OR REPLACE FUNCTION name_canon_text(t text) RETURNS text
+        LANGUAGE sql STABLE PARALLEL SAFE AS
+    $$
+    SELECT COALESCE(
+        string_agg(COALESCE(ns.canon, w.tok), ' ' ORDER BY COALESCE(ns.canon, w.tok)),
+        '')
+    FROM regexp_split_to_table(COALESCE(t, ''), '[^a-z]+') AS w(tok)
+    LEFT JOIN name_synonyms ns ON ns.variant = w.tok
+    WHERE w.tok <> ''
+    $$;
+""")
+
+# Precomputed match columns. The hot candidate join used to evaluate
+# date_qualifier()/has_day_precision() (regexes) and list_match_text()
+# (JSONB rebuild) once per CANDIDATE PAIR — a person joined against 500
+# candidates re-ran all of them 500 times, in every pair job. They are
+# pure functions of the row, so main() computes them once per row instead:
+#   *_q               date_qualifier() code (0/1/2/3)
+#   *_full_date       lower(trim(date)) when day-precise, else NULL —
+#                     full_*_match becomes a plain equality
+#   *_match_text      list_match_text() of the JSONB list
+# birth_q/marriage_q double as the "row is filled in" marker (they are
+# never NULL after a fill), so the incremental backfill only touches
+# freshly imported rows.
+# Executed ONLY when a probe shows a column is missing: ALTER TABLE takes an
+# ACCESS EXCLUSIVE lock even when IF NOT EXISTS no-ops, and on a live site
+# that lock queues behind long-running searches — with every later query
+# queueing behind IT.
+_MATCH_COLUMNS_DDL = text("""
     ALTER TABLE persons
         ADD COLUMN IF NOT EXISTS name_canon TEXT,
         ADD COLUMN IF NOT EXISTS birth_q SMALLINT,
@@ -253,17 +278,6 @@ _NAME_CANON_SETUP_SQL = text(r"""
         ADD COLUMN IF NOT EXISTS husband_parents_match_text TEXT,
         ADD COLUMN IF NOT EXISTS wife_parents_match_text TEXT,
         ADD COLUMN IF NOT EXISTS children_match_text TEXT;
-
-    CREATE OR REPLACE FUNCTION name_canon_text(t text) RETURNS text
-        LANGUAGE sql STABLE PARALLEL SAFE AS
-    $$
-    SELECT COALESCE(
-        string_agg(COALESCE(ns.canon, w.tok), ' ' ORDER BY COALESCE(ns.canon, w.tok)),
-        '')
-    FROM regexp_split_to_table(COALESCE(t, ''), '[^a-z]+') AS w(tok)
-    LEFT JOIN name_synonyms ns ON ns.variant = w.tok
-    WHERE w.tok <> ''
-    $$;
 """)
 
 # Extracts a canonical plain-text form of a parents/partners/children JSONB
@@ -817,6 +831,62 @@ _FAMILY_INSERT = text(r"""
 """)
 
 
+def _run_fill(table, fill_sql, marker, full):
+    """Fill one table's precomputed match columns in FILL_BATCH_ROWS batches.
+
+    Each batch commits in its own transaction, so an interrupted run neither
+    rolls back hours of work nor holds long-lived row locks. `full` recomputes
+    every row (id-range batches, position checkpointed in match_meta so a
+    restart continues where it left off); otherwise only rows whose `marker`
+    column is NULL — i.e. freshly imported ones — are filled. Returns the
+    number of rows updated.
+    """
+    total = 0
+    t0 = time.monotonic()
+    if full:
+        key = f"match_fill_{table}_next"
+        with engine.connect() as conn:
+            lo, hi = conn.execute(text(f"SELECT MIN(id), MAX(id) FROM {table}")).fetchone()
+            saved = conn.execute(
+                text("SELECT value FROM match_meta WHERE key = :k"), {"k": key}
+            ).scalar()
+        if lo is None:
+            return 0
+        start = max(lo, int(saved)) if saved else lo
+        if start > lo:
+            log.info(f"  {table}: resuming column fill from id {start:,}")
+        while start <= hi:
+            with engine.begin() as conn:
+                total += conn.execute(text(
+                    f"{fill_sql} WHERE id >= {start} AND id < {start + FILL_BATCH_ROWS}"
+                )).rowcount
+                conn.execute(
+                    text("INSERT INTO match_meta (key, value) VALUES (:k, :v) "
+                         "ON CONFLICT (key) DO UPDATE SET value = :v"),
+                    {"k": key, "v": str(start + FILL_BATCH_ROWS)},
+                )
+            start += FILL_BATCH_ROWS
+            log.info(
+                f"  {table}: {total:,} rows filled "
+                f"({min(start, hi + 1) - lo:,}/{hi - lo + 1:,} ids, "
+                f"{time.monotonic() - t0:.0f}s)"
+            )
+        with engine.begin() as conn:
+            conn.execute(text("DELETE FROM match_meta WHERE key = :k"), {"k": key})
+    else:
+        while True:
+            with engine.begin() as conn:
+                n = conn.execute(text(
+                    f"{fill_sql} WHERE id IN (SELECT id FROM {table} "
+                    f"WHERE {marker} IS NULL LIMIT {FILL_BATCH_ROWS})"
+                )).rowcount
+            if not n:
+                break
+            total += n
+            log.info(f"  {table}: {total:,} new rows filled ({time.monotonic() - t0:.0f}s)")
+    return total
+
+
 def reclaim_orphaned_running(conn):
     """Reset orphaned 'running' jobs back to 'pending'.
 
@@ -1088,18 +1158,34 @@ def main(workers=4):
     with engine.begin() as conn:
         conn.execute(_LIST_MATCH_TEXT_SQL)  # date_qualifier() + list_match_text()
         conn.execute(_NAME_CANON_SETUP_SQL)
+        # Add the precomputed columns only when actually missing — see
+        # _MATCH_COLUMNS_DDL for why the no-op ALTER is not harmless.
+        missing = conn.execute(text("""
+            SELECT COUNT(*) FROM (VALUES ('persons', 'birth_q'),
+                                         ('families', 'marriage_q')) v(t, c)
+            WHERE NOT EXISTS (SELECT 1 FROM information_schema.columns
+                              WHERE table_name = v.t AND column_name = v.c)
+        """)).scalar()
+        if missing:
+            conn.execute(_MATCH_COLUMNS_DDL)
         stored = conn.execute(
             text("SELECT value FROM match_meta WHERE key = 'name_synonyms_version'")
         ).scalar()
-        if stored != match_version:
+        full = stored != match_version
+        if full:
             log.info("Synonym list or column schema changed — recomputing all match columns...")
             conn.execute(text("DELETE FROM name_synonyms"))
             conn.execute(
                 text("INSERT INTO name_synonyms (variant, canon) VALUES (:variant, :canon)"),
                 syn_rows,
             )
-            conn.execute(text(persons_fill))
-            conn.execute(text(families_fill))
+    # Batched, restart-safe fills — each batch commits separately, and the
+    # version is stamped only after BOTH tables completed, so an interrupted
+    # full recompute resumes from its checkpoint instead of starting over.
+    n_filled = _run_fill("persons", persons_fill, "birth_q", full)
+    n_filled += _run_fill("families", families_fill, "marriage_q", full)
+    if full:
+        with engine.begin() as conn:
             conn.execute(
                 text(
                     "INSERT INTO match_meta (key, value) VALUES ('name_synonyms_version', :v) "
@@ -1107,12 +1193,18 @@ def main(workers=4):
                 ),
                 {"v": match_version},
             )
-        else:
-            conn.execute(text(persons_fill + " WHERE name_canon IS NULL OR birth_q IS NULL"))
-            conn.execute(text(
-                families_fill + " WHERE husband_name_canon IS NULL OR marriage_q IS NULL"
-            ))
     log.info(f"Precomputed match columns ready in {time.monotonic()-t_syn:.1f}s")
+
+    # A large fill rewrites a large share of both tables, leaving dead row
+    # versions and stuffed GIN pending lists that slow every search until
+    # vacuum catches up. Don't wait for throttled autovacuum — clean up now.
+    if n_filled >= FILL_BATCH_ROWS:
+        log.info(f"Filled {n_filled:,} rows — running VACUUM ANALYZE to clean up...")
+        t_vac = time.monotonic()
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            conn.execute(text("VACUUM (ANALYZE) persons"))
+            conn.execute(text("VACUUM (ANALYZE) families"))
+        log.info(f"  VACUUM done in {time.monotonic()-t_vac:.0f}s")
 
     log.info("Running ANALYZE for fresh planner statistics...")
     with engine.begin() as conn:
