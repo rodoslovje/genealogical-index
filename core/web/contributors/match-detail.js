@@ -5,7 +5,7 @@ import { csvRow } from '../lib/csv.js';
 import { parseDateForSort } from '../lib/dates.js';
 import {
   isPrivate, getExpandCollapseIcon, shortenUrlLabel, baseContributorName,
-  matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
+  matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
   escapeHtml, highlightDifferences, formatExportFilename, classifyMatchPair, HIGHLIGHTABLE,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
@@ -173,13 +173,15 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
     urlsHtml += `</div>`;
   }
 
-  const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav>${contribBase}</a></strong>${contribInd}`;
-  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', c: partnerBase })}" data-spa-nav>${partnerBase}</a></strong>${partnerInd}`;
+  const contribTitle = deceasedTitleAttr(contributor, t('memorial_title'));
+  const partnerTitle = deceasedTitleAttr(partner, t('memorial_title'));
+  const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav${contribTitle}>${contribBase}</a></strong>${contribInd}`;
+  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', c: partnerBase })}" data-spa-nav${partnerTitle}>${partnerBase}</a></strong>${partnerInd}`;
   const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
 
   const baseHtml = `
     <div class="matches-page-header">
-      <h2 class="matches-page-title">${partnerBase}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav style="color: inherit; text-decoration: none;">${contribBase}</a>${contribInd} - ${formatTitleSuffix(t('col_matches'))}</h2>
+      <h2 class="matches-page-title"><span${partnerTitle}>${partnerBase}</span>${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav style="color: inherit; text-decoration: none;"${contribTitle}>${contribBase}</a>${contribInd} - ${formatTitleSuffix(t('col_matches'))}</h2>
     </div>
     <p>${introText}</p>
     ${urlsHtml}`;

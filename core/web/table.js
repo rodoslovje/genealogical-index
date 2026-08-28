@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { formatLinks } from './lib/links.js';
-import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isSpecialContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList, pairRelatives } from './lib/utils.js';
+import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isSpecialContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList, pairRelatives } from './lib/utils.js';
 import { childYearOf, parseDateForSort } from './lib/dates.js';
 import { toUnicodeHref } from './lib/url.js';
 import { createExportButton } from './lib/icons.js';
@@ -591,16 +591,18 @@ function renderCellHtml(col, row) {
       : '') + deceasedIndicatorHtml(name, t('memorial_title'));
     const internalHref = row._match_href || row._contributor_href || '';
     const externalUrl = row._url || '';
-    if (internalHref) return `<td class="col-center"><a href="${internalHref}" data-spa-nav>${display}</a>${indicator}</td>`;
-    if (externalUrl)  return `<td class="col-center"><a href="${externalUrl}" target="_blank" rel="noopener">${display}</a>${indicator}</td>`;
-    return `<td class="col-center">${display}${indicator}</td>`;
+    // Same memorial tooltip on the name as on the candle beside it.
+    const nameTitle = deceasedTitleAttr(name, t('memorial_title'));
+    if (internalHref) return `<td class="col-center"><a href="${internalHref}" data-spa-nav${nameTitle}>${display}</a>${indicator}</td>`;
+    if (externalUrl)  return `<td class="col-center"><a href="${externalUrl}" target="_blank" rel="noopener"${nameTitle}>${display}</a>${indicator}</td>`;
+    return `<td class="col-center"><span${nameTitle}>${display}</span>${indicator}</td>`;
   }
   if (col === 'contributor') {
     const name = row[col] || '';
     if (!name) return `<td></td>`;
     const display = baseContributorName(name);
     const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index')) + militaryIndicatorHtml(name, t('icon_military_index')) + deceasedIndicatorHtml(name, t('memorial_title'));
-    return `<td><a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
+    return `<td><a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav${deceasedTitleAttr(name, t('memorial_title'))}>${display}</a>${indicator}</td>`;
   }
   if (CENTERED_COLUMNS.has(col)) {
     let val = NUMERIC_COLUMNS.has(col) && row[col] != null ? Number(row[col]).toLocaleString() : (row[col] || '');

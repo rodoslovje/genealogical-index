@@ -450,6 +450,37 @@ export function deceasedFullName(name) {
   return deceasedContributors[baseContributorName(name)]?.fullName || '';
 }
 
+/** Returns the memorial-page URL for a deceased genealogist, or '' if there
+ *  isn't one. */
+export function deceasedMemorialUrl(name) {
+  if (!name) return '';
+  return deceasedContributors[baseContributorName(name)]?.memorialUrl || '';
+}
+
+/** Builds the memorial tooltip text, worded and ordered exactly like the panel
+ *  heading on the contributor page — "In memoriam — Bojan Golli (1950–2023)" —
+ *  dropping whichever of the name and the years we don't have. Returns '' for a
+ *  contributor who isn't marked. Slovene and Croatian have no sex-neutral way
+ *  to say "deceased genealogist", so nothing here refers to the person
+ *  grammatically. */
+export function deceasedTooltip(name, tooltip) {
+  const marker = deceasedMarker(name);
+  if (!marker) return '';
+  const years = deceasedYears(marker);
+  const fullName = deceasedFullName(name);
+  let text = tooltip || '';
+  if (fullName) text = text ? `${text} — ${fullName}` : fullName;
+  if (years) text = text ? `${text} (${years})` : years;
+  return text;
+}
+
+/** Returns ` title="…"` for a deceased genealogist's *name*, so hovering the
+ *  name says the same thing as hovering the candle beside it. '' otherwise. */
+export function deceasedTitleAttr(name, tooltip) {
+  const text = deceasedTooltip(name, tooltip);
+  return text ? ` title="${escapeHtml(text)}"` : '';
+}
+
 export function isDeceasedContributor(name) {
   return !!deceasedMarker(name);
 }
@@ -527,21 +558,22 @@ export function militaryIndicatorHtml(name, tooltip) {
 /** Returns the HTML for the memorial candle shown next to a deceased
  *  genealogist's name, or '' if they are not marked. Unlike the source
  *  indicators above this one is about the person, not the kind of source, so
- *  callers put it last — after any ⛪/🪦/🎖 badge. */
+ *  callers put it last — after any ⛪/🪦/🎖 badge.
+ *
+ *  When a memorial page exists the candle is a link to it — the name beside it
+ *  already goes to the contributor page, and this is the only place the
+ *  memorial page is reachable from a table. Without one it stays an inert
+ *  span carrying just the tooltip. Callers place it outside their own <a>, so
+ *  this never nests anchors. */
 export function deceasedIndicatorHtml(name, tooltip) {
-  const marker = deceasedMarker(name);
-  if (!marker) return '';
-  const years = deceasedYears(marker);
-  // "Bojan Golli — In memoriam (1950–2023)", dropping whichever of the name and
-  // the years we don't have. The wording is deliberately the same phrase the
-  // panel uses: Slovene and Croatian have no sex-neutral way to say "deceased
-  // genealogist", so nothing here refers to the person grammatically.
-  const fullName = deceasedFullName(name);
-  let text = tooltip || '';
-  if (years) text = `${text} (${years})`.trim();
-  if (fullName) text = text ? `${fullName} — ${text}` : fullName;
+  const text = deceasedTooltip(name, tooltip);
+  if (!text) return '';
   const safe = escapeHtml(text);
-  return ` <span class="deceased-indicator" title="${safe}" aria-label="${safe}">${DECEASED_INDICATOR}</span>`;
+  const url = deceasedMemorialUrl(name);
+  if (!url) {
+    return ` <span class="deceased-indicator" title="${safe}" aria-label="${safe}">${DECEASED_INDICATOR}</span>`;
+  }
+  return ` <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="deceased-indicator" title="${safe}" aria-label="${safe}">${DECEASED_INDICATOR}</a>`;
 }
 
 // --- inline row icons for optional fields shown in result cells ---

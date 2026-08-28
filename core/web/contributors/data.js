@@ -66,7 +66,11 @@ export function ensureData() {
         // rendered from any table row without threading the data through.
         setDeceasedContributors(Object.fromEntries(
           cachedData.filter(d => d._deceased)
-            .map(d => [d.contributor_ID, { marker: d._deceased, fullName: d._full_name }])
+            .map(d => [d.contributor_ID, {
+              marker: d._deceased,
+              fullName: d._full_name,
+              memorialUrl: d._memorial_url,
+            }])
         ));
         return cachedData;
       });

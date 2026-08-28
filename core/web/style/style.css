@@ -1406,6 +1406,15 @@ body.compact-nav .mobile-nav-section { display: flex; }
   opacity: 0.75;
   cursor: pointer;
 }
+/* The candle is an <a> to the memorial page when one exists; keep it looking
+   like the other badges rather than like body-text link. */
+a.deceased-indicator {
+  text-decoration: none;
+  color: inherit;
+}
+a.deceased-indicator:hover {
+  opacity: 1;
+}
 
 /* "In memoriam" panel at the top of a deceased genealogist's page. Quiet by
    design — their data below stays exactly as usable as anyone else's. */
