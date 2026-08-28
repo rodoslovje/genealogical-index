@@ -16,6 +16,7 @@ const LANG_META = {
   en: { flag: '🇬🇧', code: 'EN', name: 'English' },
   sl: { flag: '🇸🇮', code: 'SL', name: 'Slovenščina' },
   hr: { flag: '🇭🇷', code: 'HR', name: 'Hrvatski' },
+  fr: { flag: '🇫🇷', code: 'FR', name: 'Français' },
   hu: { flag: '🇭🇺', code: 'HU', name: 'Magyar' },
   de: { flag: '🇩🇪', code: 'DE', name: 'Deutsch' },
   it: { flag: '🇮🇹', code: 'IT', name: 'Italiano' },

@@ -16,7 +16,7 @@ const siteConfig = {
   filePrefix: 'tgi',
 
   // Languages shown in the dropdown, ordered alphabetically by language name
-  languages: ['de', 'en', 'hr', 'hu', 'it', 'sl'],
+  languages: ['de', 'en', 'fr', 'hr', 'hu', 'it', 'sl'],
 
   // Preferred language when no saved preference or browser match is found
   defaultLang: 'sl',
@@ -24,6 +24,7 @@ const siteConfig = {
   // Per-language overrides: site title and society name
   i18n: {
     en: { site_title: 'TEST Genealogical Index',  society_name: 'TEST Genealogy Society' },
+    fr: { site_title: 'Index généalogique TEST', society_name: 'Société généalogique TEST' },
     sl: { site_title: 'TEST rodoslovni indeks',   society_name: 'TEST rodoslovno društvo' },
     hr: { site_title: 'TEST rodoslovni indeks',   society_name: 'TEST rodoslovno društvo' },
     hu: { site_title: 'TEST Genealógiai Index',   society_name: 'TEST Genealógiai Társaság' },
@@ -36,6 +37,16 @@ const siteConfig = {
   intro: {
     en: [
       { text: 'This is a TEST site.' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+      { text: '' },
+    ],
+    fr: [
+      { text: 'Ceci est un site de TEST.' },
       { text: '' },
       { text: '' },
       { text: '' },

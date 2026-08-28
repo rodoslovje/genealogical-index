@@ -21,7 +21,7 @@ const siteConfig = {
   gatedFeatures: ['matricula', 'geneanet', 'military'],
 
   // Languages shown in the dropdown, ordered alphabetically by language name
-  languages: ['de', 'en', 'hr', 'hu', 'it', 'sl'],
+  languages: ['de', 'en', 'fr', 'hr', 'hu', 'it', 'sl'],
 
   // Preferred language when no saved preference or browser match is found
   defaultLang: 'hr',
@@ -29,6 +29,7 @@ const siteConfig = {
   // Per-language overrides: site title and society name
   i18n: {
     en: { site_title: 'Croatian Genealogical Index',      society_name: 'Croatian Genealogy Society “Pavao Ritter Vitezović”' },
+    fr: { site_title: 'Index généalogique croate',        society_name: 'Société généalogique croate « Pavao Ritter Vitezović »' },
     sl: { site_title: 'Hrvaški rodoslovni indeks',        society_name: 'Hrvaško rodoslovno društvo “Pavao Ritter Vitezović”' },
     hr: { site_title: 'Hrvatski rodoslovni indeks',       society_name: 'Hrvatsko rodoslovno društvo “Pavao Ritter Vitezović”' },
     hu: { site_title: 'Horvát Genealógiai Index',         society_name: '”Pavao Ritter Vitezović” Horvát Genealógiai Társaság' },
@@ -46,6 +47,14 @@ const siteConfig = {
       { text: 'The index is built from data in GEDCOM files contributed by many genealogists, listed on the <a href="?t=contributors">Sources</a> page.' },
       { text: 'Warning! The Croatian Genealogical Index is for informational purposes only. The Croatian Genealogy Society "Pavao Ritter Vitezović" disclaims all responsibility for the accuracy of the data submitted. The society is a voluntary association of individuals who develop a shared knowledge source drawn from parish registers and other written and oral sources. Its structure allows anyone with their own collection of genealogical data to add it to the shared combined collection and index. Neither the individual contributors nor the Croatian Genealogy Society "Pavao Ritter Vitezović" can guarantee the accuracy of the data.', warning: true },
       { text: 'If you keep your own family tree in a database and would like to join the existing contributors with the results of your work, export the data to a GEDCOM file (without data on living persons) and send it to the administrator by <a href="mailto:rodoslovlje@rodoslovlje.hr">email</a>.' },
+    ],
+    fr: [
+      { text: '<strong>L\'Index généalogique croate</strong> est une collection archivistique de données sur les personnes et les familles de Croatie, constituée à partir des collections de généalogistes individuels. Vous pouvez y rechercher les prénoms et les noms des personnes que vous étudiez, afin de savoir si quelqu\'un d\'autre les a peut-être déjà découvertes et décrites. L\'index de base contient les noms de personnes, les dates et lieux de naissance, de mariage et de décès, ainsi que les liens vers les parents, les conjoints et les enfants. Chaque enregistrement comporte également le nom du généalogiste ayant fourni les données, ce qui permet au chercheur de poursuivre le contact, lui indique une direction et rend souvent possible la recherche dans une paroisse découverte de manière indirecte. Les coordonnées des généalogistes ne sont pas publiées, mais il ne sera pas difficile de les joindre par l\'intermédiaire de la <a href="https://www.rodoslovlje.hr" target="_blank" rel="noopener">Société généalogique croate « Pavao Ritter Vitezović »</a>.' },
+      { text: 'L\'application offre des options avancées de recherche, de tri et d\'exportation des données. Pour des instructions détaillées sur l\'utilisation de toutes les fonctionnalités, consultez le <a href="#" onclick="document.getElementById(\'help-toggle-btn\')?.click(); return false;">guide d\'utilisation</a>.' },
+      { text: 'L\'index des familles peut également contenir des parents qui ne se sont jamais mariés, voire n\'ont jamais vécu ensemble &ndash; une information précieuse pour les descendants et pour d\'autres chercheurs.' },
+      { text: 'L\'index est constitué à partir des données de fichiers GEDCOM que nous ont transmis de nombreux généalogistes, énumérés sur la page <a href="?t=contributors">Sources</a>.' },
+      { text: 'Avertissement ! L\'Index généalogique croate a un caractère purement informatif. La Société généalogique croate « Pavao Ritter Vitezović » décline toute responsabilité quant à l\'exactitude des données transmises. La société est une association volontaire de personnes qui développent une source de connaissances commune, issue des registres paroissiaux ainsi que d\'autres sources écrites et orales. Sa structure permet à quiconque possède sa propre collection de données généalogiques de l\'ajouter à la collection commune et à l\'index. Ni la personne qui a fourni les données ni la Société généalogique croate « Pavao Ritter Vitezović » ne garantissent leur exactitude.', warning: true },
+      { text: 'Si vous conservez votre arbre généalogique sous forme de base de données et souhaitez rejoindre les contributeurs actuels avec le fruit de votre travail, exportez les données dans un fichier GEDCOM (sans les données sur les personnes vivantes) et envoyez-le à l\'administrateur par <a href="mailto:rodoslovlje@rodoslovlje.hr">e-mail</a>.' },
     ],
     sl: [
       { text: '<strong>Hrvatski rodoslovni indeks</strong> je arhivska zbirka podatkov o osebah in družinah na Hrvaškem, ki nastaja iz zbirk posameznih rodoslovcev. V njej lahko poiščete imena in priimke oseb, ki jih raziskujete, da bi ugotovili, ali jih je morda odkril in popisal že kdo drug. Osnovni indeks vsebuje osebna imena, datume in kraje rojstev, porok in smrti, prav tako pa tudi povezave do staršev, partnerjev in otrok. Pri vsakem zapisu je tudi priimek rodoslovca &ndash; dajalca podatkov, kar iskalcu omogoči nadaljnji stik, nakaže smer in pogosto sploh omogoči nadaljnje raziskovanje v posredno odkriti župniji. Kontaktni podatki rodoslovcev sicer niso objavljeni, vendar do njih ne bo težko priti prek <a href="https://www.rodoslovlje.hr" target="_blank" rel="noopener">Hrvaškega rodoslovnega društva »Pavao Ritter Vitezović«</a>.' },
