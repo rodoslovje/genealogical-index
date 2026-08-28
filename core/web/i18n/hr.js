@@ -210,7 +210,7 @@ export default {
     more_info_about: 'Više informacija o izvoru',
     memorial_title: 'U spomen',
     memorial_note: 'Njegov rodoslovni rad ostaje objavljen ovdje, njemu u spomen.',
-    personal_page: 'Osobna stranica',
+    memorial_page: 'Spomen stranica',
     back_to_genealogists: 'Izvori',
     genealogist: 'Izvor',
     matches_persons: 'Osobe',

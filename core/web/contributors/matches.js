@@ -57,7 +57,7 @@ function renderMemorial(contribData, displayName, url) {
   }
   const memorialUrl = contribData._memorial_url;
   if (memorialUrl) {
-    links.push(`<a href="${memorialUrl}" target="_blank" rel="noopener">🕯 ${t('personal_page')}</a>`);
+    links.push(`<a href="${memorialUrl}" target="_blank" rel="noopener">🕯 ${t('memorial_page')}</a>`);
   }
   const linksHtml = links.length
     ? `<div class="contributor-memorial-links">${links.join('<span class="contributor-memorial-sep">·</span>')}</div>`

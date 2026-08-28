@@ -211,7 +211,7 @@ export default {
     more_info_about: 'More information about source',
     memorial_title: 'In memoriam',
     memorial_note: 'Their genealogical work remains published here in their memory.',
-    personal_page: 'Personal page',
+    memorial_page: 'Memorial page',
     back_to_genealogists: 'Sources',
     genealogist: 'Source',
     matches_persons: 'Persons',

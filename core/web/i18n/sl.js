@@ -210,7 +210,7 @@ export default {
     more_info_about: 'Več informacij o viru',
     memorial_title: 'V spomin',
     memorial_note: 'Njegovo rodoslovno delo ostaja objavljeno tukaj, njemu v spomin.',
-    personal_page: 'Osebna stran',
+    memorial_page: 'Spominska stran',
     back_to_genealogists: 'Viri',
     genealogist: 'Vir',
     matches_persons: 'Osebe',
