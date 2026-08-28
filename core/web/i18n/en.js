@@ -157,6 +157,7 @@ export default {
     icon_alt_surname: 'Alternate surnames',
     icon_baptism: 'Baptism',
     icon_notes: 'Notes',
+    icon_deceased: 'Genealogist has passed away',
 
     // Matches
     col_matches: 'Matches',
@@ -208,6 +209,9 @@ export default {
     book_type_marriage: 'Marriage',
     book_type_death: 'Death',
     more_info_about: 'More information about source',
+    memorial_title: 'In memoriam',
+    memorial_note: 'Their genealogical work remains published here in their memory.',
+    personal_page: 'Personal page',
     back_to_genealogists: 'Sources',
     genealogist: 'Source',
     matches_persons: 'Persons',

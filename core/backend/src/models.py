@@ -68,6 +68,14 @@ class Contributor(Base):
     families_count = Column(Integer, default=0)
     links_count = Column(Integer, default=0)
     intro = Column(Text, nullable=True)
+    # Real name behind the contributor key ("Golli" -> "Bojan Golli"). Only
+    # ever surfaced by the API for genealogists marked deceased — see
+    # crud._compute_contributors.
+    full_name = Column(Text, nullable=True)
+    # Set for genealogists who have passed away. Free-form so partial dates
+    # work: "1948-2024", "2024", or just "true" when no years are known.
+    deceased = Column(Text, nullable=True)
+    memorial_url = Column(Text, nullable=True)
 
 
 class MatchJob(Base):

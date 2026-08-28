@@ -417,6 +417,50 @@ const SPECIAL_SUFFIXES = [MATRICULA_SUFFIX, GENEANET_SUFFIX, MILITARY_SUFFIX];
 const MATRICULA_INDICATOR = '⛪';
 const GENEANET_INDICATOR = '🪦';
 const MILITARY_INDICATOR = '🎖';
+const DECEASED_INDICATOR = '🕯';
+
+// Base contributor name -> { marker, fullName }, where marker is the `deceased`
+// value ("1948-2024", "2024" or "true") and fullName the genealogist's real
+// name, which the API sends only for the deceased. Populated by
+// contributors/data.js once the contributors list has loaded, so this module
+// stays free of feature-module imports. Empty until then, which only means the
+// mark is missing on a first paint that beats the fetch.
+let deceasedContributors = {};
+
+/** Registers the deceased-genealogist entries keyed by contributor name. Keys
+ *  are re-normalized through baseContributorName() so NFD names coming off the
+ *  API still match the NFC lookups done below. */
+export function setDeceasedContributors(map) {
+  deceasedContributors = Object.fromEntries(
+    Object.entries(map || {}).map(([name, entry]) => [baseContributorName(name), entry])
+  );
+}
+
+/** Returns the `deceased` marker for a contributor, or '' if they are not
+ *  marked. Accepts suffixed source names (`Novak-matricula`). */
+export function deceasedMarker(name) {
+  if (!name) return '';
+  return deceasedContributors[baseContributorName(name)]?.marker || '';
+}
+
+/** Returns a deceased genealogist's real name, or '' when unknown. Living
+ *  contributors always return '' — the API doesn't send their full names. */
+export function deceasedFullName(name) {
+  if (!name) return '';
+  return deceasedContributors[baseContributorName(name)]?.fullName || '';
+}
+
+export function isDeceasedContributor(name) {
+  return !!deceasedMarker(name);
+}
+
+/** Formats the years carried by a `deceased` marker for display: "1948-2024"
+ *  becomes "1948–2024", a bare year stays as is, and "true" (no years
+ *  known) yields ''. */
+export function deceasedYears(marker) {
+  if (!marker || marker === 'true') return '';
+  return String(marker).trim().replace(/\s*-\s*/, '\u2013');
+}
 
 /** Returns the base contributor name (strips a trailing special-source suffix
  *  -matricula / -geneanet), Unicode-normalized. */
@@ -478,6 +522,24 @@ export function militaryIndicatorHtml(name, tooltip) {
   if (!isMilitaryContributor(name)) return '';
   const safe = escapeHtml(tooltip || '');
   return ` <span class="military-indicator" title="${safe}" aria-label="${safe}">${MILITARY_INDICATOR}</span>`;
+}
+
+/** Returns the HTML for the memorial candle shown next to a deceased
+ *  genealogist's name, or '' if they are not marked. Unlike the source
+ *  indicators above this one is about the person, not the kind of source, so
+ *  callers put it last — after any ⛪/🪦/🎖 badge. */
+export function deceasedIndicatorHtml(name, tooltip) {
+  const marker = deceasedMarker(name);
+  if (!marker) return '';
+  const years = deceasedYears(marker);
+  // "Bojan Golli — genealogist has passed away (1950–2023)", dropping whichever
+  // of the name and the years we don't have.
+  const fullName = deceasedFullName(name);
+  let text = tooltip || '';
+  if (years) text = `${text} (${years})`.trim();
+  if (fullName) text = text ? `${fullName} — ${text}` : fullName;
+  const safe = escapeHtml(text);
+  return ` <span class="deceased-indicator" title="${safe}" aria-label="${safe}">${DECEASED_INDICATOR}</span>`;
 }
 
 // --- inline row icons for optional fields shown in result cells ---

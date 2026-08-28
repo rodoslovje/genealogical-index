@@ -1,6 +1,6 @@
 import { t, getCurrentLang } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
-import { escapeHtml, baseContributorName, ensureChartJs, formatExportFilename } from '../lib/utils.js';
+import { escapeHtml, baseContributorName, deceasedIndicatorHtml, ensureChartJs, formatExportFilename } from '../lib/utils.js';
 import { toUnicodeHref } from '../lib/url.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { csvCell, csvFooter, downloadCsv } from '../lib/csv.js';
@@ -177,7 +177,7 @@ function renderBooksSection(books) {
       : date;
     const contrib = b.contributor ? baseContributorName(b.contributor) : '';
     const contribCell = contrib
-      ? `<a href="${toUnicodeHref({ t: 'contributors', c: contrib })}" data-spa-nav>${escapeHtml(contrib)}</a>`
+      ? `<a href="${toUnicodeHref({ t: 'contributors', c: contrib })}" data-spa-nav>${escapeHtml(contrib)}</a>${deceasedIndicatorHtml(contrib, t('icon_deceased'))}`
       : '';
     const lastMod = (b.last_modified || '').slice(0, 10);
     return `<tr>

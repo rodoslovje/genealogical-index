@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config.js';
+import { setDeceasedContributors } from '../lib/utils.js';
 
 // --- Module-private caches ---------------------------------------------------
 let cachedData = null;
@@ -53,11 +54,20 @@ export function ensureData() {
           last_modified: m.last_modified ? m.last_modified.slice(0, 10) : '',
           _url: m.url || '',
           _intro: m.intro || '',
+          _full_name: m.full_name || '',
+          _deceased: m.deceased || '',
+          _memorial_url: m.memorial_url || '',
           _tree: _toPart(m.tree),
           _matricula: _toPart(m.matricula),
           _geneanet: _toPart(m.geneanet),
           _military: _toPart(m.military),
         }));
+        // Hand the memorial markers to utils.js so the 🕯 indicator can be
+        // rendered from any table row without threading the data through.
+        setDeceasedContributors(Object.fromEntries(
+          cachedData.filter(d => d._deceased)
+            .map(d => [d.contributor_ID, { marker: d._deceased, fullName: d._full_name }])
+        ));
         return cachedData;
       });
   }

@@ -87,6 +87,10 @@ class Contributor(BaseModel):
     links_count: int
     url: Optional[str] = None
     intro: Optional[str] = None
+    # Only populated for deceased genealogists; see crud._compute_contributors.
+    full_name: Optional[str] = None
+    deceased: Optional[str] = None
+    memorial_url: Optional[str] = None
     tree: Optional[ContributorPart] = None
     matricula: Optional[ContributorPart] = None
     geneanet: Optional[ContributorPart] = None

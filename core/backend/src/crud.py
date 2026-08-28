@@ -41,8 +41,19 @@ METADATA_PATH = os.path.join(
 )
 
 
+def _normalize_deceased(value):
+    """Normalizes a `deceased` marker to a string or None. Accepts a boolean
+    (no years known), a year, or a "1948-2024" span; anything falsy is None."""
+    if value is None or value is False or value == "":
+        return None
+    if value is True:
+        return "true"
+    return str(value).strip() or None
+
+
 def _load_contributor_metadata():
-    """Returns a dict of contributor name -> {url, intro} extracted from metadata.json."""
+    """Returns a dict of contributor name -> {url, intro, deceased, memorial_url}
+    extracted from metadata.json."""
     try:
         with open(METADATA_PATH, encoding="utf-8") as f:
             data = json.load(f)
@@ -50,6 +61,9 @@ def _load_contributor_metadata():
             entry["contributor"]: {
                 "url": entry.get("url"),
                 "intro": entry.get("intro"),
+                "full_name": entry.get("full_name"),
+                "deceased": _normalize_deceased(entry.get("deceased")),
+                "memorial_url": entry.get("memorial_url"),
             }
             for entry in data
             if entry.get("contributor")
@@ -693,7 +707,16 @@ def _compute_contributors(db: Session):
         }
         bucket = grouped.setdefault(
             base,
-            {"tree": None, "matricula": None, "geneanet": None, "military": None, "_intro_db": None},
+            {
+                "tree": None,
+                "matricula": None,
+                "geneanet": None,
+                "military": None,
+                "_intro_db": None,
+                "_full_name_db": None,
+                "_deceased_db": None,
+                "_memorial_url_db": None,
+            },
         )
         bucket[_source_key(row.name)] = part
         # Collect intro from DB or metadata, accepting any variant in the group
@@ -701,11 +724,28 @@ def _compute_contributors(db: Session):
         intro_val = row.intro or meta.get("intro")
         if intro_val and not bucket["_intro_db"]:
             bucket["_intro_db"] = intro_val
+        # Same for the memorial fields: a genealogist who has passed away is
+        # marked once, whichever of their source rows carries the marker.
+        deceased_val = _normalize_deceased(row.deceased) or meta.get("deceased")
+        if deceased_val and not bucket["_deceased_db"]:
+            bucket["_deceased_db"] = deceased_val
+        memorial_val = row.memorial_url or meta.get("memorial_url")
+        if memorial_val and not bucket["_memorial_url_db"]:
+            bucket["_memorial_url_db"] = memorial_val
+        full_name_val = row.full_name or meta.get("full_name")
+        if full_name_val and not bucket["_full_name_db"]:
+            bucket["_full_name_db"] = full_name_val
 
     merged = []
     for base, parts in grouped.items():
         present = [p for p in [parts["tree"], parts["matricula"], parts["geneanet"], parts["military"]] if p]
         base_meta = metadata.get(base, {})
+        deceased = parts["_deceased_db"] or base_meta.get("deceased")
+        # Contributors are known by their short key everywhere on the site; the
+        # real name is only shown in the "In memoriam" panel. Withholding it for
+        # everyone else keeps the roster of living genealogists' full names out
+        # of a public API response, even though metadata.json carries them all.
+        full_name = (parts["_full_name_db"] or base_meta.get("full_name")) if deceased else None
         merged.append(
             {
                 "name": base,
@@ -718,6 +758,9 @@ def _compute_contributors(db: Session):
                 "links_count": sum(p["links_count"] for p in present),
                 "url": next((p["url"] for p in present if p["url"]), None),
                 "intro": parts["_intro_db"] or base_meta.get("intro"),
+                "full_name": full_name,
+                "deceased": deceased,
+                "memorial_url": parts["_memorial_url_db"] or base_meta.get("memorial_url"),
                 "tree": parts["tree"],
                 "matricula": parts["matricula"],
                 "geneanet": parts["geneanet"],

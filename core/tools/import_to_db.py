@@ -77,7 +77,10 @@ def setup_full(db):
             persons_count INTEGER DEFAULT 0,
             families_count INTEGER DEFAULT 0,
             links_count INTEGER DEFAULT 0,
-            intro TEXT
+            intro TEXT,
+            full_name TEXT,
+            deceased TEXT,
+            memorial_url TEXT
         );
         CREATE TABLE persons (
             id SERIAL PRIMARY KEY, ext_id TEXT,
@@ -417,6 +420,9 @@ def setup_update(db):
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS families_count INTEGER DEFAULT 0;
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS links_count    INTEGER DEFAULT 0;
         ALTER TABLE contributors ADD COLUMN IF NOT EXISTS intro          TEXT;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS full_name      TEXT;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS deceased       TEXT;
+        ALTER TABLE contributors ADD COLUMN IF NOT EXISTS memorial_url   TEXT;
         ALTER TABLE contributors DROP COLUMN IF EXISTS births_count;
         ALTER TABLE contributors DROP COLUMN IF EXISTS deaths_count;
 
@@ -565,6 +571,54 @@ def get_db_state(db, contributor_name):
     if not row:
         return None, 0, 0, 0
     return row[0], row[1], row[2], row[3]
+
+
+def _normalize_deceased(value):
+    """Normalizes a `deceased` marker to a string or None, matching
+    crud._normalize_deceased on the API side: metadata.json may carry a
+    boolean (no years known), a year, or a "1948-2024" span."""
+    if value is None or value is False or value == "":
+        return None
+    if value is True:
+        return "true"
+    return str(value).strip() or None
+
+
+def sync_contributor_metadata(db, metadata):
+    """Copies the hand-curated contributor fields — full name and the memorial
+    markers — from metadata.json into the contributors table.
+
+    Runs over every metadata entry rather than only the re-imported ones, so
+    editing contributors.json upstream and re-running the import is enough to
+    pick the changes up; nothing about a genealogist dying changes their
+    GEDCOM, so they would otherwise never be revisited. Rows are only written
+    when a value actually differs, which keeps the "nothing changed" run quiet
+    and leaves the returned list usable as a cache-invalidation signal.
+    """
+    updated = []
+    for meta in metadata:
+        params = {
+            "name": meta["contributor"],
+            "full_name": meta.get("full_name") or None,
+            "deceased": _normalize_deceased(meta.get("deceased")),
+            "memorial_url": meta.get("memorial_url") or None,
+        }
+        row = db.execute(
+            text(
+                "UPDATE contributors SET full_name = :full_name, "
+                "deceased = :deceased, memorial_url = :memorial_url "
+                "WHERE name = :name AND ("
+                "  full_name    IS DISTINCT FROM :full_name"
+                "  OR deceased  IS DISTINCT FROM :deceased"
+                "  OR memorial_url IS DISTINCT FROM :memorial_url) "
+                "RETURNING name"
+            ),
+            params,
+        ).fetchone()
+        if row:
+            updated.append(params["name"])
+    db.commit()
+    return updated
 
 
 def find_data_file(directory, filename):
@@ -1273,9 +1327,20 @@ def main():
     import_matricula_index(db)
     import_geneanet_index(db)
 
+    synced_metadata = sync_contributor_metadata(db, metadata)
+    if synced_metadata:
+        print(
+            f"\nSynced full name / memorial fields for {len(synced_metadata)} "
+            f"contributor(s): {', '.join(sorted(synced_metadata))}"
+        )
+
     print("\nData import finished successfully.")
 
-    if updated_contributors:
+    # A metadata-only change (someone marked deceased, a full name filled in)
+    # never lands in updated_contributors, but it does need the API's
+    # contributor cache dropped — without it the change is invisible for up to
+    # an hour. It never needs matches recomputed, though.
+    if updated_contributors or synced_metadata:
         # After a successful import, try to clear the API cache so changes are visible immediately.
         print("\nAttempting to clear API server cache...")
         try:
@@ -1292,7 +1357,7 @@ def main():
                 f"  -> Could not connect to API to clear cache. Is the API server running? Error: {e}"
             )
 
-        if not args.skip_matches:
+        if updated_contributors and not args.skip_matches:
             print(
                 f"Updated {len(updated_contributors)} contributor(s). "
                 "Automatically triggering match computation..."
@@ -1340,7 +1405,7 @@ def main():
                         )
                 else:
                     compute_matches.main(workers=args.workers)
-        else:
+        elif updated_contributors:
             print(
                 f"Updated {len(updated_contributors)} contributor(s). "
                 "Run matches manually: python tools/trigger_matches.py --all"

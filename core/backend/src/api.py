@@ -26,6 +26,16 @@ models.Base.metadata.create_all(bind=engine)
 # once at startup avoids a per-request roundtrip from inside _set_trgm.
 with engine.connect() as _conn:
     _conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+    # The memorial columns are curated by hand, so they are also added here and
+    # not only by import_to_db.py's migration: the API image picks up new code
+    # on restart, while migrations only run on the next import, and querying a
+    # column that doesn't exist yet would 500 the whole contributors endpoint.
+    _conn.execute(text(
+        "ALTER TABLE IF EXISTS contributors "
+        "ADD COLUMN IF NOT EXISTS full_name TEXT, "
+        "ADD COLUMN IF NOT EXISTS deceased TEXT, "
+        "ADD COLUMN IF NOT EXISTS memorial_url TEXT;"
+    ))
     _conn.commit()
 
 # Initialize the FastAPI app

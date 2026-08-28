@@ -1,7 +1,7 @@
 import { t, formatTitleSuffix } from '../i18n.js';
 import { renderTable, exportToCSV } from '../table.js';
 import {
-  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, escapeHtml, formatExportFilename, contributorTypeLabelKey,
+  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedYears, escapeHtml, formatExportFilename, contributorTypeLabelKey,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref } from '../lib/url.js';
@@ -35,6 +35,38 @@ function contribDataTypeLabelKey(contribData, rawName) {
     if (hasMil)  return 'icon_military_index';
   }
   return 'col_contributor';
+}
+
+/** Renders the "In memoriam" panel for a genealogist who has passed away, or
+ *  '' for everyone else. Carries their years when known, their personal page
+ *  (the same `url` the plain link box would have shown) and a memorial page
+ *  when one exists. */
+function renderMemorial(contribData, displayName, url) {
+  const marker = contribData?._deceased;
+  if (!marker) return '';
+  const years = deceasedYears(marker);
+  // Their real name, which is the whole point of the panel — the heading above
+  // still carries the short contributor key used everywhere else on the site.
+  const name = escapeHtml(contribData._full_name || displayName);
+  const title = years
+    ? `${t('memorial_title')} — <strong>${name}</strong> (${escapeHtml(years)})`
+    : `${t('memorial_title')} — <strong>${name}</strong>`;
+  const links = [];
+  if (url) {
+    links.push(`<a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a>`);
+  }
+  const memorialUrl = contribData._memorial_url;
+  if (memorialUrl) {
+    links.push(`<a href="${memorialUrl}" target="_blank" rel="noopener">🕯 ${t('personal_page')}</a>`);
+  }
+  const linksHtml = links.length
+    ? `<div class="contributor-memorial-links">${links.join('<span class="contributor-memorial-sep">·</span>')}</div>`
+    : '';
+  return `<div class="contributor-memorial">
+    <div class="contributor-memorial-title">${title}</div>
+    <div class="contributor-memorial-note">${t('memorial_note')}</div>
+    ${linksHtml}
+  </div>`;
 }
 
 /** Renders the per-contributor stats grid (single column or 3-column Sum/Tree/Matricula). */
@@ -136,7 +168,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       const partnerData = cached.find(d => d.contributor_ID === basePartner);
       if (!partnerData) {
         const safePartner = escapeHtml(basePartner);
-        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index')) + geneanetIndicatorHtml(withPartner, t('icon_geneanet_index')) + militaryIndicatorHtml(withPartner, t('icon_military_index'));
+        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index')) + geneanetIndicatorHtml(withPartner, t('icon_geneanet_index')) + militaryIndicatorHtml(withPartner, t('icon_military_index')) + deceasedIndicatorHtml(withPartner, t('icon_deceased'));
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
           <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${formatTitleSuffix(t('col_matches'))}</h2>
@@ -153,7 +185,11 @@ export async function renderMatchesPage(contributor, withPartner) {
 
     const urlMap = getContributorUrlMap();
     const url = urlMap[displayName] || (contribData._tree?._url) || (contribData._geneanet?._url) || (contribData._matricula?._url);
-    const urlHtml = url ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${displayName}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a></div></div>` : '';
+    // A deceased genealogist gets an "In memoriam" panel instead of the plain
+    // link box — their personal page and any memorial page move inside it, so
+    // the page never shows two separate link blocks.
+    const memorialHtml = renderMemorial(contribData, displayName, url);
+    const urlHtml = (url && !memorialHtml) ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${displayName}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a></div></div>` : '';
     const introHtml = contribData._intro ? `<div class="contributor-intro" style="margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6;">${contribData._intro}</div>` : '';
 
     const statsHtml = renderContributorStats(contribData);
@@ -346,9 +382,10 @@ export async function renderMatchesPage(contributor, withPartner) {
     };
 
     const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${displayName} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))}</h2>
+      <h2 class="matches-page-title">${displayName}${deceasedIndicatorHtml(displayName, t('icon_deceased'))} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))}</h2>
     </div>
     ${statsHtml}
+    ${memorialHtml}
     ${introHtml}
     ${urlHtml}
     ${cloudSectionsHtml}
