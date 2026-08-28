@@ -177,7 +177,7 @@ function renderBooksSection(books) {
       : date;
     const contrib = b.contributor ? baseContributorName(b.contributor) : '';
     const contribCell = contrib
-      ? `<a href="${toUnicodeHref({ t: 'contributors', c: contrib })}" data-spa-nav>${escapeHtml(contrib)}</a>${deceasedIndicatorHtml(contrib, t('icon_deceased'))}`
+      ? `<a href="${toUnicodeHref({ t: 'contributors', c: contrib })}" data-spa-nav>${escapeHtml(contrib)}</a>${deceasedIndicatorHtml(contrib, t('memorial_title'))}`
       : '';
     const lastMod = (b.last_modified || '').slice(0, 10);
     return `<tr>

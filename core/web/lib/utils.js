@@ -532,8 +532,10 @@ export function deceasedIndicatorHtml(name, tooltip) {
   const marker = deceasedMarker(name);
   if (!marker) return '';
   const years = deceasedYears(marker);
-  // "Bojan Golli — genealogist has passed away (1950–2023)", dropping whichever
-  // of the name and the years we don't have.
+  // "Bojan Golli — In memoriam (1950–2023)", dropping whichever of the name and
+  // the years we don't have. The wording is deliberately the same phrase the
+  // panel uses: Slovene and Croatian have no sex-neutral way to say "deceased
+  // genealogist", so nothing here refers to the person grammatically.
   const fullName = deceasedFullName(name);
   let text = tooltip || '';
   if (years) text = `${text} (${years})`.trim();

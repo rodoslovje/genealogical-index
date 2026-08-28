@@ -168,7 +168,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       const partnerData = cached.find(d => d.contributor_ID === basePartner);
       if (!partnerData) {
         const safePartner = escapeHtml(basePartner);
-        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index')) + geneanetIndicatorHtml(withPartner, t('icon_geneanet_index')) + militaryIndicatorHtml(withPartner, t('icon_military_index')) + deceasedIndicatorHtml(withPartner, t('icon_deceased'));
+        const partnerInd  = matriculaIndicatorHtml(withPartner, t('icon_matricula_index')) + geneanetIndicatorHtml(withPartner, t('icon_geneanet_index')) + militaryIndicatorHtml(withPartner, t('icon_military_index')) + deceasedIndicatorHtml(withPartner, t('memorial_title'));
         document.title = `${t('no_results')} | ${t('site_title')}`;
         container.innerHTML = `<div class="matches-page-header">
           <h2 class="matches-page-title">${safePartner}${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: displayName })}" data-spa-nav style="color: inherit; text-decoration: none;">${displayName}</a> - ${formatTitleSuffix(t('col_matches'))}</h2>
@@ -382,7 +382,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     };
 
     const heading = `<div class="matches-page-header">
-      <h2 class="matches-page-title">${displayName}${deceasedIndicatorHtml(displayName, t('icon_deceased'))} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))}</h2>
+      <h2 class="matches-page-title">${displayName}${deceasedIndicatorHtml(displayName, t('memorial_title'))} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))}</h2>
     </div>
     ${statsHtml}
     ${memorialHtml}

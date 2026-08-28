@@ -158,8 +158,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
   const partnerUrl = urlMap[partner];
   const contribBase = baseContributorName(contributor);
   const partnerBase = baseContributorName(partner);
-  const contribInd  = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index')) + militaryIndicatorHtml(contributor, t('icon_military_index')) + deceasedIndicatorHtml(contributor, t('icon_deceased'));
-  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index')) + geneanetIndicatorHtml(partner, t('icon_geneanet_index')) + militaryIndicatorHtml(partner, t('icon_military_index')) + deceasedIndicatorHtml(partner, t('icon_deceased'));
+  const contribInd  = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index')) + militaryIndicatorHtml(contributor, t('icon_military_index')) + deceasedIndicatorHtml(contributor, t('memorial_title'));
+  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index')) + geneanetIndicatorHtml(partner, t('icon_geneanet_index')) + militaryIndicatorHtml(partner, t('icon_military_index')) + deceasedIndicatorHtml(partner, t('memorial_title'));
 
   let urlsHtml = '';
   if (contribUrl || partnerUrl) {

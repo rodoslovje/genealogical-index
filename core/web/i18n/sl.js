@@ -157,7 +157,6 @@ export default {
     icon_alt_surname: 'Drugi priimki',
     icon_baptism: 'Krst',
     icon_notes: 'Opombe',
-    icon_deceased: 'Rodoslovec je pokojni',
 
     // Matches
     col_matches: 'Ujemanja',
@@ -209,7 +208,7 @@ export default {
     book_type_death: 'Mrliška',
     more_info_about: 'Več informacij o viru',
     memorial_title: 'V spomin',
-    memorial_note: 'Njegovo rodoslovno delo ostaja objavljeno tukaj, njemu v spomin.',
+    memorial_note: 'Rodoslovno delo ostaja objavljeno tukaj, v spomin in zahvalo.',
     memorial_page: 'Spominska stran',
     back_to_genealogists: 'Viri',
     genealogist: 'Vir',

@@ -588,7 +588,7 @@ function renderCellHtml(col, row) {
     const showIndicator = !row.hasOwnProperty('_tree');
     const indicator = (showIndicator
       ? matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index')) + militaryIndicatorHtml(name, t('icon_military_index'))
-      : '') + deceasedIndicatorHtml(name, t('icon_deceased'));
+      : '') + deceasedIndicatorHtml(name, t('memorial_title'));
     const internalHref = row._match_href || row._contributor_href || '';
     const externalUrl = row._url || '';
     if (internalHref) return `<td class="col-center"><a href="${internalHref}" data-spa-nav>${display}</a>${indicator}</td>`;
@@ -599,7 +599,7 @@ function renderCellHtml(col, row) {
     const name = row[col] || '';
     if (!name) return `<td></td>`;
     const display = baseContributorName(name);
-    const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index')) + militaryIndicatorHtml(name, t('icon_military_index')) + deceasedIndicatorHtml(name, t('icon_deceased'));
+    const indicator = matriculaIndicatorHtml(name, t('icon_matricula_index')) + geneanetIndicatorHtml(name, t('icon_geneanet_index')) + militaryIndicatorHtml(name, t('icon_military_index')) + deceasedIndicatorHtml(name, t('memorial_title'));
     return `<td><a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav>${display}</a>${indicator}</td>`;
   }
   if (CENTERED_COLUMNS.has(col)) {

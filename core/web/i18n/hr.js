@@ -157,7 +157,6 @@ export default {
     icon_alt_surname: 'Druga prezimena',
     icon_baptism: 'Krštenje',
     icon_notes: 'Bilješke',
-    icon_deceased: 'Rodoslovac je pokojan',
 
     // Matches
     col_matches: 'Podudaranja',
@@ -209,7 +208,7 @@ export default {
     book_type_death: 'Smrti',
     more_info_about: 'Više informacija o izvoru',
     memorial_title: 'U spomen',
-    memorial_note: 'Njegov rodoslovni rad ostaje objavljen ovdje, njemu u spomen.',
+    memorial_note: 'Rodoslovni rad ostaje objavljen ovdje, u spomen i zahvalu.',
     memorial_page: 'Spomen stranica',
     back_to_genealogists: 'Izvori',
     genealogist: 'Izvor',
