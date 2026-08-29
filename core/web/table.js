@@ -250,10 +250,24 @@ function memoCount(row, key, compute) {
 
 // Wraps the count + tree button + body in the standard <details> shell used
 // for parents/children/partners cells.
+//
+// In diff mode these cells can hide their own highlighting: the per-pair
+// "+N"/"≠N" badges count added/conflicting relatives, but the green/yellow
+// spans marking them live inside .expanded-content and stay invisible while the
+// cell is collapsed — so a badge points at something the reader can't see.
+// The summary count therefore carries the same tint as whatever it contains.
+// Sniffing the already-built inner HTML keeps that in one place and can't drift
+// from what the cell actually renders; outside diff mode neither class appears,
+// so the summary stays plain. Green wins when a cell holds both, since new
+// information is what the reader is hunting for.
 function wrapExpandable(count, treeBtn, innerHtml) {
   if (!count) return '';
+  const tint = innerHtml.includes('match-add') ? 'match-add'
+             : innerHtml.includes('match-diff') ? 'match-diff'
+             : '';
+  const countHtml = tint ? `<span class="${tint} match-summary-mark">${count}</span>` : `${count}`;
   return `<details class="expandable-cell">
-            <summary>${count}${treeBtn || ''}</summary>
+            <summary>${countHtml}${treeBtn || ''}</summary>
             <div class="expanded-content">${innerHtml}</div>
           </details>`;
 }

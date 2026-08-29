@@ -1135,6 +1135,15 @@ body.tree-view .section-bar {
   border-radius: 2px;
 }
 
+/* The count in a collapsed parents/children/partners cell, tinted to advertise
+   the .match-add / .match-diff highlighting folded away inside it. Slightly
+   tighter than a run of highlighted text since it wraps a single digit, and
+   bolder so it still reads as the cell's count rather than as a value. */
+.match-summary-mark {
+  padding: 0 0.3em;
+  font-weight: 600;
+}
+
 /* Link icons unique to one side get a larger highlight area so a new
    source link stands out at a glance. */
 .match-add-link {
