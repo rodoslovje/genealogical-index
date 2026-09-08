@@ -66,6 +66,66 @@ export function t(key) {
   return (translations[currentLang]?.[key]) ?? (translations.en?.[key]) ?? key;
 }
 
+// Plural categories per locale, in the order their forms are listed inside a
+// `{N|form|form|…}` block in the locale files. Categories follow CLDR (what
+// Intl.PluralRules returns): Slovenian has singular/dual/paucal/plural,
+// Croatian singular/paucal/plural, everything else singular/plural. French
+// and Italian also have a "many" category for millions; it is not listed here
+// and therefore falls back to the last form.
+const PLURAL_FORMS = {
+  sl: ['one', 'two', 'few', 'other'],
+  hr: ['one', 'few', 'other'],
+};
+const DEFAULT_PLURAL_FORMS = ['one', 'other'];
+
+const pluralRulesCache = {};
+
+/** Index of the plural form to use for `n` in the current language. */
+function pluralIndex(n) {
+  const forms = PLURAL_FORMS[currentLang] || DEFAULT_PLURAL_FORMS;
+  let rules = pluralRulesCache[currentLang];
+  if (!rules) {
+    try { rules = new Intl.PluralRules(currentLang); } catch { rules = new Intl.PluralRules('en'); }
+    pluralRulesCache[currentLang] = rules;
+  }
+  const idx = forms.indexOf(rules.select(n));
+  return idx < 0 ? forms.length - 1 : idx;
+}
+
+/** Translates `key` and fills in positional placeholders.
+ *
+ *  Two placeholder syntaxes are supported in the locale strings:
+ *   - `{N}` — replaced by the N-th argument verbatim.
+ *   - `{N|form one|form two|…}` — a plural block: the form is chosen by the
+ *     grammatical number of the N-th argument (see PLURAL_FORMS for the order
+ *     the forms must be listed in), and `#` inside the chosen form is replaced
+ *     by the argument. Extra or missing forms fall back to the last one.
+ *
+ *  Arguments may be plain strings (inserted as-is, plural blocks pick the last
+ *  form), numbers (formatted with toLocaleString and used for plural
+ *  selection), or `{ n, html }` objects where `n` drives plural selection and
+ *  `html` is what gets inserted — use this to wrap a formatted number in markup.
+ *
+ *    tf('matricula_books_summary', name, { n: 2, html: '<strong>2</strong>' })
+ *    // sl: "… ima … <strong>2</strong> knjigi …"
+ */
+export function tf(key, ...args) {
+  const vals = args.map(a => {
+    if (a && typeof a === 'object' && 'n' in a) return { n: Number(a.n), html: String(a.html ?? a.n) };
+    if (typeof a === 'number') return { n: a, html: a.toLocaleString() };
+    return { n: null, html: String(a ?? '') };
+  });
+  return t(key)
+    .replace(/\{(\d+)\|([^{}]*)\}/g, (m, i, body) => {
+      const v = vals[i];
+      if (!v) return m;
+      const forms = body.split('|');
+      const idx = v.n == null || !Number.isFinite(v.n) ? forms.length - 1 : pluralIndex(v.n);
+      return forms[Math.min(idx, forms.length - 1)].replace(/#/g, () => v.html);
+    })
+    .replace(/\{(\d+)\}/g, (m, i) => (vals[i] ? vals[i].html : m));
+}
+
 /** Formats a word appended after a hyphen for titles (lowercases it in languages that require it) */
 export function formatTitleSuffix(text) {
   if (!text) return text;

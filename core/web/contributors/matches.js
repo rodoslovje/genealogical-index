@@ -1,4 +1,4 @@
-import { t, formatTitleSuffix } from '../i18n.js';
+import { t, tf, formatTitleSuffix } from '../i18n.js';
 import { renderTable, exportToCSV } from '../table.js';
 import {
   shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, deceasedYears, escapeHtml, formatExportFilename, contributorTypeLabelKey,
@@ -222,16 +222,16 @@ export async function renderMatchesPage(contributor, withPartner) {
     ];
     let matriculaSectionHtml = '';
     if (hasMatricula || matriculaBooks.length) {
-      const fmt = (n) => Number(n || 0).toLocaleString();
+      const strongCount = (n) => ({ n, html: `<strong>${Number(n || 0).toLocaleString()}</strong>` });
       const totalRecords = matriculaBooks.reduce((s, b) => s + (b.count || 0), 0);
 
       const matriculaUrl = toUnicodeHref({ t: 'matricula' });
       const summaryHtml = matriculaBooks.length
-        ? `<p>${t('matricula_books_summary')
-            .replace('{0}', `<strong>${displayName}</strong>`)
-            .replace('{1}', `<strong>${fmt(matriculaBooks.length)}</strong>`)
-            .replace('{2}', `<strong>${fmt(totalRecords)}</strong>`)
-            .replace('{3}', matriculaUrl)}</p>`
+        ? `<p>${tf('matricula_books_summary',
+            `<strong>${displayName}</strong>`,
+            strongCount(matriculaBooks.length),
+            strongCount(totalRecords),
+            matriculaUrl)}</p>`
         : '';
 
       const cloudHtml = hasMatricula
@@ -400,14 +400,14 @@ export async function renderMatchesPage(contributor, withPartner) {
     ];
     let geneanetSectionHtml = '';
     if (hasGeneanet || geneanetCemeteries.length) {
-      const fmt = (n) => Number(n || 0).toLocaleString();
+      const strongCount = (n) => ({ n, html: `<strong>${Number(n || 0).toLocaleString()}</strong>` });
       const totalPersons = geneanetCemeteries.reduce((s, c) => s + (c.persons_count || 0), 0);
       const summaryHtml = geneanetCemeteries.length
-        ? `<p>${t('geneanet_cemeteries_summary')
-            .replace('{0}', `<strong>${displayName}</strong>`)
-            .replace('{1}', `<strong>${fmt(geneanetCemeteries.length)}</strong>`)
-            .replace('{2}', `<strong>${fmt(totalPersons)}</strong>`)
-            .replace('{3}', toUnicodeHref({ t: 'geneanet' }))}</p>`
+        ? `<p>${tf('geneanet_cemeteries_summary',
+            `<strong>${displayName}</strong>`,
+            strongCount(geneanetCemeteries.length),
+            strongCount(totalPersons),
+            toUnicodeHref({ t: 'geneanet' }))}</p>`
         : '';
       const tableHtml = geneanetCemeteries.length
         ? `<div class="geneanet-cemeteries-subsection" style="margin-top: 1.5rem;">

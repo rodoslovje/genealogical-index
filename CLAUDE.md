@@ -131,3 +131,5 @@ The app is a single-page application. Tabs map to `?t=` URL parameters (general,
 ### i18n
 
 English strings are bundled at build time; other locales are lazy-loaded on first selection. Site-specific strings (title, society name, intros) in `site.config.js` override the shared locale strings. Language preference is persisted in `localStorage`.
+
+Strings with counts go through `tf(key, ...args)` in `i18n.js`, which fills `{N}` placeholders and resolves plural blocks of the form `{N|form one|form two|…}` (with `#` standing for the number inside a form). Forms are listed in the locale's CLDR category order: `one|two|few|other` for Slovenian (singular/dual/paucal/plural), `one|few|other` for Croatian, `one|other` for the rest. Pass a number, or `{ n, html }` when the number must be wrapped in markup.

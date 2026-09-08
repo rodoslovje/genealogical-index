@@ -1,4 +1,4 @@
-import { t, formatTitleSuffix } from '../i18n.js';
+import { t, tf, formatTitleSuffix } from '../i18n.js';
 import { formatSpecialCell, exportToCSV, runWithBusy, remeasureVirtualColumns, setTableBusy } from '../table.js';
 import { formatLinks } from '../lib/links.js';
 import { csvRow } from '../lib/csv.js';
@@ -436,10 +436,10 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       let html = baseHtml;
 
       if (truncated.person || truncated.family) {
-        const shown = (loadedCounts.person + loadedCounts.family).toLocaleString();
-        const total = (totals.person + totals.family).toLocaleString();
+        const shown = loadedCounts.person + loadedCounts.family;
+        const total = totals.person + totals.family;
         html += `<div class="matches-truncated-note">
-          ${t('matches_truncated').replace('{0}', shown).replace('{1}', total)}
+          ${tf('matches_truncated', shown, total)}
           <button id="load-all-matches" class="export-btn">${t('matches_load_all')}</button>
         </div>`;
       }
