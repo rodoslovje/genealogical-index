@@ -1,6 +1,6 @@
 export default {
     // Navigation tabs
-    tab_search: 'Pretraga',
+    tab_search: 'Pretraživanje',
     tab_person: 'Osoba',
     tab_family: 'Obitelj',
     tab_contributors: 'Izvori',
@@ -13,7 +13,7 @@ export default {
     filter_with: 'Podudaranje s',
     table_filter_csv_label: 'Filtar',
     date_to: 'do godine',
-    download_csv: 'Preuzmi kao CSV — za uvoz u proračunsku tablicu ili druge programe.',
+    download_csv: 'Preuzmi kao CSV – za uvoz u proračunsku tablicu ili druge programe.',
     expand_all: 'Proširi',
     collapse_all: 'Sažmi',
     tip_expand_all: 'Proširi sve proširive ćelije (roditelji, partneri, djeca) u ovoj tablici.',
@@ -22,7 +22,7 @@ export default {
     help: 'Pomoć',
     language: 'Jezik',
     label_source: 'Izvor',
-    source_all: 'Sve',
+    source_all: 'Svi',
     source_tree: 'Obiteljska stabla',
     source_matricula: 'Matricula indeks',
     menu: 'Izbornik',
@@ -63,11 +63,11 @@ export default {
     loading: 'Učitavanje rodoslovnih podataka...',
     searching: 'Pretraživanje...',
     no_results: 'Nema rezultata.',
-    enter_criterion: 'Unesite barem jedan kriterij pretrage.',
-    search_failed: 'Pretraga nije uspjela. Provjerite API vezu.',
-    feature_restricted: 'Ova funkcionalnost je ograničena i nije dostupna na ovoj stranici.',
-    contributors_failed: 'Nije moguće učitati podatke o izvorima.',
-    init_error: 'Greška pri inicijalizaciji aplikacije.',
+    enter_criterion: 'Unesite barem jedan kriterij pretraživanja.',
+    search_failed: 'Pretraživanje nije uspjelo. Provjerite vezu s API-jem.',
+    feature_restricted: 'Ova je funkcionalnost ograničena i nije dostupna na ovoj stranici.',
+    contributors_failed: 'Podatke o izvorima nije moguće učitati.',
+    init_error: 'Pogreška pri inicijalizaciji aplikacije.',
 
     // Table column headers
     col_name: 'Ime',
@@ -82,7 +82,7 @@ export default {
     col_alt_surname: 'Drugo prezime',
     col_date_of_baptism: 'Datum krštenja',
     col_place_of_baptism: 'Mjesto krštenja',
-    col_notes: 'Bilješke',
+    col_notes: 'Napomene',
     col_partner: 'Partner',
     col_husband_name: 'Ime muža',
     col_husband_surname: 'Prezime muža',
@@ -124,24 +124,24 @@ export default {
     // Column header tooltips
     tip_contributor: 'Rodoslovac koji je ove podatke ustupio indeksu.',
     tip_contributor_ID: 'Rodoslovac koji je ove podatke ustupio indeksu.',
-    tip_contributor_ID_matches: 'Rodoslovac s potencijalno podudarnim zapisima.',
+    tip_contributor_ID_matches: 'Rodoslovac s mogućim podudarnim zapisima.',
     tip_total_persons: 'Broj zapisa o osobama.',
     tip_total_families: 'Broj zapisa o obiteljima.',
     tip_total: 'Ukupan broj osoba i obitelji.',
     tip_total_persons_matches: 'Broj podudarnih zapisa o osobama.',
     tip_total_families_matches: 'Broj podudarnih zapisa o obiteljima.',
     tip_total_matches: 'Ukupan broj podudarnih osoba i obitelji.',
-    tip_confidence: 'Procijenjena vjerojatnost da se zapisi odnose na istu osobu ili obitelj.',
-    tip_matches: 'Broj rodoslovaca koji imaju potencijalno podudarne zapise s odabranim rodoslovcem.',
+    tip_confidence: 'Procijenjena vjerojatnost da se oba zapisa odnose na istu osobu ili obitelj.',
+    tip_matches: 'Broj rodoslovaca koji s odabranim rodoslovcem imaju moguća podudaranja.',
     tip_total_contributors: 'Ukupan broj rodoslovaca.',
     tip_last_update: 'Datum posljednjeg uvoza podataka.',
     tip_total_links: 'Broj poveznica na izvorne dokumente (npr. Matricula Online, Geneanet groblja, FamilySearch.org…).',
     tip_last_modified: 'Datum posljednjeg uvoza podataka ovog rodoslovca u indeks.',
     tip_links: 'Poveznice na izvorne dokumente (npr. Matricula Online, Geneanet groblja, FamilySearch.org…).',
-    tip_parents_person: 'Roditelji ove osobe s poveznicama za pretragu njihove obitelji i pojedinih osoba.',
-    tip_partners: 'Partneri (vjenčani ili nevjenčani) ove osobe s poveznicom za pretragu njihove obitelji.',
-    tip_parents_family: 'Roditelji muža i žene s poveznicama za pretragu njihovih obitelji i pojedinih osoba.',
-    tip_children: 'Djeca ove obitelji s poveznicom za pretragu svakog djeteta.',
+    tip_parents_person: 'Roditelji ove osobe s poveznicama za pretraživanje njihove obitelji i pojedinih osoba.',
+    tip_partners: 'Partneri (vjenčani ili nevjenčani) ove osobe s poveznicom za pretraživanje njihove obitelji.',
+    tip_parents_family: 'Roditelji muža i žene s poveznicama za pretraživanje njihovih obitelji i pojedinih osoba.',
+    tip_children: 'Djeca ove obitelji s poveznicom za pretraživanje svakog djeteta.',
     tip_comma_separated_name: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Janez, Ivan&quot;).',
     tip_comma_separated_surname: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Mali, Mally&quot;).',
     tip_comma_separated_place: 'Možete unijeti više vrijednosti odvojenih zarezom (npr. &quot;Metlika, Podzemelj&quot;).',
@@ -158,20 +158,21 @@ export default {
     icon_source: 'Povijesni izvor',
     icon_alt_surname: 'Druga prezimena',
     icon_baptism: 'Krštenje',
-    icon_notes: 'Bilješke',
+    icon_notes: 'Napomene',
 
     // Matches
     col_matches: 'Podudaranja',
     col_confidence: 'Pouzdanost',
-    matches_none: 'Nema pronađenih podudaranja.',
-    matches_found_intro: 'Pronašli smo sljedeće izvore koji imaju podudarne ili slične podatke kao izvor',
-    matches_found_outro: 'Odabirom podudarnog izvora prikazat će se sva podudaranja između dva izvora.',
+    matches_none: 'Nije pronađeno nijedno podudaranje.',
+    matches_found_intro: 'Sljedeći izvori imaju podudarne ili slične podatke kao izvor',
+    matches_found_outro: 'Odabirom pojedinog izvora prikazat će se sva podudaranja među njima.',
     matches_detail_intro: 'Prikazana su sva podudaranja između rodoslovaca {1} i {0}.',
     matches_truncated: '{0|Prikazano je # najjače|Prikazana su # najjača|Prikazano je # najjačih} od {1|# podudaranja|# podudaranja|# podudaranja}.',
     matches_load_all: 'Učitaj sva',
     matches_filtered_none: 'Nema podudaranja koja odgovaraju odabranim filtrima.',
-    // Ograničenje podudaranja po prezimenu — za razliku od filtra u zaglavlju,
-    // koji sužava popis po imenu rodoslovca, ovaj ga sužava po prezimenima.
+    // Ograničenje podudaranja po prezimenu – za razliku od filtra u zaglavlju
+    // tablice, koji sužava popis po imenu rodoslovca, ovaj ga sužava po
+    // prezimenima u podudaranjima.
     match_surname_label: 'Prezime u podudaranjima:',
     match_surname_placeholder: 'npr. Pezdirc, Porenta',
     match_surname_tip: 'Prikazuje samo rodoslovce čija podudaranja s ovim izvorom sadrže ta prezimena. Više prezimena odvojite zarezom.',
@@ -184,14 +185,14 @@ export default {
     filter_links: 'Poveznice',
     filter_active: 'Aktivni filtri',
     clear_filter: 'Obriši filtar',
-    tip_table_filter: 'Filtriraj redove po bilo kojoj prikazanoj vrijednosti. Sve se riječi moraju podudarati; alternative odvojite zarezom.',
-    tip_match_add: 'Drugi rodoslovac ima podatke za jedno ili više polja koji ovdje nedostaju (npr. datum smrti ili pokopa).',
-    tip_match_link_add: 'Drugi rodoslovac ima poveznicu (npr. izvor ili zapis o grobu) koja ovdje nedostaje.',
-    tip_match_diff: 'Ovaj par ima neusklađene vrijednosti za jedno ili više polja.',
+    tip_table_filter: 'Filtriraj retke prema bilo kojoj prikazanoj vrijednosti. Sve se riječi moraju podudarati; inačice odvojite zarezom.',
+    tip_match_add: 'Drugi rodoslovac ima podatke za jedno ili više polja koja ovdje nedostaju (npr. datum smrti ili pokopa).',
+    tip_match_link_add: 'Drugi rodoslovac ima poveznicu (npr. na izvor ili zapis o grobu) koja ovdje nedostaje.',
+    tip_match_diff: 'Ovaj par ima nepodudarne vrijednosti u jednom ili više polja.',
     contributor_surnames_intro: 'Izvor',
     contributor_surnames_outro: 'ima sljedeća najčešća prezimena:',
-    contributor_matricula_surnames_intro: 'Transkribirane matične knjige sadrže sljedeća najčešća prezimena:',
-    section_matricula_books: 'Transkribirane knjige',
+    contributor_matricula_surnames_intro: 'Indeksirane matične knjige sadrže sljedeća najčešća prezimena:',
+    section_matricula_books: 'Indeksirane knjige',
     matricula_books_summary: 'Izvor {0} ima u <a href="{3}" data-spa-nav>Matricula indeksu</a> {1|# knjigu|# knjige|# knjiga} s ukupno {2|# zapisom|# zapisa|# zapisa}.',
     section_geneanet_cemeteries: 'Fotografirana i indeksirana groblja',
     geneanet_cemeteries_summary: 'Izvor {0} ima u <a href="{3}" data-spa-nav>Geneanet grobljima</a> {1|# groblje|# groblja|# groblja} s ukupno {2|# osobom|# osobe|# osoba}.',
@@ -202,19 +203,19 @@ export default {
     col_book_count: 'Zapisi',
     col_books_count: 'Knjige',
     matricula_page_title: 'Matricula indeks',
-    matricula_section_books: 'Transkribirane knjige',
+    matricula_section_books: 'Indeksirane knjige',
     matricula_section_contributors: 'Izvori',
     matricula_section_parishes: 'Župe',
     contributors_index_links_intro: 'Dostupna je i detaljna statistika za {0} i {1}.',
-    matricula_intro: 'U sklopu projekta <a href="{0}" target="_blank" rel="noopener">Indeks matičnih knjiga NŠA-LJ, NŠAM i ŠAK</a> pojedini rodoslovci mogu doprinijeti indeksom cijelih matičnih knjiga (krštene, vjenčane ili umrle) na <a href="{1}" target="_blank" rel="noopener">Matricula Online</a>.',
-    geneanet_intro: 'U sklopu projekta <a href="{0}" target="_blank" rel="noopener">Registar slovenskih groblja</a> pojedini rodoslovci mogu doprinijeti fotografijama nadgrobnih spomenika, koje se u sklopu projekta indeksiraju na stranici <a href="{1}" target="_blank" rel="noopener">Geneanet groblja</a>.',
-    book_type_birth: 'Krštenja',
-    book_type_marriage: 'Vjenčanja',
-    book_type_death: 'Smrti',
+    matricula_intro: 'U sklopu projekta <a href="{0}" target="_blank" rel="noopener">Indeks matičnih knjiga NŠA-LJ, NŠAM i ŠAK</a> pojedini rodoslovci mogu pridonijeti indeksiranjem cijelih matičnih knjiga (krštenih, vjenčanih ili umrlih) na stranici <a href="{1}" target="_blank" rel="noopener">Matricula Online</a>.',
+    geneanet_intro: 'U sklopu projekta <a href="{0}" target="_blank" rel="noopener">Registar slovenskih groblja</a> pojedini rodoslovci mogu pridonijeti fotografijama nadgrobnih spomenika, koje se u sklopu projekta indeksiraju na stranici <a href="{1}" target="_blank" rel="noopener">Geneanet groblja</a>.',
+    book_type_birth: 'Krštenih',
+    book_type_marriage: 'Vjenčanih',
+    book_type_death: 'Umrlih',
     more_info_about: 'Više informacija o izvoru',
     memorial_title: 'U spomen',
     memorial_note: 'Rodoslovni rad ostaje objavljen ovdje, u spomen i zahvalu.',
-    memorial_page: 'Spomen stranica',
+    memorial_page: 'Spomen-stranica',
     back_to_genealogists: 'Izvori',
     genealogist: 'Izvor',
     matches_persons: 'Osobe',
@@ -226,18 +227,18 @@ export default {
     logout: 'Odjava',
     logout_confirm: 'Jeste li sigurni da se želite odjaviti?',
     login_title: 'Samo za članove',
-    login_desc: 'Prijavite se pomoću svojih vjerodajnica s web stranice {society}.',
-    premium_gated_desc: 'Ova je značajka dostupna samo prijavljenim članovima. Za pristup prikazima stabla i značajkama podudaranja prijavite se pomoću svojih vjerodajnica s web stranice {society}.',
+    login_desc: 'Prijavite se korisničkim podacima s mrežne stranice {society}.',
+    premium_gated_desc: 'Ova je značajka dostupna samo prijavljenim članovima. Za pristup prikazima stabala i podudaranjima prijavite se korisničkim podacima s mrežne stranice {society}.',
     username: 'Korisničko ime ili e-pošta',
     password: 'Lozinka',
     login_submit: 'Prijavi se',
     login_error: 'Prijava nije uspjela. Provjerite korisničko ime i lozinku.',
-    login_loading: 'Prijavljivanje...',
+    login_loading: 'Prijava u tijeku...',
 
     // Footer
-    footer_version: 'Verzija',
+    footer_version: 'Inačica',
     footer_data_update: 'Podaci',
-    footer_user_guide: 'Korisnički vodič',
+    footer_user_guide: 'Upute za korištenje',
 
     // Other indexes
     other_indexes: 'Rodoslovni indeksi:',
@@ -245,15 +246,15 @@ export default {
     country_cro: 'Hrvatska',
 
     // Tree
-    tree_zoom_in: 'Povećaj',
-    tree_zoom_out: 'Smanji',
+    tree_zoom_in: 'Uvećaj',
+    tree_zoom_out: 'Umanji',
     tree_download_svg: 'Preuzmi SVG',
-    tree_download_csv: 'Preuzmi kao CSV — za uvoz u proračunsku tablicu ili druge programe.',
+    tree_download_csv: 'Preuzmi kao CSV – za uvoz u proračunsku tablicu ili druge programe.',
     tree_download_ged: 'Preuzmi GEDCOM',
     tree_ancestors_title: 'Preci',
     tree_loading: 'Učitavanje stabla...',
-    tree_error: 'Greška pri učitavanju stabla.',
-    tree_no_d3: 'Greška: D3.js biblioteka nije učitana.',
+    tree_error: 'Pogreška pri učitavanju stabla.',
+    tree_no_d3: 'Pogreška: biblioteka D3.js nije učitana.',
     tree_descendants_title: 'Potomci',
     tree_source: 'Izvor',
     tree_created: 'Izrađeno',
@@ -261,7 +262,7 @@ export default {
     // Tree comparison
     compare_title: 'Usporedba stabala',
     compare_action: 'Usporedi',
-    compare_tooltip: 'Usporedi rodoslovna stabla predaka oba rodoslovca za ovu osobu',
+    compare_tooltip: 'Usporedi stabla predaka obaju rodoslovaca za ovu osobu',
     compare_agree: 'Podudaranje',
     compare_minor: 'Manja razlika',
     compare_conflict: 'Ključna razlika',
@@ -275,56 +276,56 @@ export default {
     help_auth_match: ' (ova je funkcija dostupna samo prijavljenim članovima)',
     help_auth_section: `
       <h3>5. Prijava u sustav</h3>
-      <p>Za potpuni pristup stablima i podudaranjima morate se prijaviti. Otvorite prozor za prijavu klikom na ikonu osobe (<strong>{USER_ICON}</strong>) gore desno. U prozor upišite korisničko ime i lozinku koju inače koristite za pristup matičnom portalu društva.</p>`,
-    help_matricula_mark: `oznaka <strong>⛪</strong> pored imena izvora znači da podaci proizlaze iz indeksa Matricula Online a ne iz osobnog obiteljskog stabla, `,
-    help_source_type_item: `<li><strong>Izvor:</strong> U polje za pretragu možete unijeti naziv jednog ili više izvora odvojenih zarezom. Pomoću padajućeg izbornika pored njega možete pretragu ograničiti i na određeni tip izvora: <em>Obiteljska stabla</em>, <em>Matricula indeks</em> ili <em>Geneanet groblja</em> (prema zadanim postavkama uključeni su svi izvori).</li>`,
-    help_matricula_cols: ` Ako izvor doprinosi podacima iz više izvora (vlastito stablo, Matricula indeks, Geneanet groblja…), mreža uz stupac <em>Ukupno</em> prikazuje po jedan stupac za svaki izvor.`,
+      <p>Za potpun pristup stablima i podudaranjima morate se prijaviti. Prozor za prijavu otvarate klikom na ikonu osobe (<strong>{USER_ICON}</strong>) gore desno. U prozor upišite korisničko ime i lozinku koje inače upotrebljavate za pristup mrežnom portalu matičnoga rodoslovnog društva.</p>`,
+    help_matricula_mark: `oznaka <strong>⛪</strong> uz ime izvora znači da podaci potječu iz indeksa Matricula Online, a ne iz osobnoga obiteljskog stabla, `,
+    help_source_type_item: `<li><strong>Izvor:</strong> U polje za pretraživanje možete unijeti naziv jednog ili više izvora odvojenih zarezom. Padajućim izbornikom uz njega pretraživanje možete ograničiti i na određenu vrstu izvora: <em>Obiteljska stabla</em>, <em>Matricula indeks</em> ili <em>Geneanet groblja</em> (prema zadanim su postavkama uključeni svi izvori).</li>`,
+    help_matricula_cols: ` Ako izvor pridonosi podatke iz više izvora (vlastito obiteljsko stablo, Matricula indeks, Geneanet groblja…), mreža uz stupac <em>Ukupno</em> prikazuje još po jedan stupac za svaki izvor.`,
     help_manual: `
       <h2>Upute za korištenje</h2>
-      <p>Dobrodošli u Rodoslovni indeks, arhivsku zbirku podataka o osobama i obiteljima. Ove će vam upute pomoći u pretraživanju i pregledu rodoslovnih podataka.</p>
+      <p>Dobro došli u Rodoslovni indeks, arhivsku zbirku podataka o osobama i obiteljima. Ove će vam upute pomoći pri pretraživanju i pregledavanju rodoslovnih podataka.</p>
       <h3>1. Osnovni pregled i navigacija</h3>
       <p>Na vrhu zaslona nalazi se glavni navigacijski izbornik. Klikom na naslov stranice uvijek se vraćate na početnu stranicu. Izbornik sadrži četiri glavne kartice:</p>
       <ul>
-        <li><strong>Pretraga:</strong> Omogućuje opću pretragu po svim osobama i obiteljima istovremeno.</li>
-        <li><strong>Osoba:</strong> Omogućuje detaljnu pretragu samo po pojedincima.</li>
-        <li><strong>Obitelj:</strong> Omogućuje detaljnu pretragu specifičnih obitelji (po mužu, ženi i djeci).</li>
+        <li><strong>Pretraživanje:</strong> Omogućuje opće pretraživanje svih osoba i obitelji istodobno.</li>
+        <li><strong>Osoba:</strong> Omogućuje detaljno pretraživanje samo pojedinih osoba.</li>
+        <li><strong>Obitelj:</strong> Omogućuje detaljno pretraživanje pojedinih obitelji (prema mužu, ženi i djeci).</li>
         <li><strong>Izvori:</strong> Prikazuje popis rodoslovaca i drugih izvora te ukupnu statistiku.</li>
       </ul>
-      <p>Na desnoj strani navigacijske trake pronaći ćete ikonu izbornika (<strong>☰</strong>) za otvaranje tražilice te gumbe za pomoć (<strong>?</strong>){auth_nav} i odabir jezika. Na dnu stranice nalazi se podnožje s verzijom aplikacije i datumom posljednjeg ažuriranja podataka.</p>
-      <p><strong>Djeljive poveznice:</strong> Svaka pretraga i svaka otvorena stranica sprema se u adresnu traku preglednika (URL), pa trenutni prikaz možete jednostavno kopirati, spremiti u oznake ili proslijediti drugima.</p>
-      <h3>2. Kako pretraživati po indeksu?</h3>
-      <p>Indeks nudi prilagodljivu tražilicu na desnoj strani zaslona. Otvarate ju klikom na ikonu izbornika (<strong>☰</strong>) u gornjem desnom kutu. Sadržaj tražilice prilagođava se odabranoj kartici:</p>
+      <p>Na desnoj strani navigacijske trake nalaze se ikona izbornika (<strong>☰</strong>) za otvaranje tražilice te gumbi za pomoć (<strong>?</strong>){auth_nav} i odabir jezika. Na dnu stranice nalazi se podnožje s inačicom aplikacije i datumom posljednjeg ažuriranja podataka.</p>
+      <p><strong>Poveznice za dijeljenje:</strong> Svako pretraživanje i svaka otvorena stranica spremaju se u adresnu traku preglednika (URL), pa trenutačni prikaz možete jednostavno kopirati, spremiti među oznake ili proslijediti drugima.</p>
+      <h3>2. Kako pretraživati indeks?</h3>
+      <p>Indeks nudi prilagodljivu tražilicu na desnoj strani zaslona. Otvarate je klikom na ikonu izbornika (<strong>☰</strong>) u gornjem desnom kutu. Sadržaj tražilice prilagođava se odabranoj kartici:</p>
       <ul>
-        <li><strong>Pretraga:</strong> Najopćenitija tražilica – u polja za pretragu možete unijeti bilo koju kombinaciju imena, prezimena, datuma i mjesta, a tražilica će vam vratiti dvije odvojene tablice s rezultatima: pronađene osobe i pronađene obitelji.</li>
-        <li><strong>Osoba:</strong> Omogućuje preciznu pretragu po pojedinačnim životnim događajima (točan datum i mjesto rođenja te smrti).</li>
-        <li><strong>Obitelj:</strong> Omogućuje pretragu po podacima muža i žene istovremeno (imena, prezimena, datumi rođenja), datumu i mjestu vjenčanja te pretragu po imenima djece.</li>
+        <li><strong>Pretraživanje:</strong> Najopćenitija tražilica – u polja možete unijeti bilo koju kombinaciju imena, prezimena, datuma i mjesta, a tražilica prikazuje dvije odvojene tablice rezultata: pronađene osobe i pronađene obitelji.</li>
+        <li><strong>Osoba:</strong> Omogućuje precizno pretraživanje prema pojedinim životnim događajima (točan datum i mjesto rođenja te smrti).</li>
+        <li><strong>Obitelj:</strong> Omogućuje istodobno pretraživanje prema podacima muža i žene (imena, prezimena, datumi rođenja), prema datumu i mjestu vjenčanja te prema imenima djece.</li>
       </ul>
       <h4>Pravila za unos podataka</h4>
       <ul>
         <li><strong>Više vrijednosti odjednom:</strong> U tekstualna polja (imena, prezimena, mjesta, izvor) možete unijeti više riječi odvojenih zarezom (npr. <em>Janez, Ivan</em> ili <em>Kovač, Kovačić</em>). Sustav će pronaći zapise koji sadrže bilo koju od njih.</li>
-        <li><strong>Datumi i godine:</strong> U datumska polja možete unijeti točne datume (npr. <em>15. 4. 1850.</em>) ili samo godine (npr. <em>1850</em>). Datumska polja omogućuju i pretragu po rasponu (od - do), no pri tome se u obzir uzimaju <strong>samo godine</strong>.</li>
-        <li><strong>Precizno pretraživanje:</strong> Na početku riječi možete upotrijebiti znak <code>^</code> kako biste pronašli zapise koji njome počinju (npr. <code>^Kranj</code>) ili pak <code>$</code> na kraju za pronalaženje onih koji njome završavaju. Upotrebom oba znaka (<code>^Kranj$</code>) traži se točno podudaranje.</li>
-        <li><strong>Brisanje polja:</strong> Svako polje za unos na desnom rubu ima gumb <strong>×</strong> kojim brzo brišete unesenu vrijednost.</li>
+        <li><strong>Datumi i godine:</strong> U datumska polja možete unijeti točne datume (npr. <em>15. 4. 1850.</em>) ili samo godine (npr. <em>1850</em>). Datumska polja omogućuju i pretraživanje prema rasponu (od – do), no pritom se u obzir uzimaju <strong>samo godine</strong>.</li>
+        <li><strong>Precizno pretraživanje:</strong> Na početku riječi možete upotrijebiti znak <code>^</code> kako biste pronašli zapise koji njome počinju (npr. <code>^Kranj</code>), a znak <code>$</code> na kraju kako biste pronašli one koji njome završavaju. Upotrebom obaju znakova (<code>^Kranj$</code>) traži se točno podudaranje.</li>
+        <li><strong>Brisanje polja:</strong> Svako polje za unos uz desni rub ima gumb <strong>×</strong> kojim brzo brišete unesenu vrijednost.</li>
       </ul>
-      <h4>Napredne postavke pretrage</h4>
+      <h4>Napredne postavke pretraživanja</h4>
       <ul>
         {source_type_item}
         <li><strong>S poveznicom:</strong> Prikazuje samo rezultate koji sadrže vanjsku poveznicu na izvorne dokumente (npr. Matricula Online, FamilySearch, Geneanet).</li>
-        <li><strong>Točno / Približno:</strong> Postavka <strong>Točno</strong> traži precizna podudaranja cijelih riječi (npr. pretraga <em>Kovač</em> neće pronaći <em>Kovačič</em>). Postavka <strong>Približno</strong> pomoću algoritama pretražuje i dijelove riječi (podnizove) te slične inačice imena i prezimena.</li>
+        <li><strong>Točno / Približno:</strong> Postavka <strong>Točno</strong> traži precizna podudaranja cijelih riječi (npr. pretraživanje <em>Kovač</em> neće pronaći <em>Kovačić</em>). Postavka <strong>Približno</strong> pomoću algoritama pretražuje i dijelove riječi (podnizove) te slične inačice imena i prezimena.</li>
       </ul>
-      <h3>3. Pregled rezultata</h3>
+      <h3>3. Pregledavanje rezultata</h3>
       <ul>
-        <li><strong>Sortiranje:</strong> Klikom na naslov stupca rezultate sortirate abecedno ili kronološki. Ponovni klik na isti stupac preokreće smjer sortiranja (<strong>▲</strong> ↔ <strong>▼</strong>). Ako zatim kliknete na drugi stupac, on postaje primarni kriterij, a prethodni sekundarni (označeno s <strong>△</strong> ili <strong>▽</strong>).</li>
-        <li><strong>Filtriranje tablice:</strong> U polje za pretragu pored naslova tablice možete unijeti bilo kakav tekst kojim među prikazanim rezultatima zadržavate samo retke koji ga sadrže u bilo kojem stupcu.</li>
-        <li><strong>Proširiva polja:</strong> Stupci poput <em>Roditelji</em>, <em>Partneri</em> i <em>Djeca</em> prikazuju broj osoba. Klikom na broj proširujete popis. Za prikaz svih odjednom možete upotrijebiti gumb <strong>⤢ Proširi</strong> iznad tablice, a za skrivanje gumb <strong>⤡ Sažmi</strong>.</li>
-        <li><strong>Detalji osoba i obitelji:</strong> Klikom na plavo obojeno ime u tablici izvodite novu pretragu i prikazujete sve zapise samo za tu odabranu osobu ili obitelj. Klikom na partnera tražite njihovu obitelj. Slično tome, pri prikazu roditelja klikom na oznaku (<em>Roditelji</em>, <em>Muž</em> ili <em>Žena</em>) prikazujete njihovu obitelj, a klikom na ime pojedinog roditelja pretražujete samo tu osobu.</li>
-        <li><strong>Privatni zapisi:</strong> Kod nekih osoba umjesto imena ili prezimena prikazana je oznaka <em>&lt;private&gt;</em>. Takvi zapisi nemaju poveznicu za daljnju pretragu.</li>
-        <li><strong>Stablo:</strong> Pored određenih osoba (roditelja, djece, partnera) primijetit ćete ikonu stabla (<strong>🌳</strong> za pretke, <strong>🌿</strong> za potomke). Klikom na ikonu prikazujete grafičko i interaktivno rodoslovno stablo predaka ili potomaka odabrane osobe.{auth_tree}</li>
-        <li><strong>Izvoz podataka:</strong> Klikom na gumb <strong>CSV</strong> iznad tablice preuzimate trenutne rezultate na svoje računalo u tabličnom obliku.</li>
-        <li><strong>Sklopive tabele i odjeljci:</strong> Klikom na naslov tablice ili odjeljka (npr. <em>Osobe</em>, <em>Obitelji</em> ili <em>Podudaranja</em>) možete privremeno sakriti sadržaj i ponovnim klikom ga ponovno prikazati.</li>
+        <li><strong>Razvrstavanje:</strong> Klikom na naslov stupca rezultate razvrstavate abecedno ili kronološki. Ponovni klik na isti stupac obrće smjer razvrstavanja (<strong>▲</strong> ↔ <strong>▼</strong>). Ako zatim kliknete na drugi stupac, on postaje primarni kriterij, a prethodni sekundarni (označeno znakom <strong>△</strong> ili <strong>▽</strong>).</li>
+        <li><strong>Filtriranje tablice:</strong> U polje za pretraživanje uz naslov tablice možete unijeti bilo koji tekst; među prikazanim rezultatima tada ostaju samo retci koji ga sadrže u bilo kojem stupcu.</li>
+        <li><strong>Proširiva polja:</strong> Stupci <em>Roditelji</em>, <em>Partneri</em> i <em>Djeca</em> prikazuju broj osoba. Klikom na broj proširujete popis. Za prikaz svih odjednom upotrijebite gumb <strong>⤢ Proširi</strong> iznad tablice, a za skrivanje gumb <strong>⤡ Sažmi</strong>.</li>
+        <li><strong>Pojedinosti o osobama i obiteljima:</strong> Klikom na plavo obojeno ime u tablici pokrećete novo pretraživanje i prikazujete sve zapise samo za tu odabranu osobu ili obitelj. Klikom na partnera pronalazite njihovu zajedničku obitelj. Slično tome, pri prikazu roditelja klikom na oznaku (<em>Roditelji</em>, <em>Muž</em> ili <em>Žena</em>) prikazujete njihovu obitelj, a klikom na ime pojedinog roditelja pretražujete samo tu osobu.</li>
+        <li><strong>Privatni zapisi:</strong> Kod nekih je osoba umjesto imena ili prezimena prikazana oznaka <em>&lt;private&gt;</em>. Takvi zapisi nemaju poveznicu za daljnje pretraživanje.</li>
+        <li><strong>Stablo:</strong> Uz određene osobe (roditelje, djecu, partnere) primijetit ćete ikonu stabla (<strong>🌳</strong> za pretke, <strong>🌿</strong> za potomke). Klikom na ikonu prikazujete grafičko, interaktivno rodoslovno stablo predaka ili potomaka odabrane osobe.{auth_tree}</li>
+        <li><strong>Izvoz podataka:</strong> Klikom na gumb <strong>CSV</strong> iznad tablice preuzimate trenutačne rezultate na svoje računalo u tabličnom obliku.</li>
+        <li><strong>Sklopive tablice i odjeljci:</strong> Klikom na naslov tablice ili odjeljka (npr. <em>Osobe</em>, <em>Obitelji</em> ili <em>Podudaranja</em>) možete privremeno sakriti sadržaj; sljedećim klikom sadržaj se ponovno prikazuje.</li>
       </ul>
-      <h4>Ikone u recima</h4>
-      <p>U stupcu <em>Poveznice</em> ikone označavaju vrstu izvornog izvora na koji upućuju:</p>
+      <h4>Ikone u retcima</h4>
+      <p>U stupcu <em>Poveznice</em> ikone označavaju vrstu izvora na koji upućuju:</p>
       <ul>
         <li><strong>📜</strong> – Matricula Online (matične knjige)</li>
         <li><strong>🌳</strong> – FamilySearch (matične knjige, obiteljska stabla i drugi izvori)</li>
@@ -332,43 +333,43 @@ export default {
         <li><strong>🎖</strong> – žrtve ratova (SIstory)</li>
         <li><strong>📋</strong> – popisi stanovništva (SIstory)</li>
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
-        <li><strong>📄</strong> – ostali povijesni izvori (arhivi, župne i društvene internetske stranice)</li>
+        <li><strong>📄</strong> – ostali povijesni izvori (arhivi, župne i društvene mrežne stranice)</li>
       </ul>
-      <p>Pored nekih drugih podataka pojavljuju se manje rubne ikone s dodatnim informacijama: {matricula_mark}oznaka <strong>🏷</strong> pored prezimena prikazuje druge oblike prezimena (na primjer prezime nakon udaje), oznaka <strong>✝</strong> pored datuma rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> pored mjesta rođenja ili vjenčanja upozorava na zabilježene bilješke. Prelaskom miša preko njih prikazuju se detalji.</p>
+      <p>Uz neke druge podatke pojavljuju se i manje rubne ikone s dodatnim informacijama: {matricula_mark}oznaka <strong>🏷</strong> uz prezime prikazuje druge oblike prezimena (na primjer prezime nakon vjenčanja), oznaka <strong>✝</strong> uz datum rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> uz mjesto rođenja ili vjenčanja upozorava na zabilježene napomene. Prelaskom mišem preko njih prikazuju se pojedinosti.</p>
       <h4>Stablo predaka i potomaka</h4>
       <p>Stranica sa stablom prikazuje grafičko, interaktivno rodoslovno stablo odabrane osobe. Dostupne su sljedeće mogućnosti:</p>
       <ul>
-        <li><strong>Povećanje i smanjivanje:</strong> gumbima <strong>➕</strong> i <strong>➖</strong> u donjem desnom kutu ili kotačićem miša.</li>
-        <li><strong>Pomicanje:</strong> stablo možete povlačiti mišem (ili prstom na zaslonima osjetljivim na dodir).</li>
-        <li><strong>Izvoz:</strong> gumbima u gornjem desnom kutu možete preuzeti stablo kao sliku <strong>SVG</strong>, tablicu <strong>CSV</strong> ili datoteku <strong>GEDCOM</strong> za uvoz u druge rodoslovne programe. Izvezenu datoteku GEDCOM možete alatom kao što je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a> spojiti sa svojom vlastitom GEDCOM datotekom.</li>
-        <li><strong>Pregledna karta:</strong> na većim zaslonima u gornjem lijevom kutu prikazana je mala karta cijelog stabla i trenutno vidljivog dijela; klikom na nju pomičete se na drugi dio.</li>
+        <li><strong>Uvećavanje i umanjivanje:</strong> Gumbima <strong>➕</strong> i <strong>➖</strong> u donjem desnom kutu ili kotačićem miša.</li>
+        <li><strong>Pomicanje:</strong> Stablo možete povlačiti mišem (ili prstom na zaslonima osjetljivim na dodir).</li>
+        <li><strong>Izvoz:</strong> Gumbima u gornjem desnom kutu stablo možete preuzeti kao sliku <strong>SVG</strong>, tablicu <strong>CSV</strong> ili datoteku <strong>GEDCOM</strong> za uvoz u druge rodoslovne programe. Izvezenu datoteku GEDCOM možete alatom kao što je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a> spojiti s vlastitom datotekom GEDCOM.</li>
+        <li><strong>Pregledna karta:</strong> Na većim je zaslonima u gornjem lijevom kutu prikazana mala karta cijelog stabla i trenutačno vidljivog dijela; klikom na nju pomičete se na drugi dio.</li>
       </ul>
       <h3>4. Izvori</h3>
-      <p>Kartica <strong>Izvori</strong> prikazuje ukupnu statistiku indeksa i popis svih rodoslovaca i drugih izvora.</p>
+      <p>Kartica <strong>Izvori</strong> prikazuje ukupnu statistiku indeksa te popis svih rodoslovaca i drugih izvora.</p>
       <ul>
-        <li><strong>Statistika:</strong> Na vrhu su prikazani grafovi s doprinosima po izvoru i s vremenskom raspodjelom zapisa.</li>
-        <li><strong>Najčešća prezimena:</strong> Prikazan je oblak najčešćih prezimena. Klikom na gumb <strong>CSV</strong> ili <strong>SVG</strong> možete te podatke preuzeti na svoje računalo.</li>
-        <li><strong>Popis izvora:</strong> Tablica prikazuje sve suradnike te broj njihovih osoba, obitelji, poveznica i potencijalnih podudaranja s drugim izvorima. Klikom na gumb <strong>CSV</strong> izvozite tablicu, a klikom na ime izvora otvarate njegovu detaljnu stranicu.</li>
-        <li><strong>Filtriranje popisa:</strong> Polje za pretragu pored naslova tablice omogućuje brzo sužavanje popisa prema nazivu izvora. Oblak najčešćih prezimena tada prikazuje samo prezimena iz pronađenih izvora.</li>
+        <li><strong>Statistika:</strong> Na vrhu su prikazani grafikoni s doprinosima po izvorima i vremenskim pregledom zapisa.</li>
+        <li><strong>Najčešća prezimena:</strong> Prikazan je oblak najčešćih prezimena. Klikom na gumb <strong>CSV</strong> ili <strong>SVG</strong> te podatke možete preuzeti na svoje računalo.</li>
+        <li><strong>Popis izvora:</strong> Tablica prikazuje sve suradnike te broj njihovih osoba, obitelji, poveznica i mogućih podudaranja s drugim izvorima. Klikom na gumb <strong>CSV</strong> izvozite tablicu, a klikom na ime izvora otvarate njegovu stranicu s pojedinostima.</li>
+        <li><strong>Filtriranje popisa:</strong> Polje za pretraživanje uz naslov tablice omogućuje brzo sužavanje popisa prema nazivu izvora. Oblak najčešćih prezimena tada prikazuje samo prezimena iz pronađenih izvora.</li>
       </ul>
-      <h4>Detalji o izvoru</h4>
-      <p>Na stranici pojedinog izvora okupljene su informacije o njegovom doprinosu:</p>
+      <h4>Pojedinosti o izvoru</h4>
+      <p>Na stranici pojedinog izvora prikupljene su informacije o njegovu doprinosu:</p>
       <ul>
         <li><strong>Statistika doprinosa:</strong> Mreža s brojem osoba, obitelji i poveznica te datumom posljednjeg ažuriranja.{matricula_cols}</li>
-        <li><strong>Poveznica:</strong> Ako je izvor naveo svoju web stranicu, ona se prikazuje ispod njegovog imena.</li>
-        <li><strong>Najčešća prezimena:</strong> Oblak riječi i popis prikazuju prezimena koja se najčešće pojavljuju u njegovoj bazi.</li>
+        <li><strong>Poveznica:</strong> Ako je izvor naveo svoju mrežnu stranicu, ona se prikazuje ispod njegova imena.</li>
+        <li><strong>Najčešća prezimena:</strong> Oblak riječi i popis prikazuju prezimena koja se u njegovoj bazi najčešće pojavljuju.</li>
         <li><strong>Moguća podudaranja:</strong> Popis drugih izvora s kojima ovaj izvor dijeli zajedničke (podudarne) povijesne osobe ili obitelji.</li>
       </ul>
       <h4>Podudaranja između izvora</h4>
       <p>Klikom na jedno od predloženih podudaranja na stranici izvora prikazujete detaljnu usporedbu njihovih podataka{auth_match}. Rezultati su prikazani tako da svako podudaranje zauzima dva susjedna retka:</p>
       <ul>
         <li><strong>Gornji redak</strong> prikazuje zapis prvog izvora, a <strong>donji</strong> zapis drugog.</li>
-        <li><strong>Ocjena pouzdanosti:</strong> Svako podudaranje ima ocjenu u postocima koja govori koliko je vjerojatno da se radi o istoj osobi ili obitelji.</li>
-        <li><strong>Označene razlike:</strong> Polja u kojima se vrijednosti ne podudaraju između dvaju izvora automatski su obojena <span class="match-diff">žuto</span> u tablici. Polja i poveznice (ikona) koje postoje samo kod drugog izvora obojene su <span class="match-add">zeleno</span> — to olakšava uočavanje novih informacija koje još nemate u svom stablu.</li>
-        <li><strong>Oznake podudaranja:</strong> Pored ocjene pouzdanosti mogu se prikazati oznake <span class="match-badge match-badge-add">+</span> (drugi izvor ima podatak koji ovdje nedostaje), <span class="match-badge match-badge-link">🔗</span> (drugi izvor ima poveznicu, npr. na zapis o grobu, koja ovdje nedostaje) i <span class="match-badge match-badge-diff">≠</span> (vrijednosti se ne podudaraju između dvaju izvora), svaka s brojem polja na koja se odnosi.</li>
-        <li><strong>Filtriranje podudaranja:</strong> Svaki odjeljak (<em>Osobe</em>, <em>Obitelji</em>) ima pored svog naslova polje za pretragu kojim dodatno sužavate prikazana podudaranja po imenu, prezimenu, datumu ili mjestu, te gumbe <span class="match-badge match-badge-add">+</span> Novo, <span class="match-badge match-badge-link">🔗</span> Poveznice i <span class="match-badge match-badge-diff">≠</span> Razlike za prikaz samo onih parova koji imaju odgovarajuću oznaku.</li>
-        <li><strong>Izvoz podudaranja:</strong> Klikom na gumb <strong>CSV</strong> pored naslova pojedinog odjeljka izvozite prikazane podudarajuće zapise. Izvoz možete iskoristiti za dopunu svog stabla, primjerice alatom kao što je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
-        <li><strong>Usporedba stabala:</strong> za osobu koja se podudara gumb <strong>🌳 Usporedi</strong> otvara usporedni prikaz rodoslovnih stabala obaju izvora. Svaka je osoba označena bojom — <em>podudaranje</em>, <em>manja razlika</em>, <em>ključna razlika</em> (razlikuju se ime, prezime ili datum rođenja) ili prisutna samo u <em>jednom</em> stablu —, a klikom na osobu prikazuje se detaljna usporedba po pojedinim poljima, uključujući poveznice na izvore. Možete prebacivati između <em>predaka</em> i <em>potomaka</em>, putem obojene legende skočiti na bilo koju osobu, a usporedbu preuzeti kao tablicu <strong>CSV</strong> ili sliku <strong>SVG</strong>.</li>
+        <li><strong>Ocjena pouzdanosti:</strong> Svako podudaranje ima ocjenu u postocima koja pokazuje koliko je vjerojatno da je riječ o istoj osobi ili obitelji.</li>
+        <li><strong>Označene razlike:</strong> Polja u kojima se vrijednosti dvaju izvora ne podudaraju u tablici su automatski obojena <span class="match-diff">žuto</span>. Polja i poveznice (ikone) koje postoje samo kod drugog izvora obojene su <span class="match-add">zeleno</span> – tako se ističu nove informacije kojih još nema u vašem stablu.</li>
+        <li><strong>Oznake podudaranja:</strong> Uz ocjenu pouzdanosti mogu se prikazati oznake <span class="match-badge match-badge-add">+</span> (drugi izvor ima podatak koji ovdje nedostaje), <span class="match-badge match-badge-link">🔗</span> (drugi izvor ima poveznicu, npr. na zapis o grobu, koja ovdje nedostaje) i <span class="match-badge match-badge-diff">≠</span> (vrijednosti se dvaju izvora ne podudaraju), svaka s brojem polja na koja se odnosi.</li>
+        <li><strong>Filtriranje podudaranja:</strong> Svaki odjeljak (<em>Osobe</em>, <em>Obitelji</em>) uz svoj naslov ima polje za pretraživanje kojim prikazana podudaranja dodatno sužavate prema imenu, prezimenu, datumu ili mjestu te gumbe <span class="match-badge match-badge-add">+</span> Novo, <span class="match-badge match-badge-link">🔗</span> Poveznice i <span class="match-badge match-badge-diff">≠</span> Razlike za prikaz samo onih parova koji imaju odgovarajuću oznaku.</li>
+        <li><strong>Izvoz podudaranja:</strong> Klikom na gumb <strong>CSV</strong> uz naslov pojedinog odjeljka izvozite prikazane podudarne zapise. Izvoz možete iskoristiti za dopunu svojeg stabla, primjerice alatom kao što je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
+        <li><strong>Usporedba stabala:</strong> Za podudarnu osobu gumb <strong>🌳 Usporedi</strong> otvara usporedni prikaz rodoslovnih stabala obaju izvora. Svaka je osoba označena bojom – <em>podudaranje</em>, <em>manja razlika</em>, <em>ključna razlika</em> (razlikuju se ime, prezime ili datum rođenja) ili prisutna samo u <em>jednom</em> stablu – a klikom na osobu prikazuje se detaljna usporedba po pojedinim poljima, uključujući poveznice na izvore. Možete se prebacivati između <em>predaka</em> i <em>potomaka</em>, preko legende u bojama skočiti na bilo koju osobu, a usporedbu preuzeti kao tablicu <strong>CSV</strong> ili sliku <strong>SVG</strong>.</li>
       </ul>
       {auth_section}
     `,
