@@ -16,6 +16,10 @@ const siteConfig = {
   authUrl: 'https://rodoslovje.si/wp-json/jwt-auth/v1/token',
   filePrefix: 'sgi',
 
+  // CARTO basemap API key for the Geneanet cemeteries map (registered to
+  // this site's domain). Leave empty to use the keyless public tiles.
+  cartoBasemapKey: 'cb1_2f0m_1_8aff3081fe645df1f319eee0',
+
   // Languages shown in the dropdown, ordered alphabetically by language name
   languages: ['de', 'en', 'fr', 'hr', 'hu', 'it', 'sl'],
 

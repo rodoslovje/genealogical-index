@@ -1,5 +1,6 @@
 import { t, getCurrentLang } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
+import siteConfig from '@site-config';
 import { escapeHtml, baseContributorName, deceasedIndicatorHtml, deceasedTitleAttr, ensureLeaflet, formatExportFilename } from '../lib/utils.js';
 import { toUnicodeHref } from '../lib/url.js';
 import { csvCell, csvFooter, downloadCsv } from '../lib/csv.js';
@@ -71,7 +72,13 @@ async function renderMap(cemeteries) {
   if (mapInstance) { mapInstance.remove(); mapInstance = null; }
 
   mapInstance = L.map(mapEl, { scrollWheelZoom: false });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  // Keyed CARTO tiles are served from the bare host; the keyless public tiles
+  // are spread over the a–d subdomains.
+  const cartoKey = siteConfig.cartoBasemapKey || '';
+  const tileUrl = cartoKey
+    ? `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(cartoKey)}`
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+  L.tileLayer(tileUrl, {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 19,
     subdomains: 'abcd',
@@ -233,7 +240,7 @@ export async function renderGeneanetStatsPage() {
   try {
     const stats = await fetchStats();
     const cemeteries = stats.cemeteries || [];
-    const places = stats.top_places || [];
+    const topContributors = stats.top_contributors || [];
     const totals = stats.totals || {};
 
     // Geneanet's "A cemetery for posterity" page is localized for de/it;
@@ -262,7 +269,7 @@ export async function renderGeneanetStatsPage() {
           <div id="geneanet-map" class="geneanet-map"></div>
         </div>
         <div class="chart-wrapper">
-          <canvas id="geneanetPlacesChart"></canvas>
+          <canvas id="geneanetContributorsChart"></canvas>
         </div>
       </div>
     </div>`;
@@ -276,10 +283,10 @@ export async function renderGeneanetStatsPage() {
     container.innerHTML = heading + cloudHtml + cemeteriesSection.html;
 
     renderMap(cemeteries);
-    renderDoughnut('geneanetPlacesChart', places, {
+    renderDoughnut('geneanetContributorsChart', topContributors, {
       valueKey: 'persons_count',
-      labelKey: 'place',
-      title: t('geneanet_section_places'),
+      labelKey: 'contributor',
+      title: t('tab_contributors'),
     });
     setupCollapsibleHeader('#geneanet-stats-heading', '#geneanet-stats-body');
     // Top surnames across every Geneanet cemeteries source. The `-geneanet`

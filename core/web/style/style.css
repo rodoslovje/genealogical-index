@@ -1238,7 +1238,7 @@ body.tree-view .section-bar {
   .chart-wrapper { height: 380px; }
 }
 /* Geneanet cemeteries map: fills its chart-wrapper so it sits as a rectangle
-   beside the places chart (and stacks above it on narrow screens). */
+   beside the sources chart (and stacks above it on narrow screens). */
 .geneanet-map {
   width: 100%;
   height: 100%;

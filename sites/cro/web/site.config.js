@@ -15,6 +15,10 @@ const siteConfig = {
   authUrl: null,
   filePrefix: 'cgi',
 
+  // CARTO basemap API key for the Geneanet cemeteries map (registered to
+  // this site's domain). Leave empty to use the keyless public tiles.
+  cartoBasemapKey: '',
+
   // The Croatian site has no Matricula Index, Geneanet Cemeteries or military
   // special sources, so hide their UI (stats links, search source options,
   // side routes).
