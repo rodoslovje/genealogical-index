@@ -129,6 +129,11 @@ class GeneanetCemetery(Base):
     __tablename__ = "geneanet_cemeteries"
 
     id = Column(Integer, primary_key=True, index=True)
+    # Base contributor name (no -geneanet suffix), like MatriculaBook.
+    contributor = Column(Text, index=True)
+    # Geneanet account that uploaded the cemetery. Kept for admin use only —
+    # never returned by the API.
+    username = Column(Text)
     name = Column(Text)
     place = Column(Text)
     type = Column(Text)

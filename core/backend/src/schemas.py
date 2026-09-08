@@ -136,6 +136,7 @@ class MatriculaBook(BaseModel):
 
 
 class GeneanetCemetery(BaseModel):
+    contributor: Optional[str] = None
     name: Optional[str] = None
     place: Optional[str] = None
     type: Optional[str] = None
@@ -152,5 +153,6 @@ class GeneanetCemetery(BaseModel):
 
 class GeneanetStats(BaseModel):
     cemeteries: List[GeneanetCemetery]
+    top_contributors: List[Any] = []
     top_places: List[Any] = []
     totals: Any = None

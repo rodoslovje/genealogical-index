@@ -1,13 +1,14 @@
 import { t, getCurrentLang } from '../i18n.js';
 import { API_BASE_URL } from '../config.js';
-import { escapeHtml, ensureLeaflet, formatExportFilename } from '../lib/utils.js';
+import { escapeHtml, baseContributorName, deceasedIndicatorHtml, deceasedTitleAttr, ensureLeaflet, formatExportFilename } from '../lib/utils.js';
+import { toUnicodeHref } from '../lib/url.js';
 import { csvCell, csvFooter, downloadCsv } from '../lib/csv.js';
 import { setupSortableTable, buildThead, renderDoughnut, setupCollapsibleHeader } from './matricula-stats.js';
 import { loadSurnameCloud } from './cloud.js';
 
-// The single Geneanet cemeteries source contributor (NFC-normalised so it
-// matches the name stored in the DB).
-const GENEANET_CONTRIBUTOR = 'Pokopališča-geneanet'.normalize('NFC');
+// Person/family data for each genealogist's Geneanet cemeteries lives under
+// `<name>-geneanet`; the index stores the base name, like matricula books.
+const GENEANET_SUFFIX = '-geneanet';
 
 let cachedStats = null;
 let fetchPromise = null;
@@ -15,7 +16,7 @@ let fetchPromise = null;
 function fetchStats() {
   if (cachedStats) return Promise.resolve(cachedStats);
   if (!fetchPromise) {
-    const empty = { cemeteries: [], top_places: [], totals: {} };
+    const empty = { cemeteries: [], top_contributors: [], top_places: [], totals: {} };
     fetchPromise = fetch(`${API_BASE_URL}/api/geneanet/stats`)
       .then(r => (r.ok ? r.json() : empty))
       .then(data => { cachedStats = data; return data; })
@@ -96,10 +97,13 @@ async function renderMap(cemeteries) {
     const title = escapeHtml(c.name || c.place || '');
     const place = escapeHtml(c.place || '');
     const counts = `${t('col_persons')}: ${fmt(c.persons_count)} · ${t('col_graves')}: ${fmt(c.graves_count)}`;
+    const contrib = c.contributor
+      ? `<br>${t('col_contributor')}: ${escapeHtml(baseContributorName(c.contributor))}`
+      : '';
     const link = c.url
       ? `<br><a href="${c.url}" target="_blank" rel="noopener">Geneanet</a>`
       : '';
-    m.bindPopup(`<strong>${title}</strong><br>${typeLabel(c.type)} · ${place}<br>${counts}${link}`);
+    m.bindPopup(`<strong>${title}</strong><br>${typeLabel(c.type)} · ${place}<br>${counts}${contrib}${link}`);
     return m;
   });
   const group = L.featureGroup(markers).addTo(mapInstance);
@@ -129,6 +133,7 @@ function renderCemeteriesSection(cemeteries) {
     { f: 'type',           h: t('col_book_type'),     cls: ' col-center', sortVal: (c) => typeLabel(c.type).toLowerCase() },
     { f: 'persons_count',  h: t('col_persons'),       cls: ' col-center', sortVal: (c) => Number(c.persons_count || 0), defaultDesc: true },
     { f: 'graves_count',   h: t('col_graves'),        cls: ' col-center', sortVal: (c) => Number(c.graves_count || 0),  defaultDesc: true },
+    { f: 'contributor',    h: t('col_contributor'),   cls: ' col-center', sortVal: (c) => baseContributorName(c.contributor || '') },
   ];
 
   const renderRow = (c) => {
@@ -136,12 +141,19 @@ function renderCemeteriesSection(cemeteries) {
     const nameCell = c.url
       ? `<a href="${c.url}" target="_blank" rel="noopener">${name}</a>`
       : name;
+    // Same Source cell as the Matricula index: SPA link to the genealogist's
+    // page plus the memorial mark for deceased contributors.
+    const contrib = c.contributor ? baseContributorName(c.contributor) : '';
+    const contribCell = contrib
+      ? `<a href="${toUnicodeHref({ t: 'contributors', c: contrib })}" data-spa-nav${deceasedTitleAttr(contrib, t('memorial_title'))}>${escapeHtml(contrib)}</a>${deceasedIndicatorHtml(contrib, t('memorial_title'))}`
+      : '';
     return `<tr>
       <td class="col-center">${escapeHtml(c.place || '')}</td>
       <td>${nameCell}</td>
       <td class="col-center">${typeLabel(c.type)}</td>
       <td class="col-center">${fmt(c.persons_count)}</td>
       <td class="col-center">${fmt(c.graves_count)}</td>
+      <td class="col-center">${contribCell}</td>
     </tr>`;
   };
 
@@ -173,7 +185,7 @@ function renderCemeteriesSection(cemeteries) {
         filter: {
           paramKey: 'geneanet-cemeteries',
           placeholder: t('table_filter_placeholder'),
-          fields: [c => c.place, c => c.name, c => typeLabel(c.type)],
+          fields: [c => c.place, c => c.name, c => typeLabel(c.type), c => baseContributorName(c.contributor)],
         },
       });
 
@@ -192,8 +204,9 @@ function exportCemeteriesToCSV(rows, columns, filename) {
   const header = columns.map(c => csvCell(c.h || '')).join(',');
   const body = rows.map(c => columns.map(col => {
     let v;
-    if (col.f === 'type') v = typeLabel(c.type);
-    else                  v = c[col.f] ?? '';
+    if (col.f === 'type')             v = typeLabel(c.type);
+    else if (col.f === 'contributor') v = baseContributorName(c.contributor || '');
+    else                              v = c[col.f] ?? '';
     return csvCell(v);
   }).join(','));
   downloadCsv([header, ...body, '', ...csvFooter()], filename);
@@ -235,6 +248,7 @@ export async function renderGeneanetStatsPage() {
     <h2 class="section-heading" id="geneanet-stats-heading">${t('section_statistics')}</h2>
     <div id="geneanet-stats-body">
       <div class="totals-bar matricula-totals-bar">
+        <span><span>${t('tab_contributors')}</span>: <strong>${fmt(totals.contributors_count)}</strong></span>
         <span><span>${t('geneanet_section_cemeteries')}</span>: <strong>${fmt(totals.cemeteries_count)}</strong></span>
         <span><span>${t('geneanet_section_places')}</span>: <strong>${fmt(totals.places_count)}</strong></span>
         <span><span>${t('col_persons')}</span>: <strong>${fmt(totals.persons_count)}</strong></span>
@@ -265,9 +279,20 @@ export async function renderGeneanetStatsPage() {
       title: t('geneanet_section_places'),
     });
     setupCollapsibleHeader('#geneanet-stats-heading', '#geneanet-stats-body');
-    // Top surnames across the Geneanet cemeteries source. hideSectionIfEmpty so
-    // the section disappears cleanly if the source has no surname data.
-    loadSurnameCloud(GENEANET_CONTRIBUTOR, 'geneanet-surname-cloud', { hideSectionIfEmpty: true });
+    // Top surnames across every Geneanet cemeteries source. The `-geneanet`
+    // suffix is required: a bare base name would also pull in that
+    // genealogist's family tree. hideSectionIfEmpty so the section disappears
+    // cleanly if no source has surname data.
+    const geneanetSources = [...new Set(
+      cemeteries.map(c => baseContributorName(c.contributor || '')).filter(Boolean)
+    )].map(c => `${c}${GENEANET_SUFFIX}`);
+    // An empty list would mean "all contributors" to the API — hide instead.
+    if (geneanetSources.length) {
+      loadSurnameCloud(geneanetSources, 'geneanet-surname-cloud', { hideSectionIfEmpty: true });
+    } else {
+      const section = document.getElementById('geneanet-surname-cloud-section');
+      if (section) section.style.display = 'none';
+    }
     cemeteriesSection.setup();
   } finally {
     if (overlay) overlay.style.display = 'none';

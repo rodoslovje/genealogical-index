@@ -248,6 +248,8 @@ def setup_full(db):
 
         CREATE TABLE geneanet_cemeteries (
             id SERIAL PRIMARY KEY,
+            contributor TEXT,
+            username TEXT,
             name TEXT,
             place TEXT,
             type TEXT,
@@ -258,6 +260,7 @@ def setup_full(db):
             graves_count INTEGER DEFAULT 0,
             url TEXT
         );
+        CREATE INDEX idx_geneanet_cemeteries_contributor ON geneanet_cemeteries(contributor);
 
         -- Strips the GEDCOM xref `id` field from every element of a JSONB
         -- array of person-info objects. compute_matches uses this to compare
@@ -401,6 +404,8 @@ def setup_update(db):
 
         CREATE TABLE IF NOT EXISTS geneanet_cemeteries (
             id SERIAL PRIMARY KEY,
+            contributor TEXT,
+            username TEXT,
             name TEXT,
             place TEXT,
             type TEXT,
@@ -411,6 +416,11 @@ def setup_update(db):
             graves_count INTEGER DEFAULT 0,
             url TEXT
         );
+        -- geneanet-index.json became per-contributor (keyed by base name, like
+        -- matricula-index.json); older installs predate these two columns.
+        ALTER TABLE geneanet_cemeteries ADD COLUMN IF NOT EXISTS contributor TEXT;
+        ALTER TABLE geneanet_cemeteries ADD COLUMN IF NOT EXISTS username    TEXT;
+        CREATE INDEX IF NOT EXISTS idx_geneanet_cemeteries_contributor ON geneanet_cemeteries(contributor);
     """))
     db.commit()
 
@@ -1043,11 +1053,17 @@ def import_matricula_index(db):
 
 def import_geneanet_index(db):
     """Replace the geneanet_cemeteries table with the contents of
-    data/output/geneanet-index.json. Unlike matricula-index.json (a map keyed
-    by contributor), this file is a flat array of cemeteries, each with geo
-    coordinates and per-cemetery record counts, so it powers the standalone
-    Geneanet Cemeteries index page (`?t=geneanet`). Wholesale re-import keeps
-    it simple and fast.
+    data/output/geneanet-index.json. Like matricula-index.json, the file is a
+    map of base contributor name -> [{name, place, type, lat, lon, counts,
+    url, contributor, username}, ...] (one Geneanet source per genealogist,
+    whose person/family data lives under ``<name>-geneanet``). Each cemetery
+    carries geo coordinates and per-cemetery record counts, so it powers the
+    standalone Geneanet Cemeteries index page (`?t=geneanet`). Wholesale
+    re-import keeps it simple and fast.
+
+    The pre-2026-09 format — a flat array of cemeteries without a contributor
+    — is still accepted so an old file doesn't break the import; those rows
+    fall back to the entry's own ``contributor`` field, if any.
     """
     path = os.path.join(DATA_DIR, "geneanet-index.json")
     if not os.path.exists(path):
@@ -1063,35 +1079,55 @@ def import_geneanet_index(db):
         except (TypeError, ValueError):
             return None
 
+    if isinstance(data, dict):
+        groups = data.items()
+    else:
+        # Legacy flat list: no grouping key, contributor comes from the entry.
+        groups = [(None, data or [])]
+
     rows = []
-    for c in data or []:
-        rows.append(
-            {
-                "name": _s(c.get("name")),
-                "place": _s(c.get("place")),
-                "type": _s(c.get("type")),
-                "lat": _to_float(c.get("lat")),
-                "lon": _to_float(c.get("lon")),
-                "persons_count": int(c.get("persons_count") or 0),
-                "families_count": int(c.get("families_count") or 0),
-                "graves_count": int(c.get("graves_count") or 0),
-                "url": _s(c.get("url")),
-            }
-        )
+    contributors = set()
+    for contributor, cemeteries in groups:
+        for c in cemeteries or []:
+            contrib = unicodedata.normalize(
+                "NFC", contributor or _s(c.get("contributor"))
+            )
+            if contrib:
+                contributors.add(contrib)
+            rows.append(
+                {
+                    "contributor": contrib or None,
+                    "username": _s(c.get("username")) or None,
+                    "name": _s(c.get("name")),
+                    "place": _s(c.get("place")),
+                    "type": _s(c.get("type")),
+                    "lat": _to_float(c.get("lat")),
+                    "lon": _to_float(c.get("lon")),
+                    "persons_count": int(c.get("persons_count") or 0),
+                    "families_count": int(c.get("families_count") or 0),
+                    "graves_count": int(c.get("graves_count") or 0),
+                    "url": _s(c.get("url")),
+                }
+            )
 
     db.execute(text("TRUNCATE geneanet_cemeteries;"))
     if rows:
         db.execute(
             text("""
                 INSERT INTO geneanet_cemeteries
-                    (name, place, type, lat, lon, persons_count, families_count, graves_count, url)
+                    (contributor, username, name, place, type, lat, lon,
+                     persons_count, families_count, graves_count, url)
                 VALUES
-                    (:name, :place, :type, :lat, :lon, :persons_count, :families_count, :graves_count, :url)
+                    (:contributor, :username, :name, :place, :type, :lat, :lon,
+                     :persons_count, :families_count, :graves_count, :url)
             """),
             rows,
         )
     db.commit()
-    print(f"\nImported {len(rows)} Geneanet cemetery entries.")
+    print(
+        f"\nImported {len(rows)} Geneanet cemetery entries "
+        f"for {len(contributors)} contributor(s)."
+    )
 
 
 def main():

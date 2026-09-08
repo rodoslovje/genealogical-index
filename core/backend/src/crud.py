@@ -565,17 +565,24 @@ def get_matricula_books(db: Session, contributor: str):
 def get_geneanet_stats(db: Session):
     """Return aggregate stats over the geneanet_cemeteries table for the global
     Geneanet Cemeteries index page (`?t=geneanet`):
-      - `cemeteries`: full table — one row per cemetery (incl. lat/lon for the map).
+      - `cemeteries`: full table — one row per cemetery (incl. lat/lon for the
+        map and the base contributor name, like matricula books).
+      - `top_contributors`: per-contributor counts (cemeteries, persons, graves).
       - `top_places`: per-place counts (cemeteries, persons, graves).
       - `totals`: overall counts for the summary bar.
     """
     rows = (
         db.query(models.GeneanetCemetery)
-        .order_by(models.GeneanetCemetery.place, models.GeneanetCemetery.name)
+        .order_by(
+            models.GeneanetCemetery.place,
+            models.GeneanetCemetery.contributor,
+            models.GeneanetCemetery.name,
+        )
         .all()
     )
     cemeteries = [
         {
+            "contributor": c.contributor,
             "name": c.name,
             "place": c.place,
             "type": c.type,
@@ -587,6 +594,26 @@ def get_geneanet_stats(db: Session):
             "url": c.url,
         }
         for c in rows
+    ]
+
+    contrib_rows = db.execute(text("""
+            SELECT contributor,
+                   COUNT(*)                          AS cemeteries_count,
+                   COALESCE(SUM(persons_count), 0)   AS persons_count,
+                   COALESCE(SUM(graves_count), 0)    AS graves_count
+            FROM geneanet_cemeteries
+            WHERE contributor IS NOT NULL AND contributor <> ''
+            GROUP BY contributor
+            ORDER BY persons_count DESC, contributor
+        """)).fetchall()
+    top_contributors = [
+        {
+            "contributor": r.contributor,
+            "cemeteries_count": int(r.cemeteries_count or 0),
+            "persons_count": int(r.persons_count or 0),
+            "graves_count": int(r.graves_count or 0),
+        }
+        for r in contrib_rows
     ]
 
     place_rows = db.execute(text("""
@@ -615,9 +642,15 @@ def get_geneanet_stats(db: Session):
         "families_count": sum(c["families_count"] for c in cemeteries),
         "graves_count": sum(c["graves_count"] for c in cemeteries),
         "places_count": len(top_places),
+        "contributors_count": len(top_contributors),
     }
 
-    return {"cemeteries": cemeteries, "top_places": top_places, "totals": totals}
+    return {
+        "cemeteries": cemeteries,
+        "top_contributors": top_contributors,
+        "top_places": top_places,
+        "totals": totals,
+    }
 
 
 def get_contributor_matches(db: Session, contributor: str, surnames: list = None):
