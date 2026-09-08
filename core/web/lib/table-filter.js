@@ -88,6 +88,37 @@ function syncParamToUrl(paramKey, value) {
 // typing pause instead (mirrors match-detail.js's per-section filter).
 const FILTER_DEBOUNCE_MS = 500;
 
+/** Scrolls a filter input's section into view the first time the user types
+ *  in it, and only when it isn't already on screen.
+ *
+ *  Pairs with the `preventScroll` auto-focus below: the caret can legitimately
+ *  land in an input the user can't see (the matches filter on a contributor's
+ *  detail page sits well below the fold), which is fine while they're reading
+ *  the top of the page but confusing the moment they start typing into
+ *  something invisible. Deferring the scroll to that moment keeps the freshly
+ *  rendered page at the top *and* keeps the field visible while it's in use.
+ *
+ *  One-shot: the listener removes itself on the first keystroke, so later
+ *  edits (by then the field is on screen anyway) never move the page. */
+export function revealOnFirstInput(input, anchorEl) {
+  if (!input || input.dataset.revealOnType) return;
+  input.dataset.revealOnType = '1';
+
+  const onFirstInput = () => {
+    input.removeEventListener('input', onFirstInput);
+    delete input.dataset.revealOnType;
+    const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')) || 0;
+    const rect = input.getBoundingClientRect();
+    if (rect.top >= navHeight && rect.bottom <= window.innerHeight) return; // already visible
+    // Anchor on the section bar the input lives in, not the input itself, so
+    // the heading and CSV button land under the navbar together with it.
+    const anchor = anchorEl || input.closest('.section-bar, .section-heading') || input;
+    const y = anchor.getBoundingClientRect().top + window.scrollY - navHeight;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  };
+  input.addEventListener('input', onFirstInput);
+}
+
 /**
  * Mounts (or, on a re-render, reuses) a debounced text-filter input inside
  * `headerEl`, synced to the URL under a short param resolved from `slug`
@@ -169,7 +200,16 @@ export function mountTableFilter({ headerEl, paramKey: slug, placeholder, title,
   const scope = headerEl.closest('.tab-content') || document;
   setTimeout(() => {
     for (const candidate of scope.querySelectorAll('input[data-filter-param]')) {
-      if (candidate.offsetParent !== null) { candidate.focus(); break; }
+      // preventScroll: on pages where the first visible filter sits well below
+      // the fold (a contributor's detail view, where the matches table's filter
+      // is the only one), a plain focus() would scroll it into view and undo
+      // the scroll-to-top the freshly rendered page just did. The viewport
+      // follows the caret only once the user actually types there.
+      if (candidate.offsetParent !== null) {
+        candidate.focus({ preventScroll: true });
+        revealOnFirstInput(candidate);
+        break;
+      }
     }
   }, 0);
 

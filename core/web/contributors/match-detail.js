@@ -13,7 +13,7 @@ import { toUnicodeHref, currentParams, toUnicodeSearch } from '../lib/url.js';
 import { updateCurrentKey } from '../lib/view-cache.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
-import { observeStickyHeader, normalizeQuery, queryMatchesText } from '../lib/table-filter.js';
+import { observeStickyHeader, normalizeQuery, queryMatchesText, revealOnFirstInput } from '../lib/table-filter.js';
 
 import { getContributorUrlMap } from './data.js';
 
@@ -678,13 +678,20 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       if (focusedSearchInfo) {
         const input = detailEl.querySelector(`.match-section-search[data-type="${focusedSearchInfo.type}"]`);
         if (input) {
-          input.focus();
+          input.focus({ preventScroll: true });
           input.setSelectionRange(focusedSearchInfo.selectionStart, focusedSearchInfo.selectionEnd);
         }
       } else if (wasFirstRender) {
         // First DOM-order section (Persons) — same "ready to type immediately"
-        // behavior as every other table's filter.
-        detailEl.querySelector('.match-section-search')?.focus();
+        // behavior as every other table's filter, and the same preventScroll +
+        // revealOnFirstInput pairing: this input sits below the page header and
+        // stats, so focusing it must not scroll past them on arrival, but the
+        // page should follow the caret once the user actually types.
+        const input = detailEl.querySelector('.match-section-search');
+        if (input) {
+          input.focus({ preventScroll: true });
+          revealOnFirstInput(input);
+        }
       }
 
       // Virtualize large match tables: measure the freshly-rendered (auto-layout)
