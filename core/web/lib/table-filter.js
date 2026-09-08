@@ -88,34 +88,76 @@ function syncParamToUrl(paramKey, value) {
 // typing pause instead (mirrors match-detail.js's per-section filter).
 const FILTER_DEBOUNCE_MS = 500;
 
+/** How long `revealOnFirstInput` keeps a just-revealed filter pinned under the
+ *  navbar while sections above it are still loading in. Long enough to outlast
+ *  the slowest of them (surname clouds, Matricula/Geneanet tables), short
+ *  enough that it never interferes with normal reading afterwards. */
+const PIN_AFTER_TYPING_MS = 5000;
+
 /** Scrolls a filter input's section into view the first time the user types
- *  in it, and only when it isn't already on screen.
+ *  in it, and keeps it there while the page above is still growing.
  *
  *  Pairs with the `preventScroll` auto-focus below: the caret can legitimately
  *  land in an input the user can't see (the matches filter on a contributor's
  *  detail page sits well below the fold), which is fine while they're reading
  *  the top of the page but confusing the moment they start typing into
- *  something invisible. Deferring the scroll to that moment keeps the freshly
- *  rendered page at the top *and* keeps the field visible while it's in use.
+ *  something invisible.
  *
- *  One-shot: the listener removes itself on the first keystroke, so later
- *  edits (by then the field is on screen anyway) never move the page. */
+ *  A single scroll isn't enough, because the sections above load
+ *  asynchronously — a contributor page mounts this filter immediately but its
+ *  three surname clouds, the Matricula books table and the Geneanet cemeteries
+ *  table all arrive later and push everything below them down, leaving a
+ *  once-computed scroll target short by however much landed in the meantime.
+ *  So re-align on every resize of the page until it settles. The user always
+ *  wins: their first wheel or touch gesture ends the pinning, as does a few
+ *  seconds' silence. */
 export function revealOnFirstInput(input, anchorEl) {
   if (!input || input.dataset.revealOnType) return;
   input.dataset.revealOnType = '1';
 
+  const navHeight = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')) || 0;
+
+  const isVisible = () => {
+    const rect = input.getBoundingClientRect();
+    return rect.top >= navHeight() && rect.bottom <= window.innerHeight;
+  };
+
+  // Anchor on the section bar the input lives in, not the input itself, so the
+  // heading and CSV button land under the navbar together with it. Resolved per
+  // call: match-detail.js rebuilds its section markup on every filter change.
+  const align = () => {
+    const anchor = anchorEl || input.closest('.section-bar, .section-heading') || input;
+    if (!anchor.isConnected) return;
+    // Instant, not smooth: with content still landing above, a smooth scroll
+    // animates towards a target that's already stale by the time it arrives.
+    window.scrollTo({ top: anchor.getBoundingClientRect().top + window.scrollY - navHeight() });
+  };
+
   const onFirstInput = () => {
     input.removeEventListener('input', onFirstInput);
     delete input.dataset.revealOnType;
-    const navHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')) || 0;
-    const rect = input.getBoundingClientRect();
-    if (rect.top >= navHeight && rect.bottom <= window.innerHeight) return; // already visible
-    // Anchor on the section bar the input lives in, not the input itself, so
-    // the heading and CSV button land under the navbar together with it.
-    const anchor = anchorEl || input.closest('.section-bar, .section-heading') || input;
-    const y = anchor.getBoundingClientRect().top + window.scrollY - navHeight;
-    window.scrollTo({ top: y, behavior: 'smooth' });
+    if (!isVisible()) align();
+    if (!window.ResizeObserver) return;
+
+    let observer;
+    const stop = () => {
+      observer?.disconnect();
+      clearTimeout(timer);
+      window.removeEventListener('wheel', stop);
+      window.removeEventListener('touchmove', stop);
+    };
+    observer = new ResizeObserver(() => {
+      // match-detail.js replaces its whole section on each filter change, which
+      // detaches this input — nothing left to keep in view.
+      if (!input.isConnected) return stop();
+      if (!isVisible()) align();
+    });
+    observer.observe(document.body);
+    const timer = setTimeout(stop, PIN_AFTER_TYPING_MS);
+    window.addEventListener('wheel', stop, { passive: true, once: true });
+    window.addEventListener('touchmove', stop, { passive: true, once: true });
   };
+
   input.addEventListener('input', onFirstInput);
 }
 
