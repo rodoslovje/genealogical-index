@@ -5,8 +5,6 @@ import re
 import time
 import unicodedata
 from sqlalchemy import create_engine, text
-import urllib.request
-import urllib.error
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
@@ -1377,32 +1375,22 @@ def main():
     # contributor cache dropped — without it the change is invisible for up to
     # an hour. It never needs matches recomputed, though.
     if updated_contributors or synced_metadata:
-        # After a successful import, try to clear the API cache so changes are visible immediately.
-        print("\nAttempting to clear API server cache...")
-        try:
-            # The script is run inside the 'api' container, so it can reach the API on localhost:8000
-            api_url = "http://localhost:8000/api/cache/clear"
-            req = urllib.request.Request(api_url, method="POST")
-            with urllib.request.urlopen(req, timeout=5) as response:
-                if response.status == 200:
-                    print("  -> Successfully cleared API cache.")
-                else:
-                    print(f"  -> Failed to clear API cache. Status: {response.status}")
-        except (urllib.error.URLError, OSError) as e:
-            print(
-                f"  -> Could not connect to API to clear cache. Is the API server running? Error: {e}"
-            )
+        import sys
+
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import compute_matches
+
+        # Drop the API caches so the imported data is visible immediately.
+        # compute_matches clears them again when the match run finishes.
+        print()
+        compute_matches.clear_api_cache()
 
         if updated_contributors and not args.skip_matches:
             print(
                 f"Updated {len(updated_contributors)} contributor(s). "
                 "Automatically triggering match computation..."
             )
-            import sys
-
-            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
             import trigger_matches
-            import compute_matches
 
             all_names = [
                 r.name

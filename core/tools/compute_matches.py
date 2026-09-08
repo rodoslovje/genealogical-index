@@ -18,6 +18,8 @@ import hashlib
 import logging
 import os
 import time
+import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from sqlalchemy import create_engine, event, text
@@ -1071,6 +1073,29 @@ def worker(pg_parallel):
                     pass
 
 
+def clear_api_cache(log_fn=None):
+    """Ask the running API to drop its in-memory caches (contributor list,
+    match counts, timeline, top surnames) so freshly written data shows up
+    immediately instead of after the cache TTL. The tools run inside the
+    `api` container, so the API is reachable on localhost:8000. Failure is
+    reported, never raised — a missing API just means the caches expire on
+    their own. Shared by the importer and the match computation."""
+    say = log_fn or print
+    say("Clearing API server cache...")
+    try:
+        req = urllib.request.Request(
+            "http://localhost:8000/api/cache/clear", method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            if response.status == 200:
+                say("  -> API cache cleared.")
+                return True
+            say(f"  -> Failed to clear API cache. Status: {response.status}")
+    except (urllib.error.URLError, OSError) as e:
+        say(f"  -> Could not reach the API to clear its cache: {e}")
+    return False
+
+
 def main(workers=4):
     # Recover jobs a crashed run left in 'running' before counting pending —
     # otherwise those pairs would be skipped forever.
@@ -1268,10 +1293,16 @@ def main(workers=4):
     )
 
     t0 = time.monotonic()
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(worker, pg_parallel) for _ in range(workers)]
-        for f in as_completed(futures):
-            f.result()  # re-raises any worker exception
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(worker, pg_parallel) for _ in range(workers)]
+            for f in as_completed(futures):
+                f.result()  # re-raises any worker exception
+    finally:
+        # Every finished pair is already committed — including on a --stop or
+        # a worker failure — so the API's cached match counts are stale from
+        # here on regardless of how the run ended.
+        clear_api_cache(log.info)
 
     log.info(f"Match computation complete in {time.monotonic()-t0:.0f}s.")
 
