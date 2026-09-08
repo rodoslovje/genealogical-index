@@ -44,6 +44,9 @@ export const PARAM_MAP = {
   // *genealogist* name — this one narrows it by whose surnames the matches
   // are about.
   match_surname:    'ms',
+  // Single-contributor page: which source panel (tree / matricula / geneanet /
+  // military) is shown. Omitted for the default (primary-source) panel.
+  source_tab:       's',
 };
 
 /** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point at the unified person tab. */

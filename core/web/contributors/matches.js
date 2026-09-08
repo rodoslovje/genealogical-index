@@ -1,22 +1,12 @@
-import { t, tf, formatTitleSuffix } from '../i18n.js';
-import { renderTable, exportToCSV } from '../table.js';
+import { t, formatTitleSuffix } from '../i18n.js';
 import {
-  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, deceasedYears, escapeHtml, formatExportFilename, contributorTypeLabelKey,
+  shortenUrlLabel, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, deceasedYears, escapeHtml, contributorTypeLabelKey,
 } from '../lib/utils.js';
-import { API_BASE_URL } from '../config.js';
 import { toUnicodeHref } from '../lib/url.js';
-import { DOWNLOAD_ICON } from '../lib/icons.js';
-import { mountTableFilter, observeStickyHeader } from '../lib/table-filter.js';
-import siteConfig from '@site-config';
 
-import { ensureData, getCachedData, getContributorUrlMap, fetchMatriculaBooks, fetchGeneanetCemeteries } from './data.js';
-import { loadSurnameCloud } from './cloud.js';
-import { setCurrentMatches } from './filter.js';
-import { exportBooksToCSV, setupSortableTable, buildThead } from './matricula-stats.js';
-import { geneanetTypeLabel, exportCemeteriesToCSV } from './geneanet-stats.js';
+import { ensureData, getCachedData, getContributorUrlMap } from './data.js';
 import { renderMatchDetail } from './match-detail.js';
-import { mountSurnameScope, readMatchSurnames } from './match-surname.js';
-import { fetchErrorKey } from '../auth.js';
+import { buildSourcePanels, mountSourceTabs } from './source-panels.js';
 
 /** Returns the i18n key for the contributor type label based on which data
  *  sources are present. When the contributor has exactly one special source
@@ -84,13 +74,19 @@ function renderContributorStats(contribData) {
     { part: contribData._military,  label: t('col_military') },
   ].filter(p => p.part);
 
-  // Single-column grid when only one source exists.
+  const divider = '<div style="grid-column: 1 / -1; border-bottom: 1px solid var(--border); margin: 2px 0;"></div>';
+
+  // Single-column grid when only one source exists — still headed by the
+  // source's name (Tree / Matricula / ...) so it reads like the multi-source
+  // grid below.
   if (parts.length < 2) {
     const row = (tipKey, label, value) => {
       const a = ` title="${tip(tipKey)}"`;
       return `<span${a}>${label}:</span><strong${a}>${value}</strong>`;
     };
+    const headerHtml = parts.length ? `<span></span><strong>${parts[0].label}</strong>${divider}` : '';
     return `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: max-content max-content; column-gap: 16px; row-gap: 4px; justify-items: end;">
+      ${headerHtml}
       ${row('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons))}
       ${row('tip_total_families', t('col_total_families'), fmt(contribData.total_families))}
       ${row('tip_total',          t('col_total'),          fmt(contribData.total))}
@@ -99,20 +95,19 @@ function renderContributorStats(contribData) {
     </div>`;
   }
 
-  // Multi-value grid: Total followed by one column per present source.
+  // Multi-value grid: one column per present source, then Total.
   const metricRow = (tipKey, label, sum, values) => {
     const a = ` title="${tip(tipKey)}"`;
     return `<span${a}>${label}:</span>` +
-      `<strong${a}>${sum}</strong>` +
-      values.map(v => `<span${a}>${v}</span>`).join('');
+      values.map(v => `<span${a}>${v}</span>`).join('') +
+      `<strong${a}>${sum}</strong>`;
   };
-  const divider = '<div style="grid-column: 1 / -1; border-bottom: 1px solid var(--border); margin: 2px 0;"></div>';
   const colTemplate = Array(parts.length + 2).fill('max-content').join(' ');
 
   return `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: ${colTemplate}; column-gap: 16px; row-gap: 4px; justify-items: end;">
     <span></span>
-    <strong>${t('col_total')}</strong>
     ${parts.map(p => `<strong>${p.label}</strong>`).join('')}
+    <strong>${t('col_total')}</strong>
     ${divider}
     ${metricRow('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons),  parts.map(p => fmt(p.part.total_persons)))}
     ${metricRow('tip_total_families', t('col_total_families'), fmt(contribData.total_families), parts.map(p => fmt(p.part.total_families)))}
@@ -121,7 +116,11 @@ function renderContributorStats(contribData) {
   </div>`;
 }
 
-/** Renders either the per-contributor matches summary or the per-pair detail. */
+/** Renders either the per-contributor page or the per-pair match detail.
+ *
+ *  The per-contributor page is a shared header (name, stats grid, memorial /
+ *  intro / link) followed by one panel per data source; with several sources
+ *  a tab strip switches between them (see source-panels.js). */
 export async function renderMatchesPage(contributor, withPartner) {
   window.scrollTo(0, 0);
 
@@ -156,15 +155,6 @@ export async function renderMatchesPage(contributor, withPartner) {
     }
 
     const displayName = baseContributor;
-    const hasMatricula = !!contribData._matricula;
-    // The "primary" record source — a family tree, Geneanet cemeteries, or
-    // military records. All carry persons/families and have computed matches,
-    // so they drive the surname cloud + matches section.
-    // Matricula is index-only and handled separately below.
-    const primary = contribData._tree || contribData._geneanet || contribData._military;
-    // Matches section needs primary record data AND the 'matches' feature not
-    // being gated out of this build.
-    const showMatchesSection = !!primary && !siteConfig.gatedFeatures?.includes('matches');
 
     if (withPartner) {
       const basePartner = baseContributorName(withPartner);
@@ -195,510 +185,16 @@ export async function renderMatchesPage(contributor, withPartner) {
     const urlHtml = (url && !memorialHtml) ? `<div style="margin-bottom: 20px; font-size: 0.95rem; color: #444;">${t('more_info_about')} <strong>${displayName}</strong>:<div style="margin-top: 8px;"><a href="${url}" target="_blank" rel="noopener">🔗 ${shortenUrlLabel(url)}</a></div></div>` : '';
     const introHtml = contribData._intro ? `<div class="contributor-intro" style="margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6;">${contribData._intro}</div>` : '';
 
-    const statsHtml = renderContributorStats(contribData);
-
-    let cloudSectionsHtml = '';
-    if (primary) {
-      cloudSectionsHtml += `<div class="surname-cloud-section" style="margin-bottom: 24px;">
-        <div class="surname-cloud-header">
-          <h3 class="section-heading" data-i18n="section_surnames" style="margin: 0; padding: 0; border: none;">${t('section_surnames')}</h3>
-        </div>
-        <p>${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}</p>
-        <div class="surname-cloud" id="contributor-surname-cloud" data-i18n-title="chart_surnames_title"></div>
-      </div>`;
-    }
-
-    // Combined Matricula section: top surnames followed by the transcribed
-    // books table. Shown whenever the contributor has either matricula-suffixed
-    // index data or transcribed Matricula Online books.
-    const matriculaBooks = await fetchMatriculaBooks(displayName);
-    const booksSortState = { column: 'parish', ascending: true };
-    const booksCols = [
-      { f: 'parish',        h: t('col_book_parish'),    cls: ' col-center' },
-      { f: 'type',          h: t('col_book_type'),      cls: ' col-center' },
-      { f: 'date',          h: t('col_book_period'),    cls: ' col-center' },
-      { f: 'count',         h: t('col_book_count'),     cls: ' col-center' },
-      { f: 'last_modified', h: t('col_last_modified'),  cls: ' col-center' },
-    ];
-    let matriculaSectionHtml = '';
-    if (hasMatricula || matriculaBooks.length) {
-      const strongCount = (n) => ({ n, html: `<strong>${Number(n || 0).toLocaleString()}</strong>` });
-      const totalRecords = matriculaBooks.reduce((s, b) => s + (b.count || 0), 0);
-
-      const matriculaUrl = toUnicodeHref({ t: 'matricula' });
-      const summaryHtml = matriculaBooks.length
-        ? `<p>${tf('matricula_books_summary',
-            `<strong>${displayName}</strong>`,
-            strongCount(matriculaBooks.length),
-            strongCount(totalRecords),
-            matriculaUrl)}</p>`
-        : '';
-
-      const cloudHtml = hasMatricula
-        ? `<div class="surname-cloud-section" style="margin-top: 1.5rem;">
-            <div class="surname-cloud-header" style="margin-bottom: 8px;">
-              <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_surnames')}</h4>
-            </div>
-            <p style="margin-bottom: 12px;">${t('contributor_matricula_surnames_intro')}</p>
-            <div class="surname-cloud" id="contributor-matricula-surname-cloud" data-i18n-title="chart_surnames_title"></div>
-          </div>`
-        : '';
-
-      let booksHtml = '';
-      if (matriculaBooks.length) {
-        const theadHtml = booksCols.map(({ f, h, cls }) =>
-          `<th data-col="${f}" class="sortable${cls}">${h}</th>`
-        ).join('');
-        booksHtml = `<div class="matricula-books-subsection" style="margin-top: 1.5rem;">
-          <div class="matricula-books-header section-bar section-bar--top" style="margin-bottom: 8px;">
-            <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_matricula_books')}</h4>
-            <button class="export-btn export-matricula-books-btn" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
-          </div>
-          <div class="table-responsive">
-            <table class="matricula-books-table">
-              <thead><tr>${theadHtml}</tr></thead>
-              <tbody id="matricula-books-tbody"></tbody>
-            </table>
-          </div>
-        </div>`;
-      }
-
-      matriculaSectionHtml = `<div class="matricula-section" style="margin-bottom: 24px;">
-        <div class="matricula-section-header section-bar section-bar--top">
-          <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('matricula_page_title')}</h3>
-        </div>
-        <div class="matricula-section-content">
-          ${summaryHtml}
-          ${booksHtml}
-          ${cloudHtml}
-        </div>
-      </div>`;
-    }
-
-    const setupBooksSection = () => {
-      // Wire up the parent Matricula section's collapsible behavior first —
-      // it's present whenever there's matricula data, even with no books.
-      const matriculaHeader = document.querySelector('.matricula-section-header h3');
-      const matriculaContent = document.querySelector('.matricula-section-content');
-      if (matriculaHeader && matriculaContent) {
-        matriculaHeader.classList.add('collapsible-header');
-        matriculaHeader.addEventListener('click', (e) => {
-          if (e.target.closest('button') || e.target.closest('a')) return;
-          const isCollapsed = matriculaHeader.classList.contains('collapsed');
-          matriculaContent.style.display = isCollapsed ? '' : 'none';
-          matriculaHeader.classList.toggle('collapsed', !isCollapsed);
-        });
-      }
-
-      const booksHeader = container.querySelector('.matricula-books-header h4');
-      const booksContent = container.querySelector('.matricula-books-subsection .table-responsive');
-      if (booksHeader && booksContent) {
-        booksHeader.classList.add('collapsible-header');
-        booksHeader.addEventListener('click', (e) => {
-          if (e.target.closest('button') || e.target.closest('a')) return;
-          const isCollapsed = booksHeader.classList.contains('collapsed');
-          booksContent.style.display = isCollapsed ? '' : 'none';
-          booksHeader.classList.toggle('collapsed', !isCollapsed);
-        });
-      }
-
-      if (!matriculaBooks.length) return;
-      const tbody = document.getElementById('matricula-books-tbody');
-      if (!tbody) return;
-
-      const csvBtn = container.querySelector('.export-matricula-books-btn');
-      if (csvBtn) {
-        csvBtn.addEventListener('click', () => {
-          exportBooksToCSV(matriculaBooks, booksCols, formatExportFilename(`matricula-books-${displayName}`, 'csv'));
-        });
-      }
-
-      const typeLabel = (type) => {
-        if (type === 'birth')    return t('book_type_birth');
-        if (type === 'marriage') return t('book_type_marriage');
-        if (type === 'death')    return t('book_type_death');
-        return escapeHtml(type || '');
-      };
-      const fmt = (n) => Number(n || 0).toLocaleString();
-      const collator = new Intl.Collator('sl', { sensitivity: 'base' });
-      const sortVal = (b, col) => {
-        if (col === 'count') return Number(b.count || 0);
-        if (col === 'type')  return typeLabel(b.type).toLowerCase();
-        return String(b[col] || '').toLowerCase();
-      };
-      const cmp = (a, b) => (typeof a === 'number' && typeof b === 'number')
-        ? a - b
-        : collator.compare(String(a ?? ''), String(b ?? ''));
-
-      const sorted = matriculaBooks.slice();
-      const renderRows = () => {
-        const { column, ascending } = booksSortState;
-        const dir = ascending ? 1 : -1;
-        sorted.sort((a, b) => {
-          const r = cmp(sortVal(a, column), sortVal(b, column)) * dir;
-          if (r !== 0) return r;
-          if (column !== 'parish') return collator.compare(a.parish || '', b.parish || '');
-          return collator.compare(a.name || '', b.name || '');
-        });
-
-        tbody.innerHTML = sorted.map(b => {
-          const date = escapeHtml(b.date || '');
-          const dateCell = b.url
-            ? `<a href="${b.url}" target="_blank" rel="noopener" title="${escapeHtml(b.name || '')}">${date}</a>`
-            : date;
-          const lastMod = (b.last_modified || '').slice(0, 10);
-          return `<tr>
-            <td class="col-center">${escapeHtml(b.parish || '')}</td>
-            <td class="col-center">${typeLabel(b.type)}</td>
-            <td class="col-center">${dateCell}</td>
-            <td class="col-center">${fmt(b.count)}</td>
-            <td class="col-center">${escapeHtml(lastMod)}</td>
-          </tr>`;
-        }).join('');
-
-        // Refresh sort indicators on the header row.
-        document.querySelectorAll('.matricula-books-table thead th.sortable').forEach(th => {
-          const colDef = booksCols.find(c => c.f === th.dataset.col);
-          const baseLabel = colDef ? colDef.h : th.textContent;
-          const indicator = th.dataset.col === booksSortState.column
-            ? (booksSortState.ascending ? '&nbsp;▲' : '&nbsp;▼')
-            : '';
-          th.innerHTML = `${baseLabel}${indicator}`;
-        });
-      };
-
-      renderRows();
-
-      document.querySelectorAll('.matricula-books-table thead th.sortable').forEach(th => {
-        th.addEventListener('click', () => {
-          const col = th.dataset.col;
-          if (booksSortState.column === col) {
-            booksSortState.ascending = !booksSortState.ascending;
-          } else {
-            booksSortState.column = col;
-            booksSortState.ascending = true;
-          }
-          renderRows();
-        });
-      });
-
-    };
-
-    // Geneanet section: the cemeteries this genealogist has indexed, plus a
-    // surname cloud when the cemeteries aren't already the primary source
-    // (the main cloud above covers them in that case). Shown whenever the
-    // contributor has -geneanet index data or listed cemeteries.
-    const hasGeneanet = !!contribData._geneanet;
-    const geneanetCemeteries = hasGeneanet ? await fetchGeneanetCemeteries(displayName) : [];
-    const showGeneanetCloud = hasGeneanet && primary !== contribData._geneanet;
-    const cemeteryCols = [
-      { f: 'place',         h: t('col_place'),      cls: ' col-center' },
-      { f: 'name',          h: t('col_cemetery'),   cls: '' },
-      { f: 'type',          h: t('col_book_type'),  cls: ' col-center', sortVal: (c) => geneanetTypeLabel(c.type).toLowerCase() },
-      { f: 'persons_count', h: t('col_persons'),    cls: ' col-center', sortVal: (c) => Number(c.persons_count || 0), defaultDesc: true },
-      { f: 'graves_count',  h: t('col_graves'),     cls: ' col-center', sortVal: (c) => Number(c.graves_count || 0),  defaultDesc: true },
-    ];
-    let geneanetSectionHtml = '';
-    if (hasGeneanet || geneanetCemeteries.length) {
-      const strongCount = (n) => ({ n, html: `<strong>${Number(n || 0).toLocaleString()}</strong>` });
-      const totalPersons = geneanetCemeteries.reduce((s, c) => s + (c.persons_count || 0), 0);
-      const summaryHtml = geneanetCemeteries.length
-        ? `<p>${tf('geneanet_cemeteries_summary',
-            `<strong>${displayName}</strong>`,
-            strongCount(geneanetCemeteries.length),
-            strongCount(totalPersons),
-            toUnicodeHref({ t: 'geneanet' }))}</p>`
-        : '';
-      const tableHtml = geneanetCemeteries.length
-        ? `<div class="geneanet-cemeteries-subsection" style="margin-top: 1.5rem;">
-            <div class="contributor-geneanet-header section-bar section-bar--top" style="margin-bottom: 8px;">
-              <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_geneanet_cemeteries')}</h4>
-              <button class="export-btn export-geneanet-cemeteries-btn" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
-            </div>
-            <div class="contributor-geneanet-content">
-              <div class="table-responsive">
-                <table id="contributor-geneanet-table">
-                  <thead><tr>${buildThead(cemeteryCols)}</tr></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div>
-          </div>`
-        : '';
-      const cloudHtml = showGeneanetCloud
-        ? `<div class="surname-cloud-section" style="margin-top: 1.5rem;">
-            <div class="surname-cloud-header" style="margin-bottom: 8px;">
-              <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_surnames')}</h4>
-            </div>
-            <p style="margin-bottom: 12px;">${t('contributor_geneanet_surnames_intro')}</p>
-            <div class="surname-cloud" id="contributor-geneanet-surname-cloud" data-i18n-title="chart_surnames_title"></div>
-          </div>`
-        : '';
-      geneanetSectionHtml = `<div class="geneanet-section" style="margin-bottom: 24px;">
-        <div class="geneanet-section-header section-bar section-bar--top">
-          <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('geneanet_page_title')}</h3>
-        </div>
-        <div class="geneanet-section-content">
-          ${summaryHtml}
-          ${tableHtml}
-          ${cloudHtml}
-        </div>
-      </div>`;
-    }
-
-    const setupGeneanetSection = () => {
-      const header = container.querySelector('.geneanet-section-header h3');
-      const content = container.querySelector('.geneanet-section-content');
-      if (header && content) {
-        header.classList.add('collapsible-header');
-        header.addEventListener('click', (e) => {
-          if (e.target.closest('button') || e.target.closest('a')) return;
-          const isCollapsed = header.classList.contains('collapsed');
-          content.style.display = isCollapsed ? '' : 'none';
-          header.classList.toggle('collapsed', !isCollapsed);
-        });
-      }
-      if (!geneanetCemeteries.length) return;
-
-      const collator = new Intl.Collator('sl', { sensitivity: 'base' });
-      const tableApi = setupSortableTable({
-        tableId: 'contributor-geneanet-table',
-        headerSelector: '.contributor-geneanet-header h4',
-        contentSelector: '.contributor-geneanet-content',
-        columns: cemeteryCols,
-        data: geneanetCemeteries,
-        initialSort: { column: 'place', ascending: true },
-        renderRow: (c) => {
-          const name = escapeHtml(c.name || '');
-          const nameCell = c.url
-            ? `<a href="${c.url}" target="_blank" rel="noopener">${name}</a>`
-            : name;
-          return `<tr>
-            <td class="col-center">${escapeHtml(c.place || '')}</td>
-            <td>${nameCell}</td>
-            <td class="col-center">${geneanetTypeLabel(c.type)}</td>
-            <td class="col-center">${Number(c.persons_count || 0).toLocaleString()}</td>
-            <td class="col-center">${Number(c.graves_count || 0).toLocaleString()}</td>
-          </tr>`;
-        },
-        fallbackSort: (a, b) => collator.compare(a.name || '', b.name || ''),
-      });
-      const csvBtn = container.querySelector('.export-geneanet-cemeteries-btn');
-      if (csvBtn && tableApi) {
-        csvBtn.addEventListener('click', () => {
-          exportCemeteriesToCSV(tableApi.getVisibleData(), cemeteryCols, formatExportFilename(`geneanet-cemeteries-${displayName}`, 'csv'));
-        });
-      }
-    };
-
-    const heading = `<div class="matches-page-header">
+    container.innerHTML = `<div class="matches-page-header">
       <h2 class="matches-page-title"><span${deceasedTitleAttr(displayName, t('memorial_title'))}>${displayName}</span>${deceasedIndicatorHtml(displayName, t('memorial_title'))} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))}</h2>
     </div>
-    ${statsHtml}
+    ${renderContributorStats(contribData)}
     ${memorialHtml}
     ${introHtml}
-    ${urlHtml}
-    ${cloudSectionsHtml}
-    ${matriculaSectionHtml}
-    ${geneanetSectionHtml}`;
+    ${urlHtml}`;
 
-    const loadDetailClouds = () => {
-      if (primary)      loadSurnameCloud([primary.contributor_ID],                 'contributor-surname-cloud');
-      if (hasMatricula) loadSurnameCloud([contribData._matricula.contributor_ID], 'contributor-matricula-surname-cloud', { hideSectionIfEmpty: true });
-      if (showGeneanetCloud) loadSurnameCloud([contribData._geneanet.contributor_ID], 'contributor-geneanet-surname-cloud', { hideSectionIfEmpty: true });
-    };
-
-    if (!showMatchesSection) {
-      container.innerHTML = heading;
-      loadDetailClouds();
-      setupBooksSection();
-      setupGeneanetSection();
-      return;
-    }
-
-    let partners;
-    let status = 0;
-    try {
-      // Fetch matches by the primary source name (tree or Geneanet). The API
-      // expands the base name to its suffix variants, so this covers both.
-      const treeName = primary.contributor_ID;
-      const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(treeName)}/matches`);
-      status = res.status;
-      if (!res.ok) throw new Error('API failed');
-      partners = await res.json();
-      setCurrentMatches(partners, displayName);
-    } catch {
-      container.innerHTML = heading + `<p>${t(fetchErrorKey(status))}</p>`;
-      loadDetailClouds();
-      setupBooksSection();
-      setupGeneanetSection();
-      return;
-    }
-
-    if (!partners.length) {
-      container.innerHTML = heading +
-        `<h3 class="section-heading" style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${t('col_matches')}</h3>` +
-        `<p>${t('matches_none')}</p>`;
-      loadDetailClouds();
-      setupBooksSection();
-      setupGeneanetSection();
-      return;
-    }
-
-    container.innerHTML = heading +
-      `<div class="matches-summary-section">
-        <div class="matches-summary-header section-bar section-bar--top">
-          <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('col_matches')}</h3>
-          <button class="export-btn export-matches-summary-btn" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
-        </div>
-        <div class="matches-summary-content">
-          <p>${t('matches_found_intro')} <strong>${displayName}</strong>.<br>${t('matches_found_outro')}</p>
-          <div id="matches-surname-scope"></div>
-          <p id="matches-surname-error" class="match-surname-error" style="display: none;"></p>
-          <div id="matches-summary" class="table-responsive"></div>
-        </div>
-      </div>`;
-
-    loadDetailClouds();
-    setupBooksSection();
-      setupGeneanetSection();
-
-    const summaryHeaderEl = container.querySelector('.matches-summary-header');
-    const summaryHeader = summaryHeaderEl?.querySelector('h3');
-    const summaryContent = container.querySelector('.matches-summary-content');
-    if (summaryHeader && summaryContent) {
-      summaryHeader.classList.add('collapsible-header');
-      summaryHeader.addEventListener('click', (e) => {
-        if (e.target.closest('button') || e.target.closest('a')) return;
-        const isCollapsed = summaryHeader.classList.contains('collapsed');
-        summaryContent.style.display = isCollapsed ? '' : 'none';
-        summaryHeader.classList.toggle('collapsed', !isCollapsed);
-      });
-    }
-
-    // Map to renderTable row format, applying the inline filter. The filter
-    // input lives in `.matches-summary-header`, which (unlike the table body)
-    // is only built once above — so re-running this on a filter keystroke
-    // just re-derives `tableData` and re-renders the table, never touching
-    // (or stealing focus from) the filter input itself.
-    const BASE_SUMMARY_COLS = ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'];
-    let currentTableData = [];
-    let currentSummaryCols = BASE_SUMMARY_COLS;
-
-    // Active surname scope. `scopeCounts` is a partner → row map of the counts
-    // restricted to those surnames; null means no scope, and the table shows
-    // every partner with its overall counts as before. The overall counts stay
-    // in their own columns either way — the scoped figure gets an added column
-    // rather than quietly redefining `Total`, so it's visible that the
-    // genealogist filter hides rows while this one changes what's counted.
-    let scopeSurnames = readMatchSurnames();
-    let scopeCounts = null;
-    let scopeError = '';
-
-    const fetchScopeCounts = async (surnames) => {
-      if (!surnames.length) return null;
-      const res = await fetch(
-        `${API_BASE_URL}/api/contributors/${encodeURIComponent(primary.contributor_ID)}` +
-        `/matches?surname=${encodeURIComponent(surnames.join(','))}`
-      );
-      if (!res.ok) throw new Error('API failed');
-      const rows = await res.json();
-      return new Map(rows.map(r => [r.contributor, r]));
-    };
-
-    const applyScope = async (surnames) => {
-      scopeSurnames = surnames;
-      if (overlay) overlay.style.display = 'flex';
-      try {
-        scopeCounts = await fetchScopeCounts(surnames);
-        scopeError = '';
-      } catch {
-        // Don't fall back to an unscoped table silently — that would read as
-        // "this surname matches everyone" rather than "the lookup failed".
-        scopeCounts = new Map();
-        scopeError = t('search_failed');
-      } finally {
-        if (overlay) overlay.style.display = 'none';
-      }
-      // The column set changes with the scope, and renderTable keeps its sort
-      // state on the container — drop it so the new column can be the default
-      // sort instead of inheriting one keyed to the old columns.
-      const summaryEl = document.getElementById('matches-summary');
-      if (summaryEl) summaryEl._sortState = null;
-      renderSummaryTable();
-    };
-
-    const renderSummaryTable = () => {
-      const query = mountTableFilter({
-        headerEl: summaryHeaderEl,
-        paramKey: 'matches-summary',
-        placeholder: t('table_filter_placeholder'),
-        title: t('tip_table_filter'),
-        onChange: renderSummaryTable,
-      });
-      mountSurnameScope({
-        mountEl: document.getElementById('matches-surname-scope'),
-        sourceName: primary.contributor_ID,
-        onChange: applyScope,
-      });
-
-      const errorEl = document.getElementById('matches-surname-error');
-      if (errorEl) {
-        errorEl.textContent = scopeError;
-        errorEl.style.display = scopeError ? '' : 'none';
-      }
-
-      let filteredPartners = query ? partners.filter(p => p.contributor.toLowerCase().includes(query)) : partners;
-      if (scopeCounts) filteredPartners = filteredPartners.filter(p => scopeCounts.has(p.contributor));
-
-      const isScoped = !!scopeCounts;
-      currentSummaryCols = isScoped ? [...BASE_SUMMARY_COLS, 'surname_matches'] : BASE_SUMMARY_COLS;
-      // Carry the surname into the pair view's own per-section filters, so
-      // clicking a partner lands on those records instead of on all several
-      // hundred matches with them.
-      const detailFilter = isScoped
-        ? { mqp: scopeSurnames.join(','), mqf: scopeSurnames.join(',') }
-        : {};
-
-      currentTableData = filteredPartners.map(p => {
-        const partnerData = cached.find(d => d.contributor_ID === baseContributorName(p.contributor));
-        const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
-        const row = {
-          contributor_ID: p.contributor,
-          _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor, ...detailFilter }),
-          total_persons:  p.persons_count  || 0,
-          total_families: p.families_count || 0,
-          total:          p.total_count,
-          confidence:     Math.round((p.max_confidence || 0) * 100),
-          _is_matricula_only: isMatOnly,
-        };
-        if (isScoped) row.surname_matches = scopeCounts.get(p.contributor)?.total_count || 0;
-        return row;
-      });
-
-      renderTable(currentTableData, 'matches-summary', currentSummaryCols,
-        isScoped ? 'surname_matches' : 'total', false);
-    };
-
-    // A shared link can arrive with `ms=` already set — resolve it before the
-    // first render so the table never flashes the unscoped list.
-    if (scopeSurnames.length) {
-      try {
-        scopeCounts = await fetchScopeCounts(scopeSurnames);
-      } catch {
-        scopeCounts = new Map();
-        scopeError = t('search_failed');
-      }
-    }
-    renderSummaryTable();
-    if (summaryHeaderEl) observeStickyHeader(summaryHeaderEl, document.getElementById('matches-summary'));
-
-    const summaryBtn = container.querySelector('.export-matches-summary-btn');
-    if (summaryBtn) {
-      summaryBtn.addEventListener('click', () => {
-        exportToCSV(currentTableData, currentSummaryCols, formatExportFilename(`matches-${displayName}`, 'csv'));
-      });
-    }
+    const { panels, defaultKey } = await buildSourcePanels({ contribData, displayName, overlay });
+    await mountSourceTabs({ container, panels, defaultKey, cachedList: cached, overlay });
 
   } finally {
     if (overlay) overlay.style.display = 'none';

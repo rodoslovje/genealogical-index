@@ -155,7 +155,7 @@ function renderCemeteriesSection(cemeteries) {
     // page plus the memorial mark for deceased contributors.
     const contrib = c.contributor ? baseContributorName(c.contributor) : '';
     const contribCell = contrib
-      ? `<a href="${toUnicodeHref({ t: 'contributors', c: contrib })}" data-spa-nav${deceasedTitleAttr(contrib, t('memorial_title'))}>${escapeHtml(contrib)}</a>${deceasedIndicatorHtml(contrib, t('memorial_title'))}`
+      ? `<a href="${toUnicodeHref({ t: 'contributors', c: contrib, s: 'geneanet' })}" data-spa-nav${deceasedTitleAttr(contrib, t('memorial_title'))}>${escapeHtml(contrib)}</a>${deceasedIndicatorHtml(contrib, t('memorial_title'))}`
       : '';
     return `<tr>
       <td class="col-center">${escapeHtml(c.place || '')}</td>

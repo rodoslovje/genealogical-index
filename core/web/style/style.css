@@ -1368,6 +1368,39 @@ body.compact-nav .mobile-nav-section { display: flex; }
 
 /* --- Surname Word Cloud --- */
 .surname-cloud-section { margin: 1rem 0; }
+
+/* Source tabs on the single-contributor page (Tree / Matricula / Cemeteries /
+   Military). Underline style so the strip reads as a drill-down of the stats
+   grid above it rather than as a second main navigation. Scrolls sideways
+   instead of wrapping on narrow screens. */
+.source-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 20px;
+  border-bottom: 1px solid var(--srd-line);
+  overflow-x: auto;
+}
+.source-tabs button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 8px 14px;
+  color: var(--srd-ink-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.source-tabs button:hover {
+  color: var(--srd-ink);
+}
+.source-tabs button.active {
+  color: var(--srd-brand);
+  border-bottom-color: var(--srd-accent);
+  font-weight: 600;
+}
 .surname-cloud {
   display: flex;
   flex-wrap: wrap;
