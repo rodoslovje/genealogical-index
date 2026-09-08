@@ -562,6 +562,22 @@ def get_matricula_books(db: Session, contributor: str):
     return rows
 
 
+def get_geneanet_cemeteries(db: Session, contributor: str):
+    """Return the Geneanet cemeteries indexed by the given contributor, keyed
+    by the base name (geneanet-index.json stores entries under the base name,
+    not the ``-geneanet`` suffix). Ordered by place, then name."""
+    contrib_norm = unicodedata.normalize("NFC", contributor or "")
+    contrib_base = _base_contributor_name(contrib_norm)
+
+    rows = (
+        db.query(models.GeneanetCemetery)
+        .filter(models.GeneanetCemetery.contributor == contrib_base)
+        .order_by(models.GeneanetCemetery.place, models.GeneanetCemetery.name)
+        .all()
+    )
+    return rows
+
+
 def get_geneanet_stats(db: Session):
     """Return aggregate stats over the geneanet_cemeteries table for the global
     Geneanet Cemeteries index page (`?t=geneanet`):

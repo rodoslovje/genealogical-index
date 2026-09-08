@@ -118,6 +118,8 @@ export default {
     col_url: 'URL',
     col_tree: 'Stablo',
     col_matricula: 'Matricula',
+    col_geneanet: 'Groblja',
+    col_military: 'Vojni',
 
     // Column header tooltips
     tip_contributor: 'Rodoslovac koji je ove podatke ustupio indeksu.',
@@ -191,6 +193,9 @@ export default {
     contributor_matricula_surnames_intro: 'Transkribirane matične knjige sadrže sljedeća najčešća prezimena:',
     section_matricula_books: 'Transkribirane knjige',
     matricula_books_summary: 'Izvor {0} ima u <a href="{3}" data-spa-nav>Matricula indeksu</a> {1} knjiga s ukupno {2} zapisa.',
+    section_geneanet_cemeteries: 'Fotografirana i indeksirana groblja',
+    geneanet_cemeteries_summary: 'Izvor {0} ima u <a href="{3}" data-spa-nav>Geneanet grobljima</a> {1} groblja s ukupno {2} osoba.',
+    contributor_geneanet_surnames_intro: 'Fotografirana i indeksirana groblja sadrže sljedeća najčešća prezimena:',
     col_book_parish: 'Župa',
     col_book_period: 'Razdoblje',
     col_book_type: 'Vrsta',
@@ -273,7 +278,7 @@ export default {
       <p>Za potpuni pristup stablima i podudaranjima morate se prijaviti. Otvorite prozor za prijavu klikom na ikonu osobe (<strong>{USER_ICON}</strong>) gore desno. U prozor upišite korisničko ime i lozinku koju inače koristite za pristup matičnom portalu društva.</p>`,
     help_matricula_mark: `oznaka <strong>⛪</strong> pored imena izvora znači da podaci proizlaze iz indeksa Matricula Online a ne iz osobnog obiteljskog stabla, `,
     help_source_type_item: `<li><strong>Izvor:</strong> U polje za pretragu možete unijeti naziv jednog ili više izvora odvojenih zarezom. Pomoću padajućeg izbornika pored njega možete pretragu ograničiti i na određeni tip izvora: <em>Obiteljska stabla</em>, <em>Matricula indeks</em> ili <em>Geneanet groblja</em> (prema zadanim postavkama uključeni su svi izvori).</li>`,
-    help_matricula_cols: ` Ako izvor doprinosi podacima i iz vlastitog stabla i iz indeksa Matricula, vrijednosti su podijeljene u tri stupca: <em>Ukupno</em>, <em>Stablo</em> i <em>Matricula</em>.`,
+    help_matricula_cols: ` Ako izvor doprinosi podacima iz više izvora (vlastito stablo, Matricula indeks, Geneanet groblja…), mreža uz stupac <em>Ukupno</em> prikazuje po jedan stupac za svaki izvor.`,
     help_manual: `
       <h2>Upute za korištenje</h2>
       <p>Dobrodošli u Rodoslovni indeks, arhivsku zbirku podataka o osobama i obiteljima. Ove će vam upute pomoći u pretraživanju i pregledu rodoslovnih podataka.</p>

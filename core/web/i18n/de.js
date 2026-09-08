@@ -118,6 +118,8 @@ export default {
     col_url: 'URL',
     col_tree: 'Stammbaum',
     col_matricula: 'Matricula',
+    col_geneanet: 'Friedhöfe',
+    col_military: 'Militär',
 
     // Column header tooltips
     tip_contributor: 'Genealoge, der diese Daten zum Index beigesteuert hat.',
@@ -192,6 +194,9 @@ export default {
     contributor_matricula_surnames_intro: 'Die transkribierten Kirchenbücher enthalten die folgenden häufigsten Nachnamen:',
     section_matricula_books: 'Transkribierte Bücher',
     matricula_books_summary: 'Die Quelle {0} hat {1} Bücher mit insgesamt {2} Einträgen im <a href="{3}" data-spa-nav>Matricula-Index</a>.',
+    section_geneanet_cemeteries: 'Fotografierte und indexierte Friedhöfe',
+    geneanet_cemeteries_summary: 'Die Quelle {0} hat {1} Friedhöfe mit insgesamt {2} Personen in den <a href="{3}" data-spa-nav>Geneanet Friedhöfen</a>.',
+    contributor_geneanet_surnames_intro: 'Die fotografierten und indexierten Friedhöfe enthalten die folgenden häufigsten Nachnamen:',
     col_book_parish: 'Pfarrei',
     col_book_period: 'Zeitraum',
     col_book_type: 'Typ',
@@ -274,7 +279,7 @@ export default {
       <p>Um vollen Zugriff auf Stammbäume und Übereinstimmungen zu erhalten, müssen Sie sich anmelden. Öffnen Sie das Anmeldefenster, indem Sie auf das Benutzersymbol (<strong>{USER_ICON}</strong>) in der oberen rechten Ecke klicken. Geben Sie den Benutzernamen und das Passwort ein, die Sie für den Zugriff auf das Hauptportal der Gesellschaft verwenden.</p>`,
     help_matricula_mark: `Das <strong>⛪</strong>-Zeichen neben dem Namen der Quelle bedeutet, dass die Daten aus dem Matricula Online-Index stammen und nicht aus einem persönlichen Stammbaum, `,
     help_source_type_item: `<li><strong>Quelle:</strong> In das Suchfeld können Sie den Namen einer oder mehrerer Quellen eingeben, getrennt durch Kommas. Über das Dropdown-Menü daneben können Sie die Suche zusätzlich auf einen bestimmten Quellentyp beschränken: <em>Stammbäume</em>, <em>Matricula-Index</em> oder <em>Geneanet Friedhöfe</em> (standardmäßig sind alle Quellen eingeschlossen).</li>`,
-    help_matricula_cols: ` Steuert die Quelle Daten sowohl aus ihrem eigenen Baum als auch aus dem Matricula-Index bei, werden die Werte in drei Spalten unterteilt: <em>Gesamt</em>, <em>Stammbaum</em> und <em>Matricula</em>.`,
+    help_matricula_cols: ` Steuert die Quelle Daten aus mehreren Quellen bei (eigener Stammbaum, Matricula-Index, Geneanet-Friedhöfe…), zeigt die Übersicht neben der Spalte <em>Gesamt</em> je eine Spalte pro Quelle.`,
     help_manual: `
       <h2>Benutzerhandbuch</h2>
       <p>Willkommen beim Genealogischen Index, einer Archivdatenbank von Personen und Familien. Dieses Handbuch hilft Ihnen beim Suchen und Durchsuchen der genealogischen Daten.</p>

@@ -118,6 +118,8 @@ export default {
     col_url: 'URL',
     col_tree: 'Drevo',
     col_matricula: 'Matricula',
+    col_geneanet: 'Pokopališča',
+    col_military: 'Vojaški',
 
     // Column header tooltips
     tip_contributor: 'Rodoslovec, ki je te podatke prispeval v indeks.',
@@ -191,6 +193,9 @@ export default {
     contributor_matricula_surnames_intro: 'Indeksirane matične knjige vsebujejo naslednje najpogostejše priimke:',
     section_matricula_books: 'Indeksirane knjige',
     matricula_books_summary: 'Vir {0} ima v <a href="{3}" data-spa-nav>Matricula indeksu</a> {1} knjig s skupno {2} zapisi.',
+    section_geneanet_cemeteries: 'Fotografirana in indeksirana pokopališča',
+    geneanet_cemeteries_summary: 'Vir {0} ima v <a href="{3}" data-spa-nav>Geneanet pokopališčih</a> {1} pokopališč s skupno {2} osebami.',
+    contributor_geneanet_surnames_intro: 'Fotografirana in indeksirana pokopališča vsebujejo naslednje najpogostejše priimke:',
     col_book_parish: 'Župnija',
     col_book_period: 'Obdobje',
     col_book_type: 'Vrsta',
@@ -273,7 +278,7 @@ export default {
       <p>Za poln dostop do dreves in ujemanj se morate prijaviti. Prijavno okno odprete s klikom na ikono osebe (<strong>{USER_ICON}</strong>) zgoraj desno. V okno vpišite uporabniško ime in geslo, ki ga sicer uporabljate za dostop do spletnega portala matičnega rodoslovnega društva.</p>`,
     help_matricula_mark: `oznaka <strong>⛪</strong> ob imenu vira pomeni, da gre za podatke iz indeksa Matricula Online in ne za osebno družinsko drevo, `,
     help_source_type_item: `<li><strong>Vir:</strong> V iskalno polje lahko vnesete naziv enega ali več virov, ločenih z vejico. S spustnim menijem poleg njega lahko iskanje omejite tudi na določen tip vira: <em>Družinska drevesa</em>, <em>Matricula indeks</em> ali <em>Geneanet pokopališča</em> (privzeto so vključeni vsi viri).</li>`,
-    help_matricula_cols: ` Če vir prispeva podatke tako iz lastnega drevesa kot iz indeksa Matricula, so vrednosti razdeljene v tri stolpce: <em>Skupaj</em>, <em>Drevo</em> in <em>Matricula</em>.`,
+    help_matricula_cols: ` Če vir prispeva podatke iz več virov (lastno družinsko drevo, Matricula indeks, Geneanet pokopališča…), mreža poleg stolpca <em>Skupaj</em> prikaže še po en stolpec za vsak vir.`,
     help_manual: `
       <h2>Navodila za uporabo</h2>
       <p>Dobrodošli v rodoslovnem indeksu, arhivski zbirki podatkov o osebah in družinah. Ta navodila vam bodo pomagala pri iskanju in pregledovanju rodoslovnih podatkov.</p>

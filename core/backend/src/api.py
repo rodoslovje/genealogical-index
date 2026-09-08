@@ -157,6 +157,14 @@ def get_contributor_matricula(name: str, db: Session = Depends(get_db)):
     return crud.get_matricula_books(db, name)
 
 
+@app.get(
+    "/api/contributors/{name}/geneanet",
+    response_model=List[schemas.GeneanetCemetery],
+)
+def get_contributor_geneanet(name: str, db: Session = Depends(get_db)):
+    return crud.get_geneanet_cemeteries(db, name)
+
+
 @app.get("/api/matricula/stats")
 def get_matricula_stats(db: Session = Depends(get_db)):
     return crud.get_matricula_stats(db)

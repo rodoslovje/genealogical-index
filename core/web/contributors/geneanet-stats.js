@@ -33,8 +33,9 @@ const cmp = (a, b) => (typeof a === 'number' && typeof b === 'number')
 const fmt = (n) => Number(n || 0).toLocaleString();
 
 // Geneanet location types (cimetiere / eglise / …) → localized label, falling
-// back to the raw value for anything not explicitly translated.
-function typeLabel(type) {
+// back to the raw value for anything not explicitly translated. Shared with
+// the per-contributor cemeteries table on the genealogist's page.
+export function geneanetTypeLabel(type) {
   const key = `geneanet_type_${type}`;
   const label = t(key);
   return label && label !== key ? label : escapeHtml(type || '');
@@ -126,6 +127,8 @@ async function renderMap(cemeteries) {
   mapInstance.fitBounds(group.getBounds().pad(0.2));
 }
 
+const typeLabel = geneanetTypeLabel;
+
 function renderCemeteriesSection(cemeteries) {
   const columns = [
     { f: 'place',          h: t('col_place'),         cls: ' col-center' },
@@ -199,7 +202,7 @@ function renderCemeteriesSection(cemeteries) {
   };
 }
 
-function exportCemeteriesToCSV(rows, columns, filename) {
+export function exportCemeteriesToCSV(rows, columns, filename) {
   if (!rows?.length) return;
   const header = columns.map(c => csvCell(c.h || '')).join(',');
   const body = rows.map(c => columns.map(col => {

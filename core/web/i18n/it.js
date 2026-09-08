@@ -118,6 +118,8 @@ export default {
     col_url: 'URL',
     col_tree: 'Albero',
     col_matricula: 'Matricula',
+    col_geneanet: 'Cimiteri',
+    col_military: 'Militare',
 
     // Column header tooltips
     tip_contributor: "Genealogista che ha fornito questi dati all'indice.",
@@ -192,6 +194,9 @@ export default {
     contributor_matricula_surnames_intro: 'I registri parrocchiali trascritti contengono i seguenti cognomi più frequenti:',
     section_matricula_books: 'Registri trascritti',
     matricula_books_summary: 'La fonte {0} ha {1} registri con un totale di {2} voci nell\'<a href="{3}" data-spa-nav>Indice Matricula</a>.',
+    section_geneanet_cemeteries: 'Cimiteri fotografati e indicizzati',
+    geneanet_cemeteries_summary: 'La fonte {0} ha {1} cimiteri con un totale di {2} persone nei <a href="{3}" data-spa-nav>cimiteri Geneanet</a>.',
+    contributor_geneanet_surnames_intro: 'I cimiteri fotografati e indicizzati contengono i seguenti cognomi più frequenti:',
     col_book_parish: 'Parrocchia',
     col_book_period: 'Periodo',
     col_book_type: 'Tipo',
@@ -274,7 +279,7 @@ export default {
       <p>Per avere pieno accesso agli alberi e alle corrispondenze, è necessario effettuare l'accesso. Apri la finestra di accesso cliccando sull'icona dell'utente (<strong>{USER_ICON}</strong>) nell'angolo in alto a destra. Inserisci il nome utente e la password che utilizzi per accedere al portale principale della società.</p>`,
     help_matricula_mark: `il segno <strong>⛪</strong> accanto al nome della fonte indica che i dati provengono dall'indice Matricula Online piuttosto che da un albero genealogico personale, `,
     help_source_type_item: `<li><strong>Fonte:</strong> Nel campo di ricerca è possibile inserire il nome di una o più fonti, separati da virgole. Utilizzando il menu a discesa accanto, è inoltre possibile limitare la ricerca a un tipo di fonte specifico: <em>Alberi genealogici</em>, <em>Indice Matricula</em> o <em>Cimiteri Geneanet</em> (per impostazione predefinita sono incluse tutte le fonti).</li>`,
-    help_matricula_cols: ` Se la fonte contribuisce con dati provenienti sia dal proprio albero che dall'indice Matricula, i valori sono divisi in tre colonne: <em>Totale</em>, <em>Albero</em> e <em>Matricula</em>.`,
+    help_matricula_cols: ` Se la fonte contribuisce con dati provenienti da più origini (il proprio albero, l'indice Matricula, i cimiteri Geneanet…), la griglia mostra una colonna <em>Totale</em> seguita da una colonna per ogni origine.`,
     help_manual: `
       <h2>Manuale d'uso</h2>
       <p>Benvenuti nell'Indice genealogico, un database archivistico di persone e famiglie. Questo manuale vi aiuterà a cercare e navigare nei dati genealogici.</p>

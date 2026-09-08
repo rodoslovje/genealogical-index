@@ -118,6 +118,8 @@ export default {
     col_url: 'URL',
     col_tree: 'Tree',
     col_matricula: 'Matricula',
+    col_geneanet: 'Cemeteries',
+    col_military: 'Military',
 
     // Column header tooltips
     tip_contributor: 'Genealogist who contributed this data to the index.',
@@ -192,6 +194,9 @@ export default {
     contributor_matricula_surnames_intro: 'Transcribed parish registers contain the following top surnames:',
     section_matricula_books: 'Transcribed Books',
     matricula_books_summary: 'Source {0} has {1} books with a total of {2} records in the <a href="{3}" data-spa-nav>Matricula Index</a>.',
+    section_geneanet_cemeteries: 'Photographed and Indexed Cemeteries',
+    geneanet_cemeteries_summary: 'Source {0} has {1} cemeteries with a total of {2} persons in the <a href="{3}" data-spa-nav>Geneanet Cemeteries</a>.',
+    contributor_geneanet_surnames_intro: 'Photographed and indexed cemeteries contain the following top surnames:',
     col_book_parish: 'Parish',
     col_book_period: 'Period',
     col_book_type: 'Type',
@@ -274,7 +279,7 @@ export default {
       <p>To get full access to trees and matches, you need to log in. Open the login window by clicking the user icon (<strong>{USER_ICON}</strong>) in the top right corner. Enter the username and password you use to access the society's main portal.</p>`,
     help_matricula_mark: `the <strong>⛪</strong> mark next to the source's name indicates that the data comes from the Matricula Online index rather than from a personal family tree, `,
     help_source_type_item: `<li><strong>Source:</strong> In the search field, you can enter the name of one or more sources, separated by commas. Using the dropdown menu next to it, you can also restrict the search to a specific source type: <em>Family Trees</em>, <em>Matricula Index</em>, or <em>Geneanet Cemeteries</em> (all sources are included by default).</li>`,
-    help_matricula_cols: ` If the source contributes data from both its own tree and the Matricula index, the values are divided into three columns: <em>Total</em>, <em>Tree</em>, and <em>Matricula</em>.`,
+    help_matricula_cols: ` If the source contributes data from more than one place (its own family tree, the Matricula index, Geneanet cemeteries…), the grid shows a <em>Total</em> column followed by one column per source.`,
     help_manual: `
       <h2>User Manual</h2>
       <p>Welcome to the Genealogical Index, an archival database of persons and families. This manual will help you search and browse genealogical data.</p>

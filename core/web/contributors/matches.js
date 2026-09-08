@@ -9,10 +9,11 @@ import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { mountTableFilter, observeStickyHeader } from '../lib/table-filter.js';
 import siteConfig from '@site-config';
 
-import { ensureData, getCachedData, getContributorUrlMap, fetchMatriculaBooks } from './data.js';
+import { ensureData, getCachedData, getContributorUrlMap, fetchMatriculaBooks, fetchGeneanetCemeteries } from './data.js';
 import { loadSurnameCloud } from './cloud.js';
 import { setCurrentMatches } from './filter.js';
-import { exportBooksToCSV } from './matricula-stats.js';
+import { exportBooksToCSV, setupSortableTable, buildThead } from './matricula-stats.js';
+import { geneanetTypeLabel, exportCemeteriesToCSV } from './geneanet-stats.js';
 import { renderMatchDetail } from './match-detail.js';
 import { mountSurnameScope, readMatchSurnames } from './match-surname.js';
 import { fetchErrorKey } from '../auth.js';
@@ -69,16 +70,22 @@ function renderMemorial(contribData, displayName, url) {
   </div>`;
 }
 
-/** Renders the per-contributor stats grid (single column or 3-column Sum/Tree/Matricula). */
+/** Renders the per-contributor stats grid: a single column when the
+ *  contributor has one source, otherwise Total plus one column per source
+ *  present (Tree / Matricula / Cemeteries / Military). */
 function renderContributorStats(contribData) {
   if (!contribData) return '';
   const tip = (key) => t(key).replace(/"/g, '&quot;');
   const fmt = (n) => Number(n || 0).toLocaleString();
-  const tree = contribData._tree;
-  const mat  = contribData._matricula;
+  const parts = [
+    { part: contribData._tree,      label: t('col_tree') },
+    { part: contribData._matricula, label: t('col_matricula') },
+    { part: contribData._geneanet,  label: t('col_geneanet') },
+    { part: contribData._military,  label: t('col_military') },
+  ].filter(p => p.part);
 
   // Single-column grid when only one source exists.
-  if (!tree || !mat) {
+  if (parts.length < 2) {
     const row = (tipKey, label, value) => {
       const a = ` title="${tip(tipKey)}"`;
       return `<span${a}>${label}:</span><strong${a}>${value}</strong>`;
@@ -92,29 +99,25 @@ function renderContributorStats(contribData) {
     </div>`;
   }
 
-  // 3-value grid: Total / Tree / Matricula.
-  const metricRow = (tipKey, label, sum, treeVal, matVal) => {
+  // Multi-value grid: Total followed by one column per present source.
+  const metricRow = (tipKey, label, sum, values) => {
     const a = ` title="${tip(tipKey)}"`;
     return `<span${a}>${label}:</span>` +
       `<strong${a}>${sum}</strong>` +
-      `<span${a}>${treeVal}</span>` +
-      `<span${a}>${matVal}</span>`;
+      values.map(v => `<span${a}>${v}</span>`).join('');
   };
-  const lastTree = tree.last_modified || '';
-  const lastMat  = mat.last_modified  || '';
-  const lastSum  = contribData.last_modified || '';
   const divider = '<div style="grid-column: 1 / -1; border-bottom: 1px solid var(--border); margin: 2px 0;"></div>';
+  const colTemplate = Array(parts.length + 2).fill('max-content').join(' ');
 
-  return `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: max-content max-content max-content max-content; column-gap: 16px; row-gap: 4px; justify-items: end;">
+  return `<div class="contributor-stats" style="margin-bottom: 20px; font-size: 0.95rem; display: grid; grid-template-columns: ${colTemplate}; column-gap: 16px; row-gap: 4px; justify-items: end;">
     <span></span>
     <strong>${t('col_total')}</strong>
-    <strong>${t('col_tree')}</strong>
-    <strong>${t('col_matricula')}</strong>
+    ${parts.map(p => `<strong>${p.label}</strong>`).join('')}
     ${divider}
-    ${metricRow('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons),  fmt(tree.total_persons),  fmt(mat.total_persons))}
-    ${metricRow('tip_total_families', t('col_total_families'), fmt(contribData.total_families), fmt(tree.total_families), fmt(mat.total_families))}
-    ${metricRow('tip_total_links',    t('col_total_links'),    fmt(contribData.total_links),    fmt(tree.total_links),    fmt(mat.total_links))}
-    ${metricRow('tip_last_modified',  t('col_last_modified'),  lastSum,                          lastTree,                  lastMat)}
+    ${metricRow('tip_total_persons',  t('col_total_persons'),  fmt(contribData.total_persons),  parts.map(p => fmt(p.part.total_persons)))}
+    ${metricRow('tip_total_families', t('col_total_families'), fmt(contribData.total_families), parts.map(p => fmt(p.part.total_families)))}
+    ${metricRow('tip_total_links',    t('col_total_links'),    fmt(contribData.total_links),    parts.map(p => fmt(p.part.total_links)))}
+    ${metricRow('tip_last_modified',  t('col_last_modified'),  contribData.last_modified || '', parts.map(p => p.part.last_modified || ''))}
   </div>`;
 }
 
@@ -381,6 +384,113 @@ export async function renderMatchesPage(contributor, withPartner) {
 
     };
 
+    // Geneanet section: the cemeteries this genealogist has indexed, plus a
+    // surname cloud when the cemeteries aren't already the primary source
+    // (the main cloud above covers them in that case). Shown whenever the
+    // contributor has -geneanet index data or listed cemeteries.
+    const hasGeneanet = !!contribData._geneanet;
+    const geneanetCemeteries = hasGeneanet ? await fetchGeneanetCemeteries(displayName) : [];
+    const showGeneanetCloud = hasGeneanet && primary !== contribData._geneanet;
+    const cemeteryCols = [
+      { f: 'place',         h: t('col_place'),      cls: ' col-center' },
+      { f: 'name',          h: t('col_cemetery'),   cls: '' },
+      { f: 'type',          h: t('col_book_type'),  cls: ' col-center', sortVal: (c) => geneanetTypeLabel(c.type).toLowerCase() },
+      { f: 'persons_count', h: t('col_persons'),    cls: ' col-center', sortVal: (c) => Number(c.persons_count || 0), defaultDesc: true },
+      { f: 'graves_count',  h: t('col_graves'),     cls: ' col-center', sortVal: (c) => Number(c.graves_count || 0),  defaultDesc: true },
+    ];
+    let geneanetSectionHtml = '';
+    if (hasGeneanet || geneanetCemeteries.length) {
+      const fmt = (n) => Number(n || 0).toLocaleString();
+      const totalPersons = geneanetCemeteries.reduce((s, c) => s + (c.persons_count || 0), 0);
+      const summaryHtml = geneanetCemeteries.length
+        ? `<p>${t('geneanet_cemeteries_summary')
+            .replace('{0}', `<strong>${displayName}</strong>`)
+            .replace('{1}', `<strong>${fmt(geneanetCemeteries.length)}</strong>`)
+            .replace('{2}', `<strong>${fmt(totalPersons)}</strong>`)
+            .replace('{3}', toUnicodeHref({ t: 'geneanet' }))}</p>`
+        : '';
+      const tableHtml = geneanetCemeteries.length
+        ? `<div class="geneanet-cemeteries-subsection" style="margin-top: 1.5rem;">
+            <div class="contributor-geneanet-header section-bar section-bar--top" style="margin-bottom: 8px;">
+              <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_geneanet_cemeteries')}</h4>
+              <button class="export-btn export-geneanet-cemeteries-btn" title="${t('download_csv')}">${DOWNLOAD_ICON}CSV</button>
+            </div>
+            <div class="contributor-geneanet-content">
+              <div class="table-responsive">
+                <table id="contributor-geneanet-table">
+                  <thead><tr>${buildThead(cemeteryCols)}</tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>`
+        : '';
+      const cloudHtml = showGeneanetCloud
+        ? `<div class="surname-cloud-section" style="margin-top: 1.5rem;">
+            <div class="surname-cloud-header" style="margin-bottom: 8px;">
+              <h4 class="section-heading" style="margin: 0; padding: 0; border: none; font-size: 1.1rem;">${t('section_surnames')}</h4>
+            </div>
+            <p style="margin-bottom: 12px;">${t('contributor_geneanet_surnames_intro')}</p>
+            <div class="surname-cloud" id="contributor-geneanet-surname-cloud" data-i18n-title="chart_surnames_title"></div>
+          </div>`
+        : '';
+      geneanetSectionHtml = `<div class="geneanet-section" style="margin-bottom: 24px;">
+        <div class="geneanet-section-header section-bar section-bar--top">
+          <h3 class="section-heading" style="margin: 0; padding: 0; border: none;">${t('geneanet_page_title')}</h3>
+        </div>
+        <div class="geneanet-section-content">
+          ${summaryHtml}
+          ${tableHtml}
+          ${cloudHtml}
+        </div>
+      </div>`;
+    }
+
+    const setupGeneanetSection = () => {
+      const header = container.querySelector('.geneanet-section-header h3');
+      const content = container.querySelector('.geneanet-section-content');
+      if (header && content) {
+        header.classList.add('collapsible-header');
+        header.addEventListener('click', (e) => {
+          if (e.target.closest('button') || e.target.closest('a')) return;
+          const isCollapsed = header.classList.contains('collapsed');
+          content.style.display = isCollapsed ? '' : 'none';
+          header.classList.toggle('collapsed', !isCollapsed);
+        });
+      }
+      if (!geneanetCemeteries.length) return;
+
+      const collator = new Intl.Collator('sl', { sensitivity: 'base' });
+      const tableApi = setupSortableTable({
+        tableId: 'contributor-geneanet-table',
+        headerSelector: '.contributor-geneanet-header h4',
+        contentSelector: '.contributor-geneanet-content',
+        columns: cemeteryCols,
+        data: geneanetCemeteries,
+        initialSort: { column: 'place', ascending: true },
+        renderRow: (c) => {
+          const name = escapeHtml(c.name || '');
+          const nameCell = c.url
+            ? `<a href="${c.url}" target="_blank" rel="noopener">${name}</a>`
+            : name;
+          return `<tr>
+            <td class="col-center">${escapeHtml(c.place || '')}</td>
+            <td>${nameCell}</td>
+            <td class="col-center">${geneanetTypeLabel(c.type)}</td>
+            <td class="col-center">${Number(c.persons_count || 0).toLocaleString()}</td>
+            <td class="col-center">${Number(c.graves_count || 0).toLocaleString()}</td>
+          </tr>`;
+        },
+        fallbackSort: (a, b) => collator.compare(a.name || '', b.name || ''),
+      });
+      const csvBtn = container.querySelector('.export-geneanet-cemeteries-btn');
+      if (csvBtn && tableApi) {
+        csvBtn.addEventListener('click', () => {
+          exportCemeteriesToCSV(tableApi.getVisibleData(), cemeteryCols, formatExportFilename(`geneanet-cemeteries-${displayName}`, 'csv'));
+        });
+      }
+    };
+
     const heading = `<div class="matches-page-header">
       <h2 class="matches-page-title"><span${deceasedTitleAttr(displayName, t('memorial_title'))}>${displayName}</span>${deceasedIndicatorHtml(displayName, t('memorial_title'))} - ${formatTitleSuffix(t(contribDataTypeLabelKey(contribData, contributor)))}</h2>
     </div>
@@ -389,17 +499,20 @@ export async function renderMatchesPage(contributor, withPartner) {
     ${introHtml}
     ${urlHtml}
     ${cloudSectionsHtml}
-    ${matriculaSectionHtml}`;
+    ${matriculaSectionHtml}
+    ${geneanetSectionHtml}`;
 
     const loadDetailClouds = () => {
       if (primary)      loadSurnameCloud([primary.contributor_ID],                 'contributor-surname-cloud');
       if (hasMatricula) loadSurnameCloud([contribData._matricula.contributor_ID], 'contributor-matricula-surname-cloud', { hideSectionIfEmpty: true });
+      if (showGeneanetCloud) loadSurnameCloud([contribData._geneanet.contributor_ID], 'contributor-geneanet-surname-cloud', { hideSectionIfEmpty: true });
     };
 
     if (!showMatchesSection) {
       container.innerHTML = heading;
       loadDetailClouds();
       setupBooksSection();
+      setupGeneanetSection();
       return;
     }
 
@@ -418,6 +531,7 @@ export async function renderMatchesPage(contributor, withPartner) {
       container.innerHTML = heading + `<p>${t(fetchErrorKey(status))}</p>`;
       loadDetailClouds();
       setupBooksSection();
+      setupGeneanetSection();
       return;
     }
 
@@ -427,6 +541,7 @@ export async function renderMatchesPage(contributor, withPartner) {
         `<p>${t('matches_none')}</p>`;
       loadDetailClouds();
       setupBooksSection();
+      setupGeneanetSection();
       return;
     }
 
@@ -446,6 +561,7 @@ export async function renderMatchesPage(contributor, withPartner) {
 
     loadDetailClouds();
     setupBooksSection();
+      setupGeneanetSection();
 
     const summaryHeaderEl = container.querySelector('.matches-summary-header');
     const summaryHeader = summaryHeaderEl?.querySelector('h3');

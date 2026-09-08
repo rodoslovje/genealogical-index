@@ -145,6 +145,13 @@ export function prefetchContributors() {
   ensureMatchCounts().catch(() => {});
 }
 
+/** Fetch the Geneanet cemeteries indexed by `contributor`. Returns [] on error. */
+export function fetchGeneanetCemeteries(contributor) {
+  return fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/geneanet`)
+    .then(r => (r.ok ? r.json() : []))
+    .catch(() => []);
+}
+
 /** Fetch the Matricula books transcribed by `contributor`. Returns [] on error. */
 export function fetchMatriculaBooks(contributor) {
   return fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matricula`)

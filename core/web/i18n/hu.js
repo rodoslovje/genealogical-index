@@ -118,6 +118,8 @@ export default {
     col_url: 'URL',
     col_tree: 'Családfa',
     col_matricula: 'Matricula',
+    col_geneanet: 'Temetők',
+    col_military: 'Katonai',
 
     // Column header tooltips
     tip_contributor: 'A genealógus, aki ezeket az adatokat az indexhez hozzájárult.',
@@ -192,6 +194,9 @@ export default {
     contributor_matricula_surnames_intro: 'Az átírt anyakönyvek a következő leggyakoribb vezetékneveket tartalmazzák:',
     section_matricula_books: 'Átírt könyvek',
     matricula_books_summary: 'A(z) {0} forrásnak {1} könyve van összesen {2} bejegyzéssel a <a href="{3}" data-spa-nav>Matricula indexben</a>.',
+    section_geneanet_cemeteries: 'Lefényképezett és indexelt temetők',
+    geneanet_cemeteries_summary: 'A(z) {0} forrásnak {1} temetője van összesen {2} személlyel a <a href="{3}" data-spa-nav>Geneanet temetőkben</a>.',
+    contributor_geneanet_surnames_intro: 'A lefényképezett és indexelt temetők a következő leggyakoribb vezetékneveket tartalmazzák:',
     col_book_parish: 'Plébánia',
     col_book_period: 'Időszak',
     col_book_type: 'Típus',
@@ -274,7 +279,7 @@ export default {
       <p>A családfákhoz és egyezésekhez való teljes hozzáféréshez be kell jelentkeznie. Nyissa meg a bejelentkezési ablakot a jobb felső sarokban található felhasználó ikonra (<strong>{USER_ICON}</strong>) kattintva. Adja meg azt a felhasználónevet és jelszót, amelyet a társaság fő portáljának eléréséhez használ.</p>`,
     help_matricula_mark: `a forrás neve melletti <strong>⛪</strong> jel azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig személyes családfából, `,
     help_source_type_item: `<li><strong>Forrás:</strong> A keresőmezőbe egy vagy több forrás nevét is beírhatja, vesszővel elválasztva. A mellette lévő legördülő menü segítségével a keresést egy adott forrástípusra is korlátozhatja: <em>Családfák</em>, <em>Matricula index</em> vagy <em>Geneanet temetők</em> (alapértelmezés szerint minden forrás szerepel).</li>`,
-    help_matricula_cols: ` Ha a forrás a saját fájából és a Matricula indexből is szolgáltat adatokat, az értékek három oszlopra oszlanak: <em>Összesen</em>, <em>Családfa</em> és <em>Matricula</em>.`,
+    help_matricula_cols: ` Ha a forrás több helyről szolgáltat adatokat (saját családfa, Matricula index, Geneanet temetők…), a táblázat az <em>Összesen</em> oszlop mellett forrásonként egy-egy oszlopot mutat.`,
     help_manual: `
       <h2>Használati útmutató</h2>
       <p>Üdvözöljük a Genealógiai Indexben, amely a személyek és családok archív adatbázisa. Ez a kézikönyv segít a genealógiai adatok keresésében és böngészésében.</p>
