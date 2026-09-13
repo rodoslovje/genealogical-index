@@ -390,6 +390,23 @@ docker compose exec api python tools/trigger_matches.py --resume
 docker compose exec api python tools/trigger_matches.py --clear
 ```
 
+#### Auditing match quality
+
+`audit_matches.py` evaluates candidate precision rules (sex mismatch, contradicting parents or birth place, one-to-one pruning, "evidence must agree", a lower missing-field credit) against the stored `matches` table without recomputing anything — it only creates session-local temp tables, so it is safe to run on a live site.
+
+```bash
+docker compose exec api python tools/audit_matches.py                 # report + 200-row sample
+docker compose exec api python tools/audit_matches.py --sample 400 --band 0.80 0.90
+```
+
+The report lists how many match pairs each rule would remove, the confidence distribution before and after, how many *agreeing* fields matches carry per confidence band, and fan-out (how many partners one record has inside a single other tree). The CSV sample in `data/output/match_audit_sample.csv` is half matches the rules keep, half they would drop; fill the `label` column with `same` / `different` / `unsure` and summarise with:
+
+```bash
+docker compose exec api python tools/audit_matches.py --score data/output/match_audit_sample.csv
+```
+
+Thresholds live at the top of the script (`CONTRADICT`, `AGREE`, `ONE2ONE_SLACK`, `NEUTRAL_NEW`, ...).
+
 #### Performance notes
 
 - For 262 contributors and 3 M records, a full `--all` run takes several hours with 2 workers.

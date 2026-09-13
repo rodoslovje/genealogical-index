@@ -50,6 +50,11 @@ docker compose exec api python tools/trigger_matches.py --resume # Resume stoppe
 docker compose exec api python tools/trigger_matches.py --stop   # Stop running computation
 ```
 
+# Audit stored matches (read-only): per-rule removal counts + labelling sample
+docker compose exec api python tools/audit_matches.py
+docker compose exec api python tools/audit_matches.py --score data/output/match_audit_sample.csv
+```
+
 ## Architecture
 
 ### Repository Layout
