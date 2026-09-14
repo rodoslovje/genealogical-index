@@ -15,20 +15,31 @@ a stratified random sample to CSV for hand labelling, so the precision of
 the kept and of the dropped side can both be measured before any rule goes
 live.
 
-Rules evaluated (see the plan in the matching review):
+Rules evaluated (see the plan in the matching review; grouping in
+PERSON_RULES / FAMILY_RULES):
   Phase 1 — hard gates
     sex        both sexes recorded and different
     parents    both parents lists named, similarity < CONTRADICT
-    bplace     both birth places recorded, similarity < CONTRADICT, and no
-               full birth/death date agrees
     one2one    the pair is neither side's best (within ONE2ONE_SLACK) inside
                the other tree, and confidence < ONE2ONE_SAFE
+    death      both death years known and further apart than the tolerance
+               (the compute gate only needs birth OR death to fit)
+    fulldate   day-precise birth or death dates on both sides that differ,
+               with neither parents nor partners agreeing
+    generation one record's parent is the other's spouse (father/son with
+               the same name)
+    nn         a placeholder given name (NN) scored as an exact name match
+    names      (families) a spouse's given name missing on either side
   Phase 2 — evidence must *agree*, not merely be present
     agree      no corroborating field agrees (AGREE / YEAR_AGREE), two
                required for common surnames; a full date always satisfies it
+    plain2     two unqualified birth years two or more apart
     neutral    confidence rescored with missing always-counted fields at
                NEUTRAL_NEW instead of 0.5 falls below CONFIDENCE_MIN
-    names      (families) a spouse's given name missing on either side
+  Info only — counted, but not part of the combined verdict
+    bplace     birth places contradict (too many false hits until places
+               are normalised); family parents/children/place/agree/neutral
+               (the labelled sample showed they remove true matches)
 
 Usage (inside the api container, from /app):
     python tools/audit_matches.py                       # report + 200-row sample
@@ -131,6 +142,24 @@ _PERSON_SQL = text(f"""
                lower(left(p1.sex, 1)) AS sex_a, lower(left(p2.sex, 1)) AS sex_b,
                COALESCE(p1.birth_full_date = p2.birth_full_date, false) AS full_birth,
                COALESCE(p1.death_full_date = p2.death_full_date, false) AS full_death,
+               -- Both sides day-precise but NOT the same date: a stronger
+               -- contradiction than a year difference.
+               COALESCE(p1.birth_full_date <> p2.birth_full_date, false) AS full_birth_differs,
+               COALESCE(p1.death_full_date <> p2.death_full_date, false) AS full_death_differs,
+               (COALESCE(p1.birth_q, 0) = 0 AND COALESCE(p2.birth_q, 0) = 0) AS plain_birth,
+               -- Placeholder given names ("NN") currently score as an exact
+               -- name match.
+               (p1.name_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$'
+                OR p2.name_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$') AS nn_name,
+               -- Generation slip: one record's parent is the other record's
+               -- spouse (same-name father/son, mother/daughter). Only full
+               -- "given surname" entries count; a lone token is too vague.
+               (EXISTS (SELECT 1 FROM unnest(string_to_array(p1.parents_match_text, '; ')) x
+                        WHERE x LIKE '% %' AND x NOT LIKE 'nn %'
+                          AND x = ANY(string_to_array(p2.partners_match_text, '; ')))
+                OR EXISTS (SELECT 1 FROM unnest(string_to_array(p2.parents_match_text, '; ')) x
+                        WHERE x LIKE '% %' AND x NOT LIKE 'nn %'
+                          AND x = ANY(string_to_array(p1.partners_match_text, '; ')))) AS generation_slip,
                {_tol('p1.birth_q', 'p2.birth_q')} AS b_tol,
                {_tol('p1.death_q', 'p2.death_q')} AS d_tol,
                COALESCE(fa.is_common, false) OR COALESCE(fb.is_common, false) AS common_sur,
@@ -175,6 +204,18 @@ _PERSON_SQL = text(f"""
            (conf < {ONE2ONE_SAFE}
             AND conf < best_a - {ONE2ONE_SLACK}
             AND conf < best_b - {ONE2ONE_SLACK}) AS r_one2one,
+           -- Rules suggested by the first labelled sample (2026-09-14):
+           -- the compute gate accepts a pair when birth OR death years are
+           -- within tolerance, so a contradicting death year never rejects.
+           COALESCE(dyd > d_tol, false) AS r_death,
+           -- Day-precise dates that differ, with no parents/partners support.
+           ((full_birth_differs OR full_death_differs)
+            AND NOT COALESCE(s_par >= {AGREE}, false)
+            AND NOT COALESCE(s_part >= {AGREE}, false)) AS r_fulldate,
+           generation_slip AS r_generation,
+           nn_name AS r_nn,
+           -- Two plain (unqualified) birth years two or more apart.
+           COALESCE(byd >= 2 AND plain_birth, false) AS r_plain2,
            -- Phase 2 gates
            NOT (full_birth OR full_death
                 OR evidence >= CASE WHEN common_sur THEN 2 ELSE 1 END) AS r_agree,
@@ -258,13 +299,24 @@ _FAMILY_SQL = text(f"""
     ANALYZE af;
 """)
 
+# Rule groups. "phase1"/"phase2" feed the combined counts and the sample's
+# keep/drop split; "info" rules are only counted individually. The grouping
+# reflects the first labelled sample (80–88 % band, 2026-09-14):
+#   * r_bplace removed 5 true matches out of 14 — place strings vary too much
+#     ("Trnje, 6257, Slovenija" vs "Trnje") until places are normalised.
+#   * every family pair the rules dropped was a true match: two matching
+#     surnames plus two matching given names is already strong evidence, and
+#     children lists / marriage places are too incomplete to contradict.
 PERSON_RULES = {
-    "phase1": ["r_sex", "r_parents", "r_bplace", "r_one2one"],
-    "phase2": ["r_agree", "r_neutral"],
+    "phase1": ["r_sex", "r_parents", "r_one2one", "r_death", "r_fulldate",
+               "r_generation", "r_nn"],
+    "phase2": ["r_agree", "r_plain2", "r_neutral"],
+    "info": ["r_bplace"],
 }
 FAMILY_RULES = {
-    "phase1": ["r_parents", "r_children", "r_place", "r_one2one"],
-    "phase2": ["r_agree", "r_neutral", "r_names"],
+    "phase1": ["r_one2one", "r_names"],
+    "phase2": [],
+    "info": ["r_parents", "r_children", "r_place", "r_agree", "r_neutral"],
 }
 
 
@@ -294,9 +346,11 @@ def report(conn, tbl, rules, label):
     for phase, names in rules.items():
         for r in names:
             n = conn.execute(text(f"SELECT COUNT(*) FROM {tbl} WHERE {r}")).scalar()
-            log(f"  [{phase}] {r:<10} {_pct(n, total)}")
+            log(f"  [{phase}] {r:<13} {_pct(n, total)}")
     p1 = _any(rules["phase1"])
     p12 = _any(rules["phase1"] + rules["phase2"])
+    if not rules["phase2"]:
+        log("  (no phase-2 rules in the combined verdict for this record type)")
     n1 = conn.execute(text(f"SELECT COUNT(*) FROM {tbl} WHERE {p1}")).scalar()
     n12 = conn.execute(text(f"SELECT COUNT(*) FROM {tbl} WHERE {p12}")).scalar()
     log("\nCombined:")
@@ -339,7 +393,8 @@ def report(conn, tbl, rules, label):
 
 _PERSON_SAMPLE_COLS = """
     ap.id AS match_id, ap.conf, ap.conf2, ap.evidence, ap.n_a, ap.n_b,
-    ap.r_sex, ap.r_parents, ap.r_bplace, ap.r_one2one, ap.r_agree, ap.r_neutral,
+    ap.r_sex, ap.r_parents, ap.r_bplace, ap.r_one2one, ap.r_death, ap.r_fulldate,
+    ap.r_generation, ap.r_nn, ap.r_agree, ap.r_plain2, ap.r_neutral,
     ap.s_sur, ap.s_name, ap.s_bplace, ap.s_dplace, ap.byd, ap.dyd, ap.s_par, ap.s_part,
     ap.contributor_a, p1.id AS a_id, p1.name AS a_name, p1.surname AS a_surname,
     p1.alt_surname AS a_alt_surname, p1.sex AS a_sex,
