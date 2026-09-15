@@ -41,8 +41,6 @@ PERSON_RULES / FAMILY_RULES):
                and (if present) death year
     cemdeath   a cemetery side whose plain death year is 2+ off the other's
     cemreg     cemetery vs register index without an agreeing full birth date
-    names      (families) a spouse's given name missing and nothing else
-               agreeing
   Phase 2 — evidence must *agree*, not merely be present
     agree      no corroborating field agrees (AGREE / YEAR_AGREE); parents or
                partners agreement or a full date always satisfies it, a
@@ -56,8 +54,8 @@ PERSON_RULES / FAMILY_RULES):
     neutral    confidence rescored with missing always-counted fields at
                NEUTRAL_NEW instead of 0.5 falls below CONFIDENCE_MIN (cost
                true spouse-only matches in the second sample)
-    family one2one/parents/children/place/agree/neutral — the labelled
-               samples showed they remove true matches
+    family names/one2one/parents/children/place/agree/neutral — the
+               labelled samples showed they remove true matches
 
 Usage (inside the api container, from /app):
     python tools/audit_matches.py                       # report + 200-row sample
@@ -99,6 +97,8 @@ else:
 CONFIDENCE_MIN = 0.80  # must equal compute_matches.CONFIDENCE_MIN
 CONTRADICT = 0.30  # a recorded-on-both-sides field below this contradicts
 AGREE = 0.70  # ...and at or above this corroborates
+PARTNER_AGREE = 0.60  # spouse names are short and typo-prone ('jurij'/'jirij'
+# kozjek scored 0.625 for the same man), so partners corroborate a little lower
 YEAR_AGREE = 2  # max year difference that still counts as agreeing
 ONE2ONE_SLACK = 0.02  # a match this close to a record's best partner is kept
 ONE2ONE_SAFE = 0.95  # ...and so is any match at or above this confidence
@@ -212,8 +212,10 @@ _PERSON_SQL = text(f"""
                -- name match.
                (p1.name_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$'
                 OR p2.name_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$'
-                OR p1.surname_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$'
-                OR p2.surname_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$') AS nn_name,
+                -- A placeholder surname only counts when there is no
+                -- alternate surname that could have carried the match.
+                OR (p1.surname_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$' AND p1.alt_surname_fold = '')
+                OR (p2.surname_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$' AND p2.alt_surname_fold = '')) AS nn_name,
                -- Generation slip: one record's parent is the other record's
                -- spouse (same-name father/son, mother/daughter). Only full
                -- "given surname" entries count; a lone token is too vague.
@@ -246,7 +248,7 @@ _PERSON_SQL = text(f"""
                (type_a = 'reg' OR type_b = 'reg') AS has_reg,
                COALESCE((s_bplace >= {AGREE})::int, 0) + COALESCE((s_dplace >= {AGREE})::int, 0)
              + COALESCE((byd <= {YEAR_AGREE})::int, 0) + COALESCE((dyd <= {YEAR_AGREE})::int, 0)
-             + COALESCE((s_par >= {AGREE})::int, 0) + COALESCE((s_part >= {AGREE})::int, 0) AS evidence,
+             + COALESCE((s_par >= {AGREE})::int, 0) + COALESCE((s_part >= {PARTNER_AGREE})::int, 0) AS evidence,
                (
                    s_sur * 35.0 + s_name * 30.0
                  + COALESCE(s_bplace, {NEUTRAL_NEW}) * 10.0
@@ -286,7 +288,7 @@ _PERSON_SQL = text(f"""
            -- died. A day+month-equal, one-year-off date is a copying slip.
            (((full_birth_differs AND NOT birth_slip) OR (full_death_differs AND NOT death_slip))
             AND NOT (full_birth OR full_death)
-            AND NOT COALESCE(s_part >= {AGREE}, false)
+            AND NOT COALESCE(s_part >= {PARTNER_AGREE}, false)
             AND (COALESCE(byd, 0) >= 1 OR NOT COALESCE(s_par >= {AGREE}, false))) AS r_fulldate,
            -- Register-index rules (baptism entries: birth surname, both
            -- parents always named).
@@ -296,8 +298,11 @@ _PERSON_SQL = text(f"""
            nn_name AS r_nn,
            COALESCE(child_vs_married, false) AS r_childdeath,
            -- Two plain (unqualified) birth years two or more apart. Military
-           -- rolls derive birth years from ages, so they are exempt.
-           COALESCE(byd >= 2 AND plain_birth, false) AND NOT has_mil AS r_plain2,
+           -- rolls derive birth years from ages, so they are exempt; so is a
+           -- pair whose other full date agrees (a mistyped birth year next to
+           -- an identical death date and spouse is one person).
+           COALESCE(byd >= 2 AND plain_birth, false) AND NOT has_mil
+               AND NOT (full_birth OR full_death) AS r_plain2,
            -- Plain years on both events that BOTH disagree, even by one:
            -- cemetery indexes carry exact years, so two one-year slips are
            -- two different people.
@@ -323,7 +328,7 @@ _PERSON_SQL = text(f"""
            -- identity in itself, so it satisfies the gate even for a common
            -- surname; only place/year agreement needs a second field there.
            NOT (full_birth OR full_death
-                OR COALESCE(s_par >= {AGREE}, false) OR COALESCE(s_part >= {AGREE}, false)
+                OR COALESCE(s_par >= {AGREE}, false) OR COALESCE(s_part >= {PARTNER_AGREE}, false)
                 OR evidence >= CASE WHEN common_sur THEN 2 ELSE 1 END) AS r_agree,
            (CASE WHEN s_sur = 1.0 AND s_name = 1.0 AND (full_birth OR full_death)
                  THEN GREATEST(base2, CASE WHEN full_birth AND full_death
@@ -435,10 +440,14 @@ PERSON_RULES = {
     "phase2": ["r_agree", "r_plain2", "r_plain1"],
     "info": ["r_bplace", "r_neutral"],
 }
+#   * fourth sample (2026-09-15): r_names fired on 7 family pairs, 6 true and
+#     1 unsure — a wife's full name plus a marriage year within tolerance is
+#     enough even with the husband's given name missing. No family rule is
+#     left in the combined verdict; all are measured only.
 FAMILY_RULES = {
-    "phase1": ["r_names"],
+    "phase1": [],
     "phase2": [],
-    "info": ["r_one2one", "r_parents", "r_children", "r_place", "r_agree", "r_neutral"],
+    "info": ["r_names", "r_one2one", "r_parents", "r_children", "r_place", "r_agree", "r_neutral"],
 }
 
 

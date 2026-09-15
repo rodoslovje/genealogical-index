@@ -390,6 +390,10 @@ docker compose exec api python tools/trigger_matches.py --resume
 docker compose exec api python tools/trigger_matches.py --clear
 ```
 
+#### Precision gates
+
+After scoring, person pairs at or above `CONFIDENCE_MIN` pass a set of gates in `compute_matches.py` before being stored: a birth or death year known on both sides must fit its tolerance (previously either one fitting was enough), differing day-precise dates reject unless a spouse agrees, sex conflicts, contradicting parents, placeholder "NN" names, same-name father/son pairs and child-death-vs-married pairs reject, cemetery indexes (`-geneanet`) must agree exactly on years, register indexes (`-matricula`) are matched on birth surname and both parents, at least one corroborating field must actually agree (two for common surnames), and a record keeps only its best partner (and near-ties) inside each other tree. Thresholds live in the "precision gates" constants block. Family pairs are not gated. The rules were tuned on hand-labelled samples with `audit_matches.py` (below), which reports how many stored pairs each gate would still remove — after a full recompute those counts should be near zero.
+
 #### Auditing match quality
 
 `audit_matches.py` evaluates candidate precision rules (sex mismatch, contradicting parents or birth place, one-to-one pruning, "evidence must agree", a lower missing-field credit) against the stored `matches` table without recomputing anything — it only creates session-local temp tables, so it is safe to run on a live site.

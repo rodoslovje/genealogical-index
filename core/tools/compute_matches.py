@@ -99,6 +99,28 @@ NAME_SYNONYM_SCORE = 0.95  # s_name when two given names are known
 # same spelling. Slightly below 1.0 so exact agreement still ranks higher and
 # the identity-key floor (which demands s_name = 1.0) stays reserved for
 # exact name matches.
+# --- precision gates (2026-09) ---
+# Applied to person pairs that already clear CONFIDENCE_MIN. Every rule was
+# measured first on hand-labelled samples with tools/audit_matches.py (which
+# keeps evaluating them against the stored table, so it doubles as the
+# regression check): in the 80–88 % band the kept pairs went from ~26 % to
+# ~90 % true, at the cost of two true matches in 640. Family pairs get no
+# gates — two matching surnames plus two given names proved reliable, and
+# children/place lists are too incomplete to contradict.
+AGREE = 0.70  # a corroborating field (place, parents) agrees at or above this
+PARTNER_AGREE = 0.60  # spouse names are short and typo-prone, so a little lower
+YEAR_AGREE = 2  # max year difference that still counts as an agreeing year
+PARENTS_CONTRADICT = 0.30  # parents named on both sides but this dissimilar
+REG_PARENTS_CONTRADICT = 0.50  # stricter against a register index, which
+# always names both parents (GEDCOM parent lists can be partial)
+CEMETERY_DEATH_DIFF = 2  # cemetery death years are exact: this far apart is
+# two graves (the general tolerance in `plausible` stays YEAR_TOLERANCE)
+CHILD_DEATH_AGE = 12  # died at or under this age vs. a record with a spouse
+ONE2ONE_SLACK = 0.02  # a pair this close to a record's best partner in the
+# other tree survives one-to-one pruning...
+ONE2ONE_SAFE = 0.95  # ...and so does any pair at or above this confidence
+NN_PLACEHOLDER_RE = r"^(nn|n\.\s?n\.|n n|unknown|neznan[oai]?|\?)$"  # folded
+# given names / surnames that are placeholders, not names
 WORK_MEM = "256MB"  # per-session work_mem; raise if you have spare RAM
 PG_PARALLEL_WORKERS = 4  # PostgreSQL-internal parallel workers per query
 # (independent of Python --workers; requires max_worker_processes
@@ -510,7 +532,23 @@ _PERSON_INSERT = text(r"""
                CASE WHEN bq1 <> 0 THEN :yr_tol_approx ELSE :yr_tol END AS bt1,
                CASE WHEN bq2 <> 0 THEN :yr_tol_approx ELSE :yr_tol END AS bt2,
                CASE WHEN dq1 <> 0 THEN :yr_tol_approx ELSE :yr_tol END AS dt1,
-               CASE WHEN dq2 <> 0 THEN :yr_tol_approx ELSE :yr_tol END AS dt2
+               CASE WHEN dq2 <> 0 THEN :yr_tol_approx ELSE :yr_tol END AS dt2,
+               -- Signed year gates, NULL when either side lacks the year. Each
+               -- side earns :yr_extra of slack only in the direction its date
+               -- qualifier permits: a year may understate the truth when
+               -- qualified approx (1) or AFT (3), and overstate it when approx
+               -- (1) or BEF (2) — so for sdiff = year_a - year_b the lower bound
+               -- widens with a-understates/b-overstates and the upper bound
+               -- with the mirror combination. Plain dates on both sides reduce
+               -- to |sdiff| <= :yr_tol.
+               (b_yr_sdiff >= -(:yr_tol + CASE WHEN bq1 IN (1,3) THEN :yr_extra ELSE 0 END
+                                        + CASE WHEN bq2 IN (1,2) THEN :yr_extra ELSE 0 END)
+                AND b_yr_sdiff <= :yr_tol + CASE WHEN bq1 IN (1,2) THEN :yr_extra ELSE 0 END
+                                         + CASE WHEN bq2 IN (1,3) THEN :yr_extra ELSE 0 END) AS b_ok,
+               (d_yr_sdiff >= -(:yr_tol + CASE WHEN dq1 IN (1,3) THEN :yr_extra ELSE 0 END
+                                        + CASE WHEN dq2 IN (1,2) THEN :yr_extra ELSE 0 END)
+                AND d_yr_sdiff <= :yr_tol + CASE WHEN dq1 IN (1,2) THEN :yr_extra ELSE 0 END
+                                         + CASE WHEN dq2 IN (1,3) THEN :yr_extra ELSE 0 END) AS d_ok
         FROM cands
     ),
     -- Year-tolerance and lifespan-plausibility gates. The year gate is
@@ -525,18 +563,16 @@ _PERSON_INSERT = text(r"""
                GREATEST(bt1, bt2) AS b_tol,
                GREATEST(dt1, dt2) AS d_tol
         FROM tolerated
-        WHERE (
-                (b_yr_sdiff IS NULL
-                 OR (b_yr_sdiff >= -(:yr_tol + CASE WHEN bq1 IN (1,3) THEN :yr_extra ELSE 0 END
-                                             + CASE WHEN bq2 IN (1,2) THEN :yr_extra ELSE 0 END)
-                     AND b_yr_sdiff <= :yr_tol + CASE WHEN bq1 IN (1,2) THEN :yr_extra ELSE 0 END
-                                              + CASE WHEN bq2 IN (1,3) THEN :yr_extra ELSE 0 END))
-                OR (d_yr_sdiff IS NOT NULL
-                    AND d_yr_sdiff >= -(:yr_tol + CASE WHEN dq1 IN (1,3) THEN :yr_extra ELSE 0 END
-                                                + CASE WHEN dq2 IN (1,2) THEN :yr_extra ELSE 0 END)
-                    AND d_yr_sdiff <= :yr_tol + CASE WHEN dq1 IN (1,2) THEN :yr_extra ELSE 0 END
-                                             + CASE WHEN dq2 IN (1,3) THEN :yr_extra ELSE 0 END)
-              )
+        -- Year gates (b_ok / d_ok from `tolerated`). A year known on both
+        -- sides must fit its tolerance: the old rule accepted a pair when
+        -- birth OR death fitted, so a record dying in 1945 matched one dying
+        -- in 2013 as long as the birth years agreed — the single biggest
+        -- source of false matches in the 2026-09 audit. The only excuse is
+        -- a full day+month+year date agreeing on the other event (a death
+        -- year mistyped next to an identical death day and birth date is
+        -- one person). Years missing on either side gate nothing.
+        WHERE (b_ok IS NULL OR b_ok OR full_death_match)
+          AND (d_ok IS NULL OR d_ok OR full_birth_match)
           -- Lifespan impossibility: the same person can't die before the
           -- other record's birth.
           AND NOT (a_death_year IS NOT NULL AND b_birth_year IS NOT NULL
@@ -575,7 +611,7 @@ _PERSON_INSERT = text(r"""
         ORDER BY a_id, b_id, s_sur DESC
     ),
     scored AS (
-        SELECT a_id, b_id, s_sur, s_name, s_bplace, s_dplace,
+        SELECT a_id, b_id, common_sur, s_sur, s_name, s_bplace, s_dplace,
                b_yr_diff, d_yr_diff, s_parents, s_partners,
                full_birth_match, full_death_match,
             -- Always-counted (sum = 90): surname 35 + name 30 + birth_place 10 + birth_year 15.
@@ -604,7 +640,8 @@ _PERSON_INSERT = text(r"""
         FROM cands_dedup
     ),
     bonused AS (
-        SELECT a_id, b_id, s_sur, s_name, s_bplace, s_dplace, b_yr_diff, d_yr_diff, s_parents, s_partners,
+        SELECT a_id, b_id, common_sur, s_sur, s_name, s_bplace, s_dplace, b_yr_diff, d_yr_diff,
+               s_parents, s_partners, full_birth_match, full_death_match,
             -- Identity-key bonus: exact surname + given name + a *full* (day+
             -- month+year) birth or death date match is near-conclusive, so
             -- the confidence is floored even if some other field is missing
@@ -623,7 +660,9 @@ _PERSON_INSERT = text(r"""
         FROM scored
     ),
     filtered AS (
-        SELECT a_id, b_id, conf, jsonb_build_object(
+        SELECT a_id, b_id, conf, common_sur, s_bplace, s_dplace, b_yr_diff, d_yr_diff,
+               s_parents, s_partners, full_birth_match, full_death_match,
+               jsonb_build_object(
             'surname',     round(s_sur::numeric, 3),
             'name',        round(s_name::numeric, 3),
             'birth_place', CASE WHEN s_bplace  IS NOT NULL THEN round(s_bplace::numeric, 3) END,
@@ -635,29 +674,155 @@ _PERSON_INSERT = text(r"""
         )::text AS match_fields
         FROM bonused WHERE conf >= :conf_min
     ),
+    -- Precision gates (see the constants block). Evaluated only on pairs
+    -- that already cleared CONFIDENCE_MIN, with the two person rows joined
+    -- back in (two PK lookups per surviving match, not per candidate), so the
+    -- per-candidate hot path above is untouched. `flagged` derives the
+    -- per-pair facts, `gated` applies the rules; the rule names in the
+    -- comments are the ones tools/audit_matches.py reports.
+    -- Source types come in as parameters (from the contributor-name suffix):
+    -- cem = -geneanet cemetery index (exact years, no places/parents/spouses,
+    -- a woman under either her birth or her married surname), reg =
+    -- -matricula parish-register index (full birth date + both parents,
+    -- birth surname, no death/spouse; a reused name after a child died is a
+    -- separate record), mil = -military roll (age-derived birth years).
+    flagged AS (
+        SELECT fl.*,
+               p1.surname_fold AS sur1, p1.alt_surname_fold AS alt1,
+               p2.surname_fold AS sur2, p2.alt_surname_fold AS alt2,
+               (lower(left(p1.sex, 1)) IN ('m', 'f') AND lower(left(p2.sex, 1)) IN ('m', 'f')
+                AND lower(left(p1.sex, 1)) <> lower(left(p2.sex, 1))) AS sex_conflict,
+               (full_birth_match OR full_death_match) AS full_date_agrees,
+               -- Day-precise dates on both sides that differ — except when only
+               -- the year is off by one with day and month equal, which is a
+               -- copying slip, not a contradiction ('8 sep 1877' vs '8 sep 1878').
+               (COALESCE(p1.birth_full_date <> p2.birth_full_date, false)
+                AND NOT (split_part(p1.birth_full_date, ' ', 1) = split_part(p2.birth_full_date, ' ', 1)
+                         AND split_part(p1.birth_full_date, ' ', 2) = split_part(p2.birth_full_date, ' ', 2)
+                         AND b_yr_diff = 1)) AS birth_contradicts,
+               (COALESCE(p1.death_full_date <> p2.death_full_date, false)
+                AND NOT (split_part(p1.death_full_date, ' ', 1) = split_part(p2.death_full_date, ' ', 1)
+                         AND split_part(p1.death_full_date, ' ', 2) = split_part(p2.death_full_date, ' ', 2)
+                         AND d_yr_diff = 1)) AS death_contradicts,
+               (COALESCE(p1.birth_q, 0) = 0 AND COALESCE(p2.birth_q, 0) = 0) AS plain_birth,
+               (COALESCE(p1.death_q, 0) = 0 AND COALESCE(p2.death_q, 0) = 0) AS plain_death,
+               -- A placeholder ("NN") given name scores as an exact name match;
+               -- a placeholder surname only counts when no alternate surname
+               -- could have carried the match.
+               (p1.name_fold ~ :nn_re OR p2.name_fold ~ :nn_re
+                OR (p1.surname_fold ~ :nn_re AND p1.alt_surname_fold = '')
+                OR (p2.surname_fold ~ :nn_re AND p2.alt_surname_fold = '')) AS nn_name,
+               -- Generation slip: one record's parent is the other record's
+               -- spouse (same-name father/son). Only full "given surname"
+               -- entries count; a lone token is too vague.
+               (EXISTS (SELECT 1 FROM unnest(string_to_array(p1.parents_match_text, '; ')) x
+                        WHERE x LIKE '% %' AND x NOT LIKE 'nn %'
+                          AND x = ANY(string_to_array(p2.partners_match_text, '; ')))
+                OR EXISTS (SELECT 1 FROM unnest(string_to_array(p2.parents_match_text, '; ')) x
+                        WHERE x LIKE '% %' AND x NOT LIKE 'nn %'
+                          AND x = ANY(string_to_array(p1.partners_match_text, '; ')))) AS generation_slip,
+               -- One side died as a child while the other has a spouse: a name
+               -- reused for a later sibling, or an unrelated adult.
+               ((p1.death_year - p1.birth_year BETWEEN 0 AND :child_death_age
+                 AND p2.partners_match_text IS NOT NULL)
+                OR (p2.death_year - p2.birth_year BETWEEN 0 AND :child_death_age
+                    AND p1.partners_match_text IS NOT NULL)) AS child_vs_married,
+               -- A register (baptism) entry carries the BIRTH surname, so a
+               -- GEDCOM person who matched it only through her alternate
+               -- surname was born under a different name.
+               ((:type_a = 'reg' AND p2.surname_fold <> p1.surname_fold
+                 AND p2.alt_surname_fold <> '' AND p2.alt_surname_fold = p1.surname_fold)
+                OR (:type_b = 'reg' AND p1.surname_fold <> p2.surname_fold
+                    AND p1.alt_surname_fold <> '' AND p1.alt_surname_fold = p2.surname_fold)) AS reg_married,
+               COALESCE(s_parents >= :agree, false) AS parents_agree,
+               COALESCE(s_partners >= :partner_agree, false) AS partners_agree,
+               -- Number of corroborating fields that actually AGREE (the
+               -- minimum-evidence gate in `plausible` only checks presence).
+               COALESCE((s_bplace >= :agree)::int, 0) + COALESCE((s_dplace >= :agree)::int, 0)
+             + COALESCE((b_yr_diff <= :year_agree)::int, 0) + COALESCE((d_yr_diff <= :year_agree)::int, 0)
+             + COALESCE((s_parents >= :agree)::int, 0) + COALESCE((s_partners >= :partner_agree)::int, 0)
+               AS evidence
+        FROM filtered fl
+        JOIN persons p1 ON p1.id = fl.a_id
+        JOIN persons p2 ON p2.id = fl.b_id
+    ),
+    gated AS (
+        SELECT * FROM flagged
+        WHERE NOT sex_conflict                                                   -- sex
+          AND NOT COALESCE(s_parents < :parents_contradict, false)               -- parents
+          -- fulldate: differing day-precise dates. An agreeing spouse always
+          -- excuses it (siblings do not share a spouse); agreeing parents
+          -- only excuse a same-year slip, because parents agreeing across
+          -- different birth years are siblings.
+          AND NOT ((birth_contradicts OR death_contradicts) AND NOT full_date_agrees
+                   AND NOT partners_agree
+                   AND (COALESCE(b_yr_diff, 0) >= 1 OR NOT parents_agree))
+          AND NOT generation_slip                                                -- generation
+          AND NOT nn_name                                                        -- nn
+          AND NOT COALESCE(child_vs_married, false)                              -- childdeath
+          -- cemcem: a person is buried once, so two cemetery indexes must
+          -- agree exactly on birth year and (if present) death year.
+          AND NOT (:cem_cem AND NOT COALESCE(b_yr_diff = 0 AND COALESCE(d_yr_diff, 0) = 0, false))
+          -- cemdeath: cemetery death years are exact.
+          AND NOT (:has_cem AND plain_death
+                   AND COALESCE(d_yr_diff >= :cem_death_diff, false) AND NOT full_date_agrees)
+          -- cemreg: cemetery vs register share nothing but the birth date.
+          AND NOT (:cem_reg AND NOT full_birth_match)
+          AND NOT reg_married                                                    -- regmarried
+          AND NOT (:has_reg AND COALESCE(s_parents < :reg_parents_contradict, false))  -- regparents
+          -- agree: at least one corroborating field must agree, two for a
+          -- common surname unless the agreement is a full date, parents or
+          -- spouse (multi-token identities in their own right).
+          AND (full_date_agrees OR parents_agree OR partners_agree
+               OR evidence >= CASE WHEN common_sur THEN 2 ELSE 1 END)
+          -- plain2 / plain1: unqualified years are exact enough that two
+          -- birth years 2+ apart, or birth AND death years both off, are
+          -- two people. Military rolls derive years from ages, so exempt.
+          AND NOT (COALESCE(b_yr_diff >= 2, false) AND plain_birth
+                   AND NOT :has_mil AND NOT full_date_agrees)
+          AND NOT (COALESCE(b_yr_diff >= 1 AND d_yr_diff >= 1, false) AND plain_birth AND plain_death
+                   AND NOT :has_mil AND NOT full_date_agrees)
+    ),
+    -- one2one: a record exists once in a tree, so of its several partners in
+    -- the other tree only the best (and near-ties) can be right. A pair
+    -- survives if it is within ONE2ONE_SLACK of either record's best partner
+    -- inside this job's pair of trees, or at ONE2ONE_SAFE and above.
+    ranked AS (
+        SELECT g.*,
+               MAX(conf) OVER (PARTITION BY a_id) AS best_a,
+               MAX(conf) OVER (PARTITION BY b_id) AS best_b
+        FROM gated g
+    ),
     -- Denormalize the pair's folded surnames onto the match row, so the
     -- "which genealogists match me on surname X" filter can be answered from
     -- `matches` alone (see crud.get_contributor_matches). Both sides are
     -- stored: trigram matching means the two records can legitimately spell
     -- the surname differently (Pezdirc/Pezdirec), and a search for either
-    -- spelling should still find the pair. The join is over the
-    -- already-thresholded `filtered` set — two PK lookups per surviving
-    -- match, not per candidate.
+    -- spelling should still find the pair.
     labeled AS (
-        SELECT fl.*, ARRAY(
-            SELECT DISTINCT s FROM unnest(ARRAY[
-                p1.surname_fold, p1.alt_surname_fold,
-                p2.surname_fold, p2.alt_surname_fold
-            ]) AS s WHERE s IS NOT NULL AND s <> ''
+        SELECT a_id, b_id, conf, match_fields, ARRAY(
+            SELECT DISTINCT s FROM unnest(ARRAY[sur1, alt1, sur2, alt2]) AS s
+            WHERE s IS NOT NULL AND s <> ''
         ) AS surs
-        FROM filtered fl
-        JOIN persons p1 ON p1.id = fl.a_id
-        JOIN persons p2 ON p2.id = fl.b_id
+        FROM ranked
+        WHERE conf >= :one2one_safe
+           OR conf >= best_a - :one2one_slack
+           OR conf >= best_b - :one2one_slack
     )
     SELECT :contrib_a, :contrib_b, 'person', a_id, b_id, conf, match_fields, surs FROM labeled
     UNION ALL
     SELECT :contrib_b, :contrib_a, 'person', b_id, a_id, conf, match_fields, surs FROM labeled
 """)
+
+
+def source_type(contributor):
+    """Data-profile class of a contributor, from its name suffix (see
+    crud.SPECIAL_SUFFIXES): 'cem' cemetery index, 'reg' parish-register
+    index, 'mil' military roll, 'ged' a GEDCOM family tree."""
+    for suffix, kind in (("-geneanet", "cem"), ("-matricula", "reg"), ("-military", "mil")):
+        if contributor.endswith(suffix):
+            return kind
+    return "ged"
 
 _FAMILY_INSERT = text(r"""
     INSERT INTO matches
@@ -955,6 +1120,7 @@ def claim_jobs(batch_size=1):
 
 
 def process_job(contrib_a, contrib_b, pg_parallel=PG_PARALLEL_WORKERS):
+    type_a, type_b = source_type(contrib_a), source_type(contrib_b)
     params = {
         "contrib_a": contrib_a,
         "contrib_b": contrib_b,
@@ -969,6 +1135,24 @@ def process_job(contrib_a, contrib_b, pg_parallel=PG_PARALLEL_WORKERS):
         "alt_surname_penalty": ALT_SURNAME_PENALTY,
         "max_lifespan": MAX_LIFESPAN,
         "name_syn_score": NAME_SYNONYM_SCORE,
+        # precision gates (person pairs only; the family statement ignores them)
+        "agree": AGREE,
+        "partner_agree": PARTNER_AGREE,
+        "year_agree": YEAR_AGREE,
+        "parents_contradict": PARENTS_CONTRADICT,
+        "reg_parents_contradict": REG_PARENTS_CONTRADICT,
+        "cem_death_diff": CEMETERY_DEATH_DIFF,
+        "child_death_age": CHILD_DEATH_AGE,
+        "one2one_slack": ONE2ONE_SLACK,
+        "one2one_safe": ONE2ONE_SAFE,
+        "nn_re": NN_PLACEHOLDER_RE,
+        "type_a": type_a,
+        "type_b": type_b,
+        "has_cem": "cem" in (type_a, type_b),
+        "has_reg": "reg" in (type_a, type_b),
+        "has_mil": "mil" in (type_a, type_b),
+        "cem_cem": type_a == "cem" and type_b == "cem",
+        "cem_reg": {type_a, type_b} == {"cem", "reg"},
     }
     pair_label = f"{contrib_a}↔{contrib_b}"
 

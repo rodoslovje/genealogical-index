@@ -129,6 +129,8 @@ Import flow: `data/input/*.ged` → ged-tools cleanup → `data/filtered/*.ged` 
 
 Cross-contributor matching uses PostgreSQL trigram similarity (`pg_trgm`). Confidence scoring weights: surname 35%, name 30%, year 20%, place 15%. Configurable thresholds in `compute_matches.py`: `CONFIDENCE_MIN=0.80`, `TRGM_THRESHOLD=0.72`, `YEAR_TOLERANCE=5`.
 
+Person pairs that clear the confidence threshold then pass a set of **precision gates** (the `flagged`/`gated`/`ranked` CTEs in `_PERSON_INSERT`, constants in the "precision gates" block): year contradictions, differing full dates, sex, parents, placeholder names, generation slips, child-death-vs-married, source-aware cemetery/register rules, an "evidence must agree" gate, and one-to-one pruning. The gates are source-aware: `source_type()` classifies a contributor from its suffix (`-geneanet` cemetery, `-matricula` parish register, `-military`, else GEDCOM). Family pairs get no gates. Every gate was validated on hand-labelled samples with `tools/audit_matches.py`, which re-evaluates them against the stored table and is the regression check after a recompute.
+
 ### Frontend SPA Routing
 
 The app is a single-page application. Tabs map to `?t=` URL parameters (general, person, family, contributors, tree). `router.js` handles tab switching, history management, and three "side routes" that bypass the tab system: `?t=matricula`, `?t=geneanet`, and `?t=compare`. Premium views (tree, compare) require a valid JWT when auth is configured. Legacy `?t=ancestors` / `?t=descendants` links are rewritten to `?t=tree&dir=anc|desc` by `normalizeLegacyURL()`.
