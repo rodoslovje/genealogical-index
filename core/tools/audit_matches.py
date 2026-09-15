@@ -23,23 +23,32 @@ PERSON_RULES / FAMILY_RULES):
     one2one    the pair is neither side's best (within ONE2ONE_SLACK) inside
                the other tree, and confidence < ONE2ONE_SAFE
     death      both death years known and further apart than the tolerance
-               (the compute gate only needs birth OR death to fit)
+               (the compute gate only needs birth OR death to fit), unless a
+               full birth/death date agrees
     fulldate   day-precise birth or death dates on both sides that differ,
-               with neither parents nor partners agreeing
+               with no full date agreeing and neither parents nor partners
+               agreeing
     generation one record's parent is the other's spouse (father/son with
                the same name)
     nn         a placeholder given name (NN) scored as an exact name match
-    names      (families) a spouse's given name missing on either side
+    childdeath one side died aged 12 or less, the other has a spouse
+    names      (families) a spouse's given name missing and nothing else
+               agreeing
   Phase 2 — evidence must *agree*, not merely be present
-    agree      no corroborating field agrees (AGREE / YEAR_AGREE), two
-               required for common surnames; a full date always satisfies it
+    agree      no corroborating field agrees (AGREE / YEAR_AGREE); parents or
+               partners agreement or a full date always satisfies it, a
+               single place/year agreement needs a second one for common
+               surnames
     plain2     two unqualified birth years two or more apart
-    neutral    confidence rescored with missing always-counted fields at
-               NEUTRAL_NEW instead of 0.5 falls below CONFIDENCE_MIN
+    plain1     unqualified birth AND death years that both differ
   Info only — counted, but not part of the combined verdict
     bplace     birth places contradict (too many false hits until places
-               are normalised); family parents/children/place/agree/neutral
-               (the labelled sample showed they remove true matches)
+               are normalised)
+    neutral    confidence rescored with missing always-counted fields at
+               NEUTRAL_NEW instead of 0.5 falls below CONFIDENCE_MIN (cost
+               true spouse-only matches in the second sample)
+    family one2one/parents/children/place/agree/neutral — the labelled
+               samples showed they remove true matches
 
 Usage (inside the api container, from /app):
     python tools/audit_matches.py                       # report + 200-row sample
@@ -147,6 +156,12 @@ _PERSON_SQL = text(f"""
                COALESCE(p1.birth_full_date <> p2.birth_full_date, false) AS full_birth_differs,
                COALESCE(p1.death_full_date <> p2.death_full_date, false) AS full_death_differs,
                (COALESCE(p1.birth_q, 0) = 0 AND COALESCE(p2.birth_q, 0) = 0) AS plain_birth,
+               (COALESCE(p1.death_q, 0) = 0 AND COALESCE(p2.death_q, 0) = 0) AS plain_death,
+               -- One side died as a child (both years on that side) while the
+               -- other side has a recorded spouse: a name reused for a later
+               -- sibling, or an unrelated adult.
+               ((p1.death_year - p1.birth_year BETWEEN 0 AND 12 AND p2.partners_match_text IS NOT NULL)
+                OR (p2.death_year - p2.birth_year BETWEEN 0 AND 12 AND p1.partners_match_text IS NOT NULL)) AS child_vs_married,
                -- Placeholder given names ("NN") currently score as an exact
                -- name match.
                (p1.name_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$'
@@ -207,17 +222,30 @@ _PERSON_SQL = text(f"""
            -- Rules suggested by the first labelled sample (2026-09-14):
            -- the compute gate accepts a pair when birth OR death years are
            -- within tolerance, so a contradicting death year never rejects.
-           COALESCE(dyd > d_tol, false) AS r_death,
+           -- A full date agreeing on the other event overrides both date
+           -- contradictions (second sample: same man, death day identical,
+           -- death year mistyped 1872/1879).
+           COALESCE(dyd > d_tol, false) AND NOT (full_birth OR full_death) AS r_death,
            -- Day-precise dates that differ, with no parents/partners support.
            ((full_birth_differs OR full_death_differs)
+            AND NOT (full_birth OR full_death)
             AND NOT COALESCE(s_par >= {AGREE}, false)
             AND NOT COALESCE(s_part >= {AGREE}, false)) AS r_fulldate,
            generation_slip AS r_generation,
            nn_name AS r_nn,
+           COALESCE(child_vs_married, false) AS r_childdeath,
            -- Two plain (unqualified) birth years two or more apart.
            COALESCE(byd >= 2 AND plain_birth, false) AS r_plain2,
-           -- Phase 2 gates
+           -- Plain years on both events that BOTH disagree, even by one:
+           -- cemetery indexes carry exact years, so two one-year slips are
+           -- two different people.
+           COALESCE(byd >= 1 AND dyd >= 1 AND plain_birth AND plain_death, false)
+               AND NOT (full_birth OR full_death) AS r_plain1,
+           -- Phase 2 gates. A parents or partners agreement is a multi-token
+           -- identity in itself, so it satisfies the gate even for a common
+           -- surname; only place/year agreement needs a second field there.
            NOT (full_birth OR full_death
+                OR COALESCE(s_par >= {AGREE}, false) OR COALESCE(s_part >= {AGREE}, false)
                 OR evidence >= CASE WHEN common_sur THEN 2 ELSE 1 END) AS r_agree,
            (CASE WHEN s_sur = 1.0 AND s_name = 1.0 AND (full_birth OR full_death)
                  THEN GREATEST(base2, CASE WHEN full_birth AND full_death
@@ -289,7 +317,10 @@ _FAMILY_SQL = text(f"""
             AND conf < best_a - {ONE2ONE_SLACK}
             AND conf < best_b - {ONE2ONE_SLACK}) AS r_one2one,
            NOT (full_marriage OR evidence >= 1) AS r_agree,
-           (s_hname IS NULL OR s_wname IS NULL) AS r_names,
+           -- A missing spouse name ("NN Vidmar ⚭ Frančiška Suhadolc") only
+           -- hurts when nothing else corroborates: with the marriage year or
+           -- the other spouse's parents agreeing, such pairs were all true.
+           ((s_hname IS NULL OR s_wname IS NULL) AND evidence = 0) AS r_names,
            (CASE WHEN s_hsur = 1.0 AND s_wsur = 1.0 AND s_hname = 1.0 AND s_wname = 1.0
                       AND full_marriage
                  THEN GREATEST(base2, {IDENTITY_KEY_CONFIDENCE}) ELSE base2 END) AS conf2
@@ -307,16 +338,22 @@ _FAMILY_SQL = text(f"""
 #   * every family pair the rules dropped was a true match: two matching
 #     surnames plus two matching given names is already strong evidence, and
 #     children lists / marriage places are too incomplete to contradict.
+#   * second sample (2026-09-15): the revised person set reached 73 %
+#     precision in the band; guarding the date rules with an agreeing full
+#     date, waiving the common-surname second field when parents/partners
+#     agree, and adding r_plain1 / r_childdeath took it to 86 % with no true
+#     match lost. r_neutral cost two true spouse-only matches for no gain, so
+#     it is measured only. Family one2one fired on true matches only.
 PERSON_RULES = {
     "phase1": ["r_sex", "r_parents", "r_one2one", "r_death", "r_fulldate",
-               "r_generation", "r_nn"],
-    "phase2": ["r_agree", "r_plain2", "r_neutral"],
-    "info": ["r_bplace"],
+               "r_generation", "r_nn", "r_childdeath"],
+    "phase2": ["r_agree", "r_plain2", "r_plain1"],
+    "info": ["r_bplace", "r_neutral"],
 }
 FAMILY_RULES = {
-    "phase1": ["r_one2one", "r_names"],
+    "phase1": ["r_names"],
     "phase2": [],
-    "info": ["r_parents", "r_children", "r_place", "r_agree", "r_neutral"],
+    "info": ["r_one2one", "r_parents", "r_children", "r_place", "r_agree", "r_neutral"],
 }
 
 
@@ -394,7 +431,8 @@ def report(conn, tbl, rules, label):
 _PERSON_SAMPLE_COLS = """
     ap.id AS match_id, ap.conf, ap.conf2, ap.evidence, ap.n_a, ap.n_b,
     ap.r_sex, ap.r_parents, ap.r_bplace, ap.r_one2one, ap.r_death, ap.r_fulldate,
-    ap.r_generation, ap.r_nn, ap.r_agree, ap.r_plain2, ap.r_neutral,
+    ap.r_generation, ap.r_nn, ap.r_childdeath, ap.r_agree, ap.r_plain2, ap.r_plain1,
+    ap.r_neutral,
     ap.s_sur, ap.s_name, ap.s_bplace, ap.s_dplace, ap.byd, ap.dyd, ap.s_par, ap.s_part,
     ap.contributor_a, p1.id AS a_id, p1.name AS a_name, p1.surname AS a_surname,
     p1.alt_surname AS a_alt_surname, p1.sex AS a_sex,
