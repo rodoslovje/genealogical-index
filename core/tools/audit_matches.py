@@ -25,9 +25,14 @@ PERSON_RULES / FAMILY_RULES):
     death      both death years known and further apart than the tolerance
                (the compute gate only needs birth OR death to fit), unless a
                full birth/death date agrees
-    fulldate   day-precise birth or death dates on both sides that differ,
-               with no full date agreeing and neither parents nor partners
-               agreeing
+    fulldate   day-precise birth or death dates on both sides that differ
+               (a day+month-equal one-year slip does not count), with no
+               full date agreeing, no agreeing spouse, and agreeing parents
+               only excusing a same-year difference
+    regmarried a GEDCOM person matched a register (baptism) entry only
+               through her alternate surname
+    regparents parents similarity below REG_PARENTS_CONTRADICT against a
+               register entry, which always names both parents
     generation one record's parent is the other's spouse (father/son with
                the same name)
     nn         a placeholder given name (NN) scored as an exact name match
@@ -98,6 +103,9 @@ YEAR_AGREE = 2  # max year difference that still counts as agreeing
 ONE2ONE_SLACK = 0.02  # a match this close to a record's best partner is kept
 ONE2ONE_SAFE = 0.95  # ...and so is any match at or above this confidence
 NEUTRAL_NEW = 0.25  # candidate replacement for the 0.5 missing-field credit
+REG_PARENTS_CONTRADICT = 0.50  # a register index always names both parents,
+# so a weaker parents similarity than this against one is a real disagreement
+# (the general CONTRADICT is lower because GEDCOM parent lists can be partial)
 IDENTITY_KEY_CONFIDENCE = 0.97  # floors — must mirror compute_matches
 IDENTITY_KEY_CONFIDENCE_FULL = 0.99
 YEAR_TOLERANCE = 5
@@ -176,6 +184,23 @@ _PERSON_SQL = text(f"""
                -- contradiction than a year difference.
                COALESCE(p1.birth_full_date <> p2.birth_full_date, false) AS full_birth_differs,
                COALESCE(p1.death_full_date <> p2.death_full_date, false) AS full_death_differs,
+               -- Same day and month, year off by one: a copying slip, not a
+               -- contradiction (normalised dates look like '8 sep 1877').
+               COALESCE(p1.birth_full_date <> p2.birth_full_date
+                        AND split_part(p1.birth_full_date, ' ', 1) = split_part(p2.birth_full_date, ' ', 1)
+                        AND split_part(p1.birth_full_date, ' ', 2) = split_part(p2.birth_full_date, ' ', 2)
+                        AND ABS(p1.birth_year - p2.birth_year) = 1, false) AS birth_slip,
+               COALESCE(p1.death_full_date <> p2.death_full_date
+                        AND split_part(p1.death_full_date, ' ', 1) = split_part(p2.death_full_date, ' ', 1)
+                        AND split_part(p1.death_full_date, ' ', 2) = split_part(p2.death_full_date, ' ', 2)
+                        AND ABS(p1.death_year - p2.death_year) = 1, false) AS death_slip,
+               -- A register (baptism) entry always carries the BIRTH surname,
+               -- so a GEDCOM person who matched it only through her
+               -- alternate surname was born under a different name.
+               (({_SRC_TYPE('m.contributor_a')} = 'reg' AND p2.surname_fold <> p1.surname_fold
+                 AND p2.alt_surname_fold <> '' AND p2.alt_surname_fold = p1.surname_fold)
+                OR ({_SRC_TYPE('m.contributor_b')} = 'reg' AND p1.surname_fold <> p2.surname_fold
+                 AND p1.alt_surname_fold <> '' AND p1.alt_surname_fold = p2.surname_fold)) AS reg_married,
                (COALESCE(p1.birth_q, 0) = 0 AND COALESCE(p2.birth_q, 0) = 0) AS plain_birth,
                (COALESCE(p1.death_q, 0) = 0 AND COALESCE(p2.death_q, 0) = 0) AS plain_death,
                -- One side died as a child (both years on that side) while the
@@ -186,7 +211,9 @@ _PERSON_SQL = text(f"""
                -- Placeholder given names ("NN") currently score as an exact
                -- name match.
                (p1.name_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$'
-                OR p2.name_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$') AS nn_name,
+                OR p2.name_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$'
+                OR p1.surname_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$'
+                OR p2.surname_fold ~ '^(nn|n\\.\\s?n\\.|n n|unknown|neznan[oai]?|\\?)$') AS nn_name,
                -- Generation slip: one record's parent is the other record's
                -- spouse (same-name father/son, mother/daughter). Only full
                -- "given surname" entries count; a lone token is too vague.
@@ -216,6 +243,7 @@ _PERSON_SQL = text(f"""
                LEAST(type_a, type_b) || '-' || GREATEST(type_a, type_b) AS pair_class,
                (type_a = 'cem' OR type_b = 'cem') AS has_cem,
                (type_a = 'mil' OR type_b = 'mil') AS has_mil,
+               (type_a = 'reg' OR type_b = 'reg') AS has_reg,
                COALESCE((s_bplace >= {AGREE})::int, 0) + COALESCE((s_dplace >= {AGREE})::int, 0)
              + COALESCE((byd <= {YEAR_AGREE})::int, 0) + COALESCE((dyd <= {YEAR_AGREE})::int, 0)
              + COALESCE((s_par >= {AGREE})::int, 0) + COALESCE((s_part >= {AGREE})::int, 0) AS evidence,
@@ -251,15 +279,19 @@ _PERSON_SQL = text(f"""
            -- contradictions (second sample: same man, death day identical,
            -- death year mistyped 1872/1879).
            COALESCE(dyd > d_tol, false) AND NOT (full_birth OR full_death) AS r_death,
-           -- Day-precise dates that differ, with no parents/partners support.
-           -- Agreeing parents only excuse a same-year date slip: parents
-           -- agreeing across different birth YEARS are siblings, typically a
-           -- name reused after a child died (register indexes show this).
-           ((full_birth_differs OR full_death_differs)
+           -- Day-precise dates that differ. An agreeing spouse always excuses
+           -- it (siblings do not share a spouse). Agreeing parents only
+           -- excuse a same-year slip: parents agreeing across different
+           -- birth YEARS are siblings, typically a name reused after a child
+           -- died. A day+month-equal, one-year-off date is a copying slip.
+           (((full_birth_differs AND NOT birth_slip) OR (full_death_differs AND NOT death_slip))
             AND NOT (full_birth OR full_death)
-            AND (COALESCE(byd, 0) >= 1
-                 OR (NOT COALESCE(s_par >= {AGREE}, false)
-                     AND NOT COALESCE(s_part >= {AGREE}, false)))) AS r_fulldate,
+            AND NOT COALESCE(s_part >= {AGREE}, false)
+            AND (COALESCE(byd, 0) >= 1 OR NOT COALESCE(s_par >= {AGREE}, false))) AS r_fulldate,
+           -- Register-index rules (baptism entries: birth surname, both
+           -- parents always named).
+           reg_married AS r_regmarried,
+           (has_reg AND COALESCE(s_par < {REG_PARENTS_CONTRADICT}, false)) AS r_regparents,
            generation_slip AS r_generation,
            nn_name AS r_nn,
            COALESCE(child_vs_married, false) AS r_childdeath,
@@ -399,7 +431,7 @@ _FAMILY_SQL = text(f"""
 PERSON_RULES = {
     "phase1": ["r_sex", "r_parents", "r_one2one", "r_death", "r_fulldate",
                "r_generation", "r_nn", "r_childdeath",
-               "r_cemcem", "r_cemdeath", "r_cemreg"],
+               "r_cemcem", "r_cemdeath", "r_cemreg", "r_regmarried", "r_regparents"],
     "phase2": ["r_agree", "r_plain2", "r_plain1"],
     "info": ["r_bplace", "r_neutral"],
 }
@@ -498,7 +530,7 @@ _PERSON_SAMPLE_COLS = """
     ap.id AS match_id, ap.pair_class, ap.conf, ap.conf2, ap.evidence, ap.n_a, ap.n_b,
     ap.r_sex, ap.r_parents, ap.r_bplace, ap.r_one2one, ap.r_death, ap.r_fulldate,
     ap.r_generation, ap.r_nn, ap.r_childdeath, ap.r_cemcem, ap.r_cemdeath, ap.r_cemreg,
-    ap.r_agree, ap.r_plain2, ap.r_plain1, ap.r_neutral,
+    ap.r_regmarried, ap.r_regparents, ap.r_agree, ap.r_plain2, ap.r_plain1, ap.r_neutral,
     ap.s_sur, ap.s_name, ap.s_bplace, ap.s_dplace, ap.byd, ap.dyd, ap.s_par, ap.s_part,
     ap.contributor_a, p1.id AS a_id, p1.name AS a_name, p1.surname AS a_surname,
     p1.alt_surname AS a_alt_surname, p1.sex AS a_sex,
@@ -611,6 +643,9 @@ def main():
                     help="confidence band the sample is drawn from")
     ap.add_argument("--out", default="data/output/match_audit_sample.csv")
     ap.add_argument("--score", metavar="CSV", help="summarise a hand-labelled sample and exit")
+    ap.add_argument("--explain", action="store_true",
+                    help="print the query plans of the two rescoring queries and exit "
+                         "(builds the best-partner table first, ~1 min)")
     args = ap.parse_args()
 
     if args.score:
@@ -633,6 +668,18 @@ def main():
         log("Building per-record best-partner table ...")
         conn.execute(_BEST_SQL)
         log(f"  done in {time.monotonic() - t0:.0f}s")
+
+        if args.explain:
+            # Plan only (no ANALYZE), so this returns in seconds. The
+            # rescoring statements end with an ANALYZE of the temp table,
+            # which EXPLAIN cannot take — strip it.
+            for name, sql in (("person", _PERSON_SQL), ("family", _FAMILY_SQL)):
+                stmt = str(sql).split("ANALYZE")[0].strip().rstrip(";")
+                log(f"\n=== EXPLAIN {name} rescoring ===")
+                for row in conn.execute(text("EXPLAIN " + stmt)):
+                    log(row[0])
+            conn.rollback()
+            return
 
         t = time.monotonic()
         log("Rescoring person matches ...")
