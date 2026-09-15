@@ -32,6 +32,10 @@ PERSON_RULES / FAMILY_RULES):
                the same name)
     nn         a placeholder given name (NN) scored as an exact name match
     childdeath one side died aged 12 or less, the other has a spouse
+    cemcem     two cemetery indexes that do not agree exactly on birth year
+               and (if present) death year
+    cemdeath   a cemetery side whose plain death year is 2+ off the other's
+    cemreg     cemetery vs register index without an agreeing full birth date
     names      (families) a spouse's given name missing and nothing else
                agreeing
   Phase 2 — evidence must *agree*, not merely be present
@@ -115,6 +119,21 @@ def _tol(q1, q2):
     )
 
 
+# Source type from the contributor-name suffix (see crud.SPECIAL_SUFFIXES):
+#   ged  a GEDCOM family tree — full relationship model, places, dates
+#   cem  -geneanet: a cemetery index — exact birth/death years (sometimes
+#        full dates), a woman's birth OR married surname with no way to
+#        tell which, no places, parents or marriages
+#   reg  -matricula: an index of whole parish birth and marriage books —
+#        full birth date, place, parents; no death, no spouse on persons;
+#        siblings with a reused name are separate records
+#   mil  -military: personnel rolls — name-centred, birth data thin
+def _SRC_TYPE(col):
+    return (f"CASE WHEN {col} LIKE '%-geneanet' THEN 'cem' "
+            f"WHEN {col} LIKE '%-matricula' THEN 'reg' "
+            f"WHEN {col} LIKE '%-military' THEN 'mil' ELSE 'ged' END")
+
+
 # One row per (contributor_a, contributor_b, record_type, record_a_id): the
 # record's best confidence inside that partner tree, and how many partners it
 # has there. Both match directions are stored, so a single window pass gives
@@ -149,6 +168,8 @@ _PERSON_SQL = text(f"""
                (f->>'parents')::float AS s_par,
                (f->>'partners')::float AS s_part,
                lower(left(p1.sex, 1)) AS sex_a, lower(left(p2.sex, 1)) AS sex_b,
+               {_SRC_TYPE('m.contributor_a')} AS type_a,
+               {_SRC_TYPE('m.contributor_b')} AS type_b,
                COALESCE(p1.birth_full_date = p2.birth_full_date, false) AS full_birth,
                COALESCE(p1.death_full_date = p2.death_full_date, false) AS full_death,
                -- Both sides day-precise but NOT the same date: a stronger
@@ -192,6 +213,9 @@ _PERSON_SQL = text(f"""
     ),
     y AS (
         SELECT *,
+               LEAST(type_a, type_b) || '-' || GREATEST(type_a, type_b) AS pair_class,
+               (type_a = 'cem' OR type_b = 'cem') AS has_cem,
+               (type_a = 'mil' OR type_b = 'mil') AS has_mil,
                COALESCE((s_bplace >= {AGREE})::int, 0) + COALESCE((s_dplace >= {AGREE})::int, 0)
              + COALESCE((byd <= {YEAR_AGREE})::int, 0) + COALESCE((dyd <= {YEAR_AGREE})::int, 0)
              + COALESCE((s_par >= {AGREE})::int, 0) + COALESCE((s_part >= {AGREE})::int, 0) AS evidence,
@@ -210,8 +234,9 @@ _PERSON_SQL = text(f"""
                         + CASE WHEN s_part   IS NOT NULL THEN 15.0 ELSE 0.0 END
                ) AS base2
         FROM x
-    )
-    SELECT *,
+    ),
+    z AS (
+        SELECT *,
            -- Phase 1 gates
            COALESCE(sex_a IN ('m','f') AND sex_b IN ('m','f') AND sex_a <> sex_b, false) AS r_sex,
            COALESCE(s_par < {CONTRADICT}, false) AS r_parents,
@@ -227,20 +252,41 @@ _PERSON_SQL = text(f"""
            -- death year mistyped 1872/1879).
            COALESCE(dyd > d_tol, false) AND NOT (full_birth OR full_death) AS r_death,
            -- Day-precise dates that differ, with no parents/partners support.
+           -- Agreeing parents only excuse a same-year date slip: parents
+           -- agreeing across different birth YEARS are siblings, typically a
+           -- name reused after a child died (register indexes show this).
            ((full_birth_differs OR full_death_differs)
             AND NOT (full_birth OR full_death)
-            AND NOT COALESCE(s_par >= {AGREE}, false)
-            AND NOT COALESCE(s_part >= {AGREE}, false)) AS r_fulldate,
+            AND (COALESCE(byd, 0) >= 1
+                 OR (NOT COALESCE(s_par >= {AGREE}, false)
+                     AND NOT COALESCE(s_part >= {AGREE}, false)))) AS r_fulldate,
            generation_slip AS r_generation,
            nn_name AS r_nn,
            COALESCE(child_vs_married, false) AS r_childdeath,
-           -- Two plain (unqualified) birth years two or more apart.
-           COALESCE(byd >= 2 AND plain_birth, false) AS r_plain2,
+           -- Two plain (unqualified) birth years two or more apart. Military
+           -- rolls derive birth years from ages, so they are exempt.
+           COALESCE(byd >= 2 AND plain_birth, false) AND NOT has_mil AS r_plain2,
            -- Plain years on both events that BOTH disagree, even by one:
            -- cemetery indexes carry exact years, so two one-year slips are
            -- two different people.
            COALESCE(byd >= 1 AND dyd >= 1 AND plain_birth AND plain_death, false)
-               AND NOT (full_birth OR full_death) AS r_plain1,
+               AND NOT has_mil AND NOT (full_birth OR full_death) AS r_plain1,
+           -- Source-aware rules. Cemetery indexes: exact years, either a
+           -- woman's birth or her married surname (not knowable which), no
+           -- places, parents or marriages. Register indexes:
+           -- full birth date + parents, no death or spouse.
+           --   cemcem  two cemetery indexes: a person is buried once, so the
+           --           pair must agree on birth year and (if present) death
+           --           year exactly, else it is two graves of namesakes.
+           --   cemdeath a cemetery side with a plain death year two or more
+           --           off the other side's plain death year.
+           --   cemreg  cemetery vs register: the only shared field is the
+           --           birth date, so a full date must agree.
+           (type_a = 'cem' AND type_b = 'cem'
+            AND NOT COALESCE(byd = 0 AND COALESCE(dyd, 0) = 0, false)) AS r_cemcem,
+           (has_cem AND plain_death AND COALESCE(dyd >= 2, false)
+            AND NOT (full_birth OR full_death)) AS r_cemdeath,
+           (pair_class = 'cem-reg' AND NOT full_birth) AS r_cemreg,
            -- Phase 2 gates. A parents or partners agreement is a multi-token
            -- identity in itself, so it satisfies the gate even for a common
            -- surname; only place/year agreement needs a second field there.
@@ -252,9 +298,9 @@ _PERSON_SQL = text(f"""
                                            THEN {IDENTITY_KEY_CONFIDENCE_FULL}
                                            ELSE {IDENTITY_KEY_CONFIDENCE} END)
                  ELSE base2 END) AS conf2
-    FROM y;
-    ALTER TABLE ap ADD COLUMN r_neutral boolean;
-    UPDATE ap SET r_neutral = conf2 < {CONFIDENCE_MIN};
+        FROM y
+    )
+    SELECT *, (conf2 < {CONFIDENCE_MIN}) AS r_neutral FROM z;
     ANALYZE ap;
 """)
 
@@ -280,6 +326,8 @@ _FAMILY_SQL = text(f"""
                (f->>'children')::float AS s_cl,
                COALESCE(f1.marriage_full_date = f2.marriage_full_date, false) AS full_marriage,
                {_tol('f1.marriage_q', 'f2.marriage_q')} AS m_tol,
+               LEAST({_SRC_TYPE('m.contributor_a')}, {_SRC_TYPE('m.contributor_b')}) || '-'
+                 || GREATEST({_SRC_TYPE('m.contributor_a')}, {_SRC_TYPE('m.contributor_b')}) AS pair_class,
                ba.best_conf AS best_a, ba.n AS n_a,
                bb.best_conf AS best_b, bb.n AS n_b
         FROM m
@@ -308,8 +356,9 @@ _FAMILY_SQL = text(f"""
                          + CASE WHEN s_cl IS NOT NULL THEN 15.0 ELSE 0.0 END
                ) AS base2
         FROM x
-    )
-    SELECT *,
+    ),
+    z AS (
+        SELECT *,
            (COALESCE(s_hp < {CONTRADICT}, false) OR COALESCE(s_wp < {CONTRADICT}, false)) AS r_parents,
            COALESCE(s_cl < {CONTRADICT}, false) AS r_children,
            COALESCE(s_place < {CONTRADICT} AND NOT full_marriage, false) AS r_place,
@@ -324,9 +373,9 @@ _FAMILY_SQL = text(f"""
            (CASE WHEN s_hsur = 1.0 AND s_wsur = 1.0 AND s_hname = 1.0 AND s_wname = 1.0
                       AND full_marriage
                  THEN GREATEST(base2, {IDENTITY_KEY_CONFIDENCE}) ELSE base2 END) AS conf2
-    FROM y;
-    ALTER TABLE af ADD COLUMN r_neutral boolean;
-    UPDATE af SET r_neutral = conf2 < {CONFIDENCE_MIN};
+        FROM y
+    )
+    SELECT *, (conf2 < {CONFIDENCE_MIN}) AS r_neutral FROM z;
     ANALYZE af;
 """)
 
@@ -344,9 +393,13 @@ _FAMILY_SQL = text(f"""
 #     agree, and adding r_plain1 / r_childdeath took it to 86 % with no true
 #     match lost. r_neutral cost two true spouse-only matches for no gain, so
 #     it is measured only. Family one2one fired on true matches only.
+#   * source pairing matters (both samples, 80–88 % band): cemetery↔cemetery
+#     0 true of 38, cemetery↔register 0 of 8, cemetery↔GEDCOM 8 of 54,
+#     GEDCOM↔GEDCOM 80 of 142 — hence r_cemcem / r_cemreg / r_cemdeath.
 PERSON_RULES = {
     "phase1": ["r_sex", "r_parents", "r_one2one", "r_death", "r_fulldate",
-               "r_generation", "r_nn", "r_childdeath"],
+               "r_generation", "r_nn", "r_childdeath",
+               "r_cemcem", "r_cemdeath", "r_cemreg"],
     "phase2": ["r_agree", "r_plain2", "r_plain1"],
     "info": ["r_bplace", "r_neutral"],
 }
@@ -378,6 +431,19 @@ def report(conn, tbl, rules, label):
             {"lo": lo, "hi": hi},
         ).scalar()
         log(f"  {lo:.2f}–{min(hi, 1.0):.2f}  {_pct(n, total)}")
+
+    p12_all = _any(rules["phase1"] + rules["phase2"])
+    log("\nBy source pairing (ged = GEDCOM tree, cem = cemetery index, "
+        "reg = parish-register index, mil = military roll):")
+    log(f"  {'pair':10}{'pairs':>12}{'share':>8}{'in 0.80–0.90':>14}{'rules remove':>14}")
+    for row in conn.execute(text(f"""
+        SELECT pair_class, COUNT(*) AS n,
+               COUNT(*) FILTER (WHERE conf < 0.90) AS low,
+               COUNT(*) FILTER (WHERE {p12_all}) AS removed
+        FROM {tbl} GROUP BY pair_class ORDER BY n DESC
+    """)):
+        log(f"  {row.pair_class:10}{row.n:>12,}{100.0 * row.n / total:>7.1f}%"
+            f"{100.0 * row.low / row.n:>13.1f}%{100.0 * row.removed / row.n:>13.1f}%")
 
     log("\nWould be removed by each rule alone:")
     for phase, names in rules.items():
@@ -429,10 +495,10 @@ def report(conn, tbl, rules, label):
 
 
 _PERSON_SAMPLE_COLS = """
-    ap.id AS match_id, ap.conf, ap.conf2, ap.evidence, ap.n_a, ap.n_b,
+    ap.id AS match_id, ap.pair_class, ap.conf, ap.conf2, ap.evidence, ap.n_a, ap.n_b,
     ap.r_sex, ap.r_parents, ap.r_bplace, ap.r_one2one, ap.r_death, ap.r_fulldate,
-    ap.r_generation, ap.r_nn, ap.r_childdeath, ap.r_agree, ap.r_plain2, ap.r_plain1,
-    ap.r_neutral,
+    ap.r_generation, ap.r_nn, ap.r_childdeath, ap.r_cemcem, ap.r_cemdeath, ap.r_cemreg,
+    ap.r_agree, ap.r_plain2, ap.r_plain1, ap.r_neutral,
     ap.s_sur, ap.s_name, ap.s_bplace, ap.s_dplace, ap.byd, ap.dyd, ap.s_par, ap.s_part,
     ap.contributor_a, p1.id AS a_id, p1.name AS a_name, p1.surname AS a_surname,
     p1.alt_surname AS a_alt_surname, p1.sex AS a_sex,
@@ -447,7 +513,7 @@ _PERSON_SAMPLE_COLS = """
 """
 
 _FAMILY_SAMPLE_COLS = """
-    af.id AS match_id, af.conf, af.conf2, af.evidence, af.n_a, af.n_b,
+    af.id AS match_id, af.pair_class, af.conf, af.conf2, af.evidence, af.n_a, af.n_b,
     af.r_parents, af.r_children, af.r_place, af.r_one2one, af.r_agree, af.r_neutral, af.r_names,
     af.s_hsur, af.s_wsur, af.s_hname, af.s_wname, af.s_place, af.yd, af.s_hp, af.s_wp, af.s_cl,
     af.contributor_a, f1.id AS a_id,
