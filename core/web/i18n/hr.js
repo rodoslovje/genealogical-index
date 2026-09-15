@@ -258,6 +258,13 @@ export default {
     tree_descendants_title: 'Potomci',
     tree_source: 'Izvor',
     tree_created: 'Izrađeno',
+    tree_title: 'Rodoslovno stablo',
+    tree_dir_both: 'Oboje',
+    tree_chart_tree: 'Stablo',
+    tree_chart_fan: 'Lepeza',
+    tree_chart_circle: 'Krug',
+    tree_generations: 'Generacije',
+    tree_generations_all: 'Sve',
 
     // Tree comparison
     compare_title: 'Usporedba stabala',
@@ -320,7 +327,7 @@ export default {
         <li><strong>Proširiva polja:</strong> Stupci <em>Roditelji</em>, <em>Partneri</em> i <em>Djeca</em> prikazuju broj osoba. Klikom na broj proširujete popis. Za prikaz svih odjednom upotrijebite gumb <strong>⤢ Proširi</strong> iznad tablice, a za skrivanje gumb <strong>⤡ Sažmi</strong>.</li>
         <li><strong>Pojedinosti o osobama i obiteljima:</strong> Klikom na plavo obojeno ime u tablici pokrećete novo pretraživanje i prikazujete sve zapise samo za tu odabranu osobu ili obitelj. Klikom na partnera pronalazite njihovu zajedničku obitelj. Slično tome, pri prikazu roditelja klikom na oznaku (<em>Roditelji</em>, <em>Muž</em> ili <em>Žena</em>) prikazujete njihovu obitelj, a klikom na ime pojedinog roditelja pretražujete samo tu osobu.</li>
         <li><strong>Privatni zapisi:</strong> Kod nekih je osoba umjesto imena ili prezimena prikazana oznaka <em>&lt;private&gt;</em>. Takvi zapisi nemaju poveznicu za daljnje pretraživanje.</li>
-        <li><strong>Stablo:</strong> Uz određene osobe (roditelje, djecu, partnere) primijetit ćete ikonu stabla (<strong>🌳</strong> za pretke, <strong>🌿</strong> za potomke). Klikom na ikonu prikazujete grafičko, interaktivno rodoslovno stablo predaka ili potomaka odabrane osobe.{auth_tree}</li>
+        <li><strong>Stablo:</strong> Uz određene osobe (roditelje, djecu, partnere) primijetit ćete ikonu stabla (<strong>🌳</strong>). Klikom na nju otvarate interaktivno rodoslovno stablo odabrane osobe: zadano je <em>leptir</em> s precima lijevo i potomcima desno, koji možete ograničiti samo na pretke ili samo na potomke. Prikaz može biti klasično <em>stablo</em> ili <em>lepeza</em> (po želji i puni <em>krug</em>), ograničen na odabrani broj generacija, a možete ga preuzeti kao SVG, CSV ili GEDCOM.{auth_tree}</li>
         <li><strong>Izvoz podataka:</strong> Klikom na gumb <strong>CSV</strong> iznad tablice preuzimate trenutačne rezultate na svoje računalo u tabličnom obliku.</li>
         <li><strong>Sklopive tablice i odjeljci:</strong> Klikom na naslov tablice ili odjeljka (npr. <em>Osobe</em>, <em>Obitelji</em> ili <em>Podudaranja</em>) možete privremeno sakriti sadržaj; sljedećim klikom sadržaj se ponovno prikazuje.</li>
       </ul>

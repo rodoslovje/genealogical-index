@@ -258,6 +258,13 @@ export default {
     tree_descendants_title: 'Descendants',
     tree_source: 'Source',
     tree_created: 'Created',
+    tree_title: 'Family tree',
+    tree_dir_both: 'Both',
+    tree_chart_tree: 'Tree',
+    tree_chart_fan: 'Fan',
+    tree_chart_circle: 'Circle',
+    tree_generations: 'Generations',
+    tree_generations_all: 'All',
 
     // Tree comparison
     compare_title: 'Tree Comparison',
@@ -320,7 +327,7 @@ export default {
         <li><strong>Expandable Fields:</strong> Columns such as <em>Parents</em>, <em>Partners</em>, and <em>Children</em> display the number of persons. By clicking the number, you expand the list. To expand all at once, you can use the <strong>⤢ Expand</strong> button above the table, and for hiding the <strong>⤡ Collapse</strong> button.</li>
         <li><strong>Person and Family Details:</strong> By clicking a blue colored name in the table, you perform a new search and display all records for that specific person or family. By clicking a partner, you search for their family. Similarly, when viewing parents, clicking the label (<em>Parents</em>, <em>Husband</em>, or <em>Wife</em>) displays their family, while clicking an individual parent's name searches only for that person.</li>
         <li><strong>Private Records:</strong> For some individuals, the label <em>&lt;private&gt;</em> is displayed instead of a name or surname. Such records have no link for further search.</li>
-        <li><strong>Tree:</strong> Next to certain people (parents, children, partners), you will notice a tree icon (<strong>🌳</strong> for ancestors, <strong>🌿</strong> for descendants). By clicking the icon, you display an interactive graphical family tree of the selected person's ancestors or descendants.{auth_tree}</li>
+        <li><strong>Tree:</strong> Next to certain people (parents, children, partners), you will notice a tree icon (<strong>🌳</strong>). Clicking it opens an interactive family tree of the selected person: by default a <em>bowtie</em> with ancestors on the left and descendants on the right, switchable to ancestors or descendants only. The chart can be drawn as a classic <em>tree</em> or as a <em>fan</em> (optionally a full <em>circle</em>), limited to a chosen number of generations, and downloaded as SVG, CSV or GEDCOM.{auth_tree}</li>
         <li><strong>Data Export:</strong> By clicking the <strong>CSV</strong> button above the table, you download the current results to your computer in a tabular format.</li>
         <li><strong>Collapsible tables and sections:</strong> By clicking the title of a table or section (e.g. <em>Person</em>, <em>Family</em>, or <em>Matches</em>), you can temporarily hide its content and reveal it again with the next click.</li>
       </ul>

@@ -1,0 +1,315 @@
+import {
+  boundsFromPoints, sexTint, isNodePrivate, personHref, personLabel, birthPlaceShort,
+} from './shared.js';
+import { descendantFamilyHref, partnerLabel, isPartnerUnknown } from './descendants.js';
+import { ancestorMarriageHref } from './ancestors.js';
+import { isPrivate } from '../lib/utils.js';
+
+// "Fan" chart (and "Circle" = fan with a full 360° arc): generations as
+// concentric rings, people as wedges.
+//   Ancestors — classic fan: each generation's ring is split into 2^gen equal
+//   wedges and every ancestor sits in the wedge of its Ahnentafel slot, so a
+//   missing parent leaves an empty wedge (never computed by leaf count). A
+//   thin band under each parent pair carries their marriage date / place.
+//   Descendants — wedge width follows the number of leaves below (d3.partition);
+//   family nodes become thin bands carrying the partner / marriage.
+//   Both sides share the ring radii (person ring + family band per
+//   generation), so the halves of a bowtie line up.
+//   Bowtie — ancestors fill the top half, descendants the bottom half.
+// Angles follow d3.arc: radians, 0 at 12 o'clock, clockwise.
+// d3 is loaded globally from the CDN, so it isn't imported.
+
+const R0 = 70;        // focus-person disc radius
+const RING = 118;     // person ring width
+const FAM_RING = 34;  // family / marriage band width
+const TAU = 2 * Math.PI;
+const CHAR_W = 6.6;   // approx. glyph width at the 12px label size, for fitting
+const BOWTIE_GAP = 0.06;  // radians trimmed from each half at the horizontal axis (~3.5°)
+
+export function layoutFan(sides, { dir, arc }) {
+  const { anc, desc } = sides;
+  const both = dir === 'both';
+
+  // Angular window per side as [start, end] in fraction→angle terms. A single
+  // fan opens upward from 9 to 3 o'clock, so the father's line is on the left
+  // and the mother's on the right; the circle keeps that split (father's half
+  // on the left, mother's on the right) by running from 6 o'clock clockwise
+  // round to 6 o'clock. A bowtie keeps the ancestors fan in the top half and
+  // mirrors the descendants into the bottom half (first child on the left, as
+  // in the fan), with a small angular gap on each side of the horizontal axis
+  // so the two halves read as separate fans.
+  const single = arc === 360 ? [-Math.PI, Math.PI] : [-Math.PI / 2, Math.PI / 2];
+  const ancWindow  = both ? [-Math.PI / 2 + BOWTIE_GAP, Math.PI / 2 - BOWTIE_GAP] : single;
+  const descWindow = both ? [3 * Math.PI / 2 - BOWTIE_GAP, Math.PI / 2 + BOWTIE_GAP] : single;
+
+  const ancBands = anc ? placeAncestors(anc, ancWindow) : [];
+  if (desc) placeDescendants(desc, descWindow);
+
+  const anchorNode = anc || desc;
+  const nodes = [
+    ...(anc ? anc.descendants() : []),
+    ...ancBands,
+    ...(desc ? desc.descendants().filter(d => !(anc && d === desc)) : []),
+  ];
+
+  // Bounds from the wedge outlines (outer-arc endpoints plus any axis
+  // crossing inside the wedge), not just the centroids.
+  const points = [[0, 0]];
+  nodes.forEach(d => {
+    const angles = [d.a0, d.a1];
+    for (let k = Math.ceil(d.a0 / (Math.PI / 2)); k * (Math.PI / 2) < d.a1; k++) angles.push(k * (Math.PI / 2));
+    angles.forEach(a => points.push([d.r1 * Math.sin(a), -d.r1 * Math.cos(a)]));
+  });
+  const bounds = boundsFromPoints(points, { left: 40, right: 40, top: 40, bottom: 40 });
+
+  return {
+    nodes,
+    links: [],
+    anchorNode,
+    bounds,
+    anchor: 'fit',
+    linkPath: null,
+    draw(g, ctx) { drawWedges(g, nodes, ctx); },
+  };
+}
+
+// Converts a wedge's [f0, f1] share of a side's window into ascending angles.
+function windowAngles(window, f0, f1) {
+  const [s, e] = window;
+  const x = s + f0 * (e - s);
+  const y = s + f1 * (e - s);
+  return x < y ? [x, y] : [y, x];
+}
+
+function setGeometry(d, a0, a1, r0, r1) {
+  d.a0 = a0; d.a1 = a1; d.r0 = r0; d.r1 = r1;
+  const aMid = (a0 + a1) / 2;
+  const rMid = (r0 + r1) / 2;
+  // Screen coordinates of the wedge centroid for the minimap / pan-to-node.
+  d.y = rMid * Math.sin(aMid);
+  d.x = -rMid * Math.cos(aMid);
+}
+
+// Outer radius of the person ring at generation g (every generation adds a
+// family / marriage band plus a person ring). Shared by both sides.
+const ringOuter = g => R0 + g * (FAM_RING + RING);
+
+// Places the ancestor wedges and returns the synthetic marriage-band nodes:
+// one per person with both parents known, spanning the person's own wedge
+// (the union of the two parent wedges) just inside the parents' ring.
+function placeAncestors(root, window) {
+  const bands = [];
+  root.each(d => {
+    const [a0, a1] = windowAngles(window, d.slotFrac0, d.slotFrac1);
+    if (d.gen === 0) setGeometry(d, 0, TAU, 0, R0);
+    else setGeometry(d, a0, a1, ringOuter(d.gen) - RING, ringOuter(d.gen));
+
+    if (d.children && d.children.length === 2) {
+      const band = {
+        gen: d.gen,
+        side: 'anc',
+        data: {
+          is_family: true,
+          is_marriage: true,
+          marriage: d.data.parents_marriage || {},
+          husband: d.children[0].data,
+          wife: d.children[1].data,
+        },
+      };
+      setGeometry(band, a0, a1, ringOuter(d.gen), ringOuter(d.gen) + FAM_RING);
+      bands.push(band);
+    }
+  });
+  return bands;
+}
+
+function placeDescendants(root, window) {
+  root.count();
+  d3.partition().size([1, 1])(root);
+  root.each(d => {
+    if (d.gen === 0 && !d.data.is_family) { setGeometry(d, 0, TAU, 0, R0); return; }
+    const [a0, a1] = windowAngles(window, d.x0, d.x1);
+    if (d.data.is_family) {
+      setGeometry(d, a0, a1, ringOuter(d.gen), ringOuter(d.gen) + FAM_RING);
+    } else {
+      setGeometry(d, a0, a1, ringOuter(d.gen) - RING, ringOuter(d.gen));
+    }
+  });
+}
+
+// --- Drawing -----------------------------------------------------------------
+
+const deg = rad => (rad * 180 / Math.PI) % 360;
+
+function wedgeFill(d) {
+  if (d.data.is_family) return '#f3f3f3';
+  if (isNodePrivate(d)) return '#ececec';
+  return sexTint(d.data.sex);
+}
+
+function wedgeHref(d, contributorName) {
+  if (d.data.is_marriage) return ancestorMarriageHref(d.data.husband, d.data.wife, d.data.marriage, contributorName);
+  if (d.data.is_family) return descendantFamilyHref(d.parent.data, d.data.partner, d.data.marriage, contributorName);
+  return personHref(d, contributorName);
+}
+
+// Text lines for a wedge: [main, ...info]. Ancestor marriage bands show the
+// marriage date and place; descendant family bands the partner and the
+// marriage date; persons show name, birth date, birth place.
+function wedgeLines(d) {
+  if (d.data.is_marriage) {
+    const m = d.data.marriage;
+    const place = m.place ? m.place.split(',')[0].trim() : '';
+    return [`⚭ ${m.date || ''}`.trim(), place].filter(Boolean);
+  }
+  if (d.data.is_family) {
+    const p = d.data.partner;
+    const m = d.data.marriage || {};
+    return [`⚭ ${partnerLabel(p)}`, m.date || ''].filter(Boolean);
+  }
+  return [personLabel(d) || '?', d.data.date_of_birth || '', birthPlaceShort(d)].filter(Boolean);
+}
+
+function isTextPrivate(d) {
+  if (d.data.is_marriage) {
+    const { husband: h, wife: w } = d.data;
+    return isPrivate(h.name) || isPrivate(h.surname) || isPrivate(w.name) || isPrivate(w.surname);
+  }
+  if (d.data.is_family) {
+    const p = d.data.partner;
+    return isPartnerUnknown(p) || isPrivate(p?.name) || isPrivate(p?.surname);
+  }
+  return isNodePrivate(d);
+}
+
+// Truncates a line to what fits in `width` px at the label font size.
+function fit(text, width) {
+  const max = Math.floor(width / CHAR_W);
+  if (max < 2) return '';
+  return text.length <= max ? text : text.slice(0, Math.max(1, max - 1)) + '…';
+}
+
+function drawWedges(g, nodes, ctx) {
+  const arcGen = d3.arc()
+      .startAngle(d => d.a0).endAngle(d => d.a1)
+      .innerRadius(d => d.r0).outerRadius(d => d.r1);
+
+  const node = g.append('g')
+    .selectAll('g')
+    .data(nodes)
+    .join('g');
+
+  node.append('path')
+      .attr('d', arcGen)
+      .attr('fill', wedgeFill)
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 1.5)
+    .append('title')
+      .text(d => wedgeLines(d).join(' · '));
+
+  const hrefOf = d => wedgeHref(d, ctx.contributorName);
+  const label = node.append(d =>
+      document.createElementNS('http://www.w3.org/2000/svg', hrefOf(d) ? 'a' : 'g'))
+    .attr('href', hrefOf)
+    .attr('data-spa-nav', d => hrefOf(d) ? '' : null);
+
+  // textPath needs element ids; keep them unique across re-renders and inside
+  // an exported SVG.
+  const idPrefix = `fan${Date.now().toString(36)}`;
+  let idSeq = 0;
+
+  label.each(function(d) {
+    const el = d3.select(this);
+    const isRoot = d.r0 === 0;
+    const aMid = (d.a0 + d.a1) / 2;
+    const rMid = (d.r0 + d.r1) / 2;
+    const arcLen = (d.a1 - d.a0) * rMid;
+    const depth = d.r1 - d.r0;
+    const priv = isTextPrivate(d);
+    const lineStyle = (sel, i) => sel
+        .attr('font-weight', i === 0 && !priv && !d.data.is_family ? 'bold' : 'normal')
+        .attr('fill', i === 0 && !priv && !d.data.is_family ? '#1a5f8f' : null);
+    const baseFill = d.data.is_family ? '#555' : (priv ? '#555' : '#1f2d3d');
+
+    // Root: plain centred text. Otherwise the text follows the ring (curved
+    // along an arc) when the wedge is wider than it is deep, else runs along
+    // the radius.
+    if (isRoot) {
+      const width = 2 * R0 * 0.9, height = 2 * R0 * 0.9;
+      const size = 12, lineH = size * 1.2;
+      const fitted = wedgeLines(d).slice(0, Math.floor(height / lineH)).map(l => fit(l, width)).filter(Boolean);
+      const text = el.append('text').attr('text-anchor', 'middle').attr('font-size', `${size}px`).attr('fill', baseFill);
+      fitted.forEach((line, i) => lineStyle(text.append('tspan')
+          .attr('x', 0)
+          .attr('dy', i === 0 ? `${0.35 - 0.6 * (fitted.length - 1)}em` : '1.2em'), i).text(line));
+      return;
+    }
+
+    if (arcLen >= depth) {
+      // Curved: one arc path per line, the text centred on it. In the bottom
+      // half the path runs the other way so the text stays upright, which also
+      // puts the first line nearest the reader's "top" (the centre side).
+      const a = ((deg(aMid) % 360) + 360) % 360;
+      const flip = a > 90 && a < 270;
+      const height = depth * 0.85;
+      const size = arcLen < 70 ? 10 : 12;
+      const lineH = size * 1.2;
+      const lines = wedgeLines(d).slice(0, Math.max(1, Math.floor(height / lineH)));
+      const n = lines.length;
+      lines.forEach((line, i) => {
+        // Stack outward→inward for upright wedges, inward→outward when flipped.
+        const r = flip ? rMid - ((n - 1) / 2 - i) * lineH : rMid + ((n - 1) / 2 - i) * lineH;
+        const width = (d.a1 - d.a0) * r * 0.9;
+        const fittedLine = fit(line, width * (12 / size));
+        if (!fittedLine) return;
+        const id = `${idPrefix}-${++idSeq}`;
+        el.append('path')
+            .attr('id', id)
+            .attr('fill', 'none')
+            .attr('d', arcPath(r, d.a0, d.a1, flip));
+        const text = el.append('text')
+            .attr('font-size', `${size}px`)
+            .attr('fill', baseFill)
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'central');
+        lineStyle(text.append('textPath')
+            .attr('href', `#${id}`)
+            .attr('xlink:href', `#${id}`)
+            .attr('startOffset', '50%'), i).text(fittedLine);
+      });
+      return;
+    }
+
+    // Radial: straight text along the radius, flipped on the left so it
+    // reads outward-to-inward but upright.
+    const a = ((deg(aMid) % 360) + 360) % 360;
+    const flip = a > 180;
+    const transform = `rotate(${a - 90}) translate(${rMid},0) rotate(${flip ? 180 : 0})`;
+    const width = depth * 0.9, height = arcLen * 0.85;
+    if (width < 2 * CHAR_W || height < 11) return;
+    const size = width < 70 ? 10 : 12;
+    const lineH = size * 1.2;
+    const lines = wedgeLines(d).slice(0, Math.max(1, Math.floor(height / lineH)));
+    const fitted = lines.map(l => fit(l, width * (12 / size))).filter(Boolean);
+    if (!fitted.length) return;
+    const text = el.append('text')
+        .attr('transform', transform)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', `${size}px`)
+        .attr('fill', baseFill);
+    fitted.forEach((line, i) => lineStyle(text.append('tspan')
+        .attr('x', 0)
+        .attr('dy', i === 0 ? `${0.35 - 0.6 * (fitted.length - 1)}em` : '1.2em'), i).text(line));
+  });
+}
+
+// SVG arc from angle a0 to a1 at radius r (d3 angles: 0 at 12 o'clock,
+// clockwise). `reverse` runs it counter-clockwise so text on it stays upright
+// in the bottom half.
+function arcPath(r, a0, a1, reverse) {
+  const pt = a => `${(r * Math.sin(a)).toFixed(2)} ${(-r * Math.cos(a)).toFixed(2)}`;
+  const large = (a1 - a0) > Math.PI ? 1 : 0;
+  return reverse
+    ? `M ${pt(a1)} A ${r} ${r} 0 ${large} 0 ${pt(a0)}`
+    : `M ${pt(a0)} A ${r} ${r} 0 ${large} 1 ${pt(a1)}`;
+}

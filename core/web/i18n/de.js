@@ -258,6 +258,13 @@ export default {
     tree_descendants_title: 'Nachkommen',
     tree_source: 'Quelle',
     tree_created: 'Erstellt',
+    tree_title: 'Stammbaum',
+    tree_dir_both: 'Beides',
+    tree_chart_tree: 'Baum',
+    tree_chart_fan: 'Fächer',
+    tree_chart_circle: 'Kreis',
+    tree_generations: 'Generationen',
+    tree_generations_all: 'Alle',
 
     // Tree comparison
     compare_title: 'Stammbaum-Vergleich',
@@ -320,7 +327,7 @@ export default {
         <li><strong>Erweiterbare Felder:</strong> Spalten wie <em>Eltern</em>, <em>Partner</em> und <em>Kinder</em> zeigen die Anzahl der Personen an. Durch Klicken auf die Zahl erweitern Sie die Liste. Um alle auf einmal anzuzeigen, können Sie die Schaltfläche <strong>⤢ Ausklappen</strong> über der Tabelle verwenden, zum Ausblenden die Schaltfläche <strong>⤡ Einklappen</strong>.</li>
         <li><strong>Personen- und Familiendetails:</strong> Durch Klicken auf einen blau markierten Namen in der Tabelle führen Sie eine neue Suche aus und zeigen alle Datensätze nur für diese ausgewählte Person oder Familie an. Durch Klicken auf einen Partner suchen Sie nach dessen Familie. Ähnlich verhält es sich bei der Anzeige der Eltern: Ein Klick auf die Bezeichnung (<em>Eltern</em>, <em>Mann</em> oder <em>Frau</em>) zeigt deren Familie an, während ein Klick auf den Namen eines einzelnen Elternteils nur nach dieser Person sucht.</li>
         <li><strong>Private Datensätze:</strong> Bei einigen Personen wird anstelle von Vor- oder Nachname die Bezeichnung <em>&lt;private&gt;</em> angezeigt. Solche Datensätze haben keinen Link für die weitere Suche.</li>
-        <li><strong>Stammbaum:</strong> Neben bestimmten Personen (Eltern, Kinder, Partner) sehen Sie ein Baumsymbol (<strong>🌳</strong> für Vorfahren, <strong>🌿</strong> für Nachkommen). Durch Klicken auf das Symbol zeigen Sie einen interaktiven grafischen Stammbaum der Vorfahren oder Nachkommen der ausgewählten Person an.{auth_tree}</li>
+        <li><strong>Stammbaum:</strong> Neben bestimmten Personen (Eltern, Kinder, Partner) sehen Sie ein Baumsymbol (<strong>🌳</strong>). Ein Klick darauf öffnet einen interaktiven Stammbaum der ausgewählten Person: standardmäßig eine <em>Sanduhr</em> mit Vorfahren links und Nachkommen rechts, umschaltbar auf nur Vorfahren oder nur Nachkommen. Die Darstellung kann ein klassischer <em>Baum</em> oder ein <em>Fächer</em> (wahlweise als voller <em>Kreis</em>) sein, auf eine gewählte Anzahl Generationen begrenzt, und als SVG, CSV oder GEDCOM heruntergeladen werden.{auth_tree}</li>
         <li><strong>Datenexport:</strong> Durch Klicken auf die Schaltfläche <strong>CSV</strong> über der Tabelle laden Sie die aktuellen Ergebnisse im Tabellenformat auf Ihren Computer herunter.</li>
         <li><strong>Einklappbare Tabellen und Abschnitte:</strong> Durch Klicken auf den Titel einer Tabelle oder eines Abschnitts (z. B. <em>Personen</em>, <em>Familien</em> oder <em>Übereinstimmungen</em>) können Sie den Inhalt vorübergehend ausblenden und mit dem nächsten Klick wieder anzeigen.</li>
       </ul>

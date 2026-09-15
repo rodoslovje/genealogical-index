@@ -361,7 +361,7 @@ function renderTree(data, container, detail, ctx) {
     filePrefix: `compare-${data.direction}`,
   });
 
-  appendLinks(g, root);
+  appendLinks(g, root.links());
 
   const node = g.append('g')
       .attr('stroke-linejoin', 'round')

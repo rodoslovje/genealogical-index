@@ -258,6 +258,13 @@ export default {
     tree_descendants_title: 'Leszármazottak',
     tree_source: 'Forrás',
     tree_created: 'Létrehozva',
+    tree_title: 'Családfa',
+    tree_dir_both: 'Mindkettő',
+    tree_chart_tree: 'Fa',
+    tree_chart_fan: 'Legyező',
+    tree_chart_circle: 'Kör',
+    tree_generations: 'Generációk',
+    tree_generations_all: 'Összes',
 
     // Tree comparison
     compare_title: 'Fák összehasonlítása',
@@ -320,7 +327,7 @@ export default {
         <li><strong>Kibontható mezők:</strong> Olyan oszlopok, mint a <em>Szülők</em>, <em>Partnerek</em> és <em>Gyermekek</em>, a személyek számát mutatják. A számra kattintva kibonthatja a listát. Az összes egyszerre történő kibontásához használhatja a táblázat feletti <strong>⤢ Kibontás</strong> gombot, az elrejtéshez pedig az <strong>⤡ Összecsukás</strong> gombot.</li>
         <li><strong>Személy és család részletei:</strong> Ha a táblázatban egy kék színű névre kattint, új keresést hajt végre, és megjeleníti az adott személyhez vagy családhoz tartozó összes rekordot. Partnerre kattintva megkeresi az ő családját. Hasonlóképpen, a szülők megtekintésekor a címkére (<em>Szülők</em>, <em>Férj</em> vagy <em>Feleség</em>) kattintva megjelenik az ő családjuk, míg egy adott szülő nevére kattintva csak arra a személyre keres.</li>
         <li><strong>Privát rekordok:</strong> Egyes személyeknél a név vagy vezetéknév helyett a <em>&lt;private&gt;</em> címke jelenik meg. Ezek a rekordok nem tartalmaznak linket a további kereséshez.</li>
-        <li><strong>Családfa:</strong> Bizonyos személyek (szülők, gyerekek, partnerek) mellett egy fa ikont fog látni (<strong>🌳</strong> ősök, <strong>🌿</strong> leszármazottak). Az ikonra kattintva megjeleníti a kiválasztott személy felmenőinek vagy leszármazottainak interaktív grafikus családfáját.{auth_tree}</li>
+        <li><strong>Családfa:</strong> Bizonyos személyek (szülők, gyerekek, partnerek) mellett egy fa ikont fog látni (<strong>🌳</strong>). Rákattintva megnyílik a kiválasztott személy interaktív családfája: alapértelmezés szerint <em>homokóra</em> nézetben, balra az ősökkel, jobbra a leszármazottakkal, amely csak az ősökre vagy csak a leszármazottakra szűkíthető. A rajz lehet klasszikus <em>fa</em> vagy <em>legyező</em> (kívánság szerint teljes <em>kör</em>), a kiválasztott számú generációra korlátozva, és letölthető SVG, CSV vagy GEDCOM formátumban.{auth_tree}</li>
         <li><strong>Adat exportálása:</strong> A táblázat feletti <strong>CSV</strong> gombra kattintva letöltheti az aktuális eredményeket a számítógépére táblázatos formátumban.</li>
         <li><strong>Összecsukható táblázatok és szakaszok:</strong> Egy táblázat vagy szakasz címére (pl. <em>Személyek</em>, <em>Családok</em> vagy <em>Egyezések</em>) kattintva ideiglenesen elrejtheti a tartalmát, és a következő kattintással újra megjelenítheti.</li>
       </ul>

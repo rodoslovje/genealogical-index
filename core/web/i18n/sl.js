@@ -257,6 +257,13 @@ export default {
     tree_descendants_title: 'Potomci',
     tree_source: 'Vir',
     tree_created: 'Ustvarjeno',
+    tree_title: 'Rodovniško drevo',
+    tree_dir_both: 'Oboje',
+    tree_chart_tree: 'Drevo',
+    tree_chart_fan: 'Pahljača',
+    tree_chart_circle: 'Krog',
+    tree_generations: 'Generacije',
+    tree_generations_all: 'Vse',
 
     // Tree comparison
     compare_title: 'Primerjava dreves',
@@ -319,7 +326,7 @@ export default {
         <li><strong>Razširljiva polja:</strong> Stolpci <em>Starši</em>, <em>Partnerji</em> in <em>Otroci</em> prikazujejo število oseb. S klikom na številko razširite seznam. Za hkratni prikaz vseh uporabite gumb <strong>⤢ Razširi</strong> nad tabelo, za skrivanje pa gumb <strong>⤡ Skrči</strong>.</li>
         <li><strong>Podrobnosti oseb in družin:</strong> S klikom na modro obarvano ime v tabeli izvedete novo iskanje in prikažete vse zapise le za to izbrano osebo ali družino. S klikom na partnerja poiščete njuno družino. Podobno pri prikazu staršev s klikom na oznako (<em>Starši</em>, <em>Mož</em> ali <em>Žena</em>) prikažete njuno družino, s klikom na ime posameznega starša pa poiščete samo to osebo.</li>
         <li><strong>Zasebni zapisi:</strong> Pri nekaterih osebah je namesto imena ali priimka prikazana oznaka <em>&lt;private&gt;</em>. Takšni zapisi nimajo povezave za nadaljnje iskanje.</li>
-        <li><strong>Drevo:</strong> Ob določenih osebah (starših, otrocih, partnerjih) boste opazili ikono drevesa (<strong>🌳</strong> za prednike, <strong>🌿</strong> za potomce). S klikom na ikono prikažete grafično in interaktivno rodovniško drevo prednikov ali potomcev izbrane osebe.{auth_tree}</li>
+        <li><strong>Drevo:</strong> Ob določenih osebah (starših, otrocih, partnerjih) boste opazili ikono drevesa (<strong>🌳</strong>). S klikom nanjo odprete interaktivno rodovniško drevo izbrane osebe: privzeto <em>metuljček</em> s predniki na levi in potomci na desni, ki ga lahko omejite samo na prednike ali samo na potomce. Prikaz je lahko klasično <em>drevo</em> ali <em>pahljača</em> (po želji tudi kot polni <em>krog</em>), omejen na izbrano število generacij, prenesete pa ga lahko kot SVG, CSV ali GEDCOM.{auth_tree}</li>
         <li><strong>Izvoz podatkov:</strong> S klikom na gumb <strong>CSV</strong> nad tabelo prenesete trenutne rezultate na svoj računalnik v tabelarični obliki.</li>
         <li><strong>Skrčljive tabele in razdelki:</strong> S klikom na naslov tabele ali razdelka (npr. <em>Osebe</em>, <em>Družine</em> ali <em>Ujemanja</em>) lahko vsebino začasno skrijete in jo z naslednjim klikom znova prikažete.</li>
       </ul>

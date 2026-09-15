@@ -258,6 +258,13 @@ export default {
     tree_descendants_title: 'Discendenti',
     tree_source: 'Fonte',
     tree_created: 'Creato',
+    tree_title: 'Albero genealogico',
+    tree_dir_both: 'Entrambi',
+    tree_chart_tree: 'Albero',
+    tree_chart_fan: 'Ventaglio',
+    tree_chart_circle: 'Cerchio',
+    tree_generations: 'Generazioni',
+    tree_generations_all: 'Tutte',
 
     // Tree comparison
     compare_title: 'Confronto alberi',
@@ -320,7 +327,7 @@ export default {
         <li><strong>Campi espandibili:</strong> Colonne come <em>Genitori</em>, <em>Partner</em> e <em>Figli</em> visualizzano il numero di persone. Cliccando sul numero si espande l'elenco. Per espanderli tutti in una volta, è possibile utilizzare il pulsante <strong>⤢ Espandi</strong> sopra la tabella e per nasconderli il pulsante <strong>⤡ Comprimi</strong>.</li>
         <li><strong>Dettagli di persone e famiglie:</strong> Cliccando su un nome colorato in blu nella tabella, si esegue una nuova ricerca e si visualizzano tutti i record solo per la persona o famiglia selezionata. Cliccando su un partner, si cerca la sua famiglia. Allo stesso modo, quando si visualizzano i genitori, cliccando sull'etichetta (<em>Genitori</em>, <em>Marito</em> o <em>Moglie</em>) si visualizza la loro famiglia, mentre cliccando sul nome di un singolo genitore si cerca solo quella persona.</li>
         <li><strong>Record privati:</strong> Per alcune persone viene visualizzata l'etichetta <em>&lt;private&gt;</em> al posto del nome o del cognome. Tali record non hanno collegamenti per ulteriori ricerche.</li>
-        <li><strong>Albero:</strong> Accanto ad alcune persone (genitori, figli, partner), noterete l'icona di un albero (<strong>🌳</strong> per gli antenati, <strong>🌿</strong> per i discendenti). Cliccando sull'icona, si visualizza un albero genealogico grafico e interattivo degli antenati o dei discendenti della persona selezionata.{auth_tree}</li>
+        <li><strong>Albero:</strong> Accanto ad alcune persone (genitori, figli, partner), noterete l'icona di un albero (<strong>🌳</strong>). Cliccandola si apre un albero genealogico interattivo della persona selezionata: per impostazione predefinita una <em>clessidra</em> con gli antenati a sinistra e i discendenti a destra, limitabile ai soli antenati o discendenti. Il grafico può essere un <em>albero</em> classico o un <em>ventaglio</em> (a scelta un <em>cerchio</em> completo), limitato a un numero scelto di generazioni, e scaricato come SVG, CSV o GEDCOM.{auth_tree}</li>
         <li><strong>Esportazione dei dati:</strong> Cliccando sul pulsante <strong>CSV</strong> sopra la tabella, si scaricano i risultati correnti sul computer in formato tabellare.</li>
         <li><strong>Tabelle e sezioni comprimibili:</strong> Cliccando sul titolo di una tabella o sezione (es. <em>Persone</em>, <em>Famiglie</em> o <em>Corrispondenze</em>) è possibile nascondere temporaneamente il contenuto e rivelarlo di nuovo con il clic successivo.</li>
       </ul>

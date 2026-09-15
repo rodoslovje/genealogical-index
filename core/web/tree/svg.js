@@ -4,10 +4,18 @@ import { downloadBlob, formatExportFilename } from '../lib/utils.js';
 import { exportDateStr } from '../lib/csv.js';
 import siteConfig from '@site-config';
 
-// Tree layout, zoom/minimap chrome, and SVG export — shared by the ancestors
-// and descendants trees. d3 is loaded globally from the CDN (see ensureD3), so
-// it isn't imported here. Re-exported via tree/shared.js.
+// Zoom/minimap chrome and SVG export — shared by every tree layout and the
+// compare view. d3 is loaded globally from the CDN (see ensureD3), so it isn't
+// imported here. Re-exported via tree/shared.js.
+//
+// Coordinate convention (inherited from d3.tree): `d.x` is VERTICAL and `d.y`
+// is HORIZONTAL screen position. Bounds use minX/maxX for the horizontal
+// extent and minY/maxY for the vertical one. Every layout writes screen
+// coordinates into d.x/d.y so this chrome works for all of them.
 
+// Bounds of a left-anchored tidy tree (root at horizontal 0, growing right).
+// Used by the compare view; the tree page layouts compute their own bounds
+// with boundsFromPoints().
 export function computeBounds(root, dx, dy) {
   let x0 = Infinity, x1 = -x0, y1 = 0;
   root.each(d => {
@@ -22,6 +30,29 @@ export function computeBounds(root, dx, dy) {
   return { minX, minY, maxX, maxY, treeWidth: maxX - minX, treeHeight: maxY - minY };
 }
 
+// Bounds around a list of [horizontal, vertical] points, padded per side.
+export function boundsFromPoints(points, { left = 0, right = 0, top = 0, bottom = 0 } = {}) {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [h, v] of points) {
+    if (h < minX) minX = h;
+    if (h > maxX) maxX = h;
+    if (v < minY) minY = v;
+    if (v > maxY) maxY = v;
+  }
+  if (!isFinite(minX)) { minX = maxX = minY = maxY = 0; }
+  minX -= left; maxX += right; minY -= top; maxY += bottom;
+  return { minX, minY, maxX, maxY, treeWidth: maxX - minX, treeHeight: maxY - minY };
+}
+
+// `root` is the node the initial view anchors on (and, unless opts.nodes /
+// opts.links are given, the hierarchy the minimap draws). Options:
+//   nodes, links — explicit node list / {source,target} links for the minimap
+//                  (layouts that draw several hierarchies or none pass these);
+//   linkPath     — path generator for minimap links (default: horizontal cubic);
+//   anchor       — 'left' (root near the left border, tree grows right),
+//                  'center' (root in the middle at 1×: bowtie) or 'fit' (whole
+//                  chart visible: fan, circle);
+//   nodeColor    — overrides the sex-based minimap dot colour.
 export function createSvgWithZoom(container, bounds, root, ids, opts = {}) {
   const width = container.clientWidth || 900;
   const height = container.clientHeight || 500;
@@ -34,7 +65,10 @@ export function createSvgWithZoom(container, bounds, root, ids, opts = {}) {
   const g = svg.append('g');
 
   const minScale = Math.min(1, width / bounds.treeWidth, height / bounds.treeHeight);
-  const initialScale = Math.max(minScale, 1);
+  // 'fit' starts zoomed out so the whole chart is visible (radial charts read
+  // as a shape first); the others start at 1× on the root so the names are
+  // legible immediately.
+  const initialScale = opts.anchor === 'fit' ? minScale : Math.max(minScale, 1);
 
   // Relax the translate extent by ~half a viewport on each side. Without
   // this, the root (which sits at the left edge of the tree's natural
@@ -54,12 +88,20 @@ export function createSvgWithZoom(container, bounds, root, ids, opts = {}) {
       .on('zoom', (e) => g.attr('transform', e.transform));
   svg.call(zoom);
 
-  // Initial view: anchor the root node near the left border, vertically
-  // centered, so the branches (which expand to the right) fill the rest
-  // of the viewport. A small left margin keeps the centered name label
-  // from being clipped against the edge.
+  // Initial view. 'left': anchor the root node near the left border,
+  // vertically centered, so the branches (which expand to the right) fill the
+  // rest of the viewport; a small left margin keeps the centered name label
+  // from being clipped against the edge. 'center': root in the middle of the
+  // viewport (layouts that grow in every direction). 'fit': the whole chart
+  // centered at the fitting scale.
   let tx, ty;
-  if (root) {
+  if (root && opts.anchor === 'fit') {
+    tx = width / 2 - (bounds.minX + bounds.treeWidth / 2) * initialScale;
+    ty = height / 2 - (bounds.minY + bounds.treeHeight / 2) * initialScale;
+  } else if (root && opts.anchor === 'center') {
+    tx = width / 2 - root.y * initialScale;
+    ty = height / 2 - root.x * initialScale;
+  } else if (root) {
     const leftMargin = 120;
     tx = leftMargin - root.y * initialScale;
     ty = height / 2 - root.x * initialScale;
@@ -75,7 +117,9 @@ export function createSvgWithZoom(container, bounds, root, ids, opts = {}) {
   // Minimap on desktop and large-tablet sized viewports. Below ~1024px the
   // overlay would just steal real-estate from the tree itself.
   if (root && ids.wrapper && window.innerWidth >= 1024) {
-    const updateMinimap = addMinimap(ids.wrapper, root, bounds, width, height, svg, zoom, opts.nodeColor);
+    const mmNodes = opts.nodes || root.descendants();
+    const mmLinks = opts.links || root.links();
+    const updateMinimap = addMinimap(ids.wrapper, mmNodes, mmLinks, opts.linkPath, bounds, width, height, svg, zoom, opts.nodeColor);
     zoom.on('zoom.minimap', (e) => updateMinimap(e.transform));
     updateMinimap(d3.zoomTransform(svg.node()));
   }
@@ -102,8 +146,9 @@ export function createSvgWithZoom(container, bounds, root, ids, opts = {}) {
 // Returns an `update(transform)` callback the caller must invoke whenever
 // the main view's zoom transform changes.
 // `nodeColor(d)` optionally overrides the default sex-based dot/ring colour
-// (compare mode passes the comparison-status palette).
-function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoom, nodeColor) {
+// (compare mode passes the comparison-status palette). `linkPath` is the path
+// generator for the simplified links (default: horizontal cubic).
+function addMinimap(wrapperId, nodes, links, linkPath, bounds, viewWidth, viewHeight, mainSvg, zoom, nodeColor) {
   const wrapper = document.getElementById(wrapperId);
   if (!wrapper) return () => {};
 
@@ -163,16 +208,16 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
       .attr('stroke', '#bbb')
       .attr('stroke-width', 1 / mmScale)
     .selectAll('path')
-    .data(root.links())
+    .data(links)
     .join('path')
-      .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
+      .attr('d', linkPath || d3.linkHorizontal().x(d => d.y).y(d => d.x));
 
   // Person nodes as small coloured dots; family nodes (partners) as rings of
   // the same size — the ⚭ glyph is illegible at minimap scale, but skipping
   // them entirely makes the map look broken when a person has a partner.
   mmG.append('g')
     .selectAll('circle')
-    .data(root.descendants().filter(d => !d.data.is_family))
+    .data(nodes.filter(d => !d.data.is_family))
     .join('circle')
       .attr('cx', d => d.y)
       .attr('cy', d => d.x)
@@ -181,7 +226,7 @@ function addMinimap(wrapperId, root, bounds, viewWidth, viewHeight, mainSvg, zoo
 
   mmG.append('g')
     .selectAll('circle')
-    .data(root.descendants().filter(d => d.data.is_family))
+    .data(nodes.filter(d => d.data.is_family))
     .join('circle')
       .attr('cx', d => d.y)
       .attr('cy', d => d.x)

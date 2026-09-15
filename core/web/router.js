@@ -1,8 +1,8 @@
 import { t } from './i18n.js';
-import { toUnicodeSearch, LEGACY_TAB_MAP, currentParams } from './lib/url.js';
+import { toUnicodeSearch, LEGACY_TAB_MAP, LEGACY_TAB_PARAMS, currentParams } from './lib/url.js';
 import { isPremiumLocked, requireLogin } from './auth.js';
 import { renderContributors, renderTotalsBar } from './contributors.js';
-import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
+import { renderTreePage } from './tree/index.js';
 import { renderComparePage } from './tree/compare.js';
 import { renderMatriculaStatsPage } from './contributors/matricula-stats.js';
 import { renderGeneanetStatsPage } from './contributors/geneanet-stats.js';
@@ -22,9 +22,13 @@ const TAB_BY_TYPE = {
   person:       'tab-person',
   family:       'tab-family',
   contributors: 'tab-contributors',
-  ancestors:    'tab-ancestors',
-  descendants:  'tab-descendants',
+  tree:         'tab-tree',
 };
+
+// Tab ids that need a valid JWT when auth is configured.
+const PREMIUM_TABS = new Set(['tab-tree']);
+// URL ?t= values (current + legacy) that lead to premium views.
+const PREMIUM_TYPES = new Set(['tree', 'ancestors', 'descendants', 'compare']);
 const TYPE_BY_TAB = Object.fromEntries(Object.entries(TAB_BY_TYPE).map(([type, tab]) => [tab, type]));
 
 /** DOM tab id implied by the current URL's ?t= value (defaults to general). */
@@ -32,16 +36,20 @@ export function tabIdFromParams(params) {
   return TAB_BY_TYPE[params.get('t')] || 'tab-general';
 }
 
-/** Rewrite legacy ?t=birth / ?t=death values to ?t=person via replaceState.
- *  Runs at app load and when SPA-navigating into a legacy URL so the address
- *  bar always shows the canonical tab.  Other params (n, sn, dob, pob, dod, pod…)
- *  already line up with the unified person form so nothing else needs renaming. */
+/** Rewrite legacy ?t= values to their canonical tab via replaceState:
+ *  ?t=birth / ?t=death → ?t=person, and ?t=ancestors / ?t=descendants →
+ *  ?t=tree&dir=anc|desc. Runs at app load and when SPA-navigating into a legacy
+ *  URL so the address bar always shows the canonical form.  Other params (n,
+ *  sn, dob, pob, dod, pod…) already line up so nothing else needs renaming. */
 export function normalizeLegacyURL() {
   const params = currentParams();
   const tParam = params.get('t');
   const mapped = tParam && LEGACY_TAB_MAP[tParam];
   if (!mapped) return;
   params.set('t', mapped);
+  for (const [k, v] of Object.entries(LEGACY_TAB_PARAMS[tParam] || {})) {
+    if (!params.has(k)) params.set(k, v);
+  }
   const url = window.location.pathname + '?' + toUnicodeSearch(params);
   history.replaceState(null, '', url);
 }
@@ -127,7 +135,7 @@ export function maybeRouteCompare(urlParams) {
  *  instead of prompting for login. */
 export function activateTab(targetTab, { skipHistory = false, initial = false } = {}) {
   // Intercept if trying to open a premium tab without being logged in.
-  const isPremium = targetTab === 'tab-ancestors' || targetTab === 'tab-descendants';
+  const isPremium = PREMIUM_TABS.has(targetTab);
   if (isPremium && isPremiumLocked()) {
     if (!initial) {
       requireLogin('premium_gated_desc');
@@ -144,7 +152,7 @@ export function activateTab(targetTab, { skipHistory = false, initial = false } 
 
   const urlT = TYPE_BY_TAB[targetTab];
   if (urlT && !initial && !skipHistory) {
-    const params = urlT === 'contributors' || urlT === 'ancestors' || urlT === 'descendants' ? { t: urlT } : getTabURLParams(urlT);
+    const params = urlT === 'contributors' || urlT === 'tree' ? { t: urlT } : getTabURLParams(urlT);
     const url = new URL(window.location);
     url.search = '';
     for (const [k, v] of Object.entries(params)) {
@@ -167,13 +175,11 @@ export function activateTab(targetTab, { skipHistory = false, initial = false } 
     document.body.classList.remove('contributors-view');
   }
 
-  const isTreeTab = targetTab === 'tab-ancestors' || targetTab === 'tab-descendants';
+  const isTreeTab = targetTab === 'tab-tree';
   document.body.classList.toggle('tree-view', isTreeTab);
 
-  if (targetTab === 'tab-ancestors') {
-    renderAncestorsPage();
-  } else if (targetTab === 'tab-descendants') {
-    renderDescendantsPage();
+  if (isTreeTab) {
+    renderTreePage();
   } else if (targetTab !== 'tab-contributors') {
     document.title = t('site_title');
   }
@@ -182,20 +188,18 @@ export function activateTab(targetTab, { skipHistory = false, initial = false } 
     'tab-general': 'general-results',
     'tab-person':  'person-results',
     'tab-family':  'family-results',
-    'tab-ancestors':'ancestors-results',
-    'tab-descendants':'descendants-results',
+    'tab-tree':    'tree-results',
   };
-  ['tab-general', 'tab-person', 'tab-family', 'tab-ancestors', 'tab-descendants'].forEach(tab => {
+  ['tab-general', 'tab-person', 'tab-family', 'tab-tree'].forEach(tab => {
     if (tab !== targetTab) document.getElementById(resultsMap[tab])?.style.setProperty('display', 'none');
   });
   const introMap = {
     'tab-general': 'intro-general',
     'tab-person':  'intro-person',
     'tab-family':  'intro-family',
-    'tab-ancestors': null,
-    'tab-descendants': null,
+    'tab-tree':    null,
   };
-  if (tabsWithResults.has(targetTab) || targetTab === 'tab-ancestors' || targetTab === 'tab-descendants') {
+  if (tabsWithResults.has(targetTab) || isTreeTab) {
     const resEl = document.getElementById(resultsMap[targetTab]);
     // Tree tabs let the CSS flex layout decide (`body.tree-view .results-container`);
     // other tabs need explicit display:block to override the initial inline display:none.
@@ -292,7 +296,7 @@ export function initRouter() {
 
     const urlT = url.searchParams.get('t');
     const hasWith = url.searchParams.has('w') || url.searchParams.has('with');
-    if ((urlT === 'ancestors' || urlT === 'descendants' || urlT === 'compare' || (urlT === 'contributors' && hasWith)) && isPremiumLocked()) {
+    if ((PREMIUM_TYPES.has(urlT) || (urlT === 'contributors' && hasWith)) && isPremiumLocked()) {
       requireLogin('premium_gated_desc');
       return;
     }

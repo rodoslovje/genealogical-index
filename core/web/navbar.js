@@ -111,8 +111,7 @@ export function initNavbar() {
     // each table's header instead. The sidebar is normally a no-op there, but
     // in compact-nav mode it also hosts the nav tabs and/or help / language /
     // login utilities collapsed out of the navbar, so we still want it reachable.
-    const isTreePage = document.getElementById('tab-ancestors').classList.contains('active') ||
-                       document.getElementById('tab-descendants').classList.contains('active');
+    const isTreePage = document.getElementById('tab-tree').classList.contains('active');
     const isContributorsPage = document.getElementById('tab-contributors').classList.contains('active') ||
                        document.getElementById('tab-matricula')?.classList.contains('active') ||
                        document.getElementById('tab-geneanet')?.classList.contains('active');

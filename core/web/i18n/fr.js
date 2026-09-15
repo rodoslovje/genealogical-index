@@ -258,6 +258,13 @@ export default {
     tree_descendants_title: 'Descendants',
     tree_source: 'Source',
     tree_created: 'Créé le',
+    tree_title: 'Arbre généalogique',
+    tree_dir_both: 'Les deux',
+    tree_chart_tree: 'Arbre',
+    tree_chart_fan: 'Éventail',
+    tree_chart_circle: 'Cercle',
+    tree_generations: 'Générations',
+    tree_generations_all: 'Toutes',
 
     // Tree comparison
     compare_title: 'Comparaison des arbres',
@@ -320,7 +327,7 @@ export default {
         <li><strong>Champs développables :</strong> Les colonnes telles que <em>Parents</em>, <em>Conjoints</em> et <em>Enfants</em> affichent le nombre de personnes. En cliquant sur ce nombre, vous développez la liste. Pour tout développer d'un coup, utilisez le bouton <strong>⤢ Développer</strong> au-dessus du tableau, et pour masquer, le bouton <strong>⤡ Réduire</strong>.</li>
         <li><strong>Détails des personnes et des familles :</strong> En cliquant sur un nom affiché en bleu dans le tableau, vous lancez une nouvelle recherche et affichez tous les enregistrements de cette personne ou de cette famille. En cliquant sur un conjoint, vous recherchez sa famille. De même, pour les parents, un clic sur le libellé (<em>Parents</em>, <em>Époux</em> ou <em>Épouse</em>) affiche leur famille, tandis qu'un clic sur le nom d'un parent recherche uniquement cette personne.</li>
         <li><strong>Enregistrements privés :</strong> Pour certaines personnes, la mention <em>&lt;private&gt;</em> s'affiche à la place du prénom ou du nom. Ces enregistrements ne comportent aucun lien de recherche.</li>
-        <li><strong>Arbre :</strong> À côté de certaines personnes (parents, enfants, conjoints), vous verrez une icône d'arbre (<strong>🌳</strong> pour les ascendants, <strong>🌿</strong> pour les descendants). En cliquant sur l'icône, vous affichez un arbre généalogique graphique et interactif des ascendants ou des descendants de la personne sélectionnée.{auth_tree}</li>
+        <li><strong>Arbre :</strong> À côté de certaines personnes (parents, enfants, conjoints), vous verrez une icône d'arbre (<strong>🌳</strong>). En cliquant dessus, vous ouvrez un arbre généalogique interactif de la personne sélectionnée : par défaut un <em>sablier</em> avec les ascendants à gauche et les descendants à droite, que vous pouvez limiter aux seuls ascendants ou descendants. L'affichage peut être un <em>arbre</em> classique ou un <em>éventail</em> (au choix en <em>cercle</em> complet), limité à un nombre choisi de générations, et téléchargé en SVG, CSV ou GEDCOM.{auth_tree}</li>
         <li><strong>Export des données :</strong> En cliquant sur le bouton <strong>CSV</strong> au-dessus du tableau, vous téléchargez les résultats actuels sur votre ordinateur sous forme de tableau.</li>
         <li><strong>Tableaux et sections repliables :</strong> En cliquant sur le titre d'un tableau ou d'une section (par ex. <em>Personne</em>, <em>Famille</em> ou <em>Correspondances</em>), vous pouvez masquer temporairement son contenu et le réafficher au clic suivant.</li>
       </ul>

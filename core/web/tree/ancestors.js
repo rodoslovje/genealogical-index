@@ -1,64 +1,17 @@
 import { isPrivate } from '../lib/utils.js';
 import { toUnicodeSearch } from '../lib/url.js';
-import { computeBounds, createSvgWithZoom, attachSvgExport, attachCsvExport, attachGedExport, createGedcomModel, orderSpouses, personRow, appendLinks, decoratePersonNodes } from './shared.js';
+import { orderSpouses, personRow } from './shared.js';
 
-export function renderD3AncestorsTree(data, container, personName, contributorName, ids, exportOpts) {
-  const dx = 120, dy = 250;
-
-  const root = d3.hierarchy(data, d => d.parents);
-  d3.tree().nodeSize([dx, dy])(root.sort((a, b) => {
-    const sexOrder = { 'm': 1, 'f': 2 };
-    const aSex = sexOrder[a.data.sex] || 3;
-    const bSex = sexOrder[b.data.sex] || 3;
-    if (aSex !== bSex) return aSex - bSex;
-    return d3.ascending(a.data.name || '', b.data.name || '');
-  }));
-
-  const bounds = computeBounds(root, dx, dy);
-  const { svg, g } = createSvgWithZoom(container, bounds, root, ids);
-
-  attachSvgExport({
-    svg, g, downloadBtnId: ids.downloadSvg,
-    data, personName, contributorName,
-    titleText: exportOpts.titleText,
-    filePrefix: exportOpts.filePrefix,
-  });
-
-  attachCsvExport({
-    downloadBtnId: ids.downloadCsv,
-    buildRows: () => buildAncestorRows(data),
-    personName, contributorName,
-    criteria: exportOpts.criteria,
-    filePrefix: exportOpts.filePrefix,
-  });
-
-  attachGedExport({
-    downloadBtnId: ids.downloadGed,
-    buildModel: () => buildAncestorGedcom(data),
-    personName, contributorName,
-    filePrefix: exportOpts.filePrefix,
-  });
-
-  appendLinks(g, root);
-  appendAncestorMarriageNodes(g, root, contributorName);
-
-  const node = g.append('g')
-      .attr('stroke-linejoin', 'round')
-      .attr('stroke-width', 3)
-    .selectAll('g')
-    .data(root.descendants())
-    .join('g')
-      .attr('transform', d => `translate(${d.y},${d.x})`);
-
-  decoratePersonNodes(node, contributorName);
-}
+// Ancestors-specific pieces: the CSV / GEDCOM walkers over the raw API tree and
+// the marriage glyph drawn between a node's two parents in the tree layout. Layout and chrome live in the layout modules / svg.js.
+// d3 is loaded globally from the CDN, so it isn't imported.
 
 // Flattens the ancestors tree into one CSV row per person. Generation 0 is the
 // focus person; each step up the tree (parents, grandparents, …) increments it.
 // A person's marriage is their union with their co-parent, so for any node with
 // two parents that node's `parents_marriage` (plus the other parent as partner)
 // is attached to each of the two parent rows.
-function buildAncestorRows(rootData) {
+export function buildAncestorRows(rootData) {
   const rows = [];
 
   // `partner`/`marriage` describe THIS node's union, as determined by its child.
@@ -78,14 +31,13 @@ function buildAncestorRows(rootData) {
   return rows;
 }
 
-// Builds a GEDCOM model from the ancestors tree. Every node is an individual;
-// for each node with parents we create the parents' family (with the node as a
-// CHIL) and carry that node's `parents_marriage` onto the FAM's MARR. A node
-// with a single known parent still yields a one-spouse family.
-function buildAncestorGedcom(rootData) {
-  const model = createGedcomModel();
-  const rootIndi = model.addIndividual(rootData);
-
+// Adds the ancestors tree to a GEDCOM model whose focus person is already
+// `rootIndi`. For each node with parents we create the parents' family (with
+// the node as a CHIL) and carry that node's `parents_marriage` onto the FAM's
+// MARR. A node with a single known parent still yields a one-spouse family.
+// Shared with the descendants walker so a bowtie export emits the focus person
+// once.
+export function addAncestorsToGedcom(model, rootData, rootIndi) {
   const walk = (node, indi) => {
     const parents = node.parents || [];
     if (!parents.length) return;
@@ -112,62 +64,49 @@ function buildAncestorGedcom(rootData) {
   return model;
 }
 
-// Marriage rendering specific to the ancestors view: between the two parents
-// of any node that has both, show a ⚭ glyph + marriage date/place, linked to
-// the family search where possible.
-function appendAncestorMarriageNodes(g, root, contributorName) {
+// Family-search URL for the marriage of a node's two parents, or null when
+// either parent is private.
+export function ancestorMarriageHref(husband, wife, marriage, contributorName) {
+  const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
+  const wPriv = isPrivate(wife.name)    || isPrivate(wife.surname);
+  if (hPriv || wPriv) return null;
+
+  const params = new URLSearchParams();
+  params.set('t', 'family');
+  if (husband.name)          params.set('hn',  husband.name);
+  if (husband.surname)       params.set('hsn', husband.surname);
+  if (husband.date_of_birth) params.set('hb',  husband.date_of_birth);
+  if (wife.name)             params.set('wn',  wife.name);
+  if (wife.surname)          params.set('wsn', wife.surname);
+  if (wife.date_of_birth)    params.set('wb',  wife.date_of_birth);
+  if (marriage?.date)        params.set('dom', marriage.date);
+  if (contributorName)       params.set('c',   contributorName);
+  params.set('ex', '1');
+  return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
+}
+
+// Marriage rendering for the tree layout: between the two parents of any node
+// that has both, show a ⚭ glyph + marriage date/place, linked to the family
+// search where possible. Positioned at the parents' column, level with the
+// child, around which the tidy tree places the parents symmetrically.
+export function appendAncestorMarriageNodes(g, root, contributorName) {
   const marriageNode = g.append('g')
     .selectAll('g')
     .data(root.descendants().filter(d => d.children && d.children.length === 2 && d.data.parents_marriage))
     .join('g')
       .attr('transform', d => `translate(${d.children[0].y},${d.x})`);
 
-  const marriageLink = marriageNode.append(d => {
-    const husband = d.children[0].data;
-    const wife = d.children[1].data;
-    const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
-    const wPriv = isPrivate(wife.name)    || isPrivate(wife.surname);
-    return document.createElementNS('http://www.w3.org/2000/svg', (hPriv || wPriv) ? 'g' : 'a');
-  })
-    .attr('href', d => {
-      const husband = d.children[0].data;
-      const wife = d.children[1].data;
-      const marriage = d.data.parents_marriage;
-      const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
-      const wPriv = isPrivate(wife.name)    || isPrivate(wife.surname);
-      if (hPriv || wPriv) return null;
+  const hrefOf = d => ancestorMarriageHref(d.children[0].data, d.children[1].data, d.data.parents_marriage, contributorName);
 
-      const params = new URLSearchParams();
-      params.set('t', 'family');
-      if (husband.name)          params.set('hn',  husband.name);
-      if (husband.surname)       params.set('hsn', husband.surname);
-      if (husband.date_of_birth) params.set('hb',  husband.date_of_birth);
-      if (wife.name)             params.set('wn',  wife.name);
-      if (wife.surname)          params.set('wsn', wife.surname);
-      if (wife.date_of_birth)    params.set('wb',  wife.date_of_birth);
-      if (marriage.date)         params.set('dom', marriage.date);
-      if (contributorName)       params.set('c',   contributorName);
-      params.set('ex', '1');
-      return window.location.origin + window.location.pathname + '?' + toUnicodeSearch(params);
-    })
-    .attr('data-spa-nav', d => {
-      const husband = d.children[0].data;
-      const wife = d.children[1].data;
-      const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
-      const wPriv = isPrivate(wife.name)    || isPrivate(wife.surname);
-      return (hPriv || wPriv) ? null : '';
-    });
+  const marriageLink = marriageNode.append(d =>
+      document.createElementNS('http://www.w3.org/2000/svg', hrefOf(d) ? 'a' : 'g'))
+    .attr('href', hrefOf)
+    .attr('data-spa-nav', d => hrefOf(d) ? '' : null);
 
   const marriageText = marriageLink.append('text')
       .attr('text-anchor', 'middle')
       .attr('font-size', '11px')
-      .attr('fill', d => {
-        const husband = d.children[0].data;
-        const wife = d.children[1].data;
-        const hPriv = isPrivate(husband.name) || isPrivate(husband.surname);
-        const wPriv = isPrivate(wife.name)    || isPrivate(wife.surname);
-        return (hPriv || wPriv) ? '#555' : '#3498db';
-      });
+      .attr('fill', d => hrefOf(d) ? '#3498db' : '#555');
 
   marriageText.each(function(d) {
     const el = d3.select(this);

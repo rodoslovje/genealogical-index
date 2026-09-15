@@ -5,7 +5,7 @@ import { refreshContributorsIfVisible, prefetchContributors, updateFooterDataDat
 import { initHelp } from './help.js';
 import { setupGeneralSearch, setupPersonSearchForm, setupFamilySearchForm, restoreFromURL } from './search.js';
 import { currentParams } from './lib/url.js';
-import { renderAncestorsPage, renderDescendantsPage } from './tree/index.js';
+import { renderTreePage } from './tree/index.js';
 import { renderIntros } from './intros.js';
 import { initNavbar, checkNavOverflow } from './navbar.js';
 import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, maybeRouteGeneanet, maybeRouteCompare, tabIdFromParams } from './router.js';
@@ -101,11 +101,9 @@ async function init() {
       clearViewCache();
       renderIntros();
       refreshContributorsIfVisible();
-      if (document.getElementById('tab-ancestors').classList.contains('active')) {
-        renderAncestorsPage();
-      }
-      if (document.getElementById('tab-descendants').classList.contains('active')) {
-        renderDescendantsPage();
+      // Re-renders the toolbar + chart from the already-fetched data (no refetch).
+      if (document.getElementById('tab-tree').classList.contains('active')) {
+        renderTreePage();
       }
       if (document.getElementById('tab-compare')?.classList.contains('active')) {
         relocalizeCompare();

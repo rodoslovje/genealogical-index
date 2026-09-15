@@ -131,7 +131,11 @@ Cross-contributor matching uses PostgreSQL trigram similarity (`pg_trgm`). Confi
 
 ### Frontend SPA Routing
 
-The app is a single-page application. Tabs map to `?t=` URL parameters (general, person, family, contributors, ancestors, descendants). `router.js` handles tab switching, history management, and three "side routes" that bypass the tab system: `?t=matricula`, `?t=geneanet`, and `?t=compare`. Premium tabs (ancestors, descendants, compare) require a valid JWT when auth is configured.
+The app is a single-page application. Tabs map to `?t=` URL parameters (general, person, family, contributors, tree). `router.js` handles tab switching, history management, and three "side routes" that bypass the tab system: `?t=matricula`, `?t=geneanet`, and `?t=compare`. Premium views (tree, compare) require a valid JWT when auth is configured. Legacy `?t=ancestors` / `?t=descendants` links are rewritten to `?t=tree&dir=anc|desc` by `normalizeLegacyURL()`.
+
+### Tree page
+
+`?t=tree` (`core/web/tree/`) is one page for every direction and chart, driven by URL params: `dir=both|anc|desc` (default `both`, the bowtie: ancestors left / descendants right in the tree, top / bottom halves in the fan), `chart=tree|fan|circle` (default `tree`; `circle` is not offered for a bowtie) and `gens=N` (generation limit, 0 = all; per-chart defaults in `index.js`). `index.js` fetches each side from the existing `/api/ancestors` and `/api/descendants` endpoints, caches the data in module state so toolbar switches and language changes re-render without a refetch, and builds exports from what's shown. `data.js` builds the d3 hierarchies (Ahnentafel slots for ancestors, generation pruning); `layout-tree.js` and `layout-fan.js` each turn `{anc, desc}` hierarchies into a view (nodes, bounds, anchor, `draw()`), writing screen coordinates into `d.x` (vertical) / `d.y` (horizontal) so the zoom, minimap and SVG export in `svg.js` are layout-agnostic. `ancestors.js` / `descendants.js` hold the direction-specific CSV/GEDCOM walkers and marriage/family decorations.
 
 ### i18n
 

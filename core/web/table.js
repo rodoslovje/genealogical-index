@@ -126,36 +126,59 @@ export function remeasureVirtualColumns(table) {
   table.style.tableLayout = '';
 }
 
-// Renders the 🌳/🌿 tree button used in expandable parent/child/partner cells.
+// Renders the 🌳 tree button shown next to a person's name. It opens the tree
+// page in its default bowtie view (ancestors and descendants of the person at
+// once); the page's own toggle narrows it to one direction.
 // Returns '' when the feature is gated, there's no name/surname to seed the
 // tree, or the contributor is matricula (no stable IDs for tree nav).
-function treeButton({ kind, n, sn, dob, contributor, extId }) {
-  const feature  = kind === 'ancestors' ? 'ancestors' : 'descendants';
-  const icon     = kind === 'ancestors' ? '🌳' : '🌿';
-  const titleKey = kind === 'ancestors' ? 'tree_ancestors_title' : 'tree_descendants_title';
-  if (siteConfig.gatedFeatures?.includes(feature)) return '';
+function treeButton({ n, sn, dob, contributor, extId }) {
+  const gated = siteConfig.gatedFeatures || [];
+  if (gated.includes('tree') || gated.includes('ancestors') || gated.includes('descendants')) return '';
   if (isSpecialContributor(contributor)) return '';
   if (!n && !sn) return '';
   const p = new URLSearchParams();
-  p.set('t', kind);
+  p.set('t', 'tree');
   if (n)   p.set('n', n);
   if (sn)  p.set('sn', sn);
   if (dob) p.set('dob', dob);
   if (contributor) p.set('c', contributor);
   if (extId)       p.set('id', extId);
-  return `<a href="${toUnicodeHref(p)}" data-spa-nav class="tree-link-btn" title="${t(titleKey)}">${icon}</a>`;
+  return `<a href="${toUnicodeHref(p)}" data-spa-nav class="tree-link-btn" title="${t('tree_title')}">🌳</a>`;
+}
+
+// Whether a row person's tree page would show anything beyond the person:
+// a person row needs parents or partners, a family-row spouse needs their own
+// parents or the family's children. Only such rows get the 🌳 button.
+function personHasTree(row, namePrefix) {
+  if (!row.id) return false;
+  if (!namePrefix) {
+    return countParentPair(row.parents_list) > 0 || parseList(row.partners_list).length > 0;
+  }
+  return countParentPair(row[`${namePrefix}_parents`]) > 0 || parseList(row.children_list).length > 0;
 }
 
 // Renders a name/surname cell — used by husband_*, wife_*, and plain name/surname
-// columns. The three originally had ~20 lines of duplicated logic each.
+// columns. The three originally had ~20 lines of duplicated logic each. The
+// surname cell (end of the name pair) also carries the alternate-surname icon
+// and the 🌳 tree button.
 function renderPersonNameCell(col, row, namePrefix, altField) {
   const nameField = namePrefix ? `${namePrefix}_name`    : 'name';
   const surField  = namePrefix ? `${namePrefix}_surname` : 'surname';
   const extField  = namePrefix ? `${namePrefix}_ext_id`  : 'ext_id';
+  const dobField  = namePrefix ? `${namePrefix}_birth`   : 'date_of_birth';
   const isPriv    = isPrivate(row[nameField]) || isPrivate(row[surField]);
   const altIcon   = (col === surField && !isPriv) ? altSurnameIconHtml(row[altField], t('icon_alt_surname')) : '';
+  const treeBtn   = (col === surField && !isPriv && personHasTree(row, namePrefix))
+    ? treeButton({
+        n: row[nameField],
+        sn: row[surField],
+        dob: row[dobField] || (namePrefix ? '' : childYearOf(row)),
+        contributor: row.contributor,
+        extId: row[extField],
+      })
+    : '';
   const val = row[col];
-  if (!val) return `<td>${altIcon}</td>`;
+  if (!val) return `<td>${altIcon}${treeBtn}</td>`;
   const safeDisplay = escapeHtml(val);
   if (isPriv) {
     return `<td>${safeDisplay}${altIcon}</td>`;
@@ -169,7 +192,7 @@ function renderPersonNameCell(col, row, namePrefix, altField) {
     if (row.contributor) params.set('c', row.contributor);
   }
   params.set('ex', '1');
-  return `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}</td>`;
+  return `<td><a href="${toUnicodeHref(params)}" class="name-link" data-spa-nav>${safeDisplay}</a>${altIcon}${treeBtn}</td>`;
 }
 
 // A parent-pair has up to two entries (father, mother). Each "filled" if any
@@ -260,14 +283,14 @@ function memoCount(row, key, compute) {
 // from what the cell actually renders; outside diff mode neither class appears,
 // so the summary stays plain. Green wins when a cell holds both, since new
 // information is what the reader is hunting for.
-function wrapExpandable(count, treeBtn, innerHtml) {
+function wrapExpandable(count, innerHtml) {
   if (!count) return '';
   const tint = innerHtml.includes('match-add') ? 'match-add'
              : innerHtml.includes('match-diff') ? 'match-diff'
              : '';
   const countHtml = tint ? `<span class="${tint} match-summary-mark">${count}</span>` : `${count}`;
   return `<details class="expandable-cell">
-            <summary>${countHtml}${treeBtn || ''}</summary>
+            <summary>${countHtml}</summary>
             <div class="expanded-content">${innerHtml}</div>
           </details>`;
 }
@@ -311,7 +334,7 @@ function wrapPersonAnchor(name, surname, innerHtml, extId, contributor) {
   return `<a href="${toUnicodeHref(p)}" class="name-link" data-spa-nav>${innerHtml}</a>`;
 }
 
-function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParentsJson, contributor = null, isB = false) {
+function renderParentPair(parentsJson, labelKey, otherParentsJson, contributor = null, isB = false) {
   if (!parentsJson) return { html: '', count: 0 };
   try {
     const pList = typeof parentsJson === 'string' ? JSON.parse(parentsJson) : parentsJson;
@@ -381,22 +404,10 @@ function renderParentPair(parentsJson, labelKey, rootPerson = null, otherParents
     let htmlStr = `<div class="parent-group" style="margin-bottom: 8px;">`;
     const hasSearchFields = famParams.has('hn') || famParams.has('hsn') || famParams.has('wn') || famParams.has('wsn');
 
-    // ext_id + contributor is the GEDCOM primary key, used for exact lookup.
-    const treeBtn = rootPerson
-      ? treeButton({
-          kind: 'ancestors',
-          n: rootPerson.name,
-          sn: rootPerson.surname,
-          dob: rootPerson.date_of_birth || childYearOf(rootPerson),
-          contributor: rootPerson.contributor,
-          extId: rootPerson.ext_id,
-        })
-      : '';
-
     if (hasSearchFields) {
-      htmlStr += `<a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight: 600;">${headerLabel}:</a>${treeBtn}<br>`;
+      htmlStr += `<a href="${toUnicodeHref(famParams)}" class="name-link" data-spa-nav style="font-weight: 600;">${headerLabel}:</a><br>`;
     } else {
-      htmlStr += `<span style="font-weight: 600;">${headerLabel}:</span>${treeBtn}<br>`;
+      htmlStr += `<span style="font-weight: 600;">${headerLabel}:</span><br>`;
     }
     if (fName || fSur) htmlStr += `${wrapPersonAnchor(fName, fSur, fInner, fExtId, contributor)}<br>`;
     if (mName || mSur) htmlStr += `${wrapPersonAnchor(mName, mSur, mInner, mExtId, contributor)}`;
@@ -461,69 +472,24 @@ export function formatSpecialCell(col, row, otherRow, isB = false) {
         return entry;
       });
 
-    // Seed the descendants tree from whichever spouse has a usable name.
-    let treeBtn = '';
-    if (row.id && count > 0) {
-      const useHusband = row.husband_name && !isPrivate(row.husband_name);
-      const useWife    = !useHusband && row.wife_name && !isPrivate(row.wife_name);
-      if (useHusband || useWife) {
-        treeBtn = treeButton({
-          kind: 'descendants',
-          n:    useHusband ? row.husband_name    : row.wife_name,
-          sn:   useHusband ? row.husband_surname : row.wife_surname,
-          dob:  useHusband ? row.husband_birth   : row.wife_birth,
-          contributor: row.contributor,
-          extId: useHusband ? row.husband_ext_id : row.wife_ext_id,
-        });
-      }
-    }
-
-    return wrapExpandable(count, treeBtn, formattedList.join('<br>'));
+    return wrapExpandable(count, formattedList.join('<br>'));
   }
 
   if (col === 'parents' && row.parents_list) {
     const otherParents = diffMode ? (otherRow?.parents_list ?? null) : undefined;
-    const { html, count } = renderParentPair(row.parents_list, null, null, otherParents, row.contributor, isB);
-    const treeBtn = (count > 0 && row.id) ? treeButton({
-      kind: 'ancestors',
-      n: row.name,
-      sn: row.surname,
-      dob: row.date_of_birth || childYearOf(row),
-      contributor: row.contributor,
-      extId: row.ext_id,
-    }) : '';
-    return wrapExpandable(count, treeBtn, html);
+    const { html, count } = renderParentPair(row.parents_list, otherParents, row.contributor, isB);
+    return wrapExpandable(count, html);
   }
 
   if (col === 'parents' && (row.husband_parents || row.wife_parents)) {
     const otherHusbandParents = diffMode ? (otherRow?.husband_parents ?? null) : undefined;
     const otherWifeParents    = diffMode ? (otherRow?.wife_parents ?? null)    : undefined;
-    const husband = renderParentPair(row.husband_parents, 'label_husband', {
-      name: row.husband_name,
-      surname: row.husband_surname,
-      date_of_birth: row.husband_birth,
-      contributor: row.contributor,
-      ext_id: row.husband_ext_id
-    }, otherHusbandParents, row.contributor, isB);
-    const wife = renderParentPair(row.wife_parents, 'label_wife', {
-      name: row.wife_name,
-      surname: row.wife_surname,
-      date_of_birth: row.wife_birth,
-      contributor: row.contributor,
-      ext_id: row.wife_ext_id
-    }, otherWifeParents, row.contributor, isB);
-    return wrapExpandable(husband.count + wife.count, '', husband.html + wife.html);
+    const husband = renderParentPair(row.husband_parents, 'label_husband', otherHusbandParents, row.contributor, isB);
+    const wife = renderParentPair(row.wife_parents, 'label_wife', otherWifeParents, row.contributor, isB);
+    return wrapExpandable(husband.count + wife.count, husband.html + wife.html);
   }
 
   if (col === 'partners' && row.partners_list) {
-    const treeBtn = row.id ? treeButton({
-      kind: 'descendants',
-      n: row.name,
-      sn: row.surname,
-      dob: row.date_of_birth || childYearOf(row),
-      contributor: row.contributor,
-      extId: row.ext_id,
-    }) : '';
     const otherPartners = diffMode ? parseList(otherRow?.partners_list) : [];
     const pList = parseList(row.partners_list);
     const partnerMatches = diffMode ? pairRelatives(pList, otherPartners) : null;
@@ -570,7 +536,7 @@ export function formatSpecialCell(col, row, otherRow, isB = false) {
         if (noMatch && !isB) entry = diffWrap(entry);
         return entry;
     });
-    return wrapExpandable(pList.length, treeBtn, formattedList.join('<br>'));
+    return wrapExpandable(pList.length, formattedList.join('<br>'));
   }
 
   return null;

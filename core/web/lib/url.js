@@ -49,10 +49,21 @@ export const PARAM_MAP = {
   source_tab:       's',
 };
 
-/** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point at the unified person tab. */
+/** Map legacy `t=` values to their new tab. Old shared URLs (birth/death) point
+ *  at the unified person tab; the former ancestors/descendants tabs are now the
+ *  single tree tab with a `dir` parameter (see LEGACY_TAB_PARAMS). */
 export const LEGACY_TAB_MAP = {
   birth: 'person',
   death: 'person',
+  ancestors: 'tree',
+  descendants: 'tree',
+};
+
+/** Extra params a legacy `t=` value implies once rewritten via LEGACY_TAB_MAP
+ *  (only set when the URL doesn't already carry them). */
+export const LEGACY_TAB_PARAMS = {
+  ancestors:   { dir: 'anc' },
+  descendants: { dir: 'desc' },
 };
 
 export const PARAM_MAP_REVERSE = Object.fromEntries(
