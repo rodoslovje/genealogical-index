@@ -219,7 +219,13 @@ NAME_SYNONYM_GROUPS = {
     "augustus": ["august", "avgust"],
     "augustinus": ["augustin", "avgustin"],
     "simon": ["simun", "sime"],
-    "ladislaus": ["ladislav", "vladislav"],
+    # "lado" and "vlado" are one letter apart but land in different groups, on
+    # the pairing evidence: lado resolves 68% Ladislav / 23% Vladimir, vlado
+    # 71% Vladimir. Both carry some of the other name, so a Lado recorded for a
+    # Vladimir (or vice versa) will lean the wrong way — the surname/date gates
+    # are what keep that in check.
+    "ladislaus": ["ladislav", "vladislav", "lado"],
+    "vladimirus": ["vladimir", "vlado"],
     # female
     "maria": ["marija", "mica", "micka", "mina", "minka", "marica"],
     "anna": ["ana", "anica", "ancka"],
