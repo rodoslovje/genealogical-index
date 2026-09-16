@@ -272,10 +272,84 @@ function addMinimap(wrapperId, nodes, links, linkPath, bounds, viewWidth, viewHe
   };
 }
 
+// --- Export legend ----------------------------------------------------------
+// An optional band of coloured swatches drawn between the diagram and the
+// footer, so an exported comparison carries the same key as the page does.
+
+const LEGEND_SWATCH_R = 6;   // matches the 12px round .compare-swatch
+const LEGEND_GAP = 8;        // swatch → label
+const LEGEND_ITEM_GAP = 24;  // between entries
+const LEGEND_ROW_H = 22;
+const LEGEND_PAD = 14;       // above the first row / below the last
+
+// One entry's text: "<label> (<count>)", the count bold as in the HTML legend.
+function legendLabel(sel, item) {
+  const text = sel.append('text')
+      .attr('font-size', '14px')
+      .attr('fill', '#333');
+  text.append('tspan').text(item.label);
+  if (item.count != null) text.append('tspan').attr('font-weight', 'bold').text(` (${item.count})`);
+  return text;
+}
+
+// Drawn width of every entry. Text has to be in the DOM to be measurable, so
+// the probe is appended hidden and removed before anything else is drawn.
+function measureLegend(svg, items) {
+  if (!items || !items.length) return [];
+  const probe = svg.append('g').attr('visibility', 'hidden');
+  const measured = items.map(item => ({
+    item,
+    width: LEGEND_SWATCH_R * 2 + LEGEND_GAP + legendLabel(probe, item).node().getComputedTextLength(),
+  }));
+  probe.remove();
+  return measured;
+}
+
+// Greedy packing into rows no wider than `maxWidth`.
+function packLegend(measured, maxWidth) {
+  const rows = [];
+  let row = [], rowWidth = 0;
+  measured.forEach(m => {
+    const advance = row.length ? LEGEND_ITEM_GAP + m.width : m.width;
+    if (row.length && rowWidth + advance > maxWidth) {
+      rows.push(row);
+      row = []; rowWidth = 0;
+    }
+    rowWidth += row.length ? advance : m.width;
+    row.push(m);
+  });
+  if (row.length) rows.push(row);
+  return rows;
+}
+
+// Each row centred in the export width, swatch and label on one baseline.
+function drawLegend(overlay, rows, centerX, top) {
+  rows.forEach((row, ri) => {
+    const rowWidth = row.reduce((sum, m) => sum + m.width, 0) + LEGEND_ITEM_GAP * (row.length - 1);
+    const yc = top + ri * LEGEND_ROW_H + LEGEND_ROW_H / 2;
+    let x = centerX - rowWidth / 2;
+    row.forEach(m => {
+      overlay.append('circle')
+          .attr('cx', x + LEGEND_SWATCH_R)
+          .attr('cy', yc)
+          .attr('r', LEGEND_SWATCH_R)
+          .attr('fill', m.item.color);
+      legendLabel(overlay, m.item)
+          .attr('x', x + LEGEND_SWATCH_R * 2 + LEGEND_GAP)
+          .attr('y', yc)
+          .attr('dominant-baseline', 'central');
+      x += m.width + LEGEND_ITEM_GAP;
+    });
+  });
+}
+
 // Wires the SVG-download button. Both trees produce the same export chrome
 // (title at top-left, site title at top-right, contributor + timestamp at the
-// bottom), only the heading text and output filename differ.
-export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorName, sourceContributors, titleText, filePrefix }) {
+// bottom), only the heading text and output filename differ. `legendItems` is
+// optional: a function returning [{ color, label, count }] for a legend band
+// under the diagram (the compare view's status key). It is called on download,
+// not at attach time, so the labels follow the current language.
+export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contributorName, sourceContributors, titleText, filePrefix, legendItems }) {
   d3.select(`#${downloadBtnId}`).on('click', null).on('click', () => {
     const originalTransform = g.attr('transform');
     g.attr('transform', null);
@@ -286,10 +360,19 @@ export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contr
     const headerHeight = 50;
     const footerHeight = 40;
 
-    const exportX = bbox.x - padding;
+    // The legend is measured before the canvas is sized: a narrow chart widens
+    // the export rather than letting an entry run off the edge, and the number
+    // of rows it wraps into decides how much height the band needs.
+    const measuredLegend = measureLegend(svg, legendItems && legendItems());
+    const widestItem = measuredLegend.reduce((w, m) => Math.max(w, m.width), 0);
+    const contentWidth = Math.max(bbox.width, widestItem);
+    const legendRows = packLegend(measuredLegend, contentWidth);
+    const legendHeight = legendRows.length ? legendRows.length * LEGEND_ROW_H + LEGEND_PAD * 2 : 0;
+
+    const exportX = bbox.x - padding - (contentWidth - bbox.width) / 2;
     const exportY = bbox.y - diagramPadding - headerHeight;
-    const exportWidth = bbox.width + padding * 2;
-    const exportHeight = bbox.height + diagramPadding * 2 + headerHeight + footerHeight;
+    const exportWidth = contentWidth + padding * 2;
+    const exportHeight = bbox.height + diagramPadding * 2 + headerHeight + legendHeight + footerHeight;
 
     const vb = svg.property('viewBox').baseVal;
     const originalViewBox = `${vb.x} ${vb.y} ${vb.width} ${vb.height}`;
@@ -322,6 +405,14 @@ export function attachSvgExport({ svg, g, downloadBtnId, data, personName, contr
         .attr('width', exportWidth)
         .attr('height', footerHeight)
         .attr('fill', '#e8eef6');
+
+    if (legendRows.length) {
+      drawLegend(
+        overlay, legendRows,
+        exportX + exportWidth / 2,
+        bbox.y + bbox.height + diagramPadding + LEGEND_PAD,
+      );
+    }
 
     const rootParams = new URLSearchParams();
     rootParams.set('t', 'person');

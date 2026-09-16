@@ -389,35 +389,42 @@ export function relocalizeCompare() {
   if (openDetailNode && detail) showDetail(detail, openDetailNode, cmp);
 }
 
+// The legend's entries — swatch colour, label, count — in display order. Shared
+// by the HTML legend and the SVG export's legend band, so the two can't drift.
+// Translated on each call, so a language switch just re-runs it.
+function legendEntries(cmp) {
+  const a = baseContributorName((cmp && cmp.contributor_a) || '');
+  const b = baseContributorName((cmp && cmp.contributor_b) || '');
+  const s = (cmp && cmp.summary) || {};
+  return [
+    ['agree',    t('compare_agree'),                   s.agree],
+    ['minor',    t('compare_minor'),                   s.minor],
+    ['conflict', t('compare_conflict'),                s.conflict],
+    ['only_a',   `${t('compare_only_in')} ${a}`,       s.only_a],
+    ['only_b',   `${t('compare_only_in')} ${b}`,       s.only_b],
+  ].map(([status, label, count]) => ({ status, color: STATUS_COLOR[status], label, count }));
+}
+
 // Status counts for what's drawn. `cmp` is null before results arrive, which
 // empties the legend (the toolbar above it keeps the direction/chart toggles).
 function renderLegend(legend, cmp) {
   if (!legend) return;
-  const a = escapeHtml(baseContributorName((cmp && cmp.contributor_a) || ''));
-  const b = escapeHtml(baseContributorName((cmp && cmp.contributor_b) || ''));
-  const s = (cmp && cmp.summary) || {};
 
   // Groups with people are clickable dropdowns (jump-to-person); a pill outline
   // + caret signals that, empty groups stay plain text.
-  const swatch = (status, label, count) => {
+  const swatch = ({ status, color, label, count }) => {
     const clickable = typeof count === 'number' && count > 0;
     const cls = 'compare-legend-item' + (clickable ? ' compare-legend-clickable' : '');
     const caret = clickable ? '<span class="compare-caret">▾</span>' : '';
     return `<span class="${cls}" data-compare-status="${status}">
-      <span class="compare-swatch" style="background:${STATUS_COLOR[status]}"></span>
-      ${label}${count != null ? ` <strong>(${count})</strong>` : ''}${caret}
+      <span class="compare-swatch" style="background:${color}"></span>
+      ${escapeHtml(label)}${count != null ? ` <strong>(${count})</strong>` : ''}${caret}
     </span>`;
   };
 
-  const counts = cmp ? `<div class="compare-legend-row">
-      ${swatch('agree', t('compare_agree'), s.agree)}
-      ${swatch('minor', t('compare_minor'), s.minor)}
-      ${swatch('conflict', t('compare_conflict'), s.conflict)}
-      ${swatch('only_a', `${t('compare_only_in')} ${a}`, s.only_a)}
-      ${swatch('only_b', `${t('compare_only_in')} ${b}`, s.only_b)}
-    </div>` : '';
-
-  legend.innerHTML = counts;
+  legend.innerHTML = cmp
+    ? `<div class="compare-legend-row">${legendEntries(cmp).map(swatch).join('')}</div>`
+    : '';
 }
 
 // Make each legend status chip clickable: it opens a dropdown listing that
@@ -527,6 +534,9 @@ function renderTree(cmp, container, detail) {
     ],
     titleText: compareTitleText(ctx, cmp),
     filePrefix: `compare-${DIR_FILE_PREFIX[cmp.dir]}`,
+    // The status key, under the diagram — an exported comparison is unreadable
+    // without it. Resolved on download, so it follows the current language.
+    legendItems: () => legendEntries(cmp),
   });
 
   const node = cmp.chart === 'tree' ? drawCartesian(g, view) : view.draw(g, {});

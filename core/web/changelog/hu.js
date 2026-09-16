@@ -11,6 +11,10 @@ export default [
         title: 'A fák összehasonlítása ugyanazokat a rajzokat kínálja, mint a családfa oldal',
         text: 'Két családfakutató összehasonlítása mostantól homokóra nézetben nyílik meg — egyszerre az egyező személy őseivel és leszármazottaival —, és megrajzolható <em>legyezőként</em> vagy klasszikus <em>faként</em>, ugyanazzal a generációs korláttal. Minden személy mindegyik rajzon megtartja az összehasonlítási színét.',
       },
+      {
+        title: 'A letöltött összehasonlítás viszi magával a jelmagyarázatot',
+        text: 'A fák összehasonlításának <strong>SVG</strong>-letöltése mostantól a rajz alá is kiírja a színek jelmagyarázatát, csoportonkénti darabszámmal. Az elmentett vagy kinyomtatott összehasonlítás így önmagában is érthető, az oldal nélkül.',
+      },
     ],
   },
   {

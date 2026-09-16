@@ -11,6 +11,10 @@ export default [
         title: 'Primerjava dreves pozna enake prikaze kot stran z drevesom',
         text: 'Primerjava dveh rodoslovcev se zdaj odpre kot metuljček — hkrati s predniki in potomci ujemajoče se osebe — nariše pa se lahko kot <em>pahljača</em> ali klasično <em>drevo</em>, z enako omejitvijo generacij. Vsaka oseba v vseh prikazih ohrani svojo barvo primerjave.',
       },
+      {
+        title: 'Prenesena primerjava s seboj nosi legendo',
+        text: 'Prenos primerjave dreves v obliki <strong>SVG</strong> zdaj pod prikaz izriše še barvno legendo s številom oseb v vsaki skupini. Shranjena ali natisnjena primerjava tako govori sama zase, tudi brez strani ob njej.',
+      },
     ],
   },
   {

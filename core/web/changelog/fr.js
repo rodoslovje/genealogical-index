@@ -11,6 +11,10 @@ export default [
         title: 'La comparaison d’arbres propose les mêmes graphiques que la page de l’arbre',
         text: 'La comparaison de deux généalogistes s’ouvre désormais en sablier — les ascendants et les descendants de la personne correspondante à la fois — et peut être dessinée en <em>éventail</em> ou en <em>arbre</em> classique, avec la même limite de générations. Chaque personne conserve sa couleur de comparaison dans tous les graphiques.',
       },
+      {
+        title: 'La comparaison téléchargée emporte sa légende',
+        text: 'Le téléchargement <strong>SVG</strong> d’une comparaison d’arbres dessine désormais la légende des couleurs sous le graphique, avec le nombre de personnes par groupe. Une comparaison enregistrée ou imprimée se comprend ainsi d’elle-même, sans la page à côté.',
+      },
     ],
   },
   {

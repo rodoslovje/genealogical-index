@@ -11,6 +11,10 @@ export default [
         title: 'Usporedba stabala poznaje iste prikaze kao i stranica sa stablom',
         text: 'Usporedba dvaju rodoslovaca sada se otvara kao leptir — istodobno s precima i potomcima podudarne osobe — a može se nacrtati kao <em>lepeza</em> ili klasično <em>stablo</em>, uz isto ograničenje generacija. Svaka osoba u svim prikazima zadržava svoju boju usporedbe.',
       },
+      {
+        title: 'Preuzeta usporedba nosi svoju legendu',
+        text: 'Preuzimanje usporedbe stabala u obliku <strong>SVG</strong> sada ispod prikaza iscrtava i legendu boja s brojem osoba u svakoj skupini. Spremljena ili ispisana usporedba tako govori sama za sebe, i bez stranice uz nju.',
+      },
     ],
   },
   {

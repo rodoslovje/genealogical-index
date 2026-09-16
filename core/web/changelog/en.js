@@ -24,6 +24,10 @@ export default [
         title: 'The tree comparison draws the same charts as the tree page',
         text: 'Comparing two genealogists now opens as a bowtie — the ancestors and the descendants of the matched person at once — and can be drawn as a <em>fan</em> or as a classic <em>tree</em>, with the same generation limit. Every person keeps its comparison colour in all of them.',
       },
+      {
+        title: 'The downloaded comparison carries its legend',
+        text: 'The <strong>SVG</strong> download of a tree comparison now prints the colour key under the chart, with the count for each group. A saved or printed comparison explains itself, without the page beside it.',
+      },
     ],
   },
   {

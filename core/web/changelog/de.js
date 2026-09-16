@@ -11,6 +11,10 @@ export default [
         title: 'Der Stammbaum-Vergleich kennt dieselben Darstellungen wie die Stammbaum-Seite',
         text: 'Der Vergleich zweier Genealogen öffnet sich nun als Sanduhr — mit den Vorfahren und den Nachkommen der übereinstimmenden Person zugleich — und lässt sich als <em>Fächer</em> oder als klassischer <em>Baum</em> zeichnen, mit derselben Generationengrenze. Jede Person behält in allen Darstellungen ihre Vergleichsfarbe.',
       },
+      {
+        title: 'Der heruntergeladene Vergleich bringt seine Legende mit',
+        text: 'Der <strong>SVG</strong>-Download eines Stammbaum-Vergleichs zeichnet die Farblegende nun unter die Darstellung, mit der Anzahl je Gruppe. Ein gespeicherter oder gedruckter Vergleich erklärt sich damit von selbst, auch ohne die Seite daneben.',
+      },
     ],
   },
   {

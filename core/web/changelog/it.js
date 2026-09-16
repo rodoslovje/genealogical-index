@@ -11,6 +11,10 @@ export default [
         title: "Il confronto degli alberi usa gli stessi grafici della pagina dell'albero",
         text: 'Il confronto fra due genealogisti si apre ora come una clessidra — con gli antenati e i discendenti della persona corrispondente insieme — e può essere disegnato come <em>ventaglio</em> o come <em>albero</em> classico, con lo stesso limite di generazioni. Ogni persona mantiene il proprio colore di confronto in tutti i grafici.',
       },
+      {
+        title: 'Il confronto scaricato porta con sé la legenda',
+        text: 'Il download in <strong>SVG</strong> di un confronto fra alberi disegna ora la legenda dei colori sotto il grafico, con il numero di persone per ogni gruppo. Un confronto salvato o stampato si spiega così da solo, anche senza la pagina accanto.',
+      },
     ],
   },
   {
