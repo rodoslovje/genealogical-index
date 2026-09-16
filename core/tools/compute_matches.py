@@ -184,7 +184,7 @@ NAME_SYNONYM_GROUPS = {
     "josephus": ["joseph", "josef", "jozef", "joze", "josip"],
     "georgius": ["georg", "jurij", "juraj", "jure", "juri"],
     "franciscus": ["franz", "franc", "francisek", "franjo", "frane", "fran", "franci", "francek"],
-    "antonius": ["anton", "antun", "ante", "tone", "toni", "tony"],
+    "antonius": ["anton", "antun", "ante", "tone", "toni", "tony", "anthony"],
     "michael": ["mihael", "miha", "mihovil", "miho"],
     "jacobus": ["jacob", "jakob", "jaka", "jakov"],
     "petrus": ["peter", "petar", "pero"],
