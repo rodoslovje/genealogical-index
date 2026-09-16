@@ -9,14 +9,16 @@ import { csvCell, csvRow, csvFooter, downloadCsv } from '../lib/csv.js';
 import { formatLinks } from '../lib/links.js';
 import { authFetch } from '../auth.js';
 import {
-  computeBounds, createSvgWithZoom, appendLinks, attachSvgExport,
+  boundsFromPoints, createSvgWithZoom, appendLinks, attachSvgExport,
   attachGedExport, createGedcomModel, orderSpouses,
 } from './shared.js';
+import { DX, DY, snapDescendantColumns } from './layout-tree.js';
 
-// Tree comparison view (Phase 2: ancestors + descendants). Superimposes two
-// genealogists' trees rooted at a matched person pair into one merged tree,
-// each node coloured by its comparison status. A toggle switches direction;
-// clicking a node opens a side-by-side field detail with differences
+// Tree comparison view. Superimposes two genealogists' trees rooted at a
+// matched person pair into one merged tree, each node coloured by its
+// comparison status. A toggle switches direction — ancestors, descendants, or
+// both (the bowtie: ancestors left, descendants right, sharing the focus
+// person); clicking a node opens a side-by-side field detail with differences
 // highlighted; the differences can be exported to CSV. Reuses the layout / zoom
 // / minimap / SVG-export chrome from the regular tree views.
 
@@ -58,11 +60,26 @@ const DETAIL_FIELDS = [
   ['place_of_death',  'col_place_of_death'],
 ];
 
+// Directions the page understands, with the sides each one fetches. `both` is
+// the bowtie; the two sides share the focus person at the origin.
+const DIRS = ['ancestors', 'descendants', 'both'];
+const SIDES_FOR = {
+  ancestors: ['ancestors'],
+  descendants: ['descendants'],
+  both: ['ancestors', 'descendants'],
+};
+const DIR_TITLE_KEY = {
+  ancestors: 'tree_ancestors_title',
+  descendants: 'tree_descendants_title',
+  both: 'tree_dir_both',
+};
+const DIR_FILE = { ancestors: 'ancestors', descendants: 'descendants', both: 'bowtie' };
+
 const collator = new Intl.Collator('sl', { sensitivity: 'base' });
 
 // Last rendered comparison, kept so a language switch can re-translate the
 // chrome/legend/detail in place (no re-fetch, no tree rebuild → view preserved).
-let compareState = null;     // { data, ctx, view, detail }
+let compareState = null;     // { cmp, ctx, view, detail }
 let openDetailNode = null;   // merged node whose detail panel is currently open
 
 // Close any open legend "jump to person" list on an outside click or Escape.
@@ -75,18 +92,18 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCompa
 
 // Title string, mirroring the match page by including the genealogist pair
 // ("A × B") once the data has loaded; before then it's just the person.
-function compareTitleText(ctx, data) {
+function compareTitleText(ctx, cmp) {
   const suffix = formatTitleSuffix(t('compare_title'));
-  const pair = data
-    ? `${baseContributorName(data.contributor_a || '')} × ${baseContributorName(data.contributor_b || '')}`
+  const pair = cmp
+    ? `${baseContributorName(cmp.contributor_a || '')} × ${baseContributorName(cmp.contributor_b || '')}`
     : '';
   const base = ctx.personName ? `${ctx.personName} - ${suffix}` : t('compare_title');
   return pair ? `${base} - ${pair}` : base;
 }
 
 // Page heading + browser-tab title.
-function setCompareTitle(ctx, data) {
-  const pageTitle = compareTitleText(ctx, data);
+function setCompareTitle(ctx, cmp) {
+  const pageTitle = compareTitleText(ctx, cmp);
   const titleEl = document.getElementById(IDS.pageTitle);
   if (titleEl) titleEl.textContent = pageTitle;
   document.title = `${pageTitle} | ${t('site_title')}`;
@@ -100,7 +117,8 @@ export function renderComparePage() {
   const cb = params.get('cb') || '';
   const b = params.get('b') || '';
   const personName = params.get('pn') || '';
-  const dir = params.get('dir') === 'descendants' ? 'descendants' : 'ancestors';
+  const dirParam = params.get('dir');
+  const dir = DIRS.includes(dirParam) ? dirParam : 'ancestors';
   const ctx = { ca, a, cb, b, personName, dir };
 
   setCompareTitle(ctx, null);
@@ -140,14 +158,18 @@ export function renderComparePage() {
   }
 
   const apiParams = new URLSearchParams({ ca, a, cb, b, max_generations: '0' });
-  const dataPromise = authFetch(`${API_BASE_URL}/api/compare/${dir}?${apiParams}`)
-      .then(r => r.ok ? r.json() : null);
+  // A bowtie needs both sides; they are independent requests, so fetch them in
+  // parallel and merge the two responses into one comparison.
+  const sides = SIDES_FOR[dir];
+  const dataPromise = Promise.all(sides.map(side =>
+    authFetch(`${API_BASE_URL}/api/compare/${side}?${apiParams}`).then(r => r.ok ? r.json() : null)));
   const d3Promise = ensureD3().catch(() => {});
 
   Promise.all([dataPromise, d3Promise])
-    .then(([data]) => {
+    .then(([results]) => {
       container.innerHTML = '';
-      if (!data || !data.tree) {
+      const cmp = buildComparison(results, dir);
+      if (!cmp) {
         container.innerHTML = `<p style="padding: 20px;">${t('no_results')}</p>`;
         return;
       }
@@ -156,22 +178,56 @@ export function renderComparePage() {
         return;
       }
       if (controls) controls.style.display = 'flex';
-      setCompareTitle(ctx, data);
-      renderLegend(legend, data, ctx);
-      const view = renderTree(data, container, detail, ctx);
-      wireLegendList(legend, view, detail, data);
-      compareState = { data, ctx, view, detail };
+      setCompareTitle(ctx, cmp);
+      renderLegend(legend, cmp, ctx);
+      const view = renderTree(cmp, container, detail, ctx);
+      wireLegendList(legend, view, detail, cmp);
+      compareState = { cmp, ctx, view, detail };
       if (csvBtn) {
         csvBtn.style.display = '';
-        csvBtn.onclick = () => exportDifferences(data, ctx);
+        csvBtn.onclick = () => exportDifferences(cmp, ctx);
       }
-      wireGedExport(gedABtn, data, ctx, 'a', data.contributor_a);
-      wireGedExport(gedBBtn, data, ctx, 'b', data.contributor_b);
+      wireGedExport(gedABtn, cmp, ctx, 'a', cmp.contributor_a);
+      wireGedExport(gedBBtn, cmp, ctx, 'b', cmp.contributor_b);
     })
     .catch(err => {
       console.error(err);
       container.innerHTML = `<p style="padding: 20px;">${t('tree_error')}</p>`;
     });
+}
+
+// Folds the per-direction API responses into one comparison object:
+//   { dir, trees: { anc, desc }, contributor_a, contributor_b, summary }
+// Either side may be null (a direction that wasn't asked for, or one the API
+// couldn't resolve) — a bowtie with one side missing still renders the other.
+// Returns null when neither side has a tree.
+function buildComparison(results, dir) {
+  const byDir = {};
+  SIDES_FOR[dir].forEach((side, i) => { byDir[side] = results[i]; });
+  const anc = byDir.ancestors && byDir.ancestors.tree ? byDir.ancestors : null;
+  const desc = byDir.descendants && byDir.descendants.tree ? byDir.descendants : null;
+  const first = anc || desc;
+  if (!first) return null;
+  return {
+    dir,
+    trees: { anc: anc && anc.tree, desc: desc && desc.tree },
+    contributor_a: first.contributor_a,
+    contributor_b: first.contributor_b,
+    summary: combineSummaries(anc, desc),
+  };
+}
+
+// Legend counts for what's shown. Each side counts the focus person (both trees
+// are rooted at it), so a bowtie subtracts the duplicate.
+function combineSummaries(anc, desc) {
+  if (!anc || !desc) return ((anc || desc).summary) || {};
+  const out = {};
+  Object.keys(STATUS_COLOR).forEach(k => {
+    out[k] = ((anc.summary && anc.summary[k]) || 0) + ((desc.summary && desc.summary[k]) || 0);
+  });
+  const rootStatus = anc.tree.status;
+  if (out[rootStatus]) out[rootStatus] -= 1;
+  return out;
 }
 
 // Re-translate the compare view in place after a language switch — without
@@ -180,9 +236,9 @@ export function renderComparePage() {
 // and any open differences panel. No-op until a comparison has loaded.
 export function relocalizeCompare() {
   if (!compareState) return;
-  const { data, ctx, view, detail } = compareState;
+  const { cmp, ctx, view, detail } = compareState;
 
-  setCompareTitle(ctx, data);
+  setCompareTitle(ctx, cmp);
 
   const setTitle = (id, key) => { const el = document.getElementById(id); if (el) el.title = t(key); };
   setTitle(IDS.zoomIn, 'tree_zoom_in');
@@ -191,23 +247,23 @@ export function relocalizeCompare() {
   setTitle(IDS.downloadCsv, 'tree_download_csv');
   const gedABtn = document.getElementById(IDS.downloadGedA);
   const gedBBtn = document.getElementById(IDS.downloadGedB);
-  if (gedABtn) gedABtn.title = `${t('tree_download_ged')} – ${baseContributorName(data.contributor_a || '')}`;
-  if (gedBBtn) gedBBtn.title = `${t('tree_download_ged')} – ${baseContributorName(data.contributor_b || '')}`;
+  if (gedABtn) gedABtn.title = `${t('tree_download_ged')} – ${baseContributorName(cmp.contributor_a || '')}`;
+  if (gedBBtn) gedBBtn.title = `${t('tree_download_ged')} – ${baseContributorName(cmp.contributor_b || '')}`;
 
   const legend = document.getElementById(IDS.legend);
-  renderLegend(legend, data, ctx);
-  wireLegendList(legend, view, detail, data);
+  renderLegend(legend, cmp, ctx);
+  wireLegendList(legend, view, detail, cmp);
 
-  if (openDetailNode && detail) showDetail(detail, openDetailNode, data);
+  if (openDetailNode && detail) showDetail(detail, openDetailNode, cmp);
 }
 
-// Direction toggle + legend with status counts. `data` is null while loading
+// Direction toggle + legend with status counts. `cmp` is null while loading
 // (the toggle still renders so the user can switch before results arrive).
-function renderLegend(legend, data, ctx) {
+function renderLegend(legend, cmp, ctx) {
   if (!legend) return;
-  const a = escapeHtml(baseContributorName((data && data.contributor_a) || ''));
-  const b = escapeHtml(baseContributorName((data && data.contributor_b) || ''));
-  const s = (data && data.summary) || {};
+  const a = escapeHtml(baseContributorName((cmp && cmp.contributor_a) || ''));
+  const b = escapeHtml(baseContributorName((cmp && cmp.contributor_b) || ''));
+  const s = (cmp && cmp.summary) || {};
 
   const toggleLink = (dir, label) => {
     const href = toUnicodeHref({
@@ -217,8 +273,7 @@ function renderLegend(legend, data, ctx) {
     return `<a class="compare-toggle-btn${active}" href="${href}" data-spa-nav>${label}</a>`;
   };
   const toggle = `<div class="compare-toggle">
-      ${toggleLink('ancestors', t('tree_ancestors_title'))}
-      ${toggleLink('descendants', t('tree_descendants_title'))}
+      ${DIRS.map(d => toggleLink(d, t(DIR_TITLE_KEY[d]))).join('')}
     </div>`;
 
   // Groups with people are clickable dropdowns (jump-to-person); a pill outline
@@ -233,7 +288,7 @@ function renderLegend(legend, data, ctx) {
     </span>`;
   };
 
-  const counts = data ? `<div class="compare-legend-row">
+  const counts = cmp ? `<div class="compare-legend-row">
       ${swatch('agree', t('compare_agree'), s.agree)}
       ${swatch('minor', t('compare_minor'), s.minor)}
       ${swatch('conflict', t('compare_conflict'), s.conflict)}
@@ -246,13 +301,13 @@ function renderLegend(legend, data, ctx) {
 
 // Make each legend status chip clickable: it opens a dropdown listing that
 // group's people; choosing one pans the diagram to that node, pulses it, and
-// closes the list. `view` is renderTree's { root, panToNode, highlightNode }.
-function wireLegendList(legend, view, detail, data) {
+// closes the list. `view` is renderTree's { nodes, panToNode, highlightNode }.
+function wireLegendList(legend, view, detail, cmp) {
   if (!legend || !view) return;
-  const { root, panToNode, highlightNode } = view;
+  const { nodes: allNodes, panToNode, highlightNode } = view;
 
   const byStatus = {};
-  root.descendants().forEach(d => {
+  allNodes.forEach(d => {
     if (d.data.is_family) return;
     (byStatus[d.data.status] ||= []).push(d);
   });
@@ -302,7 +357,7 @@ function wireLegendList(legend, view, detail, data) {
           const d = nodes[+btn.dataset.idx];
           panToNode(d);
           highlightNode(d);
-          showDetail(detail, d.data, data);
+          showDetail(detail, d.data, cmp);
           close();
         });
       });
@@ -310,75 +365,94 @@ function wireLegendList(legend, view, detail, data) {
   });
 }
 
-function renderTree(data, container, detail, ctx) {
-  const dx = 120, dy = 250;
-  const isDesc = data.direction === 'descendants';
-
-  const root = d3.hierarchy(data.tree, d => isDesc ? d.children : d.parents);
-  d3.tree().nodeSize([dx, dy])(root.sort((a, b) => {
+// d3 hierarchy for one merged side. `side` is 'anc' (nodes link via `parents`)
+// or 'desc' (person nodes alternate with `is_family` nodes via `children`).
+// Annotates every node with `gen`, the generation distance from the focus
+// person, which the descendants column snapping needs.
+function buildSideHierarchy(treeData, side) {
+  const isDesc = side === 'desc';
+  const root = d3.hierarchy(treeData, d => isDesc ? d.children : d.parents);
+  root.sort((a, b) => {
     if (isDesc && a.data.is_family && b.data.is_family) return 0;
     const sexOrder = { m: 1, f: 2 };
     const aSex = sexOrder[a.data.sex] || 3;
     const bSex = sexOrder[b.data.sex] || 3;
     if (aSex !== bSex) return aSex - bSex;
     return d3.ascending(a.data.name || '', b.data.name || '');
-  }));
+  });
+  root.each(d => {
+    if (!d.parent) d.gen = 0;
+    else d.gen = d.data.is_family ? d.parent.gen : d.parent.gen + 1;
+  });
+  return root;
+}
 
-  // Descendant trees interleave family nodes between generations; snap each
-  // node to its generation column and pull families in towards their parent
-  // (mirrors the regular descendants view).
-  if (isDesc) {
-    root.each(d => {
-      let gen = 0, curr = d;
-      while (curr.parent) {
-        if (!curr.data.is_family) gen++;
-        curr = curr.parent;
-      }
-      if (d.data.is_family) { d.y = gen * dy + 50; d.x = d.x + 35; }
-      else { d.y = gen * dy; }
-    });
+function renderTree(cmp, container, detail, ctx) {
+  const anc = cmp.trees.anc ? buildSideHierarchy(cmp.trees.anc, 'anc') : null;
+  const desc = cmp.trees.desc ? buildSideHierarchy(cmp.trees.desc, 'desc') : null;
+  const both = !!(anc && desc);
+
+  // d3.tree puts each root at the origin, so mirroring the ancestors side makes
+  // the two hierarchies share the focus person: ancestors left, descendants
+  // right (same construction as the tree page's bowtie).
+  if (anc) {
+    d3.tree().nodeSize([DX, DY])(anc);
+    if (both) anc.each(d => { d.y = -d.y; });
+  }
+  if (desc) {
+    d3.tree().nodeSize([DX, DY])(desc);
+    snapDescendantColumns(desc);
   }
 
-  const bounds = computeBounds(root, dx, dy);
+  // The focus person is in both hierarchies; draw it once, from the ancestors
+  // side, while the descendants root still contributes its links.
+  const nodes = [
+    ...(anc ? anc.descendants() : []),
+    ...(desc ? desc.descendants().filter(d => !(both && d === desc)) : []),
+  ];
+  const links = [...(anc ? anc.links() : []), ...(desc ? desc.links() : [])];
+  const anchorNode = anc || desc;
+  const rootData = cmp.trees.anc || cmp.trees.desc;
+  const bounds = boundsFromPoints(nodes.map(d => [d.y, d.x]), { left: 150, right: 250, top: DX, bottom: DX });
+
   // Colour the minimap dots/rings by comparison status (not sex) so the overview
   // matches the main view's agree/minor/conflict/only-A/only-B palette.
-  const { svg, g, panToNode } = createSvgWithZoom(container, bounds, root, IDS, {
+  const { svg, g, panToNode } = createSvgWithZoom(container, bounds, anchorNode, IDS, {
+    nodes,
+    links,
+    anchor: both ? 'center' : 'left',
     nodeColor: d => STATUS_COLOR[d.data.status] || '#999',
   });
 
   attachSvgExport({
     svg, g, downloadBtnId: IDS.downloadSvg,
-    data: data.tree,
-    personName: (ctx && ctx.personName) || data.tree.name || '',
-    contributorName: data.contributor_a || '',
+    data: rootData,
+    personName: (ctx && ctx.personName) || rootData.name || '',
+    contributorName: cmp.contributor_a || '',
     // Both genealogists in the footer "Source:" line, each linked to its
     // contributor page.
     sourceContributors: [
-      baseContributorName(data.contributor_a || ''),
-      baseContributorName(data.contributor_b || ''),
+      baseContributorName(cmp.contributor_a || ''),
+      baseContributorName(cmp.contributor_b || ''),
     ],
-    titleText: compareTitleText(ctx || {}, data),
-    filePrefix: `compare-${data.direction}`,
+    titleText: compareTitleText(ctx || {}, cmp),
+    filePrefix: `compare-${DIR_FILE[cmp.dir]}`,
   });
 
-  appendLinks(g, root.links());
+  appendLinks(g, links);
 
   const node = g.append('g')
       .attr('stroke-linejoin', 'round')
       .attr('stroke-width', 3)
     .selectAll('g')
-    .data(root.descendants())
+    .data(nodes)
     .join('g')
       .attr('transform', d => `translate(${d.y},${d.x})`)
       .attr('cursor', 'pointer')
-      .on('click', (event, d) => showDetail(detail, d.data, data));
+      .on('click', (event, d) => showDetail(detail, d.data, cmp));
 
-  if (isDesc) {
-    decorateFamilies(node.filter(d => d.data.is_family));
-    decoratePersons(node.filter(d => !d.data.is_family));
-  } else {
-    decoratePersons(node);
-  }
+  decorateFamilies(node.filter(d => d.data.is_family));
+  decoratePersons(node.filter(d => !d.data.is_family));
 
   // Briefly pulse a ring around a node so the user spots where the view jumped.
   function highlightNode(d) {
@@ -390,7 +464,7 @@ function renderTree(data, container, detail, ctx) {
     });
   }
 
-  return { root, panToNode, highlightNode };
+  return { nodes, panToNode, highlightNode };
 }
 
 // Coloured dot (by status) + name + birth info for a person-node selection.
@@ -458,13 +532,13 @@ function decorateFamilies(selection) {
 // Side-by-side field comparison for the clicked node, with differing values
 // highlighted. only_a / only_b nodes show the single present side. Works for
 // both person nodes and family (partner) nodes — both carry `a`/`b`.
-function showDetail(detail, node, data) {
+function showDetail(detail, node, cmp) {
   if (!detail) return;
   const a = node.a;
   const b = node.b;
   if (!a && !b) return; // nothing to show (e.g. unknown-partner family)
-  const aName = escapeHtml(baseContributorName(data.contributor_a || ''));
-  const bName = escapeHtml(baseContributorName(data.contributor_b || ''));
+  const aName = escapeHtml(baseContributorName(cmp.contributor_a || ''));
+  const bName = escapeHtml(baseContributorName(cmp.contributor_b || ''));
   const diffs = new Set(node.field_diffs || []);
 
   let statusText;
@@ -520,7 +594,7 @@ function showDetail(detail, node, data) {
 
 // Sets the button's visible label + tooltip to the contributor's name and wires
 // the click handler to export just that side's tree.
-function wireGedExport(btn, data, ctx, side, contributorName) {
+function wireGedExport(btn, cmp, ctx, side, contributorName) {
   if (!btn) return;
   const name = baseContributorName(contributorName || '');
   const label = btn.querySelector('.ged-side-label');
@@ -529,29 +603,32 @@ function wireGedExport(btn, data, ctx, side, contributorName) {
   btn.style.display = '';
   attachGedExport({
     downloadBtnId: btn.id,
-    buildModel: () => buildCompareGedcom(data, side),
+    buildModel: () => buildCompareGedcom(cmp, side),
     personName: ctx.personName,
     contributorName: name,
-    filePrefix: `compare-${data.direction}-${name}`,
+    filePrefix: `compare-${DIR_FILE[cmp.dir]}-${name}`,
   });
 }
 
-function buildCompareGedcom(data, side) {
-  return data.direction === 'descendants'
-    ? buildCompareDescendantGedcom(data.tree, side)
-    : buildCompareAncestorGedcom(data.tree, side);
+// One genealogist's own tree (not the merged comparison), covering whichever
+// sides are shown. In a bowtie the focus person is the single individual both
+// walkers hang their side off.
+function buildCompareGedcom(cmp, side) {
+  const { anc, desc } = cmp.trees;
+  const model = createGedcomModel();
+  const rootIndi = model.addIndividual((anc || desc)[side]);
+  if (anc) addCompareAncestors(model, anc, rootIndi, side);
+  if (desc) addCompareDescendants(model, desc, rootIndi, side);
+  return model;
 }
 
-// Builds one genealogist's ancestor tree from the merged comparison tree: walks
+// Adds one genealogist's ancestors from the merged comparison tree: walks
 // `parents`, keeping only nodes present on `side`. A subtree that exists for
 // just the other genealogist (status only_<otherSide>) has no data for `side`
 // at any depth, so checking the immediate node is enough to prune it whole.
 // The merged tree carries no marriage data for ancestors (see _align_ancestors),
 // so families here are spouse links only.
-function buildCompareAncestorGedcom(rootNode, side) {
-  const model = createGedcomModel();
-  const rootIndi = model.addIndividual(rootNode[side]);
-
+function addCompareAncestors(model, rootNode, rootIndi, side) {
   const walk = (node, indi) => {
     const parents = (node.parents || []).filter(p => p[side]);
     if (!parents.length) return;
@@ -574,15 +651,11 @@ function buildCompareAncestorGedcom(rootNode, side) {
   };
 
   walk(rootNode, rootIndi);
-  return model;
 }
 
 // Same idea for descendants: walks the interleaved family/person `children`,
 // keeping only the families and persons present on `side`.
-function buildCompareDescendantGedcom(rootNode, side) {
-  const model = createGedcomModel();
-  const rootIndi = model.addIndividual(rootNode[side]);
-
+function addCompareDescendants(model, rootNode, rootIndi, side) {
   const walk = (node, indi) => {
     const families = (node.children || []).filter(c => c.is_family && c[side]);
     families.forEach(fam => {
@@ -605,7 +678,6 @@ function buildCompareDescendantGedcom(rootNode, side) {
   };
 
   walk(rootNode, rootIndi);
-  return model;
 }
 
 // --- CSV export of the differences ------------------------------------------
@@ -624,12 +696,23 @@ function collectRows(node, gen, rows) {
   (node.children || []).forEach(c => collectRows(c, node.is_family ? gen + 1 : gen, rows));
 }
 
-function exportDifferences(data, ctx) {
-  const A = baseContributorName(data.contributor_a || '');
-  const B = baseContributorName(data.contributor_b || '');
+function exportDifferences(cmp, ctx) {
+  const A = baseContributorName(cmp.contributor_a || '');
+  const B = baseContributorName(cmp.contributor_b || '');
 
+  // A single direction keeps its usual 0..n generations. A bowtie numbers
+  // ancestors negatively (-1 parents, -2 grandparents, …) and descendants
+  // positively, with the focus person's row taken from the descendants side.
+  const { anc, desc } = cmp.trees;
   const rows = [];
-  collectRows(data.tree, 0, rows);
+  if (anc && desc) {
+    const ancRows = [];
+    collectRows(anc, 0, ancRows);
+    rows.push(...ancRows.filter(r => r.gen > 0).map(r => ({ ...r, gen: -r.gen })));
+    collectRows(desc, 0, rows);
+  } else {
+    collectRows(anc || desc, 0, rows);
+  }
   // Sort by generation, then by status (legend order); the stable sort keeps the
   // tree's natural within-group order.
   rows.sort((x, y) =>
@@ -663,11 +746,12 @@ function exportDifferences(data, ctx) {
 
   // Standard footer block (site + timestamp + URL via csvFooter) preceded by a
   // subject block naming the compared person, direction, and the two sources.
-  const dirLabel = t(ctx.dir === 'descendants' ? 'tree_descendants_title' : 'tree_ancestors_title');
+  const dirLabel = t(DIR_TITLE_KEY[cmp.dir]);
   const subject = [csvCell(`${t('compare_title')} – ${dirLabel}`)];
   if (ctx.personName) subject.push(csvRow([t('col_name'), ctx.personName]));
   subject.push(csvRow([t('tree_source'), `${A}, ${B}`]));
 
-  const filename = formatExportFilename(`compare-${ctx.dir}-${ctx.personName || ctx.dir}`, 'csv');
+  const prefix = DIR_FILE[cmp.dir];
+  const filename = formatExportFilename(`compare-${prefix}-${ctx.personName || prefix}`, 'csv');
   downloadCsv([csvRow(header), ...body, '', ...csvFooter(subject)], filename);
 }

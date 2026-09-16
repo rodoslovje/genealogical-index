@@ -13,23 +13,6 @@ import siteConfig from '@site-config';
 // extent and minY/maxY for the vertical one. Every layout writes screen
 // coordinates into d.x/d.y so this chrome works for all of them.
 
-// Bounds of a left-anchored tidy tree (root at horizontal 0, growing right).
-// Used by the compare view; the tree page layouts compute their own bounds
-// with boundsFromPoints().
-export function computeBounds(root, dx, dy) {
-  let x0 = Infinity, x1 = -x0, y1 = 0;
-  root.each(d => {
-    if (d.x > x1) x1 = d.x;
-    if (d.x < x0) x0 = d.x;
-    if (d.y > y1) y1 = d.y;
-  });
-  const minX = -dy / 3;
-  const minY = x0 - dx;
-  const maxX = y1 + 250;
-  const maxY = x1 + dx;
-  return { minX, minY, maxX, maxY, treeWidth: maxX - minX, treeHeight: maxY - minY };
-}
-
 // Bounds around a list of [horizontal, vertical] points, padded per side.
 export function boundsFromPoints(points, { left = 0, right = 0, top = 0, bottom = 0 } = {}) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
