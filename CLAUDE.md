@@ -152,3 +152,18 @@ Layout and geometry come from the tree page's layouts: `fan`/`circle` pass a `de
 English strings are bundled at build time; other locales are lazy-loaded on first selection. Site-specific strings (title, society name, intros) in `site.config.js` override the shared locale strings. Language preference is persisted in `localStorage`.
 
 Strings with counts go through `tf(key, ...args)` in `i18n.js`, which fills `{N}` placeholders and resolves plural blocks of the form `{N|form one|form two|…}` (with `#` standing for the number inside a form). Forms are listed in the locale's CLDR category order: `one|two|few|other` for Slovenian (singular/dual/paucal/plural), `one|few|other` for Croatian, `one|other` for the rest. Pass a number, or `{ n, html }` when the number must be wrapped in markup.
+
+### User Guide and Changelog
+
+Both are standalone pages that open in a new tab — `/guide` and `/changelog` (`guide.html` / `changelog.html`, linked from the footer and, for the guide, the navbar `?` button). Each is rendered at build time in the site's `defaultLang` so it is crawlable and works without JS, then switched to the reader's own language client-side by `page-lang.js`; in-app links pass `?lang=` so a reader lands in the language they were already reading. The HTML-producing helpers (`lib/guide-content.js`, `lib/changelog-content.js`) are pure and shared by the Vite plugins and `page-lang.js`, so build-time and runtime output cannot drift.
+
+The guide lives in the locale files as `help_manual` (plus the `help_*` fragments that `renderGuideManual()` splices in for auth and gated features). The changelog lives in `core/web/changelog/<lang>.js`, one array of `{ date, items: [{ title, text }] }`, newest first; English is the source of record and `mergeChangelog()` falls back to it per entry, so a release shows up before it has been translated.
+
+**Keep both current as part of the change that needs them — not afterwards.** When a change alters what a user sees or can do:
+
+1. **Update the user guide** in `core/web/i18n/en.js` first, then the other six locales (`sl`, `hr`, `de`, `it`, `fr`, `hu`). Wrong instructions are worse than missing ones, so check the claim against the code rather than the previous wording.
+2. **Add a changelog entry** under today's date in `core/web/changelog/en.js`, then translate it. Write it for a genealogist, not a developer: what they can now do and why it helps, in one to three sentences.
+3. **List features and functionality changes only.** Bug fixes, refactors, performance work with no visible effect, and infrastructure changes do not get an entry. A fix only earns one when it restores something users had noticed was broken.
+4. **Write for a reader of one site, not for whoever runs them.** Per-site configuration — gated features, branding, deployment, anything in `site.config.js` or `docker-compose.yml` — is invisible to an end user: on their site the feature either exists or never did. It gets no changelog entry. The guide already handles this the other way round, by gating the text itself (`renderGuideManual()`), so a site never documents UI it hides.
+
+Purely internal work (backend refactors, tooling, match-algorithm changes with no user-visible effect) needs neither. When in doubt about whether a change is user-visible, ask rather than guessing.

@@ -239,6 +239,9 @@ export default {
     footer_version: 'Version',
     footer_data_update: 'Data',
     footer_user_guide: 'User Guide',
+    footer_changelog: 'Changelog',
+    changelog_title: 'What’s new',
+    changelog_intro: 'New features and improvements, newest first. Smaller fixes are not listed.',
 
     // Other indexes
     other_indexes: 'Genealogical indexes:',
@@ -285,7 +288,7 @@ export default {
       <h3>5. System Login</h3>
       <p>To get full access to trees and matches, you need to log in. Open the login window by clicking the user icon (<strong>{USER_ICON}</strong>) in the top right corner. Enter the username and password you use to access the society's main portal.</p>`,
     help_matricula_mark: `the <strong>⛪</strong> mark next to the source's name indicates that the data comes from the Matricula Online index rather than from a personal family tree, `,
-    help_source_type_item: `<li><strong>Source:</strong> In the search field, you can enter the name of one or more sources, separated by commas. Using the dropdown menu next to it, you can also restrict the search to a specific source type: <em>Family Trees</em>, <em>Matricula Index</em>, or <em>Geneanet Cemeteries</em> (all sources are included by default).</li>`,
+    help_source_type_item: `<li><strong>Source:</strong> In the search field, you can enter the name of one or more sources, separated by commas. Using the dropdown menu next to it, you can also restrict the search to a specific source type: <em>Family Trees</em>, <em>Matricula Index</em>, <em>Geneanet Cemeteries</em>, or <em>Military Records</em> (all sources are included by default).</li>`,
     help_matricula_cols: ` If the source contributes data from more than one place (its own family tree, the Matricula index, Geneanet cemeteries…), the grid shows a <em>Total</em> column followed by one column per source.`,
     help_manual: `
       <h2>User Manual</h2>
@@ -327,7 +330,7 @@ export default {
         <li><strong>Expandable Fields:</strong> Columns such as <em>Parents</em>, <em>Partners</em>, and <em>Children</em> display the number of persons. By clicking the number, you expand the list. To expand all at once, you can use the <strong>⤢ Expand</strong> button above the table, and for hiding the <strong>⤡ Collapse</strong> button.</li>
         <li><strong>Person and Family Details:</strong> By clicking a blue colored name in the table, you perform a new search and display all records for that specific person or family. By clicking a partner, you search for their family. Similarly, when viewing parents, clicking the label (<em>Parents</em>, <em>Husband</em>, or <em>Wife</em>) displays their family, while clicking an individual parent's name searches only for that person.</li>
         <li><strong>Private Records:</strong> For some individuals, the label <em>&lt;private&gt;</em> is displayed instead of a name or surname. Such records have no link for further search.</li>
-        <li><strong>Tree:</strong> Next to certain people (parents, children, partners), you will notice a tree icon (<strong>🌳</strong>). Clicking it opens an interactive family tree of the selected person: by default a <em>bowtie</em> with ancestors on the left and descendants on the right, switchable to ancestors or descendants only. The chart can be drawn as a classic <em>tree</em> or as a <em>fan</em> (optionally a full <em>circle</em>), limited to a chosen number of generations, and downloaded as SVG, CSV or GEDCOM.{auth_tree}</li>
+        <li><strong>Tree:</strong> A tree icon (<strong>🌳</strong>) appears next to the surname of every person whose relatives are known. Clicking it opens an interactive family tree of that person: by default a <em>bowtie</em> showing ancestors and descendants at once, which you can narrow down to ancestors or descendants only. The chart can be drawn as a <em>fan</em> (the default, with the ancestors in the upper half and the descendants in the lower) or as a classic <em>tree</em> (ancestors to the left, descendants to the right); for ancestors or descendants alone, the fan can also be closed into a full <em>circle</em>. The view can be limited to a chosen number of generations and downloaded as SVG, CSV or GEDCOM.{auth_tree}</li>
         <li><strong>Data Export:</strong> By clicking the <strong>CSV</strong> button above the table, you download the current results to your computer in a tabular format.</li>
         <li><strong>Collapsible tables and sections:</strong> By clicking the title of a table or section (e.g. <em>Person</em>, <em>Family</em>, or <em>Matches</em>), you can temporarily hide its content and reveal it again with the next click.</li>
       </ul>
@@ -343,9 +346,11 @@ export default {
         <li><strong>📄</strong> – other historical sources (archives, parish and society websites)</li>
       </ul>
       <p>Next to some other data, smaller marginal icons appear with additional information: {matricula_mark}the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
-      <h4>Ancestors and Descendants Tree</h4>
+      <h4>The Family Tree Page</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>
+        <li><strong>Toolbar:</strong> above the chart you choose the drawing (<em>Fan</em> or <em>Tree</em>), the direction (<em>Both</em>, <em>Ancestors</em> or <em>Descendants</em>) and the number of <em>Generations</em> shown. The fan opens at six generations and the tree shows all of them; the choices offered reach only as deep as the data itself.</li>
+        <li><strong>Opening a person:</strong> clicking a name in the chart searches the index for that person. The genealogist the tree comes from is named in the bottom left corner.</li>
         <li><strong>Zoom in and out:</strong> with the <strong>➕</strong> and <strong>➖</strong> buttons in the bottom right corner or with the mouse wheel.</li>
         <li><strong>Panning:</strong> you can drag the tree with the mouse (or finger on touch screens).</li>
         <li><strong>Export:</strong> with the buttons in the top right corner you can download the tree as an <strong>SVG</strong> image, a <strong>CSV</strong> table, or a <strong>GEDCOM</strong> file for import into other genealogy software. The exported GEDCOM file can be merged with your own GEDCOM file using a tool such as <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
@@ -376,7 +381,7 @@ export default {
         <li><strong>Match badges:</strong> Next to the confidence score, badges may appear: <span class="match-badge match-badge-add">+</span> (the other source has data for a field that is missing here), <span class="match-badge match-badge-link">🔗</span> (the other source has a link, e.g. to a grave record, that is missing here), and <span class="match-badge match-badge-diff">≠</span> (the values don't match between the two sources), each with a count of the fields it applies to.</li>
         <li><strong>Filtering matches:</strong> Each section (<em>Persons</em>, <em>Families</em>) has a search field next to its title for further narrowing the displayed matches by name, surname, date, or place, as well as <span class="match-badge match-badge-add">+</span> New, <span class="match-badge match-badge-link">🔗</span> Links, and <span class="match-badge match-badge-diff">≠</span> Different buttons to show only the pairs carrying the corresponding badge.</li>
         <li><strong>Exporting matches:</strong> Clicking the <strong>CSV</strong> button next to each section's title exports the displayed matching records. The export can be used to complete your own tree, for example with a tool such as <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
-        <li><strong>Tree comparison:</strong> for a matching person, the <strong>🌳 Compare</strong> button opens a side-by-side view of both sources' family trees. Every person is colour-coded — <em>match</em>, <em>minor difference</em>, <em>key difference</em> (name, surname or birth date differs), or present in <em>only one</em> of the trees — and clicking a person reveals a field-by-field comparison, including source links. You can switch between <em>ancestors</em> and <em>descendants</em>, jump to any person from the coloured legend, and download the comparison as a <strong>CSV</strong> table or an <strong>SVG</strong> image.</li>
+        <li><strong>Tree comparison:</strong> for a matching person, the <strong>🌳 Compare</strong> button opens a side-by-side view of both sources' family trees. Every person is colour-coded — <em>match</em>, <em>minor difference</em>, <em>key difference</em> (name, surname or birth date differs), or present in <em>only one</em> of the trees — and clicking a person reveals a field-by-field comparison, including source links. The comparison offers the same drawings, directions and generation limit as the tree page; you can jump to any person from the coloured legend, and download the result as a <strong>CSV</strong> table, an <strong>SVG</strong> image, or a <strong>GEDCOM</strong> file for either of the two genealogists.</li>
       </ul>
       {auth_section}
     `,

@@ -24,6 +24,7 @@ const RING = 118;     // person ring width
 const FAM_RING = 34;  // family / marriage band width
 const TAU = 2 * Math.PI;
 const CHAR_W = 6.6;   // approx. glyph width at the 12px label size, for fitting
+const GLYPH_MIN = 7;  // smallest font size a lone ⚭ is still legible at
 const BOWTIE_GAP = 0.06;  // radians trimmed from each half at the horizontal axis (~3.5°)
 
 // How wedges are painted and linked. The tree page uses the defaults (sex
@@ -184,6 +185,63 @@ function wedgeLines(d) {
   return [personLabel(d) || '?', d.data.date_of_birth || '', birthPlaceShort(d)].filter(Boolean);
 }
 
+const yearOf = date => ((date || '').match(/\d{4}/g) || []).pop() || '';
+
+// Progressively poorer versions of a marriage band's text, richest first. The
+// thin bands rarely fit their full text, and a cut-off "⚭ Ma…" says nothing —
+// so they drop detail instead of ellipsizing, down to the bare ⚭ ring, and the
+// tooltip keeps everything. Person wedges keep their one (ellipsizable)
+// variant: a shortened name still identifies someone.
+function wedgeVariants(d) {
+  if (d.data.is_marriage) {
+    const m = d.data.marriage;
+    const date = (m.date || '').trim();
+    const place = m.place ? m.place.split(',')[0].trim() : '';
+    return dropRepeats([
+      [`⚭ ${date}`.trim(), place],
+      [`⚭ ${date}`.trim()],
+      [`⚭ ${yearOf(date)}`.trim()],
+      ['⚭'],
+    ]);
+  }
+  if (d.data.is_family) {
+    const p = d.data.partner;
+    const date = ((d.data.marriage || {}).date || '').trim();
+    const full = partnerLabel(p);
+    const short = isPartnerUnknown(p) ? '' : (p.surname || p.name || '');
+    return dropRepeats([
+      [`⚭ ${full}`, date],
+      [`⚭ ${full}`],
+      [`⚭ ${short}`.trim()],
+      ['⚭'],
+    ]);
+  }
+  return [wedgeLines(d)];
+}
+
+// Drops empty lines, then variants that ended up identical to an earlier one.
+function dropRepeats(variants) {
+  const out = [];
+  variants.map(v => v.filter(Boolean)).forEach(v => {
+    if (v.length && out.every(prev => prev.join('\n') !== v.join('\n'))) out.push(v);
+  });
+  return out;
+}
+
+// Everything the wedge knows, for the hover tooltip — full places and the
+// details the wedge itself had no room for.
+function wedgeTitle(d) {
+  if (d.data.is_marriage) {
+    const m = d.data.marriage;
+    return [`⚭ ${m.date || ''}`.trim(), m.place || ''].filter(Boolean).join(' · ');
+  }
+  if (d.data.is_family) {
+    const m = d.data.marriage || {};
+    return [`⚭ ${partnerLabel(d.data.partner)}`, m.date || '', m.place || ''].filter(Boolean).join(' · ');
+  }
+  return [personLabel(d) || '?', d.data.date_of_birth || '', d.data.place_of_birth || ''].filter(Boolean).join(' · ');
+}
+
 function isTextPrivate(d) {
   if (d.data.is_marriage) {
     const { husband: h, wife: w } = d.data;
@@ -203,6 +261,26 @@ function fit(text, width) {
   return text.length <= max ? text : text.slice(0, Math.max(1, max - 1)) + '…';
 }
 
+const fitsWhole = (text, width) => text.length * CHAR_W <= width;
+
+// The lines to actually draw, given at most `maxLines` rows and `widthOf(i, n)`
+// px available for line i of an n-line block (both already normalised to the
+// 12px reference size). Marriage bands take the richest variant that fits
+// whole — or nothing, if not even a ⚭ fits; persons take their single variant,
+// ellipsized.
+function chooseLines(d, maxLines, widthOf) {
+  const variants = wedgeVariants(d);
+  if (!d.data.is_family) {
+    const lines = variants[0].slice(0, maxLines);
+    return lines.map((l, i) => fit(l, widthOf(i, lines.length))).filter(Boolean);
+  }
+  for (const variant of variants) {
+    const lines = variant.slice(0, maxLines);
+    if (lines.every((l, i) => fitsWhole(l, widthOf(i, lines.length)))) return lines;
+  }
+  return [];
+}
+
 function drawWedges(g, nodes, ctx, dec) {
   const arcGen = d3.arc()
       .startAngle(d => d.a0).endAngle(d => d.a1)
@@ -213,13 +291,16 @@ function drawWedges(g, nodes, ctx, dec) {
     .data(nodes)
     .join('g');
 
+  // On the group, not the wedge path, so the tooltip also shows over the label
+  // — which is where a band that had to drop detail needs it most.
+  node.append('title')
+      .text(wedgeTitle);
+
   node.append('path')
       .attr('d', arcGen)
       .attr('fill', dec.fill)
       .attr('stroke', '#fff')
-      .attr('stroke-width', 1.5)
-    .append('title')
-      .text(d => wedgeLines(d).join(' · '));
+      .attr('stroke-width', 1.5);
 
   const hrefOf = d => dec.href(d, ctx);
   const label = node.append(d =>
@@ -252,7 +333,7 @@ function drawWedges(g, nodes, ctx, dec) {
     if (isRoot) {
       const width = 2 * R0 * 0.9, height = 2 * R0 * 0.9;
       const size = 12, lineH = size * 1.2;
-      const fitted = wedgeLines(d).slice(0, Math.floor(height / lineH)).map(l => fit(l, width)).filter(Boolean);
+      const fitted = chooseLines(d, Math.floor(height / lineH), () => width);
       const text = el.append('text').attr('text-anchor', 'middle').attr('font-size', `${size}px`).attr('fill', baseFill);
       fitted.forEach((line, i) => lineStyle(text.append('tspan')
           .attr('x', 0)
@@ -269,14 +350,14 @@ function drawWedges(g, nodes, ctx, dec) {
       const height = depth * 0.85;
       const size = arcLen < 70 ? 10 : 12;
       const lineH = size * 1.2;
-      const lines = wedgeLines(d).slice(0, Math.max(1, Math.floor(height / lineH)));
+      // Radius of line i of an n-line block: stacked outward→inward for upright
+      // wedges, inward→outward when flipped.
+      const radiusOf = (i, n) => flip ? rMid - ((n - 1) / 2 - i) * lineH : rMid + ((n - 1) / 2 - i) * lineH;
+      const widthOf = (i, n) => (d.a1 - d.a0) * radiusOf(i, n) * 0.9 * (12 / size);
+      const lines = chooseLines(d, Math.max(1, Math.floor(height / lineH)), widthOf);
       const n = lines.length;
       lines.forEach((line, i) => {
-        // Stack outward→inward for upright wedges, inward→outward when flipped.
-        const r = flip ? rMid - ((n - 1) / 2 - i) * lineH : rMid + ((n - 1) / 2 - i) * lineH;
-        const width = (d.a1 - d.a0) * r * 0.9;
-        const fittedLine = fit(line, width * (12 / size));
-        if (!fittedLine) return;
+        const r = radiusOf(i, n);
         const id = `${idPrefix}-${++idSeq}`;
         el.append('path')
             .attr('id', id)
@@ -290,7 +371,7 @@ function drawWedges(g, nodes, ctx, dec) {
         lineStyle(text.append('textPath')
             .attr('href', `#${id}`)
             .attr('xlink:href', `#${id}`)
-            .attr('startOffset', '50%'), i).text(fittedLine);
+            .attr('startOffset', '50%'), i).text(line);
       });
       return;
     }
@@ -301,11 +382,25 @@ function drawWedges(g, nodes, ctx, dec) {
     const flip = a > 180;
     const transform = `rotate(${a - 90}) translate(${rMid},0) rotate(${flip ? 180 : 0})`;
     const width = depth * 0.9, height = arcLen * 0.85;
-    if (width < 2 * CHAR_W || height < 11) return;
+    if (width < 2 * CHAR_W || height < 11) {
+      // Too thin for a line of text. A marriage band still marks itself with a
+      // ⚭ shrunk to the band's width — the ring is the information, the
+      // tooltip has the rest — while a person wedge stays blank.
+      if (!d.data.is_family) return;
+      const size = Math.min(12, Math.floor(height));
+      if (size < GLYPH_MIN || width < GLYPH_MIN) return;
+      el.append('text')
+          .attr('transform', transform)
+          .attr('text-anchor', 'middle')
+          .attr('dy', '0.35em')
+          .attr('font-size', `${size}px`)
+          .attr('fill', baseFill)
+          .text('⚭');
+      return;
+    }
     const size = width < 70 ? 10 : 12;
     const lineH = size * 1.2;
-    const lines = wedgeLines(d).slice(0, Math.max(1, Math.floor(height / lineH)));
-    const fitted = lines.map(l => fit(l, width * (12 / size))).filter(Boolean);
+    const fitted = chooseLines(d, Math.max(1, Math.floor(height / lineH)), () => width * (12 / size));
     if (!fitted.length) return;
     const text = el.append('text')
         .attr('transform', transform)

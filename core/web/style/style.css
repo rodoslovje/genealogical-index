@@ -940,7 +940,17 @@ body.tree-view .section-bar {
   gap: 24px;
   justify-self: start;
 }
-.footer-center { justify-self: center; }
+/* Guide + Changelog sit together in the middle cell, separated by a thin
+   divider rather than a bullet so they read as two peers, not a list. */
+.footer-center {
+  justify-self: center;
+  display: flex;
+  gap: 16px;
+}
+.footer-center .footer-link + .footer-link {
+  border-left: 1px solid var(--srd-line);
+  padding-left: 16px;
+}
 .footer-right { justify-self: end; }
 .footer-link {
   color: var(--srd-ink-subtle);
@@ -1795,6 +1805,27 @@ a.deceased-indicator:hover {
   color: var(--srd-accent);
   text-decoration: underline;
 }
+
+/* --- Changelog ------------------------------------------------------------
+ * Shares .help-content typography with the guide. Each release is a dated
+ * section; the date is set in the monospace-ish sans at brand colour so the
+ * eye can run down the left edge and find a release, with the entries
+ * themselves reading as ordinary prose bullets. */
+.changelog-entry { margin-bottom: 1.8rem; }
+.changelog-entry:last-child { margin-bottom: 0; }
+.help-content .changelog-date {
+  margin-top: 0;
+  margin-bottom: 0.6rem;
+  padding-bottom: 4px;
+  font-family: var(--srd-font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--srd-brand);
+  border-bottom: 1px solid var(--srd-line);
+}
+.changelog-entry ul { margin-bottom: 0; }
+.changelog-entry li { margin-bottom: 0.7rem; }
 
 /* --- Surname scope on the matches summary ---------------------------------
    The matches table carries two filters. The header bar's `.table-filter-
