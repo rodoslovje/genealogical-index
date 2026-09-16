@@ -171,25 +171,30 @@ def _apply_session_params(dbapi_conn, _record):
 # Deliberately conservative: only well-documented register equivalences.
 # Mathias (matija) and Matthaeus (matevz) stay separate on purpose — priests
 # did conflate them, but merging them here would be a judgement call.
-# Ambiguous diminutives (tine, tina, dora, alenka, ...) are left out because
-# they map to several distinct names.
+# Ambiguous diminutives (tina, dora, alenka, ...) are left out because they map
+# to several distinct names. "tine" is the borderline case: it serves Valentin,
+# Martin, Avgustin and Konstantin, but in this dataset day-precise cross-
+# contributor pairs resolve it to Valentin 71% of the time vs. Martin 8%, so it
+# sits under "valentinus" only. A variant may appear in exactly one group —
+# name_synonyms.variant is a PRIMARY KEY and the seed INSERT has no ON CONFLICT,
+# so listing a name twice aborts the whole recompute.
 NAME_SYNONYM_GROUPS = {
     # male
     "johannes": ["joannes", "johann", "hans", "janez", "ivan", "jan", "anze", "janko"],
     "josephus": ["joseph", "josef", "jozef", "joze", "josip"],
     "georgius": ["georg", "jurij", "juraj", "jure", "juri"],
-    "franciscus": ["franz", "franc", "francisek", "franjo", "frane", "fran"],
-    "antonius": ["anton", "antun", "ante", "tone"],
+    "franciscus": ["franz", "franc", "francisek", "franjo", "frane", "fran", "franci", "francek"],
+    "antonius": ["anton", "antun", "ante", "tone", "toni", "tony"],
     "michael": ["mihael", "miha", "mihovil", "miho"],
     "jacobus": ["jacob", "jakob", "jaka", "jakov"],
     "petrus": ["peter", "petar", "pero"],
     "paulus": ["paul", "pavel", "pavao", "pavle"],
     "andreas": ["andrej", "andrija", "andraz"],
-    "stephanus": ["stephan", "stefan", "stjepan"],
+    "stephanus": ["stephan", "stefan", "stjepan", "stefi"],
     "laurentius": ["lorenz", "lovrenc", "lovro", "lovre"],
-    "gregorius": ["gregor", "grega", "grgur"],
+    "gregorius": ["gregor", "grega", "grgur", "grga"],
     "bartholomaeus": ["jernej", "bartol", "bartolomej"],
-    "valentinus": ["valentin"],
+    "valentinus": ["valentin", "tine"],
     "vincentius": ["vincenc", "vinko", "cene"],
     "aloysius": ["alois", "alojz", "alojzij", "lojze", "vekoslav"],
     "ignatius": ["ignaz", "ignac", "ignacij", "nace"],
@@ -198,10 +203,10 @@ NAME_SYNONYM_GROUPS = {
     "primus": ["primoz"],
     "urbanus": ["urban"],
     "blasius": ["blaz", "vlaho"],
-    "nicolaus": ["nikolaj", "nikola", "miklavz", "niko"],
-    "sebastianus": ["sebastian", "sebastjan", "bostjan"],
+    "nicolaus": ["nikolaj", "nikola", "miklavz", "niko", "miko"],
+    "sebastianus": ["sebastian", "sebastjan", "sebastijan", "bostjan"],
     "christophorus": ["kristof", "kristofor"],
-    "thomas": ["tomaz", "tomo", "toma"],
+    "thomas": ["tomaz", "tomo", "toma", "tomi"],
     "martinus": ["martin"],
     "leopoldus": ["leopold", "lavoslav", "polde"],
     "theodorus": ["teodor", "todor", "bozidar"],
@@ -215,13 +220,20 @@ NAME_SYNONYM_GROUPS = {
     "augustinus": ["augustin", "avgustin"],
     "simon": ["simun", "sime"],
     # female
-    "maria": ["marija", "mica", "micka"],
+    "maria": ["marija", "mica", "micka", "mina", "minka", "marica"],
     "anna": ["ana", "anica", "ancka"],
     "johanna": ["johana", "ivana", "ivanka"],
     "catharina": ["katharina", "katarina", "kata", "katra", "katica"],
     "elisabeth": ["elisabetha", "elizabeta", "spela", "jelisava"],
     "margaretha": ["margareta", "marjeta", "meta", "marjetica"],
-    "agnes": ["agneza", "neza", "janja"],
+    # Agnes and Agatha are distinct saints, merged here as a deliberate call:
+    # the registers conflate them often enough in this dataset (32% of
+    # day-precise cross-contributor "agata" pairs are recorded "neza" by the
+    # other genealogist) that keeping them apart split more real people than it
+    # protected. "agatha" must stay listed explicitly — it was this group's
+    # canon key before the merge, and canon keys are the one entry that gets
+    # into name_synonyms for free.
+    "agnes": ["agneza", "neza", "nezka", "janja", "agata", "agatha", "agica"],
     "gertrudis": ["gertruda", "jera", "jedert", "jedrt"],
     "helena": ["jelena", "jela"],
     "lucia": ["lucija", "lucka"],
@@ -238,7 +250,6 @@ NAME_SYNONYM_GROUPS = {
     "theresia": ["terezija", "reza", "rezka"],
     "ursula": ["urska", "ursa"],
     "dorothea": ["doroteja"],
-    "agatha": ["agata"],
     "christina": ["kristina"],
 }
 
