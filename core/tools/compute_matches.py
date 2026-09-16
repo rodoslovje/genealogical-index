@@ -219,6 +219,7 @@ NAME_SYNONYM_GROUPS = {
     "augustus": ["august", "avgust"],
     "augustinus": ["augustin", "avgustin"],
     "simon": ["simun", "sime"],
+    "ladislaus": ["ladislav", "vladislav"],
     # female
     "maria": ["marija", "mica", "micka", "mina", "minka", "marica"],
     "anna": ["ana", "anica", "ancka"],
