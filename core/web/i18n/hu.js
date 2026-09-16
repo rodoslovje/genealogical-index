@@ -287,7 +287,11 @@ export default {
     help_auth_section: `
       <h3>5. Bejelentkezés</h3>
       <p>A családfákhoz és egyezésekhez való teljes hozzáféréshez be kell jelentkeznie. Nyissa meg a bejelentkezési ablakot a jobb felső sarokban található felhasználó ikonra (<strong>{USER_ICON}</strong>) kattintva. Adja meg azt a felhasználónevet és jelszót, amelyet a társaság fő portáljának eléréséhez használ.</p>`,
-    help_matricula_mark: `a forrás neve melletti <strong>⛪</strong> jel azt jelenti, hogy az adatok a Matricula Online indexből származnak, nem pedig személyes családfából, `,
+    help_source_marks: `<p>A <em>Forrás</em> oszlopban a név utáni jel mutatja, milyen típusú forrásból származik a rekord — ugyanazok a típusok, amelyekre a keresés is korlátozható:</p>`,
+    help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula index</em>: a Matricula Online beszkennelt anyakönyveiből indexelt rekordok</li>`,
+    help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet temetők</em>: sírkövekről rögzített rekordok</li>`,
+    help_source_mark_military: `<li><strong>🎖</strong> – <em>Katonai forrásanyagok</em>: háborús áldozatok rekordjai</li>`,
+    help_source_mark_tree: `<li><strong>nincs jel</strong> – a genealógus saját családfája</li>`,
     help_source_type_item: `<li><strong>Forrás:</strong> A keresőmezőbe egy vagy több forrás nevét is beírhatja, vesszővel elválasztva. A mellette lévő legördülő menü segítségével a keresést egy adott forrástípusra is korlátozhatja: <em>Családfák</em>, <em>Matricula index</em>, <em>Geneanet temetők</em> vagy <em>Katonai forrásanyagok</em> (alapértelmezés szerint minden forrás szerepel).</li>`,
     help_matricula_cols: ` Ha a forrás több helyről szolgáltat adatokat (saját családfa, Matricula index, Geneanet temetők…), a táblázat az <em>Összesen</em> oszlop mellett forrásonként egy-egy oszlopot mutat.`,
     help_manual: `
@@ -330,6 +334,7 @@ export default {
         <li><strong>Kibontható mezők:</strong> Olyan oszlopok, mint a <em>Szülők</em>, <em>Partnerek</em> és <em>Gyermekek</em>, a személyek számát mutatják. A számra kattintva kibonthatja a listát. Az összes egyszerre történő kibontásához használhatja a táblázat feletti <strong>⤢ Kibontás</strong> gombot, az elrejtéshez pedig az <strong>⤡ Összecsukás</strong> gombot.</li>
         <li><strong>Személy és család részletei:</strong> Ha a táblázatban egy kék színű névre kattint, új keresést hajt végre, és megjeleníti az adott személyhez vagy családhoz tartozó összes rekordot. Partnerre kattintva megkeresi az ő családját. Hasonlóképpen, a szülők megtekintésekor a címkére (<em>Szülők</em>, <em>Férj</em> vagy <em>Feleség</em>) kattintva megjelenik az ő családjuk, míg egy adott szülő nevére kattintva csak arra a személyre keres.</li>
         <li><strong>Privát rekordok:</strong> Egyes személyeknél a név vagy vezetéknév helyett a <em>&lt;private&gt;</em> címke jelenik meg. Ezek a rekordok nem tartalmaznak linket a további kereséshez.</li>
+        <li><strong>Forrás:</strong> Az utolsó oszlop megmutatja, melyik forrásból származik a rekord. A névre kattintva megnyílik az adott forrás oldala a statisztikájával, a leggyakoribb vezetéknevekkel és a más forrásokkal való egyezésekkel. A név melletti <strong>🕯</strong> jel elhunyt genealógust jelöl; ha van emlékoldal, a gyertyára kattintva nyílik meg.</li>
         <li><strong>Családfa:</strong> Fa ikon (<strong>🌳</strong>) jelenik meg minden olyan személy vezetékneve mellett, akinek ismertek a rokonai. Rákattintva megnyílik az adott személy interaktív családfája: alapértelmezés szerint <em>homokóra</em> nézetben, amely egyszerre mutatja az őseket és a leszármazottakat, és leszűkíthető csak az ősökre vagy csak a leszármazottakra. A rajz lehet <em>legyező</em> (alapértelmezett, az ősökkel a felső, a leszármazottakkal az alsó félkörben) vagy klasszikus <em>fa</em> (ősök balra, leszármazottak jobbra); ha csak az ősök vagy csak a leszármazottak láthatók, a legyező teljes <em>körré</em> is zárható. A nézet a kiválasztott számú generációra korlátozható, és letölthető SVG, CSV vagy GEDCOM formátumban.{auth_tree}</li>
         <li><strong>Adat exportálása:</strong> A táblázat feletti <strong>CSV</strong> gombra kattintva letöltheti az aktuális eredményeket a számítógépére táblázatos formátumban.</li>
         <li><strong>Összecsukható táblázatok és szakaszok:</strong> Egy táblázat vagy szakasz címére (pl. <em>Személyek</em>, <em>Családok</em> vagy <em>Egyezések</em>) kattintva ideiglenesen elrejtheti a tartalmát, és a következő kattintással újra megjelenítheti.</li>
@@ -345,7 +350,8 @@ export default {
         <li><strong>📰</strong> – Szlovénia Digitális Könyvtára (dLib)</li>
         <li><strong>📄</strong> – egyéb történelmi források (levéltárak, plébániai és egyesületi weboldalak)</li>
       </ul>
-      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: {matricula_mark}a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
+      {source_marks}
+      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
       <h4>A családfa oldal</h4>
       <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
       <ul>

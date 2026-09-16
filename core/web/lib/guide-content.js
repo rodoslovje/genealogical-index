@@ -6,7 +6,7 @@
 export const USER_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
 
 /** Resolves the {auth_*} / {source_type_item} / {matricula_cols} /
- *  {matricula_mark} / {USER_ICON} placeholders in help_manual against a
+ *  {source_marks} / {USER_ICON} placeholders in help_manual against a
  *  given strings object
  *  (either the live i18n lookup or a static locale module). `hasAuth` gates the
  *  login-only sections; `siteConfig.gatedFeatures` gates the special-source
@@ -27,9 +27,20 @@ export function renderGuideManual(strings, hasAuth, siteConfig = {}) {
   // Matricula-specific; the bullet's first sentence is always true, so it stays
   // inline and only this clause is gated.
   const matriculaCols = matriculaGated ? '' : (strings.help_matricula_cols || '');
-  // The ⛪ marginal mark only ever appears on Matricula sources, so drop its
-  // mid-sentence clause from the "Icons in rows" paragraph when matricula is gated.
-  const matriculaMark = matriculaGated ? '' : (strings.help_matricula_mark || '');
+
+  // The ⛪ / 🪦 / 🎖 marks in the Source column exist only for the special
+  // sources a site actually shows, so the list is assembled from the ungated
+  // ones. With none left there is only one kind of source and no mark ever
+  // appears, so the whole block (intro, list, and the "no mark" line that only
+  // makes sense as a contrast) goes away.
+  const markItems = [
+    matriculaGated              ? '' : (strings.help_source_mark_matricula || ''),
+    gated.includes('geneanet')  ? '' : (strings.help_source_mark_geneanet  || ''),
+    gated.includes('military')  ? '' : (strings.help_source_mark_military  || ''),
+  ].filter(Boolean);
+  const sourceMarks = markItems.length
+    ? `${strings.help_source_marks || ''}\n      <ul>\n        ${markItems.join('\n        ')}\n        ${strings.help_source_mark_tree || ''}\n      </ul>`
+    : '';
 
   return (strings.help_manual || '')
     .replace('{auth_nav}', authNav)
@@ -38,5 +49,5 @@ export function renderGuideManual(strings, hasAuth, siteConfig = {}) {
     .replace('{auth_section}', authSection)
     .replace('{source_type_item}', sourceTypeItem)
     .replace('{matricula_cols}', matriculaCols)
-    .replace('{matricula_mark}', matriculaMark);
+    .replace('{source_marks}', sourceMarks);
 }

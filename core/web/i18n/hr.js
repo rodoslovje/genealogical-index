@@ -287,7 +287,11 @@ export default {
     help_auth_section: `
       <h3>5. Prijava u sustav</h3>
       <p>Za potpun pristup stablima i podudaranjima morate se prijaviti. Prozor za prijavu otvarate klikom na ikonu osobe (<strong>{USER_ICON}</strong>) gore desno. U prozor upišite korisničko ime i lozinku koje inače upotrebljavate za pristup mrežnom portalu matičnoga rodoslovnog društva.</p>`,
-    help_matricula_mark: `oznaka <strong>⛪</strong> uz ime izvora znači da podaci potječu iz indeksa Matricula Online, a ne iz osobnoga obiteljskog stabla, `,
+    help_source_marks: `<p>U stupcu <em>Izvor</em> oznaka iza imena govori iz koje vrste izvora zapis potječe — to su iste vrste na koje možete ograničiti pretraživanje:</p>`,
+    help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula indeks</em>: zapisi indeksirani iz skeniranih matičnih knjiga na Matriculi Online</li>`,
+    help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet groblja</em>: zapisi s nadgrobnih spomenika</li>`,
+    help_source_mark_military: `<li><strong>🎖</strong> – <em>Vojni izvori</em>: zapisi o žrtvama ratova</li>`,
+    help_source_mark_tree: `<li><strong>bez oznake</strong> – rodoslovčevo vlastito obiteljsko stablo</li>`,
     help_source_type_item: `<li><strong>Izvor:</strong> U polje za pretraživanje možete unijeti naziv jednog ili više izvora odvojenih zarezom. Padajućim izbornikom uz njega pretraživanje možete ograničiti i na određenu vrstu izvora: <em>Obiteljska stabla</em>, <em>Matricula indeks</em>, <em>Geneanet groblja</em> ili <em>Vojni izvori</em> (prema zadanim su postavkama uključeni svi izvori).</li>`,
     help_matricula_cols: ` Ako izvor pridonosi podatke iz više izvora (vlastito obiteljsko stablo, Matricula indeks, Geneanet groblja…), mreža uz stupac <em>Ukupno</em> prikazuje još po jedan stupac za svaki izvor.`,
     help_manual: `
@@ -330,6 +334,7 @@ export default {
         <li><strong>Proširiva polja:</strong> Stupci <em>Roditelji</em>, <em>Partneri</em> i <em>Djeca</em> prikazuju broj osoba. Klikom na broj proširujete popis. Za prikaz svih odjednom upotrijebite gumb <strong>⤢ Proširi</strong> iznad tablice, a za skrivanje gumb <strong>⤡ Sažmi</strong>.</li>
         <li><strong>Pojedinosti o osobama i obiteljima:</strong> Klikom na plavo obojeno ime u tablici pokrećete novo pretraživanje i prikazujete sve zapise samo za tu odabranu osobu ili obitelj. Klikom na partnera pronalazite njihovu zajedničku obitelj. Slično tome, pri prikazu roditelja klikom na oznaku (<em>Roditelji</em>, <em>Muž</em> ili <em>Žena</em>) prikazujete njihovu obitelj, a klikom na ime pojedinog roditelja pretražujete samo tu osobu.</li>
         <li><strong>Privatni zapisi:</strong> Kod nekih je osoba umjesto imena ili prezimena prikazana oznaka <em>&lt;private&gt;</em>. Takvi zapisi nemaju poveznicu za daljnje pretraživanje.</li>
+        <li><strong>Izvor:</strong> Posljednji stupac govori iz kojega izvora zapis potječe. Klikom na ime otvarate stranicu toga izvora s njegovom statistikom, najčešćim prezimenima i podudaranjima s drugim izvorima. Oznaka <strong>🕯</strong> uz ime znači da je rodoslovac preminuo; ako postoji spomen-stranica, otvarate je klikom na svijeću.</li>
         <li><strong>Stablo:</strong> Ikona stabla (<strong>🌳</strong>) pojavljuje se uz prezime svake osobe kojoj su poznati srodnici. Klikom na nju otvarate interaktivno rodoslovno stablo te osobe: zadano je <em>leptir</em>, koji istodobno prikazuje pretke i potomke, a možete ga ograničiti samo na pretke ili samo na potomke. Prikaz može biti <em>lepeza</em> (zadano, s precima u gornjoj polovici i potomcima u donjoj) ili klasično <em>stablo</em> (preci lijevo, potomci desno); kada su prikazani samo preci ili samo potomci, lepezu možete zatvoriti i u puni <em>krug</em>. Prikaz možete ograničiti na odabrani broj generacija i preuzeti kao SVG, CSV ili GEDCOM.{auth_tree}</li>
         <li><strong>Izvoz podataka:</strong> Klikom na gumb <strong>CSV</strong> iznad tablice preuzimate trenutačne rezultate na svoje računalo u tabličnom obliku.</li>
         <li><strong>Sklopive tablice i odjeljci:</strong> Klikom na naslov tablice ili odjeljka (npr. <em>Osobe</em>, <em>Obitelji</em> ili <em>Podudaranja</em>) možete privremeno sakriti sadržaj; sljedećim klikom sadržaj se ponovno prikazuje.</li>
@@ -345,7 +350,8 @@ export default {
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
         <li><strong>📄</strong> – ostali povijesni izvori (arhivi, župne i društvene mrežne stranice)</li>
       </ul>
-      <p>Uz neke druge podatke pojavljuju se i manje rubne ikone s dodatnim informacijama: {matricula_mark}oznaka <strong>🏷</strong> uz prezime prikazuje druge oblike prezimena (na primjer prezime nakon vjenčanja), oznaka <strong>✝</strong> uz datum rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> uz mjesto rođenja ili vjenčanja upozorava na zabilježene napomene. Prelaskom mišem preko njih prikazuju se pojedinosti.</p>
+      {source_marks}
+      <p>Uz neke druge podatke pojavljuju se i manje rubne ikone s dodatnim informacijama: oznaka <strong>🏷</strong> uz prezime prikazuje druge oblike prezimena (na primjer prezime nakon vjenčanja), oznaka <strong>✝</strong> uz datum rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> uz mjesto rođenja ili vjenčanja upozorava na zabilježene napomene. Prelaskom mišem preko njih prikazuju se pojedinosti.</p>
       <h4>Stranica s rodoslovnim stablom</h4>
       <p>Stranica sa stablom prikazuje grafičko, interaktivno rodoslovno stablo odabrane osobe. Dostupne su sljedeće mogućnosti:</p>
       <ul>

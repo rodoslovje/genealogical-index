@@ -238,7 +238,7 @@ export default {
     footer_version: 'Različica',
     footer_data_update: 'Podatki',
     footer_user_guide: 'Navodila za uporabo',
-    footer_changelog: 'Posodobitve',
+    footer_changelog: 'Novosti',
     changelog_title: 'Kaj je novega',
     changelog_intro: 'Nove funkcije in izboljšave, najnovejše na vrhu. Manjši popravki niso navedeni.',
 
@@ -286,7 +286,11 @@ export default {
     help_auth_section: `
       <h3>5. Prijava v sistem</h3>
       <p>Za poln dostop do dreves in ujemanj se morate prijaviti. Prijavno okno odprete s klikom na ikono osebe (<strong>{USER_ICON}</strong>) zgoraj desno. V okno vpišite uporabniško ime in geslo, ki ga sicer uporabljate za dostop do spletnega portala matičnega rodoslovnega društva.</p>`,
-    help_matricula_mark: `oznaka <strong>⛪</strong> ob imenu vira pomeni, da gre za podatke iz indeksa Matricula Online in ne za osebno družinsko drevo, `,
+    help_source_marks: `<p>V stolpcu <em>Vir</em> oznaka za imenom pove, iz katere vrste vira je zapis — to so iste vrste, na katere lahko omejite iskanje:</p>`,
+    help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula indeks</em>: zapisi, indeksirani iz skeniranih matičnih knjig na Matricula Online</li>`,
+    help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet pokopališča</em>: zapisi z nagrobnikov</li>`,
+    help_source_mark_military: `<li><strong>🎖</strong> – <em>Vojaški viri</em>: zapisi o žrtvah vojn</li>`,
+    help_source_mark_tree: `<li><strong>brez oznake</strong> – rodoslovčevo lastno družinsko drevo</li>`,
     help_source_type_item: `<li><strong>Vir:</strong> V iskalno polje lahko vnesete naziv enega ali več virov, ločenih z vejico. S spustnim menijem poleg njega lahko iskanje omejite tudi na določen tip vira: <em>Družinska drevesa</em>, <em>Matricula indeks</em>, <em>Geneanet pokopališča</em> ali <em>Vojaški viri</em> (privzeto so vključeni vsi viri).</li>`,
     help_matricula_cols: ` Če vir prispeva podatke iz več virov (lastno družinsko drevo, Matricula indeks, Geneanet pokopališča…), mreža poleg stolpca <em>Skupaj</em> prikaže še po en stolpec za vsak vir.`,
     help_manual: `
@@ -329,6 +333,7 @@ export default {
         <li><strong>Razširljiva polja:</strong> Stolpci <em>Starši</em>, <em>Partnerji</em> in <em>Otroci</em> prikazujejo število oseb. S klikom na številko razširite seznam. Za hkratni prikaz vseh uporabite gumb <strong>⤢ Razširi</strong> nad tabelo, za skrivanje pa gumb <strong>⤡ Skrči</strong>.</li>
         <li><strong>Podrobnosti oseb in družin:</strong> S klikom na modro obarvano ime v tabeli izvedete novo iskanje in prikažete vse zapise le za to izbrano osebo ali družino. S klikom na partnerja poiščete njuno družino. Podobno pri prikazu staršev s klikom na oznako (<em>Starši</em>, <em>Mož</em> ali <em>Žena</em>) prikažete njuno družino, s klikom na ime posameznega starša pa poiščete samo to osebo.</li>
         <li><strong>Zasebni zapisi:</strong> Pri nekaterih osebah je namesto imena ali priimka prikazana oznaka <em>&lt;private&gt;</em>. Takšni zapisi nimajo povezave za nadaljnje iskanje.</li>
+        <li><strong>Vir:</strong> Zadnji stolpec pove, iz katerega vira je zapis. S klikom na ime odprete stran tega vira z njegovo statistiko, najpogostejšimi priimki in ujemanji z drugimi viri. Oznaka <strong>🕯</strong> ob imenu pomeni, da je rodoslovec pokojen; če obstaja spominska stran, jo odprete s klikom na svečko.</li>
         <li><strong>Drevo:</strong> Ikona drevesa (<strong>🌳</strong>) se pojavi ob priimku vsake osebe, ki ji poznamo sorodnike. S klikom nanjo odprete interaktivno rodovniško drevo te osebe: privzeto <em>metuljček</em>, ki hkrati prikazuje prednike in potomce, omejite pa ga lahko samo na prednike ali samo na potomce. Prikaz je lahko <em>pahljača</em> (privzeto, s predniki v zgornji polovici in potomci v spodnji) ali klasično <em>drevo</em> (predniki levo, potomci desno); kadar so prikazani samo predniki ali samo potomci, lahko pahljačo sklenete tudi v polni <em>krog</em>. Prikaz lahko omejite na izbrano število generacij in ga prenesete kot SVG, CSV ali GEDCOM.{auth_tree}</li>
         <li><strong>Izvoz podatkov:</strong> S klikom na gumb <strong>CSV</strong> nad tabelo prenesete trenutne rezultate na svoj računalnik v tabelarični obliki.</li>
         <li><strong>Skrčljive tabele in razdelki:</strong> S klikom na naslov tabele ali razdelka (npr. <em>Osebe</em>, <em>Družine</em> ali <em>Ujemanja</em>) lahko vsebino začasno skrijete in jo z naslednjim klikom znova prikažete.</li>
@@ -344,7 +349,8 @@ export default {
         <li><strong>📰</strong> – Digitalna knjižnica Slovenije (dLib)</li>
         <li><strong>📄</strong> – drugi zgodovinski viri (arhivi, župnijske in društvene spletne strani)</li>
       </ul>
-      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: {matricula_mark}oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
+      {source_marks}
+      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
       <h4>Stran z rodovniškim drevesom</h4>
       <p>Stran z drevesom prikazuje grafično, interaktivno rodovniško drevo izbrane osebe. Na voljo so:</p>
       <ul>

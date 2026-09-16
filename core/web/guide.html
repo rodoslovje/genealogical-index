@@ -45,6 +45,19 @@
       <a class="guide-back-link" href="/">&larr; __GUIDE_BACK_LABEL__</a>
       <div class="help-content intro-text" id="guide-page-content">__GUIDE_CONTENT__</div>
     </main>
+    <!-- Same footer line as the app, minus the data-update date: this page
+         never talks to the API, and the build date is baked in so it is there
+         without JS. The middle cell links to the sibling page (the one this
+         isn't); page-lang.js relabels it and carries ?lang= over. -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <span><span id="footer-version-label">__GUIDE_VERSION_LABEL__</span>: <span id="build-time">__GUIDE_BUILD_TIME__</span></span>
+      </div>
+      <div class="footer-center">
+        <a class="footer-link" id="footer-sibling-link" data-page="changelog" href="/changelog">__GUIDE_CHANGELOG_LABEL__</a>
+      </div>
+      <a class="footer-link footer-right" href="https://github.com/rodoslovje/genealogical-index" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </footer>
     <!-- Re-renders the content above in the visitor's own language when that
          differs from the one baked in at build time. The baked-in default
          language is what crawlers and no-JS visitors get. -->

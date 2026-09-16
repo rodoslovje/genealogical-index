@@ -287,7 +287,11 @@ export default {
     help_auth_section: `
       <h3>5. System Login</h3>
       <p>To get full access to trees and matches, you need to log in. Open the login window by clicking the user icon (<strong>{USER_ICON}</strong>) in the top right corner. Enter the username and password you use to access the society's main portal.</p>`,
-    help_matricula_mark: `the <strong>⛪</strong> mark next to the source's name indicates that the data comes from the Matricula Online index rather than from a personal family tree, `,
+    help_source_marks: `<p>In the <em>Source</em> column, a mark after the name shows which kind of source the record comes from — the same kinds the search engine can be restricted to:</p>`,
+    help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula Index</em>: entries indexed from the scanned parish registers on Matricula Online</li>`,
+    help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet Cemeteries</em>: records read from gravestones</li>`,
+    help_source_mark_military: `<li><strong>🎖</strong> – <em>Military Records</em>: war casualty records</li>`,
+    help_source_mark_tree: `<li><strong>no mark</strong> – the genealogist's own family tree</li>`,
     help_source_type_item: `<li><strong>Source:</strong> In the search field, you can enter the name of one or more sources, separated by commas. Using the dropdown menu next to it, you can also restrict the search to a specific source type: <em>Family Trees</em>, <em>Matricula Index</em>, <em>Geneanet Cemeteries</em>, or <em>Military Records</em> (all sources are included by default).</li>`,
     help_matricula_cols: ` If the source contributes data from more than one place (its own family tree, the Matricula index, Geneanet cemeteries…), the grid shows a <em>Total</em> column followed by one column per source.`,
     help_manual: `
@@ -330,6 +334,7 @@ export default {
         <li><strong>Expandable Fields:</strong> Columns such as <em>Parents</em>, <em>Partners</em>, and <em>Children</em> display the number of persons. By clicking the number, you expand the list. To expand all at once, you can use the <strong>⤢ Expand</strong> button above the table, and for hiding the <strong>⤡ Collapse</strong> button.</li>
         <li><strong>Person and Family Details:</strong> By clicking a blue colored name in the table, you perform a new search and display all records for that specific person or family. By clicking a partner, you search for their family. Similarly, when viewing parents, clicking the label (<em>Parents</em>, <em>Husband</em>, or <em>Wife</em>) displays their family, while clicking an individual parent's name searches only for that person.</li>
         <li><strong>Private Records:</strong> For some individuals, the label <em>&lt;private&gt;</em> is displayed instead of a name or surname. Such records have no link for further search.</li>
+        <li><strong>Source:</strong> The last column names the source each record comes from. Clicking the name opens that source's page with its statistics, most frequent surnames, and matches with other sources. A <strong>🕯</strong> next to the name marks a genealogist who has passed away; where a memorial page exists, clicking the candle opens it.</li>
         <li><strong>Tree:</strong> A tree icon (<strong>🌳</strong>) appears next to the surname of every person whose relatives are known. Clicking it opens an interactive family tree of that person: by default a <em>bowtie</em> showing ancestors and descendants at once, which you can narrow down to ancestors or descendants only. The chart can be drawn as a <em>fan</em> (the default, with the ancestors in the upper half and the descendants in the lower) or as a classic <em>tree</em> (ancestors to the left, descendants to the right); for ancestors or descendants alone, the fan can also be closed into a full <em>circle</em>. The view can be limited to a chosen number of generations and downloaded as SVG, CSV or GEDCOM.{auth_tree}</li>
         <li><strong>Data Export:</strong> By clicking the <strong>CSV</strong> button above the table, you download the current results to your computer in a tabular format.</li>
         <li><strong>Collapsible tables and sections:</strong> By clicking the title of a table or section (e.g. <em>Person</em>, <em>Family</em>, or <em>Matches</em>), you can temporarily hide its content and reveal it again with the next click.</li>
@@ -345,7 +350,8 @@ export default {
         <li><strong>📰</strong> – Digital Library of Slovenia (dLib)</li>
         <li><strong>📄</strong> – other historical sources (archives, parish and society websites)</li>
       </ul>
-      <p>Next to some other data, smaller marginal icons appear with additional information: {matricula_mark}the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
+      {source_marks}
+      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
       <h4>The Family Tree Page</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>

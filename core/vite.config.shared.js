@@ -34,12 +34,18 @@ async function loadStrings(lang) {
   return { ...en, ...(locale || {}) };
 }
 
+// The build stamp the app imports from build-info.js. Kept here too so the two
+// static pages can print the same date in their footers: buildStart runs before
+// transformIndexHtml, so by the time they render this is the value that went
+// into the bundle.
+let buildTime = new Date().toISOString();
+
 function buildInfoPlugin() {
   // Only BUILD_TIME is baked into the bundle. The data-update date used in the
   // footer is fetched at runtime from /api/contributors/ so an older deployed
   // build still reflects the server's latest contributor import.
   function generate() {
-    const buildTime = new Date().toISOString();
+    buildTime = new Date().toISOString();
     return `export const BUILD_TIME = ${JSON.stringify(buildTime)};\n`;
   }
 
@@ -109,6 +115,9 @@ function guidePagePlugin(siteConfig) {
         .replace('__GUIDE_TAB_FAMILY__', () => escapeHtml(strings.tab_family || 'Family'))
         .replace('__GUIDE_TAB_CONTRIBUTORS__', () => escapeHtml(strings.tab_contributors || 'Genealogists'))
         .replace('__GUIDE_CONTENT__', () => content)
+        .replace('__GUIDE_VERSION_LABEL__', () => escapeHtml(strings.footer_version || 'Version'))
+        .replace('__GUIDE_BUILD_TIME__', () => buildTime.slice(0, 10))
+        .replace('__GUIDE_CHANGELOG_LABEL__', () => escapeHtml(strings.footer_changelog || 'Changelog'))
         .replace('</head>', () => `  <meta property="og:title" content="${escapeHtml(title)}" />\n  </head>`);
     },
   };
@@ -157,6 +166,9 @@ function changelogPagePlugin(siteConfig) {
         .replace('__CHANGELOG_TAB_FAMILY__', () => escapeHtml(strings.tab_family || 'Family'))
         .replace('__CHANGELOG_TAB_CONTRIBUTORS__', () => escapeHtml(strings.tab_contributors || 'Genealogists'))
         .replace('__CHANGELOG_CONTENT__', () => content)
+        .replace('__CHANGELOG_VERSION_LABEL__', () => escapeHtml(strings.footer_version || 'Version'))
+        .replace('__CHANGELOG_BUILD_TIME__', () => buildTime.slice(0, 10))
+        .replace('__CHANGELOG_GUIDE_LABEL__', () => escapeHtml(strings.footer_user_guide || 'User Guide'))
         .replace('</head>', () => `  <meta property="og:title" content="${escapeHtml(title)}" />\n  </head>`);
     },
   };

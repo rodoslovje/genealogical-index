@@ -64,6 +64,22 @@ function retitle(strings, pageTitleKey, fallbackTitle) {
   document.title = site ? `${pageTitle} – ${site}` : pageTitle;
 }
 
+/** The footer's version label and its link to the sibling page were filled in
+ *  at build time in the default language; this moves them over with the rest of
+ *  the page. The link also carries ?lang= so the sibling opens in the language
+ *  being read, exactly as the in-app footer links do (help.js). */
+function refooter(strings, lang) {
+  const label = document.getElementById('footer-version-label');
+  if (label && strings.footer_version) label.textContent = strings.footer_version;
+
+  const sibling = document.getElementById('footer-sibling-link');
+  if (!sibling) return;
+  const isGuide = sibling.dataset.page === 'guide';
+  const text = isGuide ? strings.footer_user_guide : strings.footer_changelog;
+  if (text) sibling.textContent = text;
+  sibling.href = `/${isGuide ? 'guide' : 'changelog'}?lang=${encodeURIComponent(lang)}`;
+}
+
 async function main() {
   const baked = document.documentElement.lang || 'en';
   const lang = wantedLang(baked);
@@ -80,6 +96,7 @@ async function main() {
 
   if (guideEl) {
     retitle(strings, 'footer_user_guide', 'User Guide');
+    refooter(strings, lang);
     document.documentElement.lang = lang;
     guideEl.innerHTML = renderGuideManual(strings, !!siteConfig.authUrl, siteConfig);
     return;
@@ -88,6 +105,7 @@ async function main() {
   const enEntries = await load(CHANGELOGS, './changelog/en.js');
   const translated = lang === 'en' ? null : await load(CHANGELOGS, `./changelog/${lang}.js`);
   retitle(strings, 'footer_changelog', 'Changelog');
+  refooter(strings, lang);
   document.documentElement.lang = lang;
   changelogEl.innerHTML = renderChangelog(mergeChangelog(enEntries, translated), strings);
 }
