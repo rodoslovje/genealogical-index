@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config.js';
-import { currentParams, toUnicodeHref } from '../lib/url.js';
+import { currentParams, toUnicodeHref, toUnicodeSearch } from '../lib/url.js';
 import { t, formatTitleSuffix } from '../i18n.js';
 import {
   escapeHtml, ensureD3, highlightDifferences, baseContributorName,
@@ -9,21 +9,34 @@ import { csvCell, csvRow, csvFooter, downloadCsv } from '../lib/csv.js';
 import { formatLinks } from '../lib/links.js';
 import { authFetch } from '../auth.js';
 import {
-  boundsFromPoints, createSvgWithZoom, appendLinks, attachSvgExport,
+  createSvgWithZoom, appendLinks, attachSvgExport,
   attachGedExport, createGedcomModel, orderSpouses,
 } from './shared.js';
-import { DX, DY, snapDescendantColumns } from './layout-tree.js';
+import { pruneGenerations, buildHierarchy, treeDepth } from './data.js';
+import {
+  DEFAULT_GENS, DIR_TITLE_KEY, DIR_FILE_PREFIX,
+  readDir, readChart, readGens, renderTreeToolbar,
+} from './toolbar.js';
+import { layoutTree } from './layout-tree.js';
+import { layoutFan } from './layout-fan.js';
 
-// Tree comparison view. Superimposes two genealogists' trees rooted at a
-// matched person pair into one merged tree, each node coloured by its
-// comparison status. A toggle switches direction — ancestors, descendants, or
-// both (the bowtie: ancestors left, descendants right, sharing the focus
-// person); clicking a node opens a side-by-side field detail with differences
-// highlighted; the differences can be exported to CSV. Reuses the layout / zoom
-// / minimap / SVG-export chrome from the regular tree views.
+// Tree comparison view (?t=compare). Superimposes two genealogists' trees
+// rooted at a matched person pair into one merged tree, each node coloured by
+// its comparison status. Driven by the same toolbar as the tree page:
+//   dir   = both (bowtie: ancestors left, descendants right — the default)
+//         | anc | desc
+//   chart = fan (half circle — default) | tree (compact tidy tree) | circle
+//   gens  = generation limit (0 = all), per-chart defaults
+// Each side comes from its own /api/compare/<direction> call; the responses are
+// cached in module state, so toolbar switches and language changes re-render
+// without a refetch. Clicking a node opens a side-by-side field detail with
+// differences highlighted; the differences can be exported to CSV. The layout /
+// zoom / minimap / export chrome is the regular tree views', with the
+// comparison-status palette swapped in for the sex colours.
 
 const IDS = {
   pageTitle:   'compare-page-title',
+  toolbar:     'compare-toolbar',
   container:   'compare-tree-container',
   controls:    'compare-tree-controls',
   legend:      'compare-legend',
@@ -48,6 +61,27 @@ const STATUS_COLOR = {
   only_b:   '#8e44ad',  // purple
 };
 
+// Tinted version of the same palette, for the fan / circle wedge fills (the
+// wedge carries its own dark label text, so the fill has to stay light).
+const STATUS_TINT = {
+  agree:    '#d7e9d8',
+  minor:    '#fdeccb',
+  conflict: '#f7d8d8',
+  only_a:   '#cfe8ec',
+  only_b:   '#e4d6ef',
+};
+
+// Fan / circle wedges in comparison colours, with no outgoing links — a wedge
+// opens the side-by-side detail panel instead of navigating away.
+const COMPARE_DECOR = {
+  // Descendant family bands carry a status of their own; the ancestor marriage
+  // bands are synthetic and compare nothing, so they stay the neutral grey the
+  // tree page uses.
+  fill: d => STATUS_TINT[d.data.status] || (d.data.is_family ? '#f3f3f3' : '#ececec'),
+  nameFill: d => STATUS_COLOR[d.data.status] || '#1f2d3d',
+  href: () => null,
+};
+
 // Fields shown in the side-by-side detail panel and the CSV export, in order.
 const DETAIL_FIELDS = [
   ['name',            'col_name'],
@@ -60,23 +94,16 @@ const DETAIL_FIELDS = [
   ['place_of_death',  'col_place_of_death'],
 ];
 
-// Directions the page understands, with the sides each one fetches. `both` is
-// the bowtie; the two sides share the focus person at the origin.
-const DIRS = ['ancestors', 'descendants', 'both'];
-const SIDES_FOR = {
-  ancestors: ['ancestors'],
-  descendants: ['descendants'],
-  both: ['ancestors', 'descendants'],
-};
-const DIR_TITLE_KEY = {
-  ancestors: 'tree_ancestors_title',
-  descendants: 'tree_descendants_title',
-  both: 'tree_dir_both',
-};
-const DIR_FILE = { ancestors: 'ancestors', descendants: 'descendants', both: 'bowtie' };
+// Sides a direction needs; each is its own /api/compare/<direction> call.
+const sidesFor = dir => (dir === 'both' ? ['anc', 'desc'] : [dir]);
+const API_PATH = { anc: 'ancestors', desc: 'descendants' };
 
 const collator = new Intl.Collator('sl', { sensitivity: 'base' });
 
+// Raw API responses cached per person pair, so switching direction / chart /
+// generations re-renders without refetching.
+let state = null;            // { key, ctx, data: { anc?, desc? }, pending: {} }
+let renderSeq = 0;           // bumps per renderComparePage call so stale fetches don't render
 // Last rendered comparison, kept so a language switch can re-translate the
 // chrome/legend/detail in place (no re-fetch, no tree rebuild → view preserved).
 let compareState = null;     // { cmp, ctx, view, detail }
@@ -117,117 +144,225 @@ export function renderComparePage() {
   const cb = params.get('cb') || '';
   const b = params.get('b') || '';
   const personName = params.get('pn') || '';
-  const dirParam = params.get('dir');
-  const dir = DIRS.includes(dirParam) ? dirParam : 'ancestors';
-  const ctx = { ca, a, cb, b, personName, dir };
+  const dir = readDir(params);
+  const chart = readChart(params, dir);
+  const gens = readGens(params, chart);
+  const ctx = { ca, a, cb, b, personName, dir, chart, gens };
 
-  setCompareTitle(ctx, null);
+  const key = JSON.stringify([ca, a, cb, b]);
+  if (!state || state.key !== key) state = { key, data: {}, pending: {} };
+  state.ctx = ctx;
+  const seq = ++renderSeq;
 
   const container = document.getElementById(IDS.container);
-  const controls = document.getElementById(IDS.controls);
-  const legend = document.getElementById(IDS.legend);
   const detail = document.getElementById(IDS.detail);
 
-  const zoomInBtn = document.getElementById(IDS.zoomIn);
-  if (zoomInBtn) { zoomInBtn.innerHTML = '➕'; zoomInBtn.title = t('tree_zoom_in'); }
-  const zoomOutBtn = document.getElementById(IDS.zoomOut);
-  if (zoomOutBtn) { zoomOutBtn.innerHTML = '➖'; zoomOutBtn.title = t('tree_zoom_out'); }
-  const svgBtn = document.getElementById(IDS.downloadSvg);
-  if (svgBtn) svgBtn.title = t('tree_download_svg');
-  const csvBtn = document.getElementById(IDS.downloadCsv);
-  if (csvBtn) { csvBtn.title = t('tree_download_csv'); csvBtn.style.display = 'none'; csvBtn.onclick = null; }
-  const gedABtn = document.getElementById(IDS.downloadGedA);
-  const gedBBtn = document.getElementById(IDS.downloadGedB);
-  [gedABtn, gedBBtn].forEach(btn => { if (btn) btn.style.display = 'none'; });
+  setCompareTitle(ctx, null);
+  wireButtonTitles();
+  renderToolbar();
 
-  if (controls) controls.style.display = 'none';
-  if (legend) renderLegend(legend, null, ctx);
   if (detail) { detail.innerHTML = ''; detail.style.display = 'none'; }
   compareState = null;
   openDetailNode = null;
-  // The minimap lives in the wrapper (sibling of the container), so clearing the
-  // container alone leaves a stale minimap behind when the new direction has no
-  // results and never re-runs createSvgWithZoom. Remove it up front.
-  document.getElementById(IDS.wrapper)
-    ?.querySelectorAll('.tree-minimap').forEach(el => el.remove());
-  container.innerHTML = `<p style="padding: 20px;">${t('tree_loading')}</p>`;
 
   if (!ca || !a || !cb || !b) {
+    resetChrome();
     container.innerHTML = `<p style="padding: 20px;">${t('no_results')}</p>`;
     return;
   }
 
-  const apiParams = new URLSearchParams({ ca, a, cb, b, max_generations: '0' });
-  // A bowtie needs both sides; they are independent requests, so fetch them in
-  // parallel and merge the two responses into one comparison.
-  const sides = SIDES_FOR[dir];
-  const dataPromise = Promise.all(sides.map(side =>
-    authFetch(`${API_BASE_URL}/api/compare/${side}?${apiParams}`).then(r => r.ok ? r.json() : null)));
-  const d3Promise = ensureD3().catch(() => {});
+  // Already fetched (a direction / chart / generations switch): re-render from
+  // the cached responses.
+  const missing = sidesFor(dir).filter(side => !(side in state.data));
+  if (!missing.length) {
+    renderChart();
+    return;
+  }
 
-  Promise.all([dataPromise, d3Promise])
-    .then(([results]) => {
-      container.innerHTML = '';
-      const cmp = buildComparison(results, dir);
-      if (!cmp) {
-        container.innerHTML = `<p style="padding: 20px;">${t('no_results')}</p>`;
-        return;
-      }
-      if (typeof d3 === 'undefined') {
-        container.innerHTML = `<p style="padding: 20px;">${t('tree_no_d3')}</p>`;
-        return;
-      }
-      if (controls) controls.style.display = 'flex';
-      setCompareTitle(ctx, cmp);
-      renderLegend(legend, cmp, ctx);
-      const view = renderTree(cmp, container, detail, ctx);
-      wireLegendList(legend, view, detail, cmp);
-      compareState = { cmp, ctx, view, detail };
-      if (csvBtn) {
-        csvBtn.style.display = '';
-        csvBtn.onclick = () => exportDifferences(cmp, ctx);
-      }
-      wireGedExport(gedABtn, cmp, ctx, 'a', cmp.contributor_a);
-      wireGedExport(gedBBtn, cmp, ctx, 'b', cmp.contributor_b);
-    })
+  resetChrome();
+  container.innerHTML = `<p style="padding: 20px;">${t('tree_loading')}</p>`;
+
+  // Kick off D3 alongside the API call(s) so the script lands while the tree
+  // data is in flight. In a bowtie the faster side is drawn as soon as it
+  // arrives; the full chart replaces it once the other side lands.
+  const d3Promise = ensureD3().catch(() => {});
+  const fetches = missing.map(side => fetchSide(side).then(() => {
+    if (seq !== renderSeq) return;
+    if (sidesFor(state.ctx.dir).some(s => !(s in state.data))) {
+      d3Promise.then(() => { if (seq === renderSeq) renderChart(); });
+    }
+  }));
+
+  Promise.all([...fetches, d3Promise])
+    .then(() => { if (seq === renderSeq) renderChart(); })
     .catch(err => {
       console.error(err);
-      container.innerHTML = `<p style="padding: 20px;">${t('tree_error')}</p>`;
+      if (seq === renderSeq) container.innerHTML = `<p style="padding: 20px;">${t('tree_error')}</p>`;
     });
 }
 
-// Folds the per-direction API responses into one comparison object:
-//   { dir, trees: { anc, desc }, contributor_a, contributor_b, summary }
-// Either side may be null (a direction that wasn't asked for, or one the API
-// couldn't resolve) — a bowtie with one side missing still renders the other.
-// Returns null when neither side has a tree.
-function buildComparison(results, dir) {
-  const byDir = {};
-  SIDES_FOR[dir].forEach((side, i) => { byDir[side] = results[i]; });
-  const anc = byDir.ancestors && byDir.ancestors.tree ? byDir.ancestors : null;
-  const desc = byDir.descendants && byDir.descendants.tree ? byDir.descendants : null;
-  const first = anc || desc;
-  if (!first) return null;
-  return {
-    dir,
-    trees: { anc: anc && anc.tree, desc: desc && desc.tree },
-    contributor_a: first.contributor_a,
-    contributor_b: first.contributor_b,
-    summary: combineSummaries(anc, desc),
-  };
+// Fetches one side for the current pair (deduplicated while in flight). Stores
+// null for "no result" so the side still counts as fetched.
+function fetchSide(side) {
+  if (state.pending[side]) return state.pending[side];
+  const { ca, a, cb, b } = state.ctx;
+  // 0 = all generations; the limit, where a chart has one, is applied client side.
+  const apiParams = new URLSearchParams({ ca, a, cb, b, max_generations: '0' });
+  const s = state;
+  const p = authFetch(`${API_BASE_URL}/api/compare/${API_PATH[side]}?${apiParams}`)
+    .then(r => (r.ok ? r.json() : null))
+    .then(data => { s.data[side] = (data && data.tree) ? data : null; })
+    .catch(err => { s.data[side] = null; throw err; })
+    .finally(() => { delete s.pending[side]; });
+  s.pending[side] = p;
+  return p;
 }
 
-// Legend counts for what's shown. Each side counts the focus person (both trees
-// are rooted at it), so a bowtie subtracts the duplicate.
-function combineSummaries(anc, desc) {
-  if (!anc || !desc) return ((anc || desc).summary) || {};
-  const out = {};
-  Object.keys(STATUS_COLOR).forEach(k => {
-    out[k] = ((anc.summary && anc.summary[k]) || 0) + ((desc.summary && desc.summary[k]) || 0);
+// --- Chrome ------------------------------------------------------------------
+
+function wireButtonTitles() {
+  const set = (id, html, title) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (html != null) el.innerHTML = html;
+    el.title = title;
+  };
+  set(IDS.zoomIn, '➕', t('tree_zoom_in'));
+  set(IDS.zoomOut, '➖', t('tree_zoom_out'));
+  set(IDS.downloadSvg, null, t('tree_download_svg'));
+  set(IDS.downloadCsv, null, t('tree_download_csv'));
+}
+
+// Hides everything that only makes sense once a chart is on screen.
+function resetChrome() {
+  const controls = document.getElementById(IDS.controls);
+  if (controls) controls.style.display = 'none';
+  renderLegend(document.getElementById(IDS.legend), null);
+  const csvBtn = document.getElementById(IDS.downloadCsv);
+  if (csvBtn) { csvBtn.style.display = 'none'; csvBtn.onclick = null; }
+  [IDS.downloadGedA, IDS.downloadGedB].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.style.display = 'none';
   });
-  const rootStatus = anc.tree.status;
-  if (out[rootStatus]) out[rootStatus] -= 1;
-  return out;
+  clearMinimap();
+}
+
+// The minimap lives in the wrapper (sibling of the container), so clearing the
+// container alone leaves a stale one behind when the new options produce no
+// results and never re-run createSvgWithZoom.
+function clearMinimap() {
+  document.getElementById(IDS.wrapper)?.querySelectorAll('.tree-minimap').forEach(el => el.remove());
+}
+
+// Rendered once up front (so the toggles work while the data is in flight) and
+// again from renderChart(), when the fetched depth is known.
+function renderToolbar() {
+  const { dir, chart, gens } = state.ctx;
+  const maxGen = Math.max(0, ...sidesFor(dir).map(side =>
+    treeDepth(state.data[side] && state.data[side].tree, side)));
+  renderTreeToolbar(document.getElementById(IDS.toolbar), { dir, chart, gens, maxGen }, {
+    hrefFor: pageHref,
+    navigate: navigateInPlace,
+  });
+}
+
+// URL params for this pair with the given options. Defaults are omitted so
+// shared links stay short.
+function pageParams({ dir, chart, gens }) {
+  const { ca, a, cb, b, personName } = state.ctx;
+  const p = new URLSearchParams();
+  p.set('t', 'compare');
+  p.set('ca', ca);
+  p.set('a', a);
+  p.set('cb', cb);
+  p.set('b', b);
+  if (personName) p.set('pn', personName);
+  if (dir !== 'both') p.set('dir', dir);
+  if (chart !== 'fan') p.set('chart', chart);
+  if (gens != null && gens !== DEFAULT_GENS[chart]) p.set('gens', String(gens));
+  return p;
+}
+
+const pageHref = opts => toUnicodeHref(pageParams(opts));
+
+// Push a new URL for the same pair and re-render from cached data.
+function navigateInPlace(opts) {
+  history.pushState(null, '', window.location.pathname + '?' + toUnicodeSearch(pageParams(opts)));
+  renderComparePage();
+}
+
+// --- Chart -------------------------------------------------------------------
+
+function renderChart() {
+  const ctx = state.ctx;
+  const { dir, chart, gens } = ctx;
+  const container = document.getElementById(IDS.container);
+  const legend = document.getElementById(IDS.legend);
+  const detail = document.getElementById(IDS.detail);
+
+  clearMinimap();
+  container.innerHTML = '';
+  // The data (and with it the depth the generations select can offer) may have
+  // arrived since the toolbar was first drawn.
+  renderToolbar();
+
+  // Prune to the generation limit once; the hierarchies and the exports both
+  // use the pruned trees so the downloads match what's on screen.
+  const trees = {};
+  if (dir !== 'desc' && state.data.anc) trees.anc = pruneGenerations(state.data.anc.tree, 'anc', gens);
+  if (dir !== 'anc' && state.data.desc) trees.desc = pruneGenerations(state.data.desc.tree, 'desc', gens);
+
+  if (!trees.anc && !trees.desc) {
+    // Still loading the other side of a bowtie, or genuinely nothing.
+    const loading = sidesFor(dir).some(s => !(s in state.data));
+    resetChrome();
+    container.innerHTML = `<p style="padding: 20px;">${t(loading ? 'tree_loading' : 'no_results')}</p>`;
+    return;
+  }
+  if (typeof d3 === 'undefined') {
+    resetChrome();
+    container.innerHTML = `<p style="padding: 20px;">${t('tree_no_d3')}</p>`;
+    return;
+  }
+
+  const src = state.data.anc || state.data.desc;
+  const cmp = {
+    dir,
+    chart,
+    trees,
+    contributor_a: src.contributor_a,
+    contributor_b: src.contributor_b,
+    summary: summarizeTrees(trees),
+  };
+
+  document.getElementById(IDS.controls).style.display = 'flex';
+  setCompareTitle(ctx, cmp);
+  renderLegend(legend, cmp);
+  const view = renderTree(cmp, container, detail);
+  wireLegendList(legend, view, detail, cmp);
+  compareState = { cmp, ctx, view, detail };
+
+  const csvBtn = document.getElementById(IDS.downloadCsv);
+  if (csvBtn) {
+    csvBtn.style.display = '';
+    csvBtn.onclick = () => exportDifferences(cmp, ctx);
+  }
+  wireGedExport(IDS.downloadGedA, cmp, ctx, 'a', cmp.contributor_a);
+  wireGedExport(IDS.downloadGedB, cmp, ctx, 'b', cmp.contributor_b);
+}
+
+// Legend counts for what's actually drawn (so a generation limit narrows them
+// too). Both trees are rooted at the focus person, so a bowtie counts it once.
+function summarizeTrees({ anc, desc }) {
+  const counts = { agree: 0, minor: 0, conflict: 0, only_a: 0, only_b: 0 };
+  const walk = (node, skip) => {
+    if (!skip && !node.is_family) counts[node.status] = (counts[node.status] || 0) + 1;
+    (node.parents || []).forEach(c => walk(c, false));
+    (node.children || []).forEach(c => walk(c, false));
+  };
+  if (anc) walk(anc, false);
+  if (desc) walk(desc, !!anc);
+  return counts;
 }
 
 // Re-translate the compare view in place after a language switch — without
@@ -239,42 +374,28 @@ export function relocalizeCompare() {
   const { cmp, ctx, view, detail } = compareState;
 
   setCompareTitle(ctx, cmp);
+  wireButtonTitles();
+  renderToolbar();
 
-  const setTitle = (id, key) => { const el = document.getElementById(id); if (el) el.title = t(key); };
-  setTitle(IDS.zoomIn, 'tree_zoom_in');
-  setTitle(IDS.zoomOut, 'tree_zoom_out');
-  setTitle(IDS.downloadSvg, 'tree_download_svg');
-  setTitle(IDS.downloadCsv, 'tree_download_csv');
   const gedABtn = document.getElementById(IDS.downloadGedA);
   const gedBBtn = document.getElementById(IDS.downloadGedB);
   if (gedABtn) gedABtn.title = `${t('tree_download_ged')} – ${baseContributorName(cmp.contributor_a || '')}`;
   if (gedBBtn) gedBBtn.title = `${t('tree_download_ged')} – ${baseContributorName(cmp.contributor_b || '')}`;
 
   const legend = document.getElementById(IDS.legend);
-  renderLegend(legend, cmp, ctx);
+  renderLegend(legend, cmp);
   wireLegendList(legend, view, detail, cmp);
 
   if (openDetailNode && detail) showDetail(detail, openDetailNode, cmp);
 }
 
-// Direction toggle + legend with status counts. `cmp` is null while loading
-// (the toggle still renders so the user can switch before results arrive).
-function renderLegend(legend, cmp, ctx) {
+// Status counts for what's drawn. `cmp` is null before results arrive, which
+// empties the legend (the toolbar above it keeps the direction/chart toggles).
+function renderLegend(legend, cmp) {
   if (!legend) return;
   const a = escapeHtml(baseContributorName((cmp && cmp.contributor_a) || ''));
   const b = escapeHtml(baseContributorName((cmp && cmp.contributor_b) || ''));
   const s = (cmp && cmp.summary) || {};
-
-  const toggleLink = (dir, label) => {
-    const href = toUnicodeHref({
-      t: 'compare', ca: ctx.ca, a: ctx.a, cb: ctx.cb, b: ctx.b, pn: ctx.personName, dir,
-    });
-    const active = ctx.dir === dir ? ' compare-toggle-active' : '';
-    return `<a class="compare-toggle-btn${active}" href="${href}" data-spa-nav>${label}</a>`;
-  };
-  const toggle = `<div class="compare-toggle">
-      ${DIRS.map(d => toggleLink(d, t(DIR_TITLE_KEY[d]))).join('')}
-    </div>`;
 
   // Groups with people are clickable dropdowns (jump-to-person); a pill outline
   // + caret signals that, empty groups stay plain text.
@@ -296,7 +417,7 @@ function renderLegend(legend, cmp, ctx) {
       ${swatch('only_b', `${t('compare_only_in')} ${b}`, s.only_b)}
     </div>` : '';
 
-  legend.innerHTML = toggle + counts;
+  legend.innerHTML = counts;
 }
 
 // Make each legend status chip clickable: it opens a dropdown listing that
@@ -365,69 +486,38 @@ function wireLegendList(legend, view, detail, cmp) {
   });
 }
 
-// d3 hierarchy for one merged side. `side` is 'anc' (nodes link via `parents`)
-// or 'desc' (person nodes alternate with `is_family` nodes via `children`).
-// Annotates every node with `gen`, the generation distance from the focus
-// person, which the descendants column snapping needs.
-function buildSideHierarchy(treeData, side) {
-  const isDesc = side === 'desc';
-  const root = d3.hierarchy(treeData, d => isDesc ? d.children : d.parents);
-  root.sort((a, b) => {
-    if (isDesc && a.data.is_family && b.data.is_family) return 0;
-    const sexOrder = { m: 1, f: 2 };
-    const aSex = sexOrder[a.data.sex] || 3;
-    const bSex = sexOrder[b.data.sex] || 3;
-    if (aSex !== bSex) return aSex - bSex;
-    return d3.ascending(a.data.name || '', b.data.name || '');
-  });
-  root.each(d => {
-    if (!d.parent) d.gen = 0;
-    else d.gen = d.data.is_family ? d.parent.gen : d.parent.gen + 1;
-  });
-  return root;
-}
+// The comparison charts reuse the tree page's layouts — they only differ in how
+// the nodes are painted, so `tree` takes the layout's geometry and draws its own
+// status-coloured nodes, while `fan`/`circle` hand the palette in as decor.
+const LAYOUTS = {
+  tree:   sides => layoutTree(sides, { dir: state.ctx.dir }),
+  fan:    sides => layoutFan(sides, { dir: state.ctx.dir, arc: 180, decor: COMPARE_DECOR }),
+  circle: sides => layoutFan(sides, { dir: state.ctx.dir, arc: 360, decor: COMPARE_DECOR }),
+};
 
-function renderTree(cmp, container, detail, ctx) {
-  const anc = cmp.trees.anc ? buildSideHierarchy(cmp.trees.anc, 'anc') : null;
-  const desc = cmp.trees.desc ? buildSideHierarchy(cmp.trees.desc, 'desc') : null;
-  const both = !!(anc && desc);
-
-  // d3.tree puts each root at the origin, so mirroring the ancestors side makes
-  // the two hierarchies share the focus person: ancestors left, descendants
-  // right (same construction as the tree page's bowtie).
-  if (anc) {
-    d3.tree().nodeSize([DX, DY])(anc);
-    if (both) anc.each(d => { d.y = -d.y; });
-  }
-  if (desc) {
-    d3.tree().nodeSize([DX, DY])(desc);
-    snapDescendantColumns(desc);
-  }
-
-  // The focus person is in both hierarchies; draw it once, from the ancestors
-  // side, while the descendants root still contributes its links.
-  const nodes = [
-    ...(anc ? anc.descendants() : []),
-    ...(desc ? desc.descendants().filter(d => !(both && d === desc)) : []),
-  ];
-  const links = [...(anc ? anc.links() : []), ...(desc ? desc.links() : [])];
-  const anchorNode = anc || desc;
+function renderTree(cmp, container, detail) {
+  const ctx = state.ctx;
+  const sides = {
+    anc: cmp.trees.anc ? buildHierarchy(cmp.trees.anc, 'anc') : null,
+    desc: cmp.trees.desc ? buildHierarchy(cmp.trees.desc, 'desc') : null,
+  };
+  const view = LAYOUTS[cmp.chart](sides);
   const rootData = cmp.trees.anc || cmp.trees.desc;
-  const bounds = boundsFromPoints(nodes.map(d => [d.y, d.x]), { left: 150, right: 250, top: DX, bottom: DX });
 
   // Colour the minimap dots/rings by comparison status (not sex) so the overview
   // matches the main view's agree/minor/conflict/only-A/only-B palette.
-  const { svg, g, panToNode } = createSvgWithZoom(container, bounds, anchorNode, IDS, {
-    nodes,
-    links,
-    anchor: both ? 'center' : 'left',
+  const { svg, g, panToNode } = createSvgWithZoom(container, view.bounds, view.anchorNode, IDS, {
+    nodes: view.nodes,
+    links: view.links,
+    linkPath: view.linkPath,
+    anchor: view.anchor,
     nodeColor: d => STATUS_COLOR[d.data.status] || '#999',
   });
 
   attachSvgExport({
     svg, g, downloadBtnId: IDS.downloadSvg,
     data: rootData,
-    personName: (ctx && ctx.personName) || rootData.name || '',
+    personName: ctx.personName || rootData.name || '',
     contributorName: cmp.contributor_a || '',
     // Both genealogists in the footer "Source:" line, each linked to its
     // contributor page.
@@ -435,36 +525,47 @@ function renderTree(cmp, container, detail, ctx) {
       baseContributorName(cmp.contributor_a || ''),
       baseContributorName(cmp.contributor_b || ''),
     ],
-    titleText: compareTitleText(ctx || {}, cmp),
-    filePrefix: `compare-${DIR_FILE[cmp.dir]}`,
+    titleText: compareTitleText(ctx, cmp),
+    filePrefix: `compare-${DIR_FILE_PREFIX[cmp.dir]}`,
   });
 
-  appendLinks(g, links);
+  const node = cmp.chart === 'tree' ? drawCartesian(g, view) : view.draw(g, {});
+  node.attr('cursor', 'pointer')
+      .on('click', (event, d) => showDetail(detail, d.data, cmp));
+
+  // Pulse a ring where the view jumped to, so the user spots the node. Drawn in
+  // an overlay at the node's screen position rather than inside its group, which
+  // keeps it working for the wedge layouts (whose groups carry no transform).
+  const overlay = g.append('g').attr('pointer-events', 'none');
+  function highlightNode(d) {
+    overlay.append('circle')
+        .attr('cx', d.y).attr('cy', d.x)
+        .attr('r', 9).attr('fill', 'none')
+        .attr('stroke', '#222').attr('stroke-width', 2.5).attr('opacity', 0.9)
+      .transition().duration(1300)
+        .attr('r', 26).attr('opacity', 0).remove();
+  }
+
+  return { nodes: view.nodes, panToNode, highlightNode };
+}
+
+// Tidy-tree drawing in comparison colours: the layout's own draw() paints nodes
+// by sex and links them to the person/family search, neither of which applies
+// here. Returns the node selection.
+function drawCartesian(g, view) {
+  appendLinks(g, view.links);
 
   const node = g.append('g')
       .attr('stroke-linejoin', 'round')
       .attr('stroke-width', 3)
     .selectAll('g')
-    .data(nodes)
+    .data(view.nodes)
     .join('g')
-      .attr('transform', d => `translate(${d.y},${d.x})`)
-      .attr('cursor', 'pointer')
-      .on('click', (event, d) => showDetail(detail, d.data, cmp));
+      .attr('transform', d => `translate(${d.y},${d.x})`);
 
   decorateFamilies(node.filter(d => d.data.is_family));
   decoratePersons(node.filter(d => !d.data.is_family));
-
-  // Briefly pulse a ring around a node so the user spots where the view jumped.
-  function highlightNode(d) {
-    node.filter(x => x === d).each(function () {
-      const ring = d3.select(this).append('circle')
-          .attr('r', 9).attr('fill', 'none')
-          .attr('stroke', '#222').attr('stroke-width', 2.5).attr('opacity', 0.9);
-      ring.transition().duration(1300).attr('r', 26).attr('opacity', 0).remove();
-    });
-  }
-
-  return { nodes, panToNode, highlightNode };
+  return node;
 }
 
 // Coloured dot (by status) + name + birth info for a person-node selection.
@@ -594,7 +695,8 @@ function showDetail(detail, node, cmp) {
 
 // Sets the button's visible label + tooltip to the contributor's name and wires
 // the click handler to export just that side's tree.
-function wireGedExport(btn, cmp, ctx, side, contributorName) {
+function wireGedExport(btnId, cmp, ctx, side, contributorName) {
+  const btn = document.getElementById(btnId);
   if (!btn) return;
   const name = baseContributorName(contributorName || '');
   const label = btn.querySelector('.ged-side-label');
@@ -602,11 +704,11 @@ function wireGedExport(btn, cmp, ctx, side, contributorName) {
   btn.title = `${t('tree_download_ged')} – ${name}`;
   btn.style.display = '';
   attachGedExport({
-    downloadBtnId: btn.id,
+    downloadBtnId: btnId,
     buildModel: () => buildCompareGedcom(cmp, side),
     personName: ctx.personName,
     contributorName: name,
-    filePrefix: `compare-${DIR_FILE[cmp.dir]}-${name}`,
+    filePrefix: `compare-${DIR_FILE_PREFIX[cmp.dir]}-${name}`,
   });
 }
 
@@ -626,8 +728,6 @@ function buildCompareGedcom(cmp, side) {
 // `parents`, keeping only nodes present on `side`. A subtree that exists for
 // just the other genealogist (status only_<otherSide>) has no data for `side`
 // at any depth, so checking the immediate node is enough to prune it whole.
-// The merged tree carries no marriage data for ancestors (see _align_ancestors),
-// so families here are spouse links only.
 function addCompareAncestors(model, rootNode, rootIndi, side) {
   const walk = (node, indi) => {
     const parents = (node.parents || []).filter(p => p[side]);
@@ -643,7 +743,7 @@ function addCompareAncestors(model, rootNode, rootIndi, side) {
       husband = parentIndis[0];
     }
 
-    const fam = model.addFamily(husband, wife, null);
+    const fam = model.addFamily(husband, wife, node.parents_marriage);
     fam.children.push(indi.id);
     indi.famc = fam.id;
 
@@ -751,7 +851,7 @@ function exportDifferences(cmp, ctx) {
   if (ctx.personName) subject.push(csvRow([t('col_name'), ctx.personName]));
   subject.push(csvRow([t('tree_source'), `${A}, ${B}`]));
 
-  const prefix = DIR_FILE[cmp.dir];
+  const prefix = DIR_FILE_PREFIX[cmp.dir];
   const filename = formatExportFilename(`compare-${prefix}-${ctx.personName || prefix}`, 'csv');
   downloadCsv([csvRow(header), ...body, '', ...csvFooter(subject)], filename);
 }

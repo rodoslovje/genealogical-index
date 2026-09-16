@@ -4,7 +4,11 @@ import { t, formatTitleSuffix } from '../i18n.js';
 import { escapeHtml, ensureD3 } from '../lib/utils.js';
 import { authFetch } from '../auth.js';
 import { createSvgWithZoom, attachSvgExport, attachCsvExport, attachGedExport, createGedcomModel } from './shared.js';
-import { pruneGenerations, buildHierarchy, DIRS, CHARTS } from './data.js';
+import { pruneGenerations, buildHierarchy, treeDepth } from './data.js';
+import {
+  DEFAULT_GENS, DIR_TITLE_KEY, DIR_FILE_PREFIX,
+  readDir, readChart, readGens, renderTreeToolbar,
+} from './toolbar.js';
 import { layoutTree } from './layout-tree.js';
 import { layoutFan } from './layout-fan.js';
 import { buildAncestorRows, addAncestorsToGedcom } from './ancestors.js';
@@ -13,7 +17,7 @@ import { buildDescendantRows, addDescendantsToGedcom } from './descendants.js';
 // The tree page (?t=tree). One page for every direction and chart:
 //   dir   = both (bowtie: ancestors left, descendants right — the default)
 //         | anc | desc
-//   chart = tree (compact tidy tree — default) | fan (half circle) | circle
+//   chart = fan (half circle — default) | tree (compact tidy tree) | circle
 //           (full circle)
 //   gens  = generation limit (0 = all); defaults depend on the chart because
 //           the fan can't cope with unbounded depth the way the tree can.
@@ -42,13 +46,8 @@ const LAYOUTS = {
   circle: (sides, o) => layoutFan(sides, { ...o, arc: 360 }),
 };
 
-// The tree copes with any depth; the radial charts default to 6 generations
-// (fan and circle share it so toggling between them keeps the same people).
-const DEFAULT_GENS = { tree: 0, fan: 6, circle: 6 };
-const GENS_OPTIONS = [0, 3, 4, 5, 6, 7, 8, 10, 12];
-
-const TITLE_KEY = { both: 'tree_title', anc: 'tree_ancestors_title', desc: 'tree_descendants_title' };
-const FILE_PREFIX = { both: 'bowtie', anc: 'ancestors', desc: 'descendants' };
+// The bowtie's own heading; the single directions reuse the toolbar's labels.
+const TITLE_KEY = { ...DIR_TITLE_KEY, both: 'tree_title' };
 
 // Sides a direction needs.
 const sidesFor = dir => (dir === 'both' ? ['anc', 'desc'] : [dir]);
@@ -57,27 +56,6 @@ let state = null;     // { personKey, person, data: { anc?, desc? }, pending: {}
 let renderSeq = 0;    // bumps per renderTreePage call so stale fetches don't render
 
 // --- URL → options -----------------------------------------------------------
-
-function readDir(params) {
-  const v = params.get('dir');
-  return DIRS.includes(v) ? v : 'both';
-}
-
-// Circle has no meaning for a bowtie (each side already owns a half).
-// Anything unknown falls back to the tree.
-function readChart(params, dir) {
-  let chart = params.get('chart');
-  if (!CHARTS.includes(chart)) chart = 'tree';
-  if (chart === 'circle' && dir === 'both') chart = 'fan';
-  return chart;
-}
-
-function readGens(params, chart) {
-  const raw = params.get('gens');
-  if (raw == null || raw === '') return DEFAULT_GENS[chart];
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_GENS[chart];
-}
 
 // URL params for this person with the given options. Defaults are omitted so
 // shared links stay short; `gens` is only carried when explicitly set.
@@ -91,7 +69,7 @@ function pageParams({ dir, chart, gens }) {
   if (c) p.set('c', c);
   if (id) p.set('id', id);
   if (dir !== 'both') p.set('dir', dir);
-  if (chart !== 'tree') p.set('chart', chart);
+  if (chart !== 'fan') p.set('chart', chart);
   if (gens != null && gens !== DEFAULT_GENS[chart]) p.set('gens', String(gens));
   return p;
 }
@@ -212,60 +190,20 @@ function wireButtonTitles() {
   set(IDS.downloadGed, null, t('tree_download_ged'));
 }
 
-// Direction toggle, chart toggle (Tree / Fan) with the fan's Circle option
-// and the generations limit. Toggles are SPA links so they
-// go through the router (history + back/forward); the option checkbox and
-// generations select push the URL and re-render in place.
+// Rendered once up front (so the toggles work while the data is in flight) and
+// again from renderChart(), when the fetched depth is known.
 function renderToolbar() {
-  const bar = document.getElementById(IDS.toolbar);
-  if (!bar) return;
   const { dir, chart, gens } = state;
-
-  const seg = (items, active) => `<div class="compare-toggle tree-toggle">${items.map(([value, label, href]) =>
-    `<a class="compare-toggle-btn${value === active ? ' compare-toggle-active' : ''}" href="${href}" data-spa-nav>${label}</a>`
-  ).join('')}</div>`;
-
-  // Switching direction keeps the chart family (tree/fan) and the generation
-  // limit, dropping the option only when it no longer applies; switching
-  // between tree and fan resets the limit to the new chart's default.
-  const dirHref = d => pageHref({ dir: d, chart: readChart(new URLSearchParams({ chart }), d), gens });
-  const dirToggle = seg([
-    ['anc',  t('tree_ancestors_title'),   dirHref('anc')],
-    ['desc', t('tree_descendants_title'), dirHref('desc')],
-    ['both', t('tree_dir_both'),          dirHref('both')],
-  ], dir);
-
-  const family = chart === 'fan' || chart === 'circle' ? 'fan' : 'tree';
-  const chartToggle = seg([
-    ['tree', t('tree_chart_tree'), pageHref({ dir, chart: 'tree' })],
-    ['fan',  t('tree_chart_fan'),  pageHref({ dir, chart: 'fan' })],
-  ], family);
-
-  // Circle option for the fan (not in a bowtie, where each side is a half).
-  let option = '';
-  if (family === 'fan' && dir !== 'both') {
-    option = `<label class="tree-opt"><input type="checkbox" id="tree-opt-toggle" data-on="circle" data-off="fan"${chart === 'circle' ? ' checked' : ''}> ${t('tree_chart_circle')}</label>`;
-  }
-
-  const gensOptions = GENS_OPTIONS.map(n =>
-    `<option value="${n}"${n === gens ? ' selected' : ''}>${n === 0 ? t('tree_generations_all') : n}</option>`).join('');
-  const gensSelect = `<label class="tree-opt">${t('tree_generations')} <select id="tree-gens-select">${gensOptions}</select></label>`;
-
-  bar.innerHTML = dirToggle + chartToggle + option + gensSelect;
-
-  // Fan ↔ circle is the same chart family: keep the chosen generation count.
-  bar.querySelector('#tree-opt-toggle')?.addEventListener('change', (e) => {
-    const next = e.target.checked ? e.target.dataset.on : e.target.dataset.off;
-    navigateInPlace(pageParams({ dir, chart: next, gens }));
-  });
-  bar.querySelector('#tree-gens-select')?.addEventListener('change', (e) => {
-    navigateInPlace(pageParams({ dir, chart, gens: parseInt(e.target.value, 10) }));
+  const maxGen = Math.max(0, ...sidesFor(dir).map(side => treeDepth(state.data[side], side)));
+  renderTreeToolbar(document.getElementById(IDS.toolbar), { dir, chart, gens, maxGen }, {
+    hrefFor: pageHref,
+    navigate: navigateInPlace,
   });
 }
 
 // Push a new URL for the same person and re-render from cached data.
-function navigateInPlace(params) {
-  history.pushState(null, '', window.location.pathname + '?' + toUnicodeSearch(params));
+function navigateInPlace(opts) {
+  history.pushState(null, '', window.location.pathname + '?' + toUnicodeSearch(pageParams(opts)));
   renderTreePage();
 }
 
@@ -283,6 +221,9 @@ function renderChart() {
 
   clearMinimap();
   container.innerHTML = '';
+  // The data (and with it the depth the generations select can offer) may have
+  // arrived since the toolbar was first drawn.
+  renderToolbar();
 
   // Prune to the generation limit once; hierarchies and exports both use the
   // pruned trees so the downloads match what's on screen.
@@ -321,7 +262,7 @@ function renderChart() {
   });
   view.draw(g, { contributorName: person.c });
 
-  const filePrefix = FILE_PREFIX[dir];
+  const filePrefix = DIR_FILE_PREFIX[dir];
   attachSvgExport({
     svg, g, downloadBtnId: IDS.downloadSvg,
     data: rootData, personName: person.name, contributorName: person.c,

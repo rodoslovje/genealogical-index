@@ -46,6 +46,28 @@ function pruneDescendants(person, gen, gens) {
   return { ...person, children };
 }
 
+// Deepest generation present in a raw API tree (0 for a lone person), used to
+// cap the toolbar's generation choices at what the data can actually show.
+// Family nodes in a descendants tree share their person's generation.
+export function treeDepth(data, side) {
+  if (!data) return 0;
+  let max = 0;
+  if (side === 'anc') {
+    const walk = (node, gen) => {
+      if (gen > max) max = gen;
+      (node.parents || []).forEach(p => walk(p, gen + 1));
+    };
+    walk(data, 0);
+  } else {
+    const walk = (node, gen) => {
+      if (!node.is_family && gen > max) max = gen;
+      (node.children || []).forEach(c => walk(c, node.is_family ? gen + 1 : gen));
+    };
+    walk(data, 0);
+  }
+  return max;
+}
+
 // --- Hierarchies -------------------------------------------------------------
 
 const SEX_ORDER = { m: 1, f: 2 };

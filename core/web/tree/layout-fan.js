@@ -26,9 +26,25 @@ const TAU = 2 * Math.PI;
 const CHAR_W = 6.6;   // approx. glyph width at the 12px label size, for fitting
 const BOWTIE_GAP = 0.06;  // radians trimmed from each half at the horizontal axis (~3.5°)
 
-export function layoutFan(sides, { dir, arc }) {
+// How wedges are painted and linked. The tree page uses the defaults (sex
+// tints, links to the person / family search); the compare view swaps in its
+// comparison-status palette and drops the links, since a wedge there opens the
+// side-by-side detail panel instead.
+const DEFAULT_DECOR = {
+  fill: d => {
+    if (d.data.is_family) return '#f3f3f3';
+    if (isNodePrivate(d)) return '#ececec';
+    return sexTint(d.data.sex);
+  },
+  // Colour of a wedge's first (name) line; null leaves it the body colour.
+  nameFill: () => '#1a5f8f',
+  href: (d, ctx) => wedgeHref(d, ctx.contributorName),
+};
+
+export function layoutFan(sides, { dir, arc, decor }) {
   const { anc, desc } = sides;
   const both = dir === 'both';
+  const dec = { ...DEFAULT_DECOR, ...decor };
 
   // Angular window per side as [start, end] in fraction→angle terms. A single
   // fan opens upward from 9 to 3 o'clock, so the father's line is on the left
@@ -69,7 +85,7 @@ export function layoutFan(sides, { dir, arc }) {
     bounds,
     anchor: 'fit',
     linkPath: null,
-    draw(g, ctx) { drawWedges(g, nodes, ctx); },
+    draw(g, ctx) { return drawWedges(g, nodes, ctx, dec); },
   };
 }
 
@@ -95,8 +111,11 @@ function setGeometry(d, a0, a1, r0, r1) {
 const ringOuter = g => R0 + g * (FAM_RING + RING);
 
 // Places the ancestor wedges and returns the synthetic marriage-band nodes:
-// one per person with both parents known, spanning the person's own wedge
-// (the union of the two parent wedges) just inside the parents' ring.
+// one per person with both parents known and a recorded marriage, spanning the
+// person's own wedge (the union of the two parent wedges) just inside the
+// parents' ring. Without marriage data there is nothing to put in the band, so
+// the ring gap is left empty (the cartesian layout skips it the same way, and
+// the compare view's merged trees never carry ancestor marriages).
 function placeAncestors(root, window) {
   const bands = [];
   root.each(d => {
@@ -104,14 +123,15 @@ function placeAncestors(root, window) {
     if (d.gen === 0) setGeometry(d, 0, TAU, 0, R0);
     else setGeometry(d, a0, a1, ringOuter(d.gen) - RING, ringOuter(d.gen));
 
-    if (d.children && d.children.length === 2) {
+    const marriage = d.data.parents_marriage;
+    if (d.children && d.children.length === 2 && marriage) {
       const band = {
         gen: d.gen,
         side: 'anc',
         data: {
           is_family: true,
           is_marriage: true,
-          marriage: d.data.parents_marriage || {},
+          marriage,
           husband: d.children[0].data,
           wife: d.children[1].data,
         },
@@ -140,12 +160,6 @@ function placeDescendants(root, window) {
 // --- Drawing -----------------------------------------------------------------
 
 const deg = rad => (rad * 180 / Math.PI) % 360;
-
-function wedgeFill(d) {
-  if (d.data.is_family) return '#f3f3f3';
-  if (isNodePrivate(d)) return '#ececec';
-  return sexTint(d.data.sex);
-}
 
 function wedgeHref(d, contributorName) {
   if (d.data.is_marriage) return ancestorMarriageHref(d.data.husband, d.data.wife, d.data.marriage, contributorName);
@@ -189,7 +203,7 @@ function fit(text, width) {
   return text.length <= max ? text : text.slice(0, Math.max(1, max - 1)) + '…';
 }
 
-function drawWedges(g, nodes, ctx) {
+function drawWedges(g, nodes, ctx, dec) {
   const arcGen = d3.arc()
       .startAngle(d => d.a0).endAngle(d => d.a1)
       .innerRadius(d => d.r0).outerRadius(d => d.r1);
@@ -201,13 +215,13 @@ function drawWedges(g, nodes, ctx) {
 
   node.append('path')
       .attr('d', arcGen)
-      .attr('fill', wedgeFill)
+      .attr('fill', dec.fill)
       .attr('stroke', '#fff')
       .attr('stroke-width', 1.5)
     .append('title')
       .text(d => wedgeLines(d).join(' · '));
 
-  const hrefOf = d => wedgeHref(d, ctx.contributorName);
+  const hrefOf = d => dec.href(d, ctx);
   const label = node.append(d =>
       document.createElementNS('http://www.w3.org/2000/svg', hrefOf(d) ? 'a' : 'g'))
     .attr('href', hrefOf)
@@ -226,9 +240,10 @@ function drawWedges(g, nodes, ctx) {
     const arcLen = (d.a1 - d.a0) * rMid;
     const depth = d.r1 - d.r0;
     const priv = isTextPrivate(d);
+    const isName = i => i === 0 && !priv && !d.data.is_family;
     const lineStyle = (sel, i) => sel
-        .attr('font-weight', i === 0 && !priv && !d.data.is_family ? 'bold' : 'normal')
-        .attr('fill', i === 0 && !priv && !d.data.is_family ? '#1a5f8f' : null);
+        .attr('font-weight', isName(i) ? 'bold' : 'normal')
+        .attr('fill', isName(i) ? dec.nameFill(d) : null);
     const baseFill = d.data.is_family ? '#555' : (priv ? '#555' : '#1f2d3d');
 
     // Root: plain centred text. Otherwise the text follows the ring (curved
@@ -301,6 +316,8 @@ function drawWedges(g, nodes, ctx) {
         .attr('x', 0)
         .attr('dy', i === 0 ? `${0.35 - 0.6 * (fitted.length - 1)}em` : '1.2em'), i).text(line));
   });
+
+  return node;
 }
 
 // SVG arc from angle a0 to a1 at radius r (d3 angles: 0 at 12 o'clock,

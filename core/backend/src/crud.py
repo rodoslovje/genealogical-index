@@ -1833,8 +1833,7 @@ def get_ancestors_tree(
     lookup for parents_marriage) replace what used to be O(N) round-trips.
 
     `include_marriage=False` skips the parents-marriage attachment (an extra
-    query plus a full-tree walk); the tree-comparison view doesn't render
-    marriages, so it opts out to save that work on both trees it builds.
+    query plus a full-tree walk) for callers that don't render marriages.
     """
     max_generations = _resolve_max_generations(max_generations)
     root_person = db.query(models.Person).filter(models.Person.id == person_id).first()
@@ -2466,9 +2465,14 @@ def _merged_person_core(a, b, status, confidence):
 
 
 def _merged_person_node(a, b, status, confidence):
-    """Merged ancestor node (children live under `parents`)."""
+    """Merged ancestor node (children live under `parents`). The parents' own
+    marriage rides along for the fan chart's inter-generation band, taken from
+    whichever side records one (A preferred, as with descendant families)."""
     node = _merged_person_core(a, b, status, confidence)
     node["parents"] = []
+    marriage = (a or {}).get("parents_marriage") or (b or {}).get("parents_marriage")
+    if marriage:
+        node["parents_marriage"] = marriage
     return node
 
 
@@ -2822,16 +2826,15 @@ def _collect_node_ids(node, acc):
 
 def _build_trees_parallel(a_id, b_id, max_generations, direction):
     """Build the two trees concurrently, each on its own session so the DB
-    round-trips overlap. Ancestors skip the unused parents-marriage attachment;
-    descendants need their family nodes. Sessions are closed in the worker."""
+    round-trips overlap. Both directions carry their marriages: the fan chart
+    draws a band between generations for them. Sessions are closed in the
+    worker."""
 
     def build(person_id):
         session = SessionLocal()
         try:
             if direction == "ancestors":
-                return get_ancestors_tree(
-                    session, person_id, max_generations, include_marriage=False
-                )
+                return get_ancestors_tree(session, person_id, max_generations)
             return get_descendants_tree(session, person_id, max_generations)
         finally:
             session.close()
