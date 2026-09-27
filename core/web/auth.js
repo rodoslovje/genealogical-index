@@ -174,14 +174,14 @@ export function initAuth() {
         <h3 data-i18n="login_title">${t('login_title')}</h3>
         <p id="login-desc" data-msg-key="login_desc">${loginDescText}</p>
         <div id="login-error" class="login-error" style="display: none;" data-i18n="login_error"></div>
-        <form id="login-form">
+        <form id="login-form" method="post" action="${escapeHtml(siteConfig.authUrl)}">
           <div class="input-wrapper" style="margin-bottom: 12px; display: block;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;" data-i18n="username">${t('username')}</label>
-            <input type="text" id="login-user" required style="width: 100%; box-sizing: border-box; padding: 8px;" />
+            <label for="login-user" style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;" data-i18n="username">${t('username')}</label>
+            <input type="text" id="login-user" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required style="width: 100%; box-sizing: border-box; padding: 8px;" />
           </div>
           <div class="input-wrapper" style="margin-bottom: 20px; display: block;">
-            <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;" data-i18n="password">${t('password')}</label>
-            <input type="password" id="login-pass" required style="width: 100%; box-sizing: border-box; padding: 8px;" />
+            <label for="login-pass" style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;" data-i18n="password">${t('password')}</label>
+            <input type="password" id="login-pass" name="password" autocomplete="current-password" required style="width: 100%; box-sizing: border-box; padding: 8px;" />
           </div>
           <button type="submit" class="primary-btn" style="width: 100%;" data-i18n="login_submit">${t('login_submit')}</button>
         </form>
@@ -215,8 +215,10 @@ export function initAuth() {
       await login(user, pass);
 
       modal.classList.remove('open');
-      form.reset();
 
+      // Leave the fields filled: browsers and password managers decide whether
+      // to offer saving the credentials from the values still in the form when
+      // the page goes away, and resetting it first suppresses that prompt.
       // Reload page to re-render previously blocked UI views
       window.location.reload();
     } catch (err) {
@@ -249,6 +251,9 @@ export function requireLogin(messageKey = 'login_desc') {
     const societyNameStr = escapeHtml(String(t('society_name') || ''));
     desc.innerHTML = String(t(messageKey) || '').replace('{society}', `<strong>${societyNameStr}</strong>`);
     modal.classList.add('open');
+    // Focus the first field once it is visible, so the keyboard and the
+    // password manager's autofill both land on the form straight away.
+    requestAnimationFrame(() => document.getElementById('login-user')?.focus());
   }
 }
 
