@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-09-27',
+    items: [
+      {
+        title: 'Das Taufzeichen verwendet das übliche genealogische Symbol',
+        text: 'Das kleine Zeichen neben dem Geburtsdatum, das ein bekanntes Taufdatum anzeigt, ist jetzt <strong>~</strong> — das Symbol, das Genealogen für eine Taufe verwenden — anstelle des Kreuzes <strong>✝</strong>, das herkömmlich für den Tod steht. Im CSV-Download erscheint es genauso.',
+      },
+    ],
+  },
+  {
     date: '2026-09-16',
     items: [
       {

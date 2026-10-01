@@ -350,7 +350,7 @@ export default {
         <li><strong>📄</strong> – drugi zgodovinski viri (arhivi, župnijske in društvene spletne strani)</li>
       </ul>
       {source_marks}
-      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>✝</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
+      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>~</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
       <h4>Stran z rodovniškim drevesom</h4>
       <p>Stran z drevesom prikazuje grafično, interaktivno rodovniško drevo izbrane osebe. Na voljo so:</p>
       <ul>

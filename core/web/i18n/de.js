@@ -351,7 +351,7 @@ export default {
         <li><strong>📄</strong> – andere historische Quellen (Archive, Pfarr- und Vereinswebseiten)</li>
       </ul>
       {source_marks}
-      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>✝</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
+      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>~</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
       <h4>Die Stammbaum-Seite</h4>
       <p>Die Stammbaum-Seite zeigt einen grafischen, interaktiven Stammbaum der ausgewählten Person an. Folgende Funktionen stehen zur Verfügung:</p>
       <ul>

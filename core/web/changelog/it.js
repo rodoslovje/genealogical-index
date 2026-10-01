@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-09-27',
+    items: [
+      {
+        title: 'Il segno del battesimo usa il simbolo genealogico consueto',
+        text: 'Il piccolo segno accanto alla data di nascita che indica una data di battesimo nota è ora <strong>~</strong> — il simbolo che i genealogisti usano per il battesimo — invece della croce <strong>✝</strong>, che per convenzione indica la morte. Compare allo stesso modo nel download CSV.',
+      },
+    ],
+  },
+  {
     date: '2026-09-16',
     items: [
       {

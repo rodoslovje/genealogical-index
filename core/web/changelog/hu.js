@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-09-27',
+    items: [
+      {
+        title: 'A keresztelés jele a szokásos genealógiai szimbólumot használja',
+        text: 'A születési dátum melletti kis jel, amely ismert keresztelési dátumra utal, most <strong>~</strong> — a genealógusok által a kereszteléshez használt szimbólum — a <strong>✝</strong> kereszt helyett, amely a hagyomány szerint a halált jelöli. A CSV-letöltésben ugyanígy szerepel.',
+      },
+    ],
+  },
+  {
     date: '2026-09-16',
     items: [
       {

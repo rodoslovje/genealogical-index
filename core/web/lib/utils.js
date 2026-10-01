@@ -578,7 +578,7 @@ export function deceasedIndicatorHtml(name, tooltip) {
 
 // --- inline row icons for optional fields shown in result cells ---
 const ALT_SURNAME_ICON = '🏷';
-const BAPTISM_ICON     = '✝';
+const BAPTISM_ICON     = '~';
 const NOTES_ICON       = '🗒';
 
 function _inlineIcon(glyph, label, value) {

@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-09-27',
+    items: [
+      {
+        title: 'La marque de baptême utilise le symbole généalogique habituel',
+        text: 'La petite marque à côté de la date de naissance qui signale une date de baptême connue est désormais <strong>~</strong> — le symbole que les généalogistes emploient pour un baptême — au lieu de la croix <strong>✝</strong>, qui désigne par convention le décès. Elle apparaît de la même façon dans le téléchargement CSV.',
+      },
+    ],
+  },
+  {
     date: '2026-09-16',
     items: [
       {

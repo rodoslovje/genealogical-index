@@ -351,7 +351,7 @@ export default {
         <li><strong>📄</strong> – altre fonti storiche (archivi, siti web parrocchiali e di associazioni)</li>
       </ul>
       {source_marks}
-      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome (ad esempio il cognome acquisito con il matrimonio), il segno <strong>✝</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
+      <p>Accanto ad alcuni altri dati compaiono icone marginali più piccole con informazioni aggiuntive: il segno <strong>🏷</strong> accanto a un cognome mostra forme alternative del cognome (ad esempio il cognome acquisito con il matrimonio), il segno <strong>~</strong> accanto alla data di nascita indica che è nota anche la data di battesimo, e il segno <strong>🗒</strong> accanto al luogo di nascita o matrimonio avvisa di note registrate. Passandoci sopra con il mouse verranno visualizzati i dettagli.</p>
       <h4>La pagina dell'albero genealogico</h4>
       <p>La pagina dell'albero visualizza un albero genealogico grafico e interattivo della persona selezionata. Sono disponibili le seguenti funzioni:</p>
       <ul>

@@ -76,7 +76,7 @@ function cellValue(col, row) {
     cellVal = `${cellVal} (${row.wife_alt_surname})`.trim();
   } else if (col === 'date_of_birth' && (row.date_of_baptism || row.place_of_baptism)) {
     const b = [row.date_of_baptism, row.place_of_baptism].filter(Boolean).join(', ');
-    cellVal = `${cellVal} (✝ ${b})`.trim();
+    cellVal = `${cellVal} (~ ${b})`.trim();
   } else if ((col === 'place_of_birth' || col === 'place_of_marriage') && row.notes) {
     cellVal = `${cellVal} (🗒 ${row.notes})`.trim();
   }

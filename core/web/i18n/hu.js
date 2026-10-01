@@ -351,7 +351,7 @@ export default {
         <li><strong>📄</strong> – egyéb történelmi források (levéltárak, plébániai és egyesületi weboldalak)</li>
       </ul>
       {source_marks}
-      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>✝</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
+      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>~</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
       <h4>A családfa oldal</h4>
       <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
       <ul>

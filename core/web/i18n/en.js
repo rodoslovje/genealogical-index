@@ -351,7 +351,7 @@ export default {
         <li><strong>📄</strong> – other historical sources (archives, parish and society websites)</li>
       </ul>
       {source_marks}
-      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>✝</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
+      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>~</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
       <h4>The Family Tree Page</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>

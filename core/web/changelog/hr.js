@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-09-27',
+    items: [
+      {
+        title: 'Oznaka za krštenje koristi uobičajeni rodoslovni simbol',
+        text: 'Mala oznaka uz datum rođenja koja znači da je poznat i datum krštenja sada je <strong>~</strong> — simbol koji rodoslovci koriste za krštenje — umjesto križa <strong>✝</strong>, koji po uobičajenoj uporabi znači smrt. Isto tako je zapisana i u CSV preuzimanju.',
+      },
+    ],
+  },
+  {
     date: '2026-09-16',
     items: [
       {

@@ -18,6 +18,15 @@
 
 export default [
   {
+    date: '2026-09-27',
+    items: [
+      {
+        title: 'The baptism mark uses the usual genealogical symbol',
+        text: 'The small mark next to a date of birth that signals a known baptism date is now <strong>~</strong>, the symbol genealogists use for a baptism, instead of the cross <strong>✝</strong>, which by convention stands for a death. It appears the same way in the CSV download.',
+      },
+    ],
+  },
+  {
     date: '2026-09-16',
     items: [
       {

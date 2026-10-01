@@ -351,7 +351,7 @@ export default {
         <li><strong>📄</strong> – ostali povijesni izvori (arhivi, župne i društvene mrežne stranice)</li>
       </ul>
       {source_marks}
-      <p>Uz neke druge podatke pojavljuju se i manje rubne ikone s dodatnim informacijama: oznaka <strong>🏷</strong> uz prezime prikazuje druge oblike prezimena (na primjer prezime nakon vjenčanja), oznaka <strong>✝</strong> uz datum rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> uz mjesto rođenja ili vjenčanja upozorava na zabilježene napomene. Prelaskom mišem preko njih prikazuju se pojedinosti.</p>
+      <p>Uz neke druge podatke pojavljuju se i manje rubne ikone s dodatnim informacijama: oznaka <strong>🏷</strong> uz prezime prikazuje druge oblike prezimena (na primjer prezime nakon vjenčanja), oznaka <strong>~</strong> uz datum rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> uz mjesto rođenja ili vjenčanja upozorava na zabilježene napomene. Prelaskom mišem preko njih prikazuju se pojedinosti.</p>
       <h4>Stranica s rodoslovnim stablom</h4>
       <p>Stranica sa stablom prikazuje grafičko, interaktivno rodoslovno stablo odabrane osobe. Dostupne su sljedeće mogućnosti:</p>
       <ul>

@@ -351,7 +351,7 @@ export default {
         <li><strong>📄</strong> – autres sources historiques (archives, sites de paroisses et de sociétés)</li>
       </ul>
       {source_marks}
-      <p>À côté de certaines autres données apparaissent de petites icônes marginales apportant des informations complémentaires : la marque <strong>🏷</strong> à côté d'un nom indique des formes alternatives du nom (par exemple un nom d'épouse), la marque <strong>✝</strong> à côté de la date de naissance signifie que la date de baptême est également connue, et la marque <strong>🗒</strong> à côté du lieu de naissance ou de mariage signale des notes enregistrées. Survolez-les avec la souris pour afficher les détails.</p>
+      <p>À côté de certaines autres données apparaissent de petites icônes marginales apportant des informations complémentaires : la marque <strong>🏷</strong> à côté d'un nom indique des formes alternatives du nom (par exemple un nom d'épouse), la marque <strong>~</strong> à côté de la date de naissance signifie que la date de baptême est également connue, et la marque <strong>🗒</strong> à côté du lieu de naissance ou de mariage signale des notes enregistrées. Survolez-les avec la souris pour afficher les détails.</p>
       <h4>La page de l'arbre généalogique</h4>
       <p>La page de l'arbre affiche un arbre généalogique graphique et interactif de la personne sélectionnée. Les fonctions disponibles sont :</p>
       <ul>
