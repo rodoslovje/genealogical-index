@@ -477,7 +477,7 @@ export function formatSpecialCell(col, row, otherRow, isB = false) {
 
   if (col === 'parents' && row.parents_list) {
     const otherParents = diffMode ? (otherRow?.parents_list ?? null) : undefined;
-    const { html, count } = renderParentPair(row.parents_list, otherParents, row.contributor, isB);
+    const { html, count } = renderParentPair(row.parents_list, null, otherParents, row.contributor, isB);
     return wrapExpandable(count, html);
   }
 
