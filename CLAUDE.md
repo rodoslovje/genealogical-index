@@ -113,7 +113,9 @@ The Docker volume mounts `core/backend/src` directly into the container, so back
 
 Genealogists who have passed away are marked with a `deceased` value (`"1948-2024"`, `"2024"`, or `true`), an optional `memorial_url`, and their `full_name`. These come from `metadata.json` and are copied into the `contributors` table by `sync_contributor_metadata()` on every import (DB wins at read time, same as `intro`). `full_name` is deliberately returned by the API **only** for contributors marked deceased, so living genealogists' real names stay out of public responses. The UI shows a 🕯 next to the name wherever it appears and an "In memoriam" panel on their contributor page; their data stays fully available.
 
-Contributors with `-matricula`, `-geneanet`, or `-military` suffixes are "special" non-tree sources. They are folded into their base name for display and excluded from the `tree` source filter. This logic lives in `crud.py` (`SPECIAL_SUFFIXES`).
+Contributors with `-matricula`, `-geneanet`, or `-military` suffixes are "special" non-tree sources. They are folded into their base name for display and excluded from the `tree` source filter. This logic lives in `crud.py` (`SPECIAL_SUFFIXES`). Only a genealogist with a tree gets a Matches section on their page; the special sources appear there only as partners of trees.
+
+Each `-matricula` record carries its parish and each `-geneanet` record its cemetery's place in `source_unit` (persons and families), set on every import by `assign_source_units()` in `import_to_db.py`: Matricula via the book its page link points into (`matricula_book_key()` → `matricula_books.parish`, falling back to the place's "Parish, village" prefix), Geneanet persons from the cemetery index's `place` for their `place_of_burial` ("place, cemetery"; postcode dropped), Geneanet families from their spouses' graves. It exists so matches against those sources can be grouped per parish / cemetery place; matching itself ignores it.
 
 ### Authentication (Optional)
 

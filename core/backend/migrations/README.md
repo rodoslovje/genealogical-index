@@ -355,6 +355,28 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/015_match_surnames.sql
 ```
 
+### 016 — `source_unit`
+
+Adds `source_unit TEXT` to `persons` and `families` — the parish of a
+Matricula record, the cemetery's place for a Geneanet record, NULL
+otherwise — plus the `matricula_book_key(url)` helper. Groundwork for grouping matches against
+those sources per parish / place instead of per transcriber.
+
+- `ADD COLUMN` (nullable, no default) is metadata-only; safe online.
+- Run it **before** deploying the API code: the ORM models include the
+  column, so search would fail against a DB without it.
+- Values come from `import_to_db.py`'s `assign_source_units()`, which runs on
+  every import (only changed rows are written). Backfill from the data
+  already in the DB with `import_to_db.py --source-units-only` — no
+  re-import, no match recompute.
+- Re-runnable.
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/016_source_unit.sql
+docker compose exec api python tools/import_to_db.py --source-units-only
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

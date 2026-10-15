@@ -376,7 +376,7 @@ export default {
         <li><strong>Statistiques de contribution :</strong> Une grille indiquant le nombre de personnes, de familles, de liens et la date de la dernière mise à jour.{matricula_cols}</li>
         <li><strong>Lien :</strong> Si la source a fourni un site web personnel, celui-ci est affiché sous son nom.</li>
         <li><strong>Noms les plus fréquents :</strong> Un nuage de mots et une liste montrent les noms qui apparaissent le plus souvent dans sa base de données.</li>
-        <li><strong>Correspondances possibles :</strong> Une liste des autres sources qui partagent avec celle-ci des personnes ou des familles historiques correspondantes.</li>
+        <li><strong>Correspondances possibles :</strong> Une liste des autres sources qui partagent avec celle-ci des personnes ou des familles historiques correspondantes. Seuls les généalogistes ayant fourni un arbre généalogique ont cette liste ; les index Matricula, de cimetières et militaires y apparaissent comme correspondances des arbres.</li>
       </ul>
       <h4>Correspondances entre sources</h4>
       <p>En cliquant sur l'une des correspondances proposées sur la page d'une source, vous affichez une comparaison détaillée de leurs données{auth_match}. Les résultats sont présentés de manière que chaque correspondance occupe deux lignes adjacentes :</p>

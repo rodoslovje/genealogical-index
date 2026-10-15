@@ -375,7 +375,7 @@ export default {
         <li><strong>Statistika prispevka:</strong> Mreža s številom oseb, družin in povezav ter datumom zadnje posodobitve.{matricula_cols}</li>
         <li><strong>Povezava:</strong> Če je vir podal svojo osebno spletno stran, se ta prikaže pod njegovim imenom.</li>
         <li><strong>Najpogostejši priimki:</strong> Oblak besed in seznam prikazujeta priimke, ki se v njegovi bazi največkrat pojavijo.</li>
-        <li><strong>Možna ujemanja:</strong> Seznam drugih virov, s katerimi ima ta vir skupne (ujemajoče) zgodovinske osebe ali družine.</li>
+        <li><strong>Možna ujemanja:</strong> Seznam drugih virov, s katerimi ima ta vir skupne (ujemajoče) zgodovinske osebe ali družine. Seznam imajo le rodoslovci, ki so prispevali rodovnik; indeksi Matricule, pokopališč in vojaških virov se v njem pojavljajo kot ujemanja rodovnikov.</li>
       </ul>
       <h4>Ujemanja med viri</h4>
       <p>S klikom na eno izmed predlaganih ujemanj na strani vira prikažete podrobno primerjavo njunih podatkov{auth_match}. Rezultati so prikazani tako, da vsak ujemek zavzame dve sosednji vrstici:</p>

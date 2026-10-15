@@ -57,6 +57,13 @@ _FOLD_HELPERS_SQL = """
     CREATE OR REPLACE FUNCTION has_day_precision(d text) RETURNS boolean
         LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
     $$ SELECT COALESCE(d, '') ~* '\\d{1,2}\\s+[a-z]{3,9}\\s+\\d{4}' $$;
+
+    -- The book a Matricula URL points into, as country/diocese/parish/book:
+    -- the language segment and the ?pg= page are dropped, so a record's page
+    -- link and the book's own URL in matricula_books reduce to the same key.
+    CREATE OR REPLACE FUNCTION matricula_book_key(url text) RETURNS text
+        LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
+    $$ SELECT rtrim(substring(url FROM 'matricula-online\\.eu/[^/]+/([^?#]+)'), '/') $$;
 """
 
 
@@ -89,6 +96,9 @@ def setup_full(db):
             date_of_burial TEXT, burial_year SMALLINT, place_of_burial TEXT,
             parents_list JSONB, partners_list JSONB,
             notes TEXT, contributor TEXT, links JSONB,
+            -- Parish (-matricula) or cemetery place (-geneanet) of the
+            -- record; filled by assign_source_units(), NULL for other sources.
+            source_unit TEXT,
             -- Folded (lower-cased, accent-stripped) name columns: let
             -- compute_matches treat e.g. "Žagar"/"Zagar"/"ZAGAR" as the same
             -- surname for trigram blocking and similarity.
@@ -105,6 +115,7 @@ def setup_full(db):
             date_of_marriage TEXT, marriage_year SMALLINT, place_of_marriage TEXT,
             children_list JSONB, husband_parents JSONB, wife_parents JSONB,
             notes TEXT, contributor TEXT, links JSONB,
+            source_unit TEXT,
             husband_surname_fold     TEXT GENERATED ALWAYS AS (fold_text(husband_surname))     STORED,
             husband_alt_surname_fold TEXT GENERATED ALWAYS AS (fold_text(husband_alt_surname)) STORED,
             husband_name_fold        TEXT GENERATED ALWAYS AS (fold_text(husband_name))        STORED,
@@ -455,6 +466,8 @@ def setup_update(db):
         ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_ext_id         TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS wife_alt_surname    TEXT;
         ALTER TABLE families ADD COLUMN IF NOT EXISTS notes               TEXT;
+        ALTER TABLE persons  ADD COLUMN IF NOT EXISTS source_unit         TEXT;
+        ALTER TABLE families ADD COLUMN IF NOT EXISTS source_unit         TEXT;
 
         -- Folded (lower-cased, accent-stripped) name columns used by
         -- compute_matches for diacritic-insensitive surname/given-name
@@ -1128,6 +1141,137 @@ def import_geneanet_index(db):
     )
 
 
+# Parish of each Matricula record. The record's page link names the book
+# (matricula_book_key), and the book index knows its parish; the lookup is
+# over every transcriber's books, since a book is in the same parish whoever
+# indexed it. A record without a resolvable link (missing, mistyped, or a
+# book not in the index) falls back to the place, which Matricula exports
+# write as "Parish, village".
+_MATRICULA_PARISH_SQL = """
+    WITH book AS (
+        SELECT DISTINCT ON (key) key, parish
+        FROM (SELECT matricula_book_key(url) AS key, parish FROM matricula_books) b
+        WHERE key IS NOT NULL AND parish <> ''
+        ORDER BY key, parish
+    ),
+    -- Set-based (one hash join) rather than a per-record subquery: the
+    -- latter re-reads the book list for every record and is ~100x slower.
+    link_parish AS (
+        SELECT DISTINCT ON (r.id) r.id, b.parish
+        FROM {table} r
+        CROSS JOIN LATERAL jsonb_array_elements_text(
+            CASE WHEN jsonb_typeof(r.links) = 'array'
+                 THEN r.links ELSE CAST('[]' AS jsonb) END
+        ) WITH ORDINALITY AS l(url, ord)
+        JOIN book b ON b.key = matricula_book_key(l.url)
+        WHERE r.contributor LIKE '%-matricula'
+        ORDER BY r.id, l.ord
+    ),
+    unit AS (
+        SELECT r.id, COALESCE(
+            lp.parish, NULLIF(btrim(split_part({place}, ',', 1)), '')
+        ) AS unit
+        FROM {table} r
+        LEFT JOIN link_parish lp ON lp.id = r.id
+        WHERE r.contributor LIKE '%-matricula'
+    )
+    UPDATE {table} t SET source_unit = u.unit
+    FROM unit u
+    WHERE t.id = u.id AND t.source_unit IS DISTINCT FROM u.unit
+"""
+
+_SOURCE_UNIT_SQL = [
+    (
+        "Matricula persons",
+        _MATRICULA_PARISH_SQL.format(
+            table="persons",
+            place="COALESCE(NULLIF(r.place_of_baptism, ''), NULLIF(r.place_of_birth, ''),"
+            " NULLIF(r.place_of_death, ''), r.place_of_burial)",
+        ),
+    ),
+    (
+        "Matricula families",
+        _MATRICULA_PARISH_SQL.format(table="families", place="r.place_of_marriage"),
+    ),
+    # Geneanet records are grouped by the cemetery's place, not the cemetery:
+    # a village's graves belong together even when it has two cemeteries. A
+    # person's burial place is written as "place, cemetery name", but either
+    # half can itself contain a comma ("Šmihel, Novo Mesto", "Pokopališče
+    # Ptuj-staro, Mestno"), so the place is looked up in the cemetery index
+    # (any contributor's), falling back to the text before the first comma
+    # for a cemetery the index lacks. A leading postcode is dropped so that
+    # "6330 Piran" and "Piran" are one place.
+    (
+        "Geneanet persons",
+        """
+        WITH cem AS (
+            SELECT DISTINCT ON (key) key, place
+            FROM (SELECT place || ', ' || name AS key, place
+                  FROM geneanet_cemeteries WHERE place <> '') c
+            ORDER BY key, place
+        ),
+        unit AS (
+            SELECT p.id, NULLIF(btrim(regexp_replace(
+                COALESCE(c.place, split_part(p.place_of_burial, ',', 1)),
+                '^\\d{4,5}\\s+', '')), '') AS unit
+            FROM persons p
+            LEFT JOIN cem c ON c.key = p.place_of_burial
+            WHERE p.contributor LIKE '%-geneanet'
+        )
+        UPDATE persons t SET source_unit = u.unit
+        FROM unit u
+        WHERE t.id = u.id AND t.source_unit IS DISTINCT FROM u.unit
+        """,
+    ),
+    # Geneanet families carry no place of their own; they take the place of
+    # the spouses' graves. Runs after the persons statement above.
+    (
+        "Geneanet families",
+        """
+        WITH grave AS (
+            SELECT DISTINCT ON (contributor, ext_id) contributor, ext_id, source_unit
+            FROM persons
+            WHERE contributor LIKE '%-geneanet' AND ext_id <> ''
+              AND source_unit IS NOT NULL
+            ORDER BY contributor, ext_id, id
+        ),
+        unit AS (
+            SELECT f.id, COALESCE(h.source_unit, w.source_unit) AS unit
+            FROM families f
+            LEFT JOIN grave h ON h.contributor = f.contributor AND h.ext_id = f.husband_ext_id
+            LEFT JOIN grave w ON w.contributor = f.contributor AND w.ext_id = f.wife_ext_id
+            WHERE f.contributor LIKE '%-geneanet'
+        )
+        UPDATE families t SET source_unit = u.unit
+        FROM unit u
+        WHERE t.id = u.id AND t.source_unit IS DISTINCT FROM u.unit
+        """,
+    ),
+]
+
+
+def assign_source_units(db):
+    """Label every Matricula record with its parish and every Geneanet record
+    with its cemetery's place (`source_unit`), so matches against those sources
+    can be grouped the way a genealogist reviews them: one parish or place at a
+    time, where a family's records sit together.
+
+    Runs on every import, after the book and cemetery indexes are reloaded,
+    since a changed index can relabel records whose own data did not change.
+    Only rows whose label actually changes are written, so a run with nothing
+    new is a read-only scan.
+    """
+    print("\nAssigning parishes / cemeteries to special-source records...")
+    for label, sql in _SOURCE_UNIT_SQL:
+        start = time.perf_counter()
+        updated = db.execute(text(sql)).rowcount
+        db.commit()
+        print(
+            f"  -> {label}: {updated:,} updated "
+            f"({time.perf_counter() - start:.1f} sec)"
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Import JSON data into the database.")
     parser.add_argument(
@@ -1177,7 +1321,26 @@ def main():
         action="store_true",
         help="Run automatic match computation in the background and exit immediately.",
     )
+    parser.add_argument(
+        "--source-units-only",
+        action="store_true",
+        help="Only (re)label Matricula / Geneanet records with their parish / "
+        "cemetery place from what is already in the DB; imports nothing.",
+    )
     args = parser.parse_args()
+
+    if args.source_units_only:
+        db = SessionLocal()
+        db.execute(text(_FOLD_HELPERS_SQL))
+        db.execute(text("""
+            ALTER TABLE persons  ADD COLUMN IF NOT EXISTS source_unit TEXT;
+            ALTER TABLE families ADD COLUMN IF NOT EXISTS source_unit TEXT;
+        """))
+        db.commit()
+        assign_source_units(db)
+        db.close()
+        return
+
     full_mode = args.mode == "full" or args.drop_tables
 
     db = SessionLocal()
@@ -1360,6 +1523,7 @@ def main():
 
     import_matricula_index(db)
     import_geneanet_index(db)
+    assign_source_units(db)
 
     synced_metadata = sync_contributor_metadata(db, metadata)
     if synced_metadata:

@@ -376,7 +376,7 @@ export default {
         <li><strong>Beitragsstatistik:</strong> Ein Raster mit der Anzahl von Personen, Familien und Links sowie dem Datum der letzten Aktualisierung.{matricula_cols}</li>
         <li><strong>Link:</strong> Wenn die Quelle eine persönliche Website angegeben hat, wird diese unter ihrem Namen angezeigt.</li>
         <li><strong>Häufigste Nachnamen:</strong> Eine Wortwolke und eine Liste zeigen die Nachnamen, die in seiner Datenbank am häufigsten vorkommen.</li>
-        <li><strong>Mögliche Übereinstimmungen:</strong> Eine Liste anderer Quellen, die übereinstimmende historische Personen oder Familien mit dieser Quelle teilen.</li>
+        <li><strong>Mögliche Übereinstimmungen:</strong> Eine Liste anderer Quellen, die übereinstimmende historische Personen oder Familien mit dieser Quelle teilen. Diese Liste gibt es nur bei Genealogen, die einen Stammbaum beigetragen haben; Matricula-, Friedhofs- und Militärindizes erscheinen darin als Übereinstimmungen der Stammbäume.</li>
       </ul>
       <h4>Übereinstimmungen zwischen Quellen</h4>
       <p>Durch Klicken auf eine der vorgeschlagenen Übereinstimmungen auf der Seite einer Quelle zeigen Sie einen detaillierten Vergleich ihrer Daten an{auth_match}. Die Ergebnisse werden so angezeigt, dass jede Übereinstimmung zwei benachbarte Zeilen einnimmt:</p>

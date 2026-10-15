@@ -5,10 +5,10 @@
 // Matricula index transcriptions, Geneanet cemetery indexes, military
 // records — and each gets one panel: its own surname cloud plus whatever is
 // specific to that source (transcribed books, indexed cemeteries). The
-// Matches section rides along on the *primary* source's panel (tree, else
-// cemeteries, else military) because the matches API folds all of a
-// genealogist's sources together — matches are per genealogist, not per
-// source — and Matricula is index-only with no matches at all.
+// Matches section rides along on the tree panel only: matches are for
+// comparing family trees, so a genealogist who contributed only Matricula,
+// cemetery or military indexes gets none. Those indexes still show up as
+// partners on the tree owners' pages.
 //
 // With one source there is no strip and the lone panel renders flat. With
 // several, only the active panel is built (lazily, on first activation) and
@@ -198,11 +198,11 @@ function mountBooksTable(panelEl, matriculaBooks, booksCols, displayName) {
  *  listed but no `-matricula` index yet still gets a Matricula panel, and
  *  that can't be known without asking. */
 export async function buildSourcePanels({ contribData, displayName, overlay }) {
-  const primary = contribData._tree || contribData._geneanet || contribData._military;
+  const primary = contribData._tree;
   const showMatches = !!primary && !siteConfig.gatedFeatures?.includes('matches');
   const matriculaBooks = await fetchMatriculaBooks(displayName);
 
-  // The Matches section lands on the primary source's panel only.
+  // The Matches section lands on the tree panel only.
   const matchesHtml = (part) => (showMatches && part === primary)
     ? '<div class="matches-summary-section"></div>'
     : '';
@@ -301,8 +301,7 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
           : '';
         panelEl.innerHTML =
           cloudSectionHtml('contributor-geneanet-surname-cloud', t('contributor_geneanet_surnames_intro')) +
-          tableHtml +
-          matchesHtml(part);
+          tableHtml;
 
         if (cemeteries.length) {
           const collator = new Intl.Collator('sl', { sensitivity: 'base' });
@@ -336,7 +335,6 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
           }
         }
         loadSurnameCloud([part.contributor_ID], 'contributor-geneanet-surname-cloud', { hideSectionIfEmpty: true });
-        await mountMatches(panelEl, part, cachedList);
       },
     });
   }
@@ -346,24 +344,18 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
     panels.push({
       key: 'military',
       label: t('col_military'),
-      async load(panelEl, cachedList) {
+      async load(panelEl) {
         panelEl.innerHTML =
           cloudSectionHtml('contributor-military-surname-cloud',
-            `${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}`) +
-          matchesHtml(part);
+            `${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}`);
         loadSurnameCloud([part.contributor_ID], 'contributor-military-surname-cloud', { hideSectionIfEmpty: true });
-        await mountMatches(panelEl, part, cachedList);
       },
     });
   }
 
-  // Default to the primary source's panel (it carries Matches); a contributor
-  // with only Matricula data has no primary and falls back to the first panel.
-  const primaryKey = !primary ? null
-    : primary === contribData._tree ? 'tree'
-    : primary === contribData._geneanet ? 'geneanet'
-    : 'military';
-  return { panels, defaultKey: primaryKey || panels[0]?.key || null };
+  // Default to the tree panel (it carries Matches); a contributor without a
+  // tree falls back to the first panel.
+  return { panels, defaultKey: primary ? 'tree' : panels[0]?.key || null };
 }
 
 /** Appends the tab strip (when there is more than one panel) and the panel

@@ -376,7 +376,7 @@ export default {
         <li><strong>Contribution statistics:</strong> A grid with the number of persons, families, links, and the date of the last update.{matricula_cols}</li>
         <li><strong>Link:</strong> If the source provided a personal website, it is displayed under its name.</li>
         <li><strong>Top surnames:</strong> A word cloud and list show the surnames that appear most frequently in their database.</li>
-        <li><strong>Possible matches:</strong> A list of other sources that share matching historical persons or families with this source.</li>
+        <li><strong>Possible matches:</strong> A list of other sources that share matching historical persons or families with this source. Only genealogists who contributed a family tree have this list; Matricula, cemetery and military indexes appear in it as matches of the trees.</li>
       </ul>
       <h4>Matches between Sources</h4>
       <p>By clicking one of the suggested matches on a source's page, you display a detailed comparison of their data{auth_match}. The results are displayed so that each match occupies two adjacent rows:</p>

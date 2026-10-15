@@ -29,6 +29,9 @@ class Person(Base):
     notes = Column(Text)
     contributor = Column(Text, index=True)
     links = Column(JSONB)
+    # Parish (-matricula) or cemetery place (-geneanet) of the record, set
+    # by import_to_db.assign_source_units(); NULL for every other source.
+    source_unit = Column(Text, nullable=True)
 
 
 class Family(Base):
@@ -56,6 +59,7 @@ class Family(Base):
     notes = Column(Text)
     contributor = Column(Text, index=True)
     links = Column(JSONB)
+    source_unit = Column(Text, nullable=True)
 
 
 class Contributor(Base):

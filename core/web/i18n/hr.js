@@ -376,7 +376,7 @@ export default {
         <li><strong>Statistika doprinosa:</strong> Mreža s brojem osoba, obitelji i poveznica te datumom posljednjeg ažuriranja.{matricula_cols}</li>
         <li><strong>Poveznica:</strong> Ako je izvor naveo svoju mrežnu stranicu, ona se prikazuje ispod njegova imena.</li>
         <li><strong>Najčešća prezimena:</strong> Oblak riječi i popis prikazuju prezimena koja se u njegovoj bazi najčešće pojavljuju.</li>
-        <li><strong>Moguća podudaranja:</strong> Popis drugih izvora s kojima ovaj izvor dijeli zajedničke (podudarne) povijesne osobe ili obitelji.</li>
+        <li><strong>Moguća podudaranja:</strong> Popis drugih izvora s kojima ovaj izvor dijeli zajedničke (podudarne) povijesne osobe ili obitelji. Popis imaju samo rodoslovci koji su priložili rodoslovno stablo; indeksi Matricule, groblja i vojnih izvora pojavljuju se u njemu kao podudaranja stabala.</li>
       </ul>
       <h4>Podudaranja između izvora</h4>
       <p>Klikom na jedno od predloženih podudaranja na stranici izvora prikazujete detaljnu usporedbu njihovih podataka{auth_match}. Rezultati su prikazani tako da svako podudaranje zauzima dva susjedna retka:</p>
