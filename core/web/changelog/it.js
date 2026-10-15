@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-10-15',
+    items: [
+      {
+        title: 'Corrispondenze raggruppate per parrocchia e luogo del cimitero',
+        text: "Nella pagina di un genealogista le corrispondenze sono ora divise in sezioni: altri alberi genealogici, l'indice Matricula, i cimiteri e le fonti militari. Le corrispondenze con Matricula sono elencate per <strong>parrocchia</strong> e quelle con i cimiteri per <strong>luogo</strong>, chiunque le abbia indicizzate, così potete esaminare una parrocchia o un luogo alla volta, dove i record di una famiglia si trovano di solito insieme.",
+      },
+    ],
+  },
+  {
     date: '2026-09-27',
     items: [
       {

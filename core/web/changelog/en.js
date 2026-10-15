@@ -18,6 +18,15 @@
 
 export default [
   {
+    date: '2026-10-15',
+    items: [
+      {
+        title: 'Matches grouped by parish and cemetery place',
+        text: "On a genealogist's page, matches are now split into sections: other family trees, the Matricula index, cemeteries and military records. Matricula matches are listed by <strong>parish</strong> and cemetery matches by <strong>place</strong>, whoever indexed them, so you can review one parish or place at a time, where a family's records usually sit together.",
+      },
+    ],
+  },
+  {
     date: '2026-09-27',
     items: [
       {

@@ -162,6 +162,13 @@ export default {
 
     // Matches
     col_matches: 'Ujemanja',
+    section_matches_trees: 'Rodovniki',
+    col_parish: 'Župnija',
+    col_cemetery_place: 'Kraj',
+    col_contributors: 'Sodelujoči',
+    match_unit_unknown: '(neznano)',
+    col_match_source: 'Vir',
+    col_match_name: 'Ime',
     col_confidence: 'Zaupanje',
     matches_none: 'Ni najdenih ujemanj.',
     matches_found_intro: 'Naslednji viri imajo ujemajoče ali podobne podatke kot vir',
@@ -375,7 +382,7 @@ export default {
         <li><strong>Statistika prispevka:</strong> Mreža s številom oseb, družin in povezav ter datumom zadnje posodobitve.{matricula_cols}</li>
         <li><strong>Povezava:</strong> Če je vir podal svojo osebno spletno stran, se ta prikaže pod njegovim imenom.</li>
         <li><strong>Najpogostejši priimki:</strong> Oblak besed in seznam prikazujeta priimke, ki se v njegovi bazi največkrat pojavijo.</li>
-        <li><strong>Možna ujemanja:</strong> Seznam drugih virov, s katerimi ima ta vir skupne (ujemajoče) zgodovinske osebe ali družine. Seznam imajo le rodoslovci, ki so prispevali rodovnik; indeksi Matricule, pokopališč in vojaških virov se v njem pojavljajo kot ujemanja rodovnikov.</li>
+        <li><strong>Možna ujemanja:</strong> Seznam drugih virov, s katerimi ima ta vir skupne (ujemajoče) zgodovinske osebe ali družine. Seznam imajo le rodoslovci, ki so prispevali rodovnik, in šteje samo ujemanja tega rodovnika. Razdeljen je na razdelke: drugi rodovniki, indeks Matricula po <em>župnijah</em>, pokopališča po <em>krajih</em> in vojaški viri. Župnija ali kraj se pojavi le enkrat, tudi če jo je indeksiralo več ljudi (navedeni so v stolpcu <em>Sodelujoči</em>), zato lahko ujemanja pregledujete po posamezni župniji ali kraju, kjer so zapisi ene družine običajno skupaj.</li>
       </ul>
       <h4>Ujemanja med viri</h4>
       <p>S klikom na eno izmed predlaganih ujemanj na strani vira prikažete podrobno primerjavo njunih podatkov{auth_match}. Rezultati so prikazani tako, da vsak ujemek zavzame dve sosednji vrstici:</p>

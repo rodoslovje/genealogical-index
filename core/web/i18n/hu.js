@@ -162,6 +162,13 @@ export default {
 
     // Matches
     col_matches: 'Egyezések',
+    section_matches_trees: 'Családfák',
+    col_parish: 'Plébánia',
+    col_cemetery_place: 'Település',
+    col_contributors: 'Közreműködők',
+    match_unit_unknown: '(ismeretlen)',
+    col_match_source: 'Forrás',
+    col_match_name: 'Név',
     col_confidence: 'Megbízhatóság',
     matches_none: 'Nem találhatók egyezések.',
     matches_found_intro: 'A következő forrásokat találtuk, amelyek egyező vagy hasonló adatokkal rendelkeznek, mint a forrás',
@@ -376,7 +383,7 @@ export default {
         <li><strong>Hozzájárulási statisztika:</strong> Egy rács a személyek, családok és hivatkozások számával, valamint az utolsó frissítés dátumával.{matricula_cols}</li>
         <li><strong>Hivatkozás:</strong> Ha a forrás megadott személyes weboldalt, az a neve alatt jelenik meg.</li>
         <li><strong>Leggyakoribb vezetéknevek:</strong> Egy szófelhő és egy lista mutatja az adatbázisában leggyakrabban előforduló vezetékneveket.</li>
-        <li><strong>Lehetséges egyezések:</strong> Azoknak a többi forrásoknak a listája, amelyek egyező történelmi személyeket vagy családokat osztanak meg ezzel a forrással. Ez a lista csak azoknál a genealógusoknál jelenik meg, akik családfát töltöttek fel; a Matricula-, temető- és katonai indexek benne a családfák egyezéseiként szerepelnek.</li>
+        <li><strong>Lehetséges egyezések:</strong> Azoknak a többi forrásoknak a listája, amelyek egyező történelmi személyeket vagy családokat osztanak meg ezzel a forrással. Ez a lista csak azoknál a genealógusoknál jelenik meg, akik családfát töltöttek fel, és csak ennek a családfának az egyezéseit számolja. Szakaszokra oszlik: más családfák, a Matricula-index <em>plébániánként</em>, a temetők <em>településenként</em> és a katonai források. Egy plébánia vagy település csak egyszer szerepel, akkor is, ha többen indexelték (őket az <em>Közreműködők</em> oszlop sorolja fel), így az egyezéseket plébániánként vagy településenként tekintheti át, ahol egy család bejegyzései általában együtt vannak.</li>
       </ul>
       <h4>Egyezések a források között</h4>
       <p>Ha a forrás oldalán rákattint a javasolt egyezések valamelyikére, megjeleníti az adataik részletes összehasonlítását{auth_match}. Az eredmények úgy jelennek meg, hogy minden egyezés két egymás melletti sort foglal el:</p>

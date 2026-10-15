@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-10-15',
+    items: [
+      {
+        title: 'Correspondances regroupées par paroisse et lieu de cimetière',
+        text: "Sur la page d'un généalogiste, les correspondances sont désormais réparties en sections : les autres arbres généalogiques, l'index Matricula, les cimetières et les sources militaires. Les correspondances Matricula sont listées par <strong>paroisse</strong> et celles des cimetières par <strong>lieu</strong>, quelle que soit la personne qui les a indexées, ce qui permet d'examiner une paroisse ou un lieu à la fois, là où les actes d'une famille se trouvent généralement ensemble.",
+      },
+    ],
+  },
+  {
     date: '2026-09-27',
     items: [
       {

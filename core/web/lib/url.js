@@ -34,6 +34,9 @@ export const PARAM_MAP = {
   // Contributors / matches view: which contributor is active and who they're
   // being compared with; `filter` is the per-view filter input.
   with:             'w',
+  // With a Matricula / cemetery partner: the parish / cemetery place whose
+  // matches are shown, across all its transcribers ('-' = records with none).
+  match_unit:       'u',
   filter:           'f',
   source:           'src',
   // Matches detail "New"/"Different"/"Links" checkbox filters, per section.

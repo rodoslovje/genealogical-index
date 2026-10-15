@@ -5,7 +5,7 @@ import {
 import { toUnicodeHref } from '../lib/url.js';
 
 import { ensureData, getCachedData, getContributorUrlMap } from './data.js';
-import { renderMatchDetail } from './match-detail.js';
+import { renderMatchDetail, readMatchUnit, matchUnitLabel } from './match-detail.js';
 import { buildSourcePanels, mountSourceTabs } from './source-panels.js';
 
 /** Returns the i18n key for the contributor type label based on which data
@@ -169,7 +169,9 @@ export async function renderMatchesPage(contributor, withPartner) {
         <p>${t('no_results')}</p>`;
         return;
       }
-      document.title = `${basePartner} × ${displayName} - ${formatTitleSuffix(t('col_matches'))} | ${t('site_title')}`;
+      const unit = readMatchUnit();
+      const partnerLabel = unit === null ? basePartner : matchUnitLabel(unit);
+      document.title = `${partnerLabel} × ${displayName} - ${formatTitleSuffix(t('col_matches'))} | ${t('site_title')}`;
       await renderMatchDetail(contributor, withPartner, contribData, container);
       return;
     }
@@ -194,7 +196,7 @@ export async function renderMatchesPage(contributor, withPartner) {
     ${urlHtml}`;
 
     const { panels, defaultKey } = await buildSourcePanels({ contribData, displayName, overlay });
-    await mountSourceTabs({ container, panels, defaultKey, cachedList: cached, overlay });
+    await mountSourceTabs({ container, panels, defaultKey, overlay });
 
   } finally {
     if (overlay) overlay.style.display = 'none';

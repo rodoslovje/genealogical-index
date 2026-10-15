@@ -9,13 +9,14 @@ import {
   escapeHtml, highlightDifferences, formatExportFilename, classifyMatchPair, HIGHLIGHTABLE,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
-import { toUnicodeHref, currentParams, toUnicodeSearch } from '../lib/url.js';
+import { toUnicodeHref, currentParams, toUnicodeSearch, getParam } from '../lib/url.js';
 import { updateCurrentKey } from '../lib/view-cache.js';
 import { DOWNLOAD_ICON } from '../lib/icons.js';
 import { authFetch, fetchErrorKey } from '../auth.js';
 import { observeStickyHeader, normalizeQuery, queryMatchesText, revealOnFirstInput } from '../lib/table-filter.js';
 
 import { getContributorUrlMap } from './data.js';
+import { NO_UNIT_PARAM } from './matches-summary.js';
 
 // --- Match detail (per-record pair view) ------------------------------------
 
@@ -149,17 +150,33 @@ function reorderType(tbody, group, pairMap) {
   if (parent) parent.insertBefore(tbody, next);
 }
 
+/** The parish / cemetery place a match detail is narrowed to (`u=`): null
+ *  for a plain contributor pair, '' for the records that have none. */
+export function readMatchUnit() {
+  const raw = getParam(currentParams(), 'match_unit');
+  if (raw == null) return null;
+  return raw === NO_UNIT_PARAM ? '' : raw;
+}
+
+/** Display label of a match unit (see readMatchUnit). */
+export const matchUnitLabel = (unit) => unit || t('match_unit_unknown');
+
 export async function renderMatchDetail(contributor, partner, contribData, container) {
   const detailEl = container;
   if (!detailEl) return;
 
+  // With a unit, `partner` is just one transcriber of the source: the other
+  // side is that parish / place, across everyone who indexed it.
+  const unit = readMatchUnit();
+  const isUnit = unit !== null;
+
   const urlMap = getContributorUrlMap();
   const contribUrl = urlMap[contributor];
-  const partnerUrl = urlMap[partner];
+  const partnerUrl = isUnit ? null : urlMap[partner];
   const contribBase = baseContributorName(contributor);
-  const partnerBase = baseContributorName(partner);
+  const partnerBase = isUnit ? escapeHtml(matchUnitLabel(unit)) : baseContributorName(partner);
   const contribInd  = matriculaIndicatorHtml(contributor, t('icon_matricula_index')) + geneanetIndicatorHtml(contributor, t('icon_geneanet_index')) + militaryIndicatorHtml(contributor, t('icon_military_index')) + deceasedIndicatorHtml(contributor, t('memorial_title'));
-  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index')) + geneanetIndicatorHtml(partner, t('icon_geneanet_index')) + militaryIndicatorHtml(partner, t('icon_military_index')) + deceasedIndicatorHtml(partner, t('memorial_title'));
+  const partnerInd  = matriculaIndicatorHtml(partner, t('icon_matricula_index')) + geneanetIndicatorHtml(partner, t('icon_geneanet_index')) + militaryIndicatorHtml(partner, t('icon_military_index')) + (isUnit ? '' : deceasedIndicatorHtml(partner, t('memorial_title')));
 
   let urlsHtml = '';
   if (contribUrl || partnerUrl) {
@@ -174,12 +191,14 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
   }
 
   const contribTitle = deceasedTitleAttr(contributor, t('memorial_title'));
-  const partnerTitle = deceasedTitleAttr(partner, t('memorial_title'));
+  const partnerTitle = isUnit ? '' : deceasedTitleAttr(partner, t('memorial_title'));
   const primaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav${contribTitle}>${contribBase}</a></strong>${contribInd}`;
-  const secondaryHtml = `<strong><a href="${toUnicodeHref({ t: 'contributors', c: partnerBase })}" data-spa-nav${partnerTitle}>${partnerBase}</a></strong>${partnerInd}`;
+  const secondaryHtml = isUnit
+    ? `<strong>${partnerBase}</strong>${partnerInd}`
+    : `<strong><a href="${toUnicodeHref({ t: 'contributors', c: partnerBase })}" data-spa-nav${partnerTitle}>${partnerBase}</a></strong>${partnerInd}`;
   const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
 
-  const baseHtml = `
+  let baseHtml = `
     <div class="matches-page-header">
       <h2 class="matches-page-title"><span${partnerTitle}>${partnerBase}</span>${partnerInd} × <a href="${toUnicodeHref({ t: 'contributors', c: contribBase })}" data-spa-nav style="color: inherit; text-decoration: none;"${contribTitle}>${contribBase}</a>${contribInd} - ${formatTitleSuffix(t('col_matches'))}</h2>
     </div>
@@ -196,7 +215,8 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
 
     const fetchRecords = async (limit) => {
       const res = await authFetch(
-        `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}?limit=${limit}`
+        `${API_BASE_URL}/api/contributors/${encodeURIComponent(contributor)}/matches/${encodeURIComponent(partner)}?limit=${limit}` +
+        (isUnit ? `&unit=${encodeURIComponent(unit)}` : '')
       );
       status = res.status;
       if (!res.ok) throw new Error('API failed');
@@ -224,6 +244,17 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
     if (!records || !records.length) {
       detailEl.innerHTML = baseHtml + `<p>${t('matches_none')}</p>`;
       return;
+    }
+
+    // Who indexed this parish / place — from the loaded records, so a
+    // transcriber whose matches all fall beyond the load cap is not named.
+    if (isUnit) {
+      const names = [...new Set(records.map(r => r.record_b?.contributor).filter(Boolean))].sort();
+      const links = names.map(name => {
+        const display = baseContributorName(name);
+        return `<a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav${deceasedTitleAttr(name, t('memorial_title'))}>${escapeHtml(display)}</a>${deceasedIndicatorHtml(name, t('memorial_title'))}`;
+      });
+      baseHtml += `<p>${t('col_contributors')}: ${links.join(', ')}</p>`;
     }
 
     const sortState = {
@@ -837,7 +868,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
           const extraFooterRows = activeFilters.length
             ? [csvRow([t('filter_active'), activeFilters.join(', ')])]
             : [];
-          exportToCSV(flatData, cols, formatExportFilename(`matches-${typeKey}-${contributor}-${partner}`, 'csv'), extraFooterRows);
+          exportToCSV(flatData, cols, formatExportFilename(`matches-${typeKey}-${contributor}-${isUnit ? matchUnitLabel(unit) : partner}`, 'csv'), extraFooterRows);
         });
       });
 

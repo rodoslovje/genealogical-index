@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-10-15',
+    items: [
+      {
+        title: 'Egyezések plébánia és temetőhely szerint csoportosítva',
+        text: 'A genealógusok oldalán az egyezések most szakaszokra oszlanak: más családfák, a Matricula-index, temetők és katonai források. A Matricula-egyezések <strong>plébániánként</strong>, a temetői egyezések <strong>településenként</strong> szerepelnek, függetlenül attól, ki indexelte őket, így egyszerre egy plébániát vagy települést tekinthet át, ahol egy család bejegyzései általában együtt vannak.',
+      },
+    ],
+  },
+  {
     date: '2026-09-27',
     items: [
       {

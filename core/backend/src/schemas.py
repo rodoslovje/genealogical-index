@@ -106,7 +106,15 @@ class SurnameStat(BaseModel):
 
 
 class MatchPartner(BaseModel):
-    contributor: str
+    # Set for tree / military rows; None for a parish / place row, whose
+    # transcribers are in `contributors`.
+    contributor: Optional[str] = None
+    # 'tree', 'matricula', 'geneanet' or 'military'.
+    source: str = "tree"
+    # Parish (matricula) or cemetery place (geneanet); None otherwise, or for
+    # matched records that have no unit.
+    unit: Optional[str] = None
+    contributors: List[str] = []
     persons_count: int = 0
     families_count: int = 0
     total_count: int = 0

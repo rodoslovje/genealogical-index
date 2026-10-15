@@ -577,6 +577,20 @@ function renderCellHtml(col, row) {
     if (externalUrl)  return `<td class="col-center"><a href="${externalUrl}" target="_blank" rel="noopener"${nameTitle}>${display}</a>${indicator}</td>`;
     return `<td class="col-center"><span${nameTitle}>${display}</span>${indicator}</td>`;
   }
+  if (col === 'parish' || col === 'cemetery_place') {
+    // Matches summary: a parish / cemetery place row opens its match detail.
+    const label = escapeHtml(row[col] || '');
+    return row._match_href
+      ? `<td><a href="${row._match_href}" data-spa-nav>${label}</a></td>`
+      : `<td>${label}</td>`;
+  }
+  if (col === 'contributors') {
+    const names = row._contributors || [];
+    return `<td>${names.map(name => {
+      const display = baseContributorName(name);
+      return `<a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav${deceasedTitleAttr(name, t('memorial_title'))}>${escapeHtml(display)}</a>${deceasedIndicatorHtml(name, t('memorial_title'))}`;
+    }).join(', ')}</td>`;
+  }
   if (col === 'contributor') {
     const name = row[col] || '';
     if (!name) return `<td></td>`;
@@ -740,9 +754,9 @@ export function renderTable(data, containerId, columns, defaultSortColumn = null
   if (primary) sortData(rows, primary, secondary);
 
   // Detect family vs. person table by the presence of husband-side columns;
-  // the matches-summary table is identified by its container id.
+  // the matches-summary tables (one per source kind) by their container id.
   const isFamilyTable = columns.includes('husband_name') || columns.includes('husband_surname');
-  const isMatchesSummary = containerId === 'matches-summary';
+  const isMatchesSummary = containerId.startsWith('matches-summary');
 
   let theadHtml = '<thead><tr>';
   columns.forEach(col => {

@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-10-15',
+    items: [
+      {
+        title: 'Podudaranja razvrstana po župama i mjestima groblja',
+        text: 'Na stranici rodoslovca podudaranja su sada podijeljena na odjeljke: druga rodoslovna stabla, indeks Matricula, groblja i vojni izvori. Podudaranja s Matriculom navedena su po <strong>župama</strong>, a podudaranja s grobljima po <strong>mjestima</strong>, bez obzira na to tko ih je indeksirao, pa možete pregledavati jednu po jednu župu ili mjesto, gdje su zapisi jedne obitelji obično zajedno.',
+      },
+    ],
+  },
+  {
     date: '2026-09-27',
     items: [
       {

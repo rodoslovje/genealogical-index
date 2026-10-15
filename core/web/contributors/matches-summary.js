@@ -10,18 +10,40 @@ import { setCurrentMatches } from './filter.js';
 import { mountSurnameScope, readMatchSurnames } from './match-surname.js';
 import { fetchErrorKey } from '../auth.js';
 
-const BASE_SUMMARY_COLS = ['contributor_ID', 'total_persons', 'total_families', 'total', 'confidence'];
+const COUNT_COLS = ['total_persons', 'total_families', 'total', 'confidence'];
 
-/** Renders the "Matches" section — every genealogist whose records overlap
- *  `displayName`'s, with per-partner counts — into `sectionEl`.
+/** One table per kind of match partner, in this order. Trees and military
+ *  sources list one row per contributor; Matricula and cemetery indexes list
+ *  one row per parish / cemetery place (the API's `unit`), whichever
+ *  transcribers indexed it — that's how a genealogist reviews them, since a
+ *  family's records sit in one parish. */
+const SECTIONS = [
+  { source: 'tree',      titleKey: 'section_matches_trees', nameCol: 'contributor_ID' },
+  { source: 'matricula', titleKey: 'icon_matricula_index',  nameCol: 'parish' },
+  { source: 'geneanet',  titleKey: 'icon_geneanet_index',   nameCol: 'cemetery_place' },
+  { source: 'military',  titleKey: 'icon_military_index',   nameCol: 'contributor_ID' },
+];
+
+const isUnitSection = (section) => section.nameCol !== 'contributor_ID';
+const sectionColumns = (section) => isUnitSection(section)
+  ? [section.nameCol, 'contributors', ...COUNT_COLS]
+  : ['contributor_ID', ...COUNT_COLS];
+
+// Stable identity of a partner row, shared by the overall and the
+// surname-scoped responses.
+const partnerKey = (p) => `${p.source}|${p.unit ?? ''}|${p.contributor ?? ''}`;
+
+// URL value for "records without a parish / place" — an empty `u=` would be
+// dropped from the URL.
+export const NO_UNIT_PARAM = '-';
+
+/** Renders the "Matches" section — every source whose records overlap
+ *  `displayName`'s tree, with counts — into `sectionEl`, as one table per
+ *  kind of source (see SECTIONS).
  *
- *  `primary` is the record source the matches are fetched by; the API folds
- *  every suffix variant of the base name in, so this covers the tree together
- *  with any Geneanet / military records the same genealogist contributed.
- *  `cached` is the aggregate contributors list (to flag matricula-only
- *  partners); `overlay` is the global spinner shown while a surname scope
- *  is re-fetched. */
-export async function renderMatchesSummary({ sectionEl, primary, displayName, cached, overlay }) {
+ *  `primary` is the tree the matches are fetched for. `overlay` is the global
+ *  spinner shown while a surname scope is re-fetched. */
+export async function renderMatchesSummary({ sectionEl, primary, displayName, overlay }) {
   const plainHeading = `<h3 class="section-heading" style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${t('col_matches')}</h3>`;
 
   let partners;
@@ -50,7 +72,11 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ca
       <p>${t('matches_found_intro')} <strong>${displayName}</strong>.<br>${t('matches_found_outro')}</p>
       <div id="matches-surname-scope"></div>
       <p id="matches-surname-error" class="match-surname-error" style="display: none;"></p>
-      <div id="matches-summary" class="table-responsive"></div>
+      ${SECTIONS.map(s => `<div class="matches-summary-group" data-source="${s.source}">
+        <h4 class="matches-summary-group-title">${t(s.titleKey)}</h4>
+        <div id="matches-summary-${s.source}" class="table-responsive"></div>
+      </div>`).join('')}
+      <p class="matches-summary-empty" style="display: none;">${t('no_results')}</p>
     </div>`;
 
   const summaryHeaderEl = sectionEl.querySelector('.matches-summary-header');
@@ -71,8 +97,8 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ca
   // is only built once above — so re-running this on a filter keystroke
   // just re-derives `tableData` and re-renders the table, never touching
   // (or stealing focus from) the filter input itself.
-  let currentTableData = [];
-  let currentSummaryCols = BASE_SUMMARY_COLS;
+  // Rows of every visible section, for the CSV export.
+  let currentExportRows = [];
 
   // Active surname scope. `scopeCounts` is a partner → row map of the counts
   // restricted to those surnames; null means no scope, and the table shows
@@ -92,7 +118,7 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ca
     );
     if (!res.ok) throw new Error('API failed');
     const rows = await res.json();
-    return new Map(rows.map(r => [r.contributor, r]));
+    return new Map(rows.map(r => [partnerKey(r), r]));
   };
 
   const applyScope = async (surnames) => {
@@ -112,8 +138,10 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ca
     // The column set changes with the scope, and renderTable keeps its sort
     // state on the container — drop it so the new column can be the default
     // sort instead of inheriting one keyed to the old columns.
-    const summaryEl = document.getElementById('matches-summary');
-    if (summaryEl) summaryEl._sortState = null;
+    for (const s of SECTIONS) {
+      const el = document.getElementById(`matches-summary-${s.source}`);
+      if (el) el._sortState = null;
+    }
     renderSummaryTable();
   };
 
@@ -137,11 +165,7 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ca
       errorEl.style.display = scopeError ? '' : 'none';
     }
 
-    let filteredPartners = query ? partners.filter(p => p.contributor.toLowerCase().includes(query)) : partners;
-    if (scopeCounts) filteredPartners = filteredPartners.filter(p => scopeCounts.has(p.contributor));
-
     const isScoped = !!scopeCounts;
-    currentSummaryCols = isScoped ? [...BASE_SUMMARY_COLS, 'surname_matches'] : BASE_SUMMARY_COLS;
     // Carry the surname into the pair view's own per-section filters, so
     // clicking a partner lands on those records instead of on all several
     // hundred matches with them.
@@ -149,24 +173,61 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ca
       ? { mqp: scopeSurnames.join(','), mqf: scopeSurnames.join(',') }
       : {};
 
-    currentTableData = filteredPartners.map(p => {
-      const partnerData = cached.find(d => d.contributor_ID === baseContributorName(p.contributor));
-      const isMatOnly = partnerData ? (!partnerData._tree && !!partnerData._matricula) : false;
+    const toRow = (p) => {
+      const names = p.contributors?.length ? p.contributors : [p.contributor];
       const row = {
-        contributor_ID: p.contributor,
-        _match_href: toUnicodeHref({ t: 'contributors', c: displayName, w: p.contributor, ...detailFilter }),
+        // The detail view takes one partner; for a parish / place row that
+        // is any of its transcribers (it fixes the source type) plus `u`.
+        _match_href: toUnicodeHref({
+          t: 'contributors', c: displayName, w: p.contributor || names[0],
+          ...(p.contributor ? {} : { u: p.unit ?? NO_UNIT_PARAM }),
+          ...detailFilter,
+        }),
         total_persons:  p.persons_count  || 0,
         total_families: p.families_count || 0,
         total:          p.total_count,
         confidence:     Math.round((p.max_confidence || 0) * 100),
-        _is_matricula_only: isMatOnly,
       };
-      if (isScoped) row.surname_matches = scopeCounts.get(p.contributor)?.total_count || 0;
+      if (p.contributor) {
+        row.contributor_ID = p.contributor;
+      } else {
+        row._unit_label = p.unit ?? t('match_unit_unknown');
+        row._contributors = names;
+        row.contributors = names.map(baseContributorName).join(', ');
+      }
+      if (isScoped) row.surname_matches = scopeCounts.get(partnerKey(p))?.total_count || 0;
       return row;
-    });
+    };
+    const matchesQuery = (row) => !query ||
+      [row.contributor_ID, row._unit_label, row.contributors]
+        .some(v => v && v.toLowerCase().includes(query));
 
-    renderTable(currentTableData, 'matches-summary', currentSummaryCols,
-      isScoped ? 'surname_matches' : 'total', false);
+    currentExportRows = [];
+    let shown = 0;
+    for (const section of SECTIONS) {
+      const groupEl = sectionEl.querySelector(`.matches-summary-group[data-source="${section.source}"]`);
+      const rows = partners
+        .filter(p => (p.source || 'tree') === section.source)
+        .filter(p => !scopeCounts || scopeCounts.has(partnerKey(p)))
+        .map(toRow)
+        .map(row => isUnitSection(section) ? { ...row, [section.nameCol]: row._unit_label } : row)
+        .filter(matchesQuery);
+      groupEl.style.display = rows.length ? '' : 'none';
+      if (!rows.length) continue;
+      shown += rows.length;
+      const cols = isScoped ? [...sectionColumns(section), 'surname_matches'] : sectionColumns(section);
+      renderTable(rows, `matches-summary-${section.source}`, cols,
+        isScoped ? 'surname_matches' : 'total', false);
+      for (const row of rows) {
+        currentExportRows.push({
+          ...row,
+          match_source: t(section.titleKey),
+          match_name: row.contributor_ID ? baseContributorName(row.contributor_ID) : row._unit_label,
+        });
+      }
+    }
+    const emptyEl = sectionEl.querySelector('.matches-summary-empty');
+    if (emptyEl) emptyEl.style.display = shown ? 'none' : '';
   };
 
   // A shared link can arrive with `ms=` already set — resolve it before the
@@ -180,12 +241,14 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ca
     }
   }
   renderSummaryTable();
-  if (summaryHeaderEl) observeStickyHeader(summaryHeaderEl, document.getElementById('matches-summary'));
+  if (summaryHeaderEl) observeStickyHeader(summaryHeaderEl, summaryContent);
 
   const summaryBtn = sectionEl.querySelector('.export-matches-summary-btn');
   if (summaryBtn) {
     summaryBtn.addEventListener('click', () => {
-      exportToCSV(currentTableData, currentSummaryCols, formatExportFilename(`matches-${displayName}`, 'csv'));
+      const cols = ['match_source', 'match_name', 'contributors', ...COUNT_COLS,
+        ...(scopeCounts ? ['surname_matches'] : [])];
+      exportToCSV(currentExportRows, cols, formatExportFilename(`matches-${displayName}`, 'csv'));
     });
   }
 }

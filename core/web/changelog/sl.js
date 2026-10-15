@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-10-15',
+    items: [
+      {
+        title: 'Ujemanja, razvrščena po župnijah in krajih pokopališč',
+        text: 'Na strani rodoslovca so ujemanja zdaj razdeljena na razdelke: drugi rodovniki, indeks Matricula, pokopališča in vojaški viri. Ujemanja z Matriculo so navedena po <strong>župnijah</strong>, ujemanja s pokopališči pa po <strong>krajih</strong>, ne glede na to, kdo jih je indeksiral, zato lahko pregledujete po eno župnijo ali kraj naenkrat, kjer so zapisi ene družine običajno skupaj.',
+      },
+    ],
+  },
+  {
     date: '2026-09-27',
     items: [
       {

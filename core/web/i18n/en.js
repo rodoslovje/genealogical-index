@@ -162,6 +162,13 @@ export default {
 
     // Matches
     col_matches: 'Matches',
+    section_matches_trees: 'Family trees',
+    col_parish: 'Parish',
+    col_cemetery_place: 'Place',
+    col_contributors: 'Contributors',
+    match_unit_unknown: '(unknown)',
+    col_match_source: 'Source',
+    col_match_name: 'Name',
     col_confidence: 'Confidence',
     matches_none: 'No matches found.',
     matches_found_intro: 'We have found that the following sources have matching or similar data to source',
@@ -376,7 +383,7 @@ export default {
         <li><strong>Contribution statistics:</strong> A grid with the number of persons, families, links, and the date of the last update.{matricula_cols}</li>
         <li><strong>Link:</strong> If the source provided a personal website, it is displayed under its name.</li>
         <li><strong>Top surnames:</strong> A word cloud and list show the surnames that appear most frequently in their database.</li>
-        <li><strong>Possible matches:</strong> A list of other sources that share matching historical persons or families with this source. Only genealogists who contributed a family tree have this list; Matricula, cemetery and military indexes appear in it as matches of the trees.</li>
+        <li><strong>Possible matches:</strong> A list of other sources that share matching historical persons or families with this source. Only genealogists who contributed a family tree have this list, and it counts matches of that tree only. It is split into sections: other family trees, the Matricula index listed by <em>parish</em>, cemeteries listed by <em>place</em>, and military records. A parish or place appears once even when several transcribers indexed it (they are named in the <em>Contributors</em> column), so you can review one parish or place at a time, where a family's records usually sit together.</li>
       </ul>
       <h4>Matches between Sources</h4>
       <p>By clicking one of the suggested matches on a source's page, you display a detailed comparison of their data{auth_match}. The results are displayed so that each match occupies two adjacent rows:</p>

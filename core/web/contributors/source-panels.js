@@ -203,13 +203,11 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
   const matriculaBooks = await fetchMatriculaBooks(displayName);
 
   // The Matches section lands on the tree panel only.
-  const matchesHtml = (part) => (showMatches && part === primary)
-    ? '<div class="matches-summary-section"></div>'
-    : '';
-  const mountMatches = async (panelEl, part, cachedList) => {
+  const matchesHtml = showMatches ? '<div class="matches-summary-section"></div>' : '';
+  const mountMatches = async (panelEl) => {
     const sectionEl = panelEl.querySelector('.matches-summary-section');
     if (!sectionEl) return;
-    await renderMatchesSummary({ sectionEl, primary, displayName, cached: cachedList, overlay });
+    await renderMatchesSummary({ sectionEl, primary, displayName, overlay });
   };
 
   const panels = [];
@@ -219,13 +217,13 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
     panels.push({
       key: 'tree',
       label: t('col_tree'),
-      async load(panelEl, cachedList) {
+      async load(panelEl) {
         panelEl.innerHTML =
           cloudSectionHtml('contributor-tree-surname-cloud',
             `${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}`) +
-          matchesHtml(part);
+          matchesHtml;
         loadSurnameCloud([part.contributor_ID], 'contributor-tree-surname-cloud');
-        await mountMatches(panelEl, part, cachedList);
+        await mountMatches(panelEl);
       },
     });
   }
@@ -272,7 +270,7 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
     panels.push({
       key: 'geneanet',
       label: t('col_geneanet'),
-      async load(panelEl, cachedList) {
+      async load(panelEl) {
         const cemeteries = await fetchGeneanetCemeteries(displayName);
         const totalPersons = cemeteries.reduce((s, c) => s + (c.persons_count || 0), 0);
         const summaryHtml = cemeteries.length
@@ -360,9 +358,8 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
 
 /** Appends the tab strip (when there is more than one panel) and the panel
  *  containers to `container`, activates the tab the URL asks for (falling
- *  back to `defaultKey`), and wires tab clicks. `cachedList` is the aggregate
- *  contributors list handed through to the Matches section. */
-export async function mountSourceTabs({ container, panels, defaultKey, cachedList, overlay }) {
+ *  back to `defaultKey`), and wires tab clicks. */
+export async function mountSourceTabs({ container, panels, defaultKey, overlay }) {
   if (!panels.length) return;
   const has = (key) => panels.some(p => p.key === key);
   const requested = readSourceTab();
@@ -399,7 +396,7 @@ export async function mountSourceTabs({ container, panels, defaultKey, cachedLis
     // later tab click shows it for its own fetches.
     if (sync && overlay) overlay.style.display = 'flex';
     try {
-      await panel.load(panelEl, cachedList);
+      await panel.load(panelEl);
     } finally {
       if (sync && overlay) overlay.style.display = 'none';
     }

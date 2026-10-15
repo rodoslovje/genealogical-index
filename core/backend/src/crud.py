@@ -257,11 +257,14 @@ def _compute_match_counts(db: Session):
         text("SELECT DISTINCT contributor_a, contributor_b FROM matches")
     ).fetchall()
 
+    # Counted for trees only, like the Matches section on a genealogist's
+    # page (see get_contributor_matches): their own indexes' matches belong
+    # to the trees those indexes match.
     counts = {}
     for a, b in rows:
-        counts.setdefault(_base_contributor_name(a or ""), set()).add(
-            _base_contributor_name(b or "")
-        )
+        if _partner_source(a or "") != "tree":
+            continue
+        counts.setdefault(a, set()).add(_base_contributor_name(b or ""))
     return [{"contributor": k, "partners_count": len(v)} for k, v in counts.items()]
 
 
@@ -273,9 +276,17 @@ def get_match_counts(db: Session):
 
 
 def get_contributor_match_detail(
-    db: Session, contributor_a: str, contributor_b: str, limit: int = None
+    db: Session, contributor_a: str, contributor_b: str, limit: int = None,
+    unit: str = None,
 ):
     """Match pairs between two contributors, strongest first.
+
+    `contributor_a` is matched as given — a genealogist's page compares their
+    tree only (see get_contributor_matches). With `unit`, `contributor_b`
+    only names the source type (a -matricula / -geneanet contributor): the
+    other side becomes every contributor of that type, restricted to records
+    whose source_unit is `unit` — one parish or cemetery place across all its
+    transcribers. An empty `unit` selects the records that have none.
 
     `limit` caps each record type independently (persons, families) to the
     top-N by confidence — large pairs (cemetery indexes) can run to tens of
@@ -286,24 +297,37 @@ def get_contributor_match_detail(
     """
     results = []
 
-    a_norm = unicodedata.normalize("NFC", contributor_a)
-    a_forms = [a_norm, *(a_norm + s for s in SPECIAL_SUFFIXES)]
+    a_forms = [unicodedata.normalize("NFC", contributor_a)]
+    b_norm = unicodedata.normalize("NFC", contributor_b)
+    params = {"a_forms": a_forms, "limit": limit}
 
-    b_forms = [unicodedata.normalize("NFC", contributor_b)]
+    # Partner condition on the matched record ({b} is its table alias) — a plain
+    # contributor match, or a unit across every transcriber of the source.
+    unit_suffix = next((s for s in UNIT_SOURCES if b_norm.endswith(s)), None)
+    if unit is not None and unit_suffix:
+        b_clause = (
+            "m.contributor_b LIKE :b_pattern "
+            "AND COALESCE({b}.source_unit, '') = :unit"
+        )
+        params.update(b_pattern="%" + unit_suffix, unit=unit)
+    else:
+        b_clause = "m.contributor_b = :b"
+        params["b"] = b_norm
 
     totals = {"person": 0, "family": 0}
-    for row in db.execute(
-        text("""
-        SELECT record_type, COUNT(*) AS n FROM matches
-        WHERE contributor_a = ANY(:a_forms) AND contributor_b = ANY(:b_forms)
-        GROUP BY record_type
-    """),
-        {"a_forms": a_forms, "b_forms": b_forms},
-    ):
-        totals[row.record_type] = row.n
+    for record_type, table in (("person", "persons"), ("family", "families")):
+        totals[record_type] = db.execute(
+            text(f"""
+            SELECT COUNT(*) FROM matches m
+            JOIN {table} b ON b.id = m.record_b_id
+            WHERE m.contributor_a = ANY(:a_forms) AND m.record_type = :rt
+              AND {b_clause.format(b='b')}
+        """),
+            {**params, "rt": record_type},
+        ).scalar()
 
     person_rows = db.execute(
-        text("""
+        text(f"""
         SELECT m.confidence, m.match_fields,
                p1.id AS a_id, p1.ext_id AS a_ext_id, p1.name AS a_name,
                p1.surname AS a_surname, p1.alt_surname AS a_alt_surname, p1.sex AS a_sex,
@@ -324,11 +348,12 @@ def get_contributor_match_detail(
         FROM matches m
         JOIN persons p1 ON m.record_a_id = p1.id
         JOIN persons p2 ON m.record_b_id = p2.id
-        WHERE m.contributor_a = ANY(:a_forms) AND m.contributor_b = ANY(:b_forms) AND m.record_type = 'person'
+        WHERE m.contributor_a = ANY(:a_forms) AND m.record_type = 'person'
+          AND {b_clause.format(b='p2')}
         ORDER BY m.confidence DESC
         LIMIT :limit
     """),
-        {"a_forms": a_forms, "b_forms": b_forms, "limit": limit},
+        params,
     ).fetchall()
     for r in person_rows:
         results.append(
@@ -382,7 +407,7 @@ def get_contributor_match_detail(
         )
 
     family_rows = db.execute(
-        text("""
+        text(f"""
         SELECT m.confidence, m.match_fields,
                f1.id AS a_id,
                f1.husband_ext_id AS a_hext, f1.husband_name AS a_hname,
@@ -407,11 +432,12 @@ def get_contributor_match_detail(
         FROM matches m
         JOIN families f1 ON m.record_a_id = f1.id
         JOIN families f2 ON m.record_b_id = f2.id
-        WHERE m.contributor_a = ANY(:a_forms) AND m.contributor_b = ANY(:b_forms) AND m.record_type = 'family'
+        WHERE m.contributor_a = ANY(:a_forms) AND m.record_type = 'family'
+          AND {b_clause.format(b='f2')}
         ORDER BY m.confidence DESC
         LIMIT :limit
     """),
-        {"a_forms": a_forms, "b_forms": b_forms, "limit": limit},
+        params,
     ).fetchall()
     for r in family_rows:
         results.append(
@@ -669,8 +695,32 @@ def get_geneanet_stats(db: Session):
     }
 
 
+# Sources whose matches are listed per parish / cemetery place
+# (persons.source_unit / families.source_unit) rather than per transcriber.
+UNIT_SOURCES = {MATRICULA_SUFFIX: "matricula", GENEANET_SUFFIX: "geneanet"}
+
+
+def _partner_source(name: str) -> str:
+    """'tree', 'matricula', 'geneanet' or 'military' for a match partner."""
+    for suffix, source in (*UNIT_SOURCES.items(), (MILITARY_SUFFIX, "military")):
+        if name.endswith(suffix):
+            return source
+    return "tree"
+
+
 def get_contributor_matches(db: Session, contributor: str, surnames: list = None):
-    """Per-partner match counts for one contributor.
+    """Match counts for one genealogist's tree, one row per match partner.
+
+    Only the tree itself is matched on this side: a genealogist's own
+    Matricula / cemetery / military indexes are sources for *other* trees, so
+    their matches show up on those trees' pages, not here.
+
+    Trees and military sources are one row per contributor. Matricula and
+    Geneanet partners are one row per parish / cemetery place (`unit`, from
+    the matched record's `source_unit`) across every transcriber of that
+    source type, with the transcribers listed in `contributors` — a family's
+    records sit in one parish, so that is the grouping worth reviewing by.
+    Records without a unit get `unit` None.
 
     With `surnames`, the counts are scoped to match pairs carrying one of those
     surnames — the "which of my matched genealogists overlap with me on
@@ -683,38 +733,80 @@ def get_contributor_matches(db: Session, contributor: str, surnames: list = None
     answers containment, and the UI feeds this from a picker of surnames that
     actually occur, so a partial term would only ever be a typo.
     """
-    contrib_norm = unicodedata.normalize("NFC", contributor)
-    c_forms = [contrib_norm, *(contrib_norm + s for s in SPECIAL_SUFFIXES)]
-    params = {"c_forms": c_forms}
+    params = {
+        "c": unicodedata.normalize("NFC", contributor),
+        "unit_patterns": ["%" + s for s in UNIT_SOURCES],
+    }
 
     # `surnames && ARRAY[...]` is what idx_matches_surnames serves, so a rare
     # surname reads only its own match rows rather than all of contributor_a's.
     sur_clause = ""
     if surnames:
         sur_clause = (
-            "AND surnames && ARRAY(SELECT fold_text(s) "
+            "AND m.surnames && ARRAY(SELECT fold_text(s) "
             "FROM unnest(CAST(:surs AS text[])) AS s)"
         )
         params["surs"] = surnames
 
-    rows = db.execute(
+    counts = """
+        SUM(CASE WHEN m.record_type = 'person' THEN 1 ELSE 0 END)  AS persons_count,
+        SUM(CASE WHEN m.record_type = 'family' THEN 1 ELSE 0 END)  AS families_count,
+        COUNT(*)                                                   AS total_count,
+        MAX(m.confidence)                                          AS max_confidence,
+        MAX(m.computed_at)::text                                   AS computed_at
+    """
+    per_contributor = db.execute(
         text(f"""
-            SELECT
-                contributor_b                                             AS contributor,
-                SUM(CASE WHEN record_type = 'person' THEN 1 ELSE 0 END)   AS persons_count,
-                SUM(CASE WHEN record_type = 'family' THEN 1 ELSE 0 END)   AS families_count,
-                COUNT(*)                                                    AS total_count,
-                MAX(confidence)                                             AS max_confidence,
-                MAX(computed_at)::text                                      AS computed_at
-            FROM matches
-            WHERE contributor_a = ANY(:c_forms)
+            SELECT m.contributor_b AS contributor, {counts}
+            FROM matches m
+            WHERE m.contributor_a = :c
+              AND NOT m.contributor_b LIKE ANY(:unit_patterns)
             {sur_clause}
-            GROUP BY contributor_b
+            GROUP BY m.contributor_b
+        """),
+        params,
+    ).fetchall()
+    # The matched record's unit, looked up by primary key on whichever table
+    # the record type points at.
+    per_unit = db.execute(
+        text(f"""
+            SELECT m.contributor_b AS contributor,
+                   COALESCE(p.source_unit, f.source_unit) AS unit, {counts}
+            FROM matches m
+            LEFT JOIN persons  p ON m.record_type = 'person' AND p.id = m.record_b_id
+            LEFT JOIN families f ON m.record_type = 'family' AND f.id = m.record_b_id
+            WHERE m.contributor_a = :c
+              AND m.contributor_b LIKE ANY(:unit_patterns)
+            {sur_clause}
+            GROUP BY m.contributor_b, COALESCE(p.source_unit, f.source_unit)
         """),
         params,
     ).fetchall()
 
-    return [dict(r._mapping) for r in rows]
+    result = [
+        {**r._mapping, "source": _partner_source(r.contributor), "unit": None,
+         "contributors": [r.contributor]}
+        for r in per_contributor
+    ]
+
+    # Fold the per-transcriber rows into one row per (source, unit).
+    by_unit = {}
+    for r in per_unit:
+        source = _partner_source(r.contributor)
+        row = by_unit.setdefault((source, r.unit), {
+            "contributor": None, "source": source, "unit": r.unit,
+            "contributors": [], "persons_count": 0, "families_count": 0,
+            "total_count": 0, "max_confidence": 0.0, "computed_at": None,
+        })
+        row["contributors"].append(r.contributor)
+        row["persons_count"] += r.persons_count
+        row["families_count"] += r.families_count
+        row["total_count"] += r.total_count
+        row["max_confidence"] = max(row["max_confidence"], r.max_confidence or 0.0)
+        row["computed_at"] = max(filter(None, [row["computed_at"], r.computed_at]), default=None)
+    for row in by_unit.values():
+        row["contributors"].sort()
+    return result + list(by_unit.values())
 
 
 def _base_contributor_name(name: str) -> str:

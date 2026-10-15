@@ -981,6 +981,15 @@ body.tree-view .section-bar {
 }
 .matches-active-row td { background: var(--srd-brand-tint); }
 .matches-detail-section { margin-top: 28px; }
+/* Matches summary: one table per kind of source (trees, Matricula, …). */
+.matches-summary-group + .matches-summary-group { margin-top: 24px; }
+.matches-summary-group-title {
+  font-family: var(--srd-font-serif);
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 16px 0 8px 0;
+  color: var(--srd-ink);
+}
 .section-heading {
   font-family: var(--srd-font-serif);
   font-size: 1.3rem;

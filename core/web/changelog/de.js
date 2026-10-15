@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-10-15',
+    items: [
+      {
+        title: 'Übereinstimmungen nach Pfarrei und Friedhofsort gruppiert',
+        text: 'Auf der Seite eines Genealogen sind die Übereinstimmungen jetzt in Abschnitte gegliedert: andere Stammbäume, der Matricula-Index, Friedhöfe und Militärquellen. Matricula-Übereinstimmungen werden nach <strong>Pfarrei</strong> und Friedhofs-Übereinstimmungen nach <strong>Ort</strong> aufgeführt, unabhängig davon, wer sie indexiert hat. So prüfen Sie eine Pfarrei oder einen Ort nach dem anderen, wo die Einträge einer Familie meist beisammen liegen.',
+      },
+    ],
+  },
+  {
     date: '2026-09-27',
     items: [
       {

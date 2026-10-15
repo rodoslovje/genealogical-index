@@ -180,10 +180,15 @@ def get_contributor_match_detail(
     name: str,
     other: str,
     limit: int = 2000,
+    unit: Optional[str] = None,
     db: Session = Depends(get_db),
     user: Optional[dict] = Depends(require_user),
 ):
     """Top matches by confidence between two contributors.
+
+    `unit` (with a -matricula / -geneanet `other`) narrows the other side to
+    one parish / cemetery place across all transcribers of that source; an
+    empty value selects records without one.
 
     `limit` caps persons and families independently; 0 means no cap. Returned
     as a direct ORJSONResponse: the payload is plain str/int/float/list/dict
@@ -191,7 +196,7 @@ def get_contributor_match_detail(
     multi-MB structure) cuts most of the serialization time on large pairs.
     """
     payload = crud.get_contributor_match_detail(
-        db, name, other, limit=limit if limit > 0 else None
+        db, name, other, limit=limit if limit > 0 else None, unit=unit
     )
     return ORJSONResponse(payload)
 

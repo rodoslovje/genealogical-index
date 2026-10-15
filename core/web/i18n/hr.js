@@ -162,6 +162,13 @@ export default {
 
     // Matches
     col_matches: 'Podudaranja',
+    section_matches_trees: 'Rodoslovna stabla',
+    col_parish: 'Župa',
+    col_cemetery_place: 'Mjesto',
+    col_contributors: 'Suradnici',
+    match_unit_unknown: '(nepoznato)',
+    col_match_source: 'Izvor',
+    col_match_name: 'Naziv',
     col_confidence: 'Pouzdanost',
     matches_none: 'Nije pronađeno nijedno podudaranje.',
     matches_found_intro: 'Sljedeći izvori imaju podudarne ili slične podatke kao izvor',
@@ -376,7 +383,7 @@ export default {
         <li><strong>Statistika doprinosa:</strong> Mreža s brojem osoba, obitelji i poveznica te datumom posljednjeg ažuriranja.{matricula_cols}</li>
         <li><strong>Poveznica:</strong> Ako je izvor naveo svoju mrežnu stranicu, ona se prikazuje ispod njegova imena.</li>
         <li><strong>Najčešća prezimena:</strong> Oblak riječi i popis prikazuju prezimena koja se u njegovoj bazi najčešće pojavljuju.</li>
-        <li><strong>Moguća podudaranja:</strong> Popis drugih izvora s kojima ovaj izvor dijeli zajedničke (podudarne) povijesne osobe ili obitelji. Popis imaju samo rodoslovci koji su priložili rodoslovno stablo; indeksi Matricule, groblja i vojnih izvora pojavljuju se u njemu kao podudaranja stabala.</li>
+        <li><strong>Moguća podudaranja:</strong> Popis drugih izvora s kojima ovaj izvor dijeli zajedničke (podudarne) povijesne osobe ili obitelji. Popis imaju samo rodoslovci koji su priložili rodoslovno stablo i on broji samo podudaranja tog stabla. Podijeljen je na odjeljke: druga rodoslovna stabla, indeks Matricula po <em>župama</em>, groblja po <em>mjestima</em> i vojni izvori. Župa ili mjesto pojavljuje se samo jednom, čak i ako ju je indeksiralo više ljudi (navedeni su u stupcu <em>Suradnici</em>), pa podudaranja možete pregledavati po pojedinoj župi ili mjestu, gdje su zapisi jedne obitelji obično zajedno.</li>
       </ul>
       <h4>Podudaranja između izvora</h4>
       <p>Klikom na jedno od predloženih podudaranja na stranici izvora prikazujete detaljnu usporedbu njihovih podataka{auth_match}. Rezultati su prikazani tako da svako podudaranje zauzima dva susjedna retka:</p>
