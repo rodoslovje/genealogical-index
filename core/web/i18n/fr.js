@@ -165,7 +165,7 @@ export default {
     section_matches_trees: 'Arbres généalogiques',
     col_parish: 'Paroisse',
     col_cemetery_place: 'Lieu',
-    col_contributors: 'Contributeurs',
+    col_contributors: 'Source',
     match_unit_unknown: '(inconnu)',
     col_match_source: 'Source',
     col_match_name: 'Nom',
@@ -174,6 +174,8 @@ export default {
     matches_found_intro: 'Nous avons constaté que les sources suivantes possèdent des données identiques ou similaires à celles de la source',
     matches_found_outro: 'Sélectionnez une source correspondante pour afficher toutes les correspondances entre les deux.',
     matches_detail_intro: 'Toutes les correspondances entre {1} et {0} sont présentées ci-dessous.',
+    matches_detail_intro_parish: 'Toutes les correspondances entre la paroisse de {1} et le généalogiste {0} sont présentées ci-dessous.',
+    matches_detail_intro_place: 'Toutes les correspondances entre les cimetières de {1} et le généalogiste {0} sont présentées ci-dessous.',
     matches_truncated: '{0|Affichage de la correspondance la plus forte|Affichage des # correspondances les plus fortes} sur {1}.',
     matches_load_all: 'Tout charger',
     matches_filtered_none: 'Aucune correspondance avec les filtres sélectionnés.',
@@ -383,7 +385,7 @@ export default {
         <li><strong>Statistiques de contribution :</strong> Une grille indiquant le nombre de personnes, de familles, de liens et la date de la dernière mise à jour.{matricula_cols}</li>
         <li><strong>Lien :</strong> Si la source a fourni un site web personnel, celui-ci est affiché sous son nom.</li>
         <li><strong>Noms les plus fréquents :</strong> Un nuage de mots et une liste montrent les noms qui apparaissent le plus souvent dans sa base de données.</li>
-        <li><strong>Correspondances possibles :</strong> Une liste des autres sources qui partagent avec celle-ci des personnes ou des familles historiques correspondantes. Seuls les généalogistes ayant fourni un arbre généalogique ont cette liste, et elle ne compte que les correspondances de cet arbre. Elle est divisée en sections : les autres arbres généalogiques, l'index Matricula par <em>paroisse</em>, les cimetières par <em>lieu</em> et les sources militaires. Une paroisse ou un lieu n'apparaît qu'une fois même si plusieurs personnes l'ont indexé (elles figurent dans la colonne <em>Contributeurs</em>), ce qui permet d'examiner les correspondances paroisse par paroisse ou lieu par lieu, là où les actes d'une famille se trouvent généralement ensemble.</li>
+        <li><strong>Correspondances possibles :</strong> Une liste des autres sources qui partagent avec celle-ci des personnes ou des familles historiques correspondantes. Seuls les généalogistes ayant fourni un arbre généalogique ont cette liste, et elle ne compte que les correspondances de cet arbre. Elle est divisée en sections : les autres arbres généalogiques, l'index Matricula par <em>paroisse</em>, les cimetières par <em>lieu</em> et les sources militaires. Une paroisse ou un lieu n'apparaît qu'une fois même si plusieurs personnes l'ont indexé (elles figurent dans la colonne <em>Source</em>), ce qui permet d'examiner les correspondances paroisse par paroisse ou lieu par lieu, là où les actes d'une famille se trouvent généralement ensemble.</li>
       </ul>
       <h4>Correspondances entre sources</h4>
       <p>En cliquant sur l'une des correspondances proposées sur la page d'une source, vous affichez une comparaison détaillée de leurs données{auth_match}. Les résultats sont présentés de manière que chaque correspondance occupe deux lignes adjacentes :</p>

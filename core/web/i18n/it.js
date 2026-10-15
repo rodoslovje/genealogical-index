@@ -165,7 +165,7 @@ export default {
     section_matches_trees: 'Alberi genealogici',
     col_parish: 'Parrocchia',
     col_cemetery_place: 'Luogo',
-    col_contributors: 'Contributori',
+    col_contributors: 'Fonte',
     match_unit_unknown: '(sconosciuto)',
     col_match_source: 'Fonte',
     col_match_name: 'Nome',
@@ -174,6 +174,8 @@ export default {
     matches_found_intro: 'Abbiamo trovato le seguenti fonti che hanno dati corrispondenti o simili alla fonte',
     matches_found_outro: 'Seleziona una fonte corrispondente per visualizzare tutte le corrispondenze tra i due.',
     matches_detail_intro: 'Tutte le corrispondenze tra {1} e {0} sono mostrate di seguito.',
+    matches_detail_intro_parish: 'Tutte le corrispondenze tra la parrocchia di {1} e il genealogista {0} sono mostrate di seguito.',
+    matches_detail_intro_place: 'Tutte le corrispondenze tra i cimiteri di {1} e il genealogista {0} sono mostrate di seguito.',
     matches_truncated: '{0|È mostrata la corrispondenza più forte|Sono mostrate le # corrispondenze più forti} su {1}.',
     matches_load_all: 'Carica tutte',
     matches_filtered_none: 'Nessuna corrispondenza con i filtri selezionati.',
@@ -383,7 +385,7 @@ export default {
         <li><strong>Statistiche del contributo:</strong> Una griglia con il numero di persone, famiglie, collegamenti e la data dell'ultimo aggiornamento.{matricula_cols}</li>
         <li><strong>Collegamento:</strong> Se la fonte ha fornito un sito web personale, viene visualizzato sotto il suo nome.</li>
         <li><strong>Cognomi più frequenti:</strong> Una nuvola di parole e un elenco mostrano i cognomi che compaiono più frequentemente nel suo database.</li>
-        <li><strong>Possibili corrispondenze:</strong> Un elenco di altre fonti che condividono persone o famiglie storiche corrispondenti con questa fonte. L'elenco è presente solo per i genealogisti che hanno contribuito un albero genealogico e conta solo le corrispondenze di quell'albero. È diviso in sezioni: altri alberi genealogici, l'indice Matricula per <em>parrocchia</em>, i cimiteri per <em>luogo</em> e le fonti militari. Una parrocchia o un luogo compare una sola volta anche se l'hanno indicizzato più persone (indicate nella colonna <em>Contributori</em>), così potete esaminare le corrispondenze una parrocchia o un luogo alla volta, dove i record di una famiglia si trovano di solito insieme.</li>
+        <li><strong>Possibili corrispondenze:</strong> Un elenco di altre fonti che condividono persone o famiglie storiche corrispondenti con questa fonte. L'elenco è presente solo per i genealogisti che hanno contribuito un albero genealogico e conta solo le corrispondenze di quell'albero. È diviso in sezioni: altri alberi genealogici, l'indice Matricula per <em>parrocchia</em>, i cimiteri per <em>luogo</em> e le fonti militari. Una parrocchia o un luogo compare una sola volta anche se l'hanno indicizzato più persone (indicate nella colonna <em>Fonte</em>), così potete esaminare le corrispondenze una parrocchia o un luogo alla volta, dove i record di una famiglia si trovano di solito insieme.</li>
       </ul>
       <h4>Corrispondenze tra fonti</h4>
       <p>Cliccando su una delle corrispondenze suggerite nella pagina di una fonte, si visualizza un confronto dettagliato dei loro dati{auth_match}. I risultati sono visualizzati in modo che ogni corrispondenza occupi due righe adiacenti:</p>

@@ -588,7 +588,7 @@ function renderCellHtml(col, row) {
     const names = row._contributors || [];
     return `<td>${names.map(name => {
       const display = baseContributorName(name);
-      return `<a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav${deceasedTitleAttr(name, t('memorial_title'))}>${escapeHtml(display)}</a>${deceasedIndicatorHtml(name, t('memorial_title'))}`;
+      return `<a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav${deceasedTitleAttr(name, t('memorial_title'))}>${escapeHtml(display)}</a>${matriculaIndicatorHtml(name, t('icon_matricula_index'))}${geneanetIndicatorHtml(name, t('icon_geneanet_index'))}${militaryIndicatorHtml(name, t('icon_military_index'))}${deceasedIndicatorHtml(name, t('memorial_title'))}`;
     }).join(', ')}</td>`;
   }
   if (col === 'contributor') {

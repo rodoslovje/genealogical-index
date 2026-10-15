@@ -5,7 +5,7 @@ import { csvRow } from '../lib/csv.js';
 import { parseDateForSort } from '../lib/dates.js';
 import {
   isPrivate, getExpandCollapseIcon, shortenUrlLabel, baseContributorName,
-  matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
+  isMatriculaContributor, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
   escapeHtml, highlightDifferences, formatExportFilename, classifyMatchPair, HIGHLIGHTABLE,
 } from '../lib/utils.js';
 import { API_BASE_URL } from '../config.js';
@@ -196,7 +196,12 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
   const secondaryHtml = isUnit
     ? `<strong>${partnerBase}</strong>${partnerInd}`
     : `<strong><a href="${toUnicodeHref({ t: 'contributors', c: partnerBase })}" data-spa-nav${partnerTitle}>${partnerBase}</a></strong>${partnerInd}`;
-  const introText = t('matches_detail_intro').replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
+  // A parish / place page compares a place with a genealogist, not two
+  // genealogists, so it gets its own wording.
+  const introKey = !isUnit ? 'matches_detail_intro'
+    : isMatriculaContributor(partner) ? 'matches_detail_intro_parish'
+    : 'matches_detail_intro_place';
+  const introText = t(introKey).replace('{0}', primaryHtml).replace('{1}', secondaryHtml);
 
   let baseHtml = `
     <div class="matches-page-header">
@@ -252,7 +257,7 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
       const names = [...new Set(records.map(r => r.record_b?.contributor).filter(Boolean))].sort();
       const links = names.map(name => {
         const display = baseContributorName(name);
-        return `<a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav${deceasedTitleAttr(name, t('memorial_title'))}>${escapeHtml(display)}</a>${deceasedIndicatorHtml(name, t('memorial_title'))}`;
+        return `<a href="${toUnicodeHref({ t: 'contributors', c: display })}" data-spa-nav${deceasedTitleAttr(name, t('memorial_title'))}>${escapeHtml(display)}</a>${matriculaIndicatorHtml(name, t('icon_matricula_index'))}${geneanetIndicatorHtml(name, t('icon_geneanet_index'))}${militaryIndicatorHtml(name, t('icon_military_index'))}${deceasedIndicatorHtml(name, t('memorial_title'))}`;
       });
       baseHtml += `<p>${t('col_contributors')}: ${links.join(', ')}</p>`;
     }

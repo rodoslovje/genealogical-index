@@ -165,7 +165,7 @@ export default {
     section_matches_trees: 'Stammbäume',
     col_parish: 'Pfarrei',
     col_cemetery_place: 'Ort',
-    col_contributors: 'Beitragende',
+    col_contributors: 'Quelle',
     match_unit_unknown: '(unbekannt)',
     col_match_source: 'Quelle',
     col_match_name: 'Name',
@@ -174,6 +174,8 @@ export default {
     matches_found_intro: 'Wir haben die folgenden Quellen gefunden, die übereinstimmende oder ähnliche Daten aufweisen wie die Quelle',
     matches_found_outro: 'Wählen Sie eine übereinstimmende Quelle aus, um alle Übereinstimmungen zwischen den beiden anzuzeigen.',
     matches_detail_intro: 'Alle Übereinstimmungen zwischen {1} und {0} werden unten angezeigt.',
+    matches_detail_intro_parish: 'Alle Übereinstimmungen zwischen der Pfarrei {1} und dem Genealogen {0} werden unten angezeigt.',
+    matches_detail_intro_place: 'Alle Übereinstimmungen zwischen den Friedhöfen in {1} und dem Genealogen {0} werden unten angezeigt.',
     matches_truncated: 'Es {0|wird die # stärkste|werden die # stärksten} von {1|# Übereinstimmung|# Übereinstimmungen} angezeigt.',
     matches_load_all: 'Alle laden',
     matches_filtered_none: 'Keine Übereinstimmungen mit den ausgewählten Filtern.',
@@ -383,7 +385,7 @@ export default {
         <li><strong>Beitragsstatistik:</strong> Ein Raster mit der Anzahl von Personen, Familien und Links sowie dem Datum der letzten Aktualisierung.{matricula_cols}</li>
         <li><strong>Link:</strong> Wenn die Quelle eine persönliche Website angegeben hat, wird diese unter ihrem Namen angezeigt.</li>
         <li><strong>Häufigste Nachnamen:</strong> Eine Wortwolke und eine Liste zeigen die Nachnamen, die in seiner Datenbank am häufigsten vorkommen.</li>
-        <li><strong>Mögliche Übereinstimmungen:</strong> Eine Liste anderer Quellen, die übereinstimmende historische Personen oder Familien mit dieser Quelle teilen. Diese Liste gibt es nur bei Genealogen, die einen Stammbaum beigetragen haben, und sie zählt nur Übereinstimmungen dieses Stammbaums. Sie ist in Abschnitte gegliedert: andere Stammbäume, der Matricula-Index nach <em>Pfarrei</em>, Friedhöfe nach <em>Ort</em> und Militärquellen. Eine Pfarrei oder ein Ort erscheint nur einmal, auch wenn mehrere Personen sie indexiert haben (sie stehen in der Spalte <em>Beitragende</em>), sodass Sie die Übereinstimmungen Pfarrei für Pfarrei bzw. Ort für Ort prüfen können, wo die Einträge einer Familie meist beisammen liegen.</li>
+        <li><strong>Mögliche Übereinstimmungen:</strong> Eine Liste anderer Quellen, die übereinstimmende historische Personen oder Familien mit dieser Quelle teilen. Diese Liste gibt es nur bei Genealogen, die einen Stammbaum beigetragen haben, und sie zählt nur Übereinstimmungen dieses Stammbaums. Sie ist in Abschnitte gegliedert: andere Stammbäume, der Matricula-Index nach <em>Pfarrei</em>, Friedhöfe nach <em>Ort</em> und Militärquellen. Eine Pfarrei oder ein Ort erscheint nur einmal, auch wenn mehrere Personen sie indexiert haben (sie stehen in der Spalte <em>Quelle</em>), sodass Sie die Übereinstimmungen Pfarrei für Pfarrei bzw. Ort für Ort prüfen können, wo die Einträge einer Familie meist beisammen liegen.</li>
       </ul>
       <h4>Übereinstimmungen zwischen Quellen</h4>
       <p>Durch Klicken auf eine der vorgeschlagenen Übereinstimmungen auf der Seite einer Quelle zeigen Sie einen detaillierten Vergleich ihrer Daten an{auth_match}. Die Ergebnisse werden so angezeigt, dass jede Übereinstimmung zwei benachbarte Zeilen einnimmt:</p>

@@ -73,8 +73,10 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ov
       <div id="matches-surname-scope"></div>
       <p id="matches-surname-error" class="match-surname-error" style="display: none;"></p>
       ${SECTIONS.map(s => `<div class="matches-summary-group" data-source="${s.source}">
-        <h4 class="matches-summary-group-title">${t(s.titleKey)}</h4>
-        <div id="matches-summary-${s.source}" class="table-responsive"></div>
+        <h4 class="matches-summary-group-title collapsible-header">${t(s.titleKey)}</h4>
+        <div class="matches-summary-group-body">
+          <div id="matches-summary-${s.source}" class="table-responsive"></div>
+        </div>
       </div>`).join('')}
       <p class="matches-summary-empty" style="display: none;">${t('no_results')}</p>
     </div>`;
@@ -89,6 +91,16 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ov
       const isCollapsed = summaryHeader.classList.contains('collapsed');
       summaryContent.style.display = isCollapsed ? '' : 'none';
       summaryHeader.classList.toggle('collapsed', !isCollapsed);
+    });
+  }
+
+  // Each source section collapses on its own. The wrapper is what's hidden,
+  // not the table container: renderTable un-hides that on every re-render.
+  for (const title of sectionEl.querySelectorAll('.matches-summary-group-title')) {
+    const body = title.nextElementSibling;
+    title.addEventListener('click', () => {
+      const collapsed = title.classList.toggle('collapsed');
+      body.style.display = collapsed ? 'none' : '';
     });
   }
 
