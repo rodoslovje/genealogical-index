@@ -115,7 +115,7 @@ Genealogists who have passed away are marked with a `deceased` value (`"1948-202
 
 Contributors with `-matricula`, `-geneanet`, or `-military` suffixes are "special" non-tree sources. They are folded into their base name for display and excluded from the `tree` source filter. This logic lives in `crud.py` (`SPECIAL_SUFFIXES`). Only a genealogist with a tree gets a Matches section on their page; the special sources appear there only as partners of trees.
 
-Each `-matricula` record carries its parish and each `-geneanet` record its cemetery's place in `source_unit` (persons and families), set on every import by `assign_source_units()` in `import_to_db.py`: Matricula via the book its page link points into (`matricula_book_key()` → `matricula_books.parish`, falling back to the place's "Parish, village" prefix), Geneanet persons from the cemetery index's `place` for their `place_of_burial` ("place, cemetery"; postcode dropped), Geneanet families from their spouses' graves. It exists so matches against those sources can be grouped per parish / cemetery place; matching itself ignores it.
+Each `-matricula` record carries its parish and each `-geneanet` record its cemetery's place in `source_unit` (persons and families). The value is written into the record JSON by ged-tools' converters — `matricula_to_json.py` takes the parish of the book the row belongs to (the same parish `matricula-index.json` lists), `geneanet_to_json.py` the grave row's cemetery place (postcode dropped), for the person and the family alike — and `import_to_db.py` just copies it, so a changed label arrives like any other data change. It exists so matches against those sources can be grouped per parish / cemetery place; matching itself ignores it.
 
 ### Authentication (Optional)
 

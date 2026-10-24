@@ -7,13 +7,10 @@
 -- baptisms, marriages and deaths sit in one parish, its graves in one
 -- place.
 --
--- Also adds matricula_book_key(url), which reduces a Matricula page link and
--- a book's own URL to the same country/diocese/parish/book key.
---
--- Only the column and the function: the values are filled by
--- import_to_db.py's assign_source_units(), which runs on every import;
--- `import_to_db.py --source-units-only` straight after this backfills them
--- from the data already in the DB, without re-importing anything.
+-- Only the column: the values come with the data. ged-tools' converters write
+-- `source_unit` into the Matricula / Geneanet record JSON and import_to_db.py
+-- copies it, so existing rows are filled when their contributor is next
+-- re-imported.
 -- Run this before deploying the API code, whose ORM models expect the column.
 --
 -- ADD COLUMN (nullable, no default) is metadata-only — no table rewrite, safe
@@ -27,7 +24,3 @@
 
 ALTER TABLE persons  ADD COLUMN IF NOT EXISTS source_unit TEXT;
 ALTER TABLE families ADD COLUMN IF NOT EXISTS source_unit TEXT;
-
-CREATE OR REPLACE FUNCTION matricula_book_key(url text) RETURNS text
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
-$$ SELECT rtrim(substring(url FROM 'matricula-online\.eu/[^/]+/([^?#]+)'), '/') $$;

@@ -29,8 +29,8 @@ class Person(Base):
     notes = Column(Text)
     contributor = Column(Text, index=True)
     links = Column(JSONB)
-    # Parish (-matricula) or cemetery place (-geneanet) of the record, set
-    # by import_to_db.assign_source_units(); NULL for every other source.
+    # Parish (-matricula) or cemetery place (-geneanet) of the record, from
+    # the record JSON written by ged-tools; NULL for every other source.
     source_unit = Column(Text, nullable=True)
 
 
