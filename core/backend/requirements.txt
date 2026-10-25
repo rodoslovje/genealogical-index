@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
-sqlalchemy
+# 2.1 makes postgresql:// mean psycopg 3; we ship psycopg2.
+sqlalchemy>=2.0,<2.1
 psycopg2-binary
 python-dotenv
 PyJWT
