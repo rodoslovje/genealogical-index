@@ -1,5 +1,6 @@
 import os
 import threading
+from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +10,7 @@ from sqlalchemy.orm import Session
 import jwt
 from sqlalchemy import text
 
-from . import crud, models, schemas
+from . import crud, mcp_server, models, schemas
 from .database import SessionLocal, engine
 
 # Optional JWT auth. When JWT_SECRET is unset (test/cro deployments) the
@@ -38,8 +39,18 @@ with engine.connect() as _conn:
     ))
     _conn.commit()
 
+# The MCP endpoint's session manager has to run for the app's lifetime.
+mcp_app = mcp_server.http_app()
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    async with mcp_server.mcp.session_manager.run():
+        yield
+
+
 # Initialize the FastAPI app
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # Configure CORS so the frontend can make requests to this API
 app.add_middleware(
@@ -56,6 +67,11 @@ app.add_middleware(
 # thread, so a multi-second scan doesn't delay the API accepting requests — the
 # first visitor after a restart would otherwise pay for it.
 threading.Thread(target=crud.warm_caches, name="api-warm-up", daemon=True).start()
+
+# Tools for AI assistants (Model Context Protocol); see mcp_server.py. Its
+# route is added as is rather than mounted: a Mount answers /mcp with a
+# redirect to /mcp/, which clients POSTing to the documented URL don't follow.
+app.router.routes.extend(mcp_app.routes)
 
 
 # Dependency to get DB session

@@ -706,6 +706,38 @@ except jwt.PyJWTError as e:
 
 ---
 
+## 8. MCP Server (AI assistants)
+
+The API also serves a [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp` on the API host (e.g. `https://indeks-api.rodoslovlje.si/mcp`), so an AI assistant such as Claude can search the index and see who matches whom on a user's behalf. It lives in `core/backend/src/mcp_server.py` and is served by the same container as the REST API — no extra service, and no Caddy change: the existing `reverse_proxy` already forwards `/mcp`.
+
+The tools are read-only and call `crud.py` directly, so they return what the website does:
+
+| Tool                                 | What it returns                                                                  |
+| ------------------------------------ | -------------------------------------------------------------------------------- |
+| `search`                             | Quick search over persons and families (name, surname, years, place, source, id) |
+| `search_persons` / `search_families` | Field-by-field search, like the Person / Family tabs                             |
+| `list_contributors` / `top_surnames` | Genealogists with record counts; most frequent surnames                          |
+| `get_contributor_matches`            | A tree's match partners and counts (per tree / parish / cemetery place)          |
+
+**The endpoint is public and does not check `JWT_SECRET`, so it offers only what a logged-out visitor sees.** The premium endpoints — ancestor / descendant trees, tree comparison and pair-by-pair match detail — have no tool; add one only together with the same JWT check. Results are capped at 200 rows per call, and at most `MCP_MAX_CONCURRENT` (default 4) tool calls run at once, the rest queuing without holding a worker thread (see the pool-exhaustion note in `database.py`).
+
+To connect:
+
+```bash
+# Claude Code
+claude mcp add --transport http genealogical-index https://indeks-api.rodoslovlje.si/mcp
+```
+
+In claude.ai or Claude Desktop, add it under Settings → Connectors → Add custom connector with the same URL. To check it by hand:
+
+```bash
+curl -s https://indeks-api.rodoslovlje.si/mcp \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+---
+
 ## License
 
 This project is released under the [MIT License](LICENSE).

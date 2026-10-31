@@ -6,3 +6,5 @@ psycopg[binary]>=3.2
 python-dotenv
 PyJWT
 orjson
+# 2.x renamed FastMCP to MCPServer; mcp_server.py is written for 2.x.
+mcp>=2.3,<3

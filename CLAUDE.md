@@ -106,6 +106,7 @@ Each site's `vite.config.js` calls `createSiteConfig()` from `core/vite.config.s
 - `api.py` — FastAPI routes, CORS, optional JWT auth middleware
 - `crud.py` — All DB query logic; in-memory caches with TTL for expensive queries (contributor lists, match counts, timelines)
 - `schemas.py` — Pydantic response models
+- `mcp_server.py` — MCP endpoint at `/mcp` (Model Context Protocol, for AI assistants): read-only tools over the same `crud.py` functions, added to the FastAPI router in `api.py`. Public, with no JWT check, so it must expose only what logged-out visitors see: no tool for the `require_user` endpoints (trees, compare, match detail) until it checks the same token. Details in README §8.
 
 The DB driver is psycopg 3 (`postgresql+psycopg://`) with `ClientCursor`, i.e. client-side parameter binding as psycopg2 had — server-side binding rejects the parameterised multi-statement `text()` SQL in the tools. Every engine (API and each tool) sets it.
 
