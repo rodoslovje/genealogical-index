@@ -6,7 +6,8 @@ Last work: matches split into sections (trees / Matricula by parish / cemeteries
 by place / military), counting the tree only (15. 10.); `source_unit` on every
 special-source record, now written by ged-tools'
 converters instead of an import-time SQL pass (24. 10.); public MCP server at
-`/mcp` (README §8), SQLAlchemy 2.1 + psycopg 3, Vite 8.3 (31. 10.).
+`/mcp` (README §8), SQLAlchemy 2.1 + psycopg 3, Vite 8.3; GEDCOM date qualifiers
+shown short (~ < > x–y) with tap tooltips, row icons tappable (31. 10.).
 
 **Next**
 - [ ] Deploy MCP + driver upgrade: `docker compose up -d --build api` on each
@@ -27,5 +28,6 @@ converters instead of an import-time SQL pass (24. 10.); public MCP server at
 - Matricula / cemetery matches: one row per parish / place across all transcribers
 - Geneanet groups by cemetery *place* (postcode dropped), not cemetery
 - `source_unit` is set in the record JSON by ged-tools, never derived at import
+- Dates: short form for display only; sort, search, exports keep the raw GEDCOM
 - `srd-tokens.css` / `srd.css` shared verbatim with genetic-atlas
 - Per-site config under `sites/<slo|cro|test>/`
