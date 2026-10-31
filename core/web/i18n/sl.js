@@ -303,8 +303,9 @@ export default {
     help_auth_tree: ' Ta funkcija je na voljo samo za prijavljene člane.',
     help_auth_match: ' (ta funkcija je na voljo le prijavljenim članom)',
     help_auth_section: `
-      <h3>5. Prijava v sistem</h3>
+      <h3>6. Prijava v sistem</h3>
       <p>Za poln dostop do dreves in ujemanj se morate prijaviti. Prijavno okno odprete s klikom na ikono osebe (<strong>{USER_ICON}</strong>) zgoraj desno. V okno vpišite uporabniško ime in geslo, ki ga sicer uporabljate za dostop do spletnega portala matičnega rodoslovnega društva.</p>`,
+    help_auth_mcp: ' Rodovniki, primerjave dreves in podrobnosti ujemanj, ki na tej strani zahtevajo prijavo, pomočniku niso dostopni.',
     help_source_marks: `<p>V stolpcu <em>Vir</em> oznaka za imenom pove, iz katere vrste vira je zapis — to so iste vrste, na katere lahko omejite iskanje:</p>`,
     help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula indeks</em>: zapisi, indeksirani iz skeniranih matičnih knjig na Matricula Online</li>`,
     help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet pokopališča</em>: zapisi z nagrobnikov</li>`,
@@ -417,6 +418,25 @@ export default {
         <li><strong>Izvoz ujemkov:</strong> S klikom na gumb <strong>CSV</strong> ob naslovu posameznega razdelka izvozite prikazane ujemajoče se zapise. Izvoz lahko uporabite za dopolnitev svojega drevesa, na primer z orodjem, kot je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Primerjava dreves:</strong> za ujemajočo se osebo gumb <strong>🌳 Primerjaj</strong> odpre vzporedni prikaz rodovniških dreves obeh virov. Vsaka oseba je barvno označena — <em>ujemanje</em>, <em>manjša razlika</em>, <em>ključna razlika</em> (razlikujejo se ime, priimek ali datum rojstva) ali prisotna le v <em>enem</em> drevesu —, s klikom na osebo pa se prikaže podrobna primerjava po posameznih poljih, vključno s povezavami do virov. Primerjava ponuja enake oblike risbe, smeri in omejitev generacij kot stran z drevesom; prek barvne legende skočite na poljubno osebo, rezultat pa prenesete kot tabelo <strong>CSV</strong>, sliko <strong>SVG</strong> ali datoteko <strong>GEDCOM</strong> za katerega koli od obeh rodoslovcev.</li>
       </ul>
+      <h3 id="ai-assistant">5. Uporaba indeksa z AI pomočnikom</h3>
+      <p>Indeks lahko povežete z AI pomočnikom, kot so <strong>Claude</strong>, <strong>Gemini</strong> ali <strong>ChatGPT</strong>. Nato ga sprašujete s svojimi besedami, pomočnik pa sam išče po indeksu, združi zadetke in povzame, kaj je našel. Povezava uporablja odprti standard <em>MCP</em> (Model Context Protocol).</p>
+      <p>Pri čem pomaga:</p>
+      <ul>
+        <li><strong>Vprašanja v navadnem jeziku:</strong> na primer <em>„Poišči vse s priimkom Novak, rojene v Ribnici med letoma 1820 in 1850, in mi povej, kateri rodoslovci jih imajo.“</em> Pomočnik namesto vas izpolni iskalna polja.</li>
+        <li><strong>Veliko iskanj hkrati:</strong> preizkusi več zapisov imena, enega za drugim poišče starše, partnerje in otroke osebe ali preveri, kateri rodoslovci imajo isto osebo — delo, ki bi ročno zahtevalo več deset iskanj.</li>
+        <li><strong>Pregledi:</strong> kateri viri imajo največ zapisov s priimkom, s katerimi rodovniki se ujema vaš in koliko je ujemanj.</li>
+        <li><strong>Pomoč pri raziskovanju:</strong> povzetek družine skozi več rodov, razlike med zapisi različnih rodoslovcev o isti osebi ali seznam odprtih vprašanj, ki jih je treba preveriti v matičnih knjigah.</li>
+      </ul>
+      <p>Pomočnik vidi iste podatke kot vsak obiskovalec te strani in jih lahko le bere, ne pa spreminja.{auth_mcp} Vaša vprašanja in najdene zapise obdela ponudnik pomočnika po svojih pogojih.</p>
+      <h4>Kako ga povežete</h4>
+      <p>Vsi pomočniki potrebujejo isti naslov povezave:</p>
+      <p><code>{mcp_url}</code></p>
+      <ul>
+        <li><strong>Claude</strong> (claude.ai ali aplikacija Claude): v <em>nastavitvah</em> (Settings) odprite <em>Connectors</em> in izberite <em>Add custom connector</em>. Vpišite ime, npr. <em>Rodoslovni indeks</em>, in zgornji naslov, nastavitve preverjanja pristnosti pa pustite prazne. Brezplačni paket dovoli en lasten konektor. V pogovoru preverite, da je konektor vklopljen v meniju orodij.</li>
+        <li><strong>Gemini</strong> (gemini.google.com): v <em>nastavitvah</em> odprite <em>Povezane aplikacije</em> (Connected apps) in dodajte lastno aplikacijo z zgornjim naslovom. Dodati jo morate v spletni različici, nato pa deluje tudi v aplikaciji na telefonu.</li>
+        <li><strong>ChatGPT</strong> (chatgpt.com): lastne povezave so trenutno na voljo le v plačljivih paketih. V <em>nastavitvah</em> (Settings) → <em>Apps</em> (ali <em>Connectors</em>) → <em>Advanced settings</em> vklopite <em>Developer mode</em>, nato ustvarite novo aplikacijo z zgornjim naslovom in brez preverjanja pristnosti. V pogovoru jo izberete pod gumbom <strong>+</strong>.</li>
+      </ul>
+      <p>Meniji teh aplikacij se pogosto spreminjajo. Če možnosti ne najdete, v nastavitvah ali pomoči pomočnika poiščite <em>connectors</em>, <em>apps</em> ali <em>MCP</em>. Tudi pomočnik se lahko zmoti, zato preden kar koli dodate v svoj rodovnik, njegove navedbe preverite v zapisih na tej strani.</p>
       {auth_section}
     `,
 };

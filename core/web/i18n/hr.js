@@ -304,8 +304,9 @@ export default {
     help_auth_tree: ' Ova je funkcija dostupna samo prijavljenim članovima.',
     help_auth_match: ' (ova je funkcija dostupna samo prijavljenim članovima)',
     help_auth_section: `
-      <h3>5. Prijava u sustav</h3>
+      <h3>6. Prijava u sustav</h3>
       <p>Za potpun pristup stablima i podudaranjima morate se prijaviti. Prozor za prijavu otvarate klikom na ikonu osobe (<strong>{USER_ICON}</strong>) gore desno. U prozor upišite korisničko ime i lozinku koje inače upotrebljavate za pristup mrežnom portalu matičnoga rodoslovnog društva.</p>`,
+    help_auth_mcp: ' Rodoslovna stabla, usporedbe stabala i pojedinosti podudaranja, za koje je na ovoj stranici potrebna prijava, pomoćniku nisu dostupni.',
     help_source_marks: `<p>U stupcu <em>Izvor</em> oznaka iza imena govori iz koje vrste izvora zapis potječe — to su iste vrste na koje možete ograničiti pretraživanje:</p>`,
     help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula indeks</em>: zapisi indeksirani iz skeniranih matičnih knjiga na Matriculi Online</li>`,
     help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet groblja</em>: zapisi s nadgrobnih spomenika</li>`,
@@ -418,6 +419,25 @@ export default {
         <li><strong>Izvoz podudaranja:</strong> Klikom na gumb <strong>CSV</strong> uz naslov pojedinog odjeljka izvozite prikazane podudarne zapise. Izvoz možete iskoristiti za dopunu svojeg stabla, primjerice alatom kao što je <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Usporedba stabala:</strong> Za podudarnu osobu gumb <strong>🌳 Usporedi</strong> otvara usporedni prikaz rodoslovnih stabala obaju izvora. Svaka je osoba označena bojom – <em>podudaranje</em>, <em>manja razlika</em>, <em>ključna razlika</em> (razlikuju se ime, prezime ili datum rođenja) ili prisutna samo u <em>jednom</em> stablu – a klikom na osobu prikazuje se detaljna usporedba po pojedinim poljima, uključujući poveznice na izvore. Usporedba nudi iste oblike crteža, smjerove i ograničenje generacija kao i stranica sa stablom; preko legende u bojama možete skočiti na bilo koju osobu, a rezultat preuzeti kao tablicu <strong>CSV</strong>, sliku <strong>SVG</strong> ili datoteku <strong>GEDCOM</strong> za bilo kojeg od dvaju rodoslovaca.</li>
       </ul>
+      <h3 id="ai-assistant">5. Korištenje indeksa s AI pomoćnikom</h3>
+      <p>Indeks možete povezati s AI pomoćnikom kao što su <strong>Claude</strong>, <strong>Gemini</strong> ili <strong>ChatGPT</strong>. Tada ga pitate svojim riječima, a pomoćnik sam pretražuje indeks, spaja rezultate i sažima što je pronašao. Veza koristi otvoreni standard <em>MCP</em> (Model Context Protocol).</p>
+      <p>U čemu pomaže:</p>
+      <ul>
+        <li><strong>Pitanja običnim jezikom:</strong> na primjer <em>„Pronađi sve s prezimenom Novak rođene u Ravnoj Gori između 1820. i 1850. i reci mi koji ih rodoslovci imaju.“</em> Pomoćnik umjesto vas ispunjava polja za pretraživanje.</li>
+        <li><strong>Mnogo pretraživanja odjednom:</strong> isprobava više zapisa imena, jedno za drugim traži roditelje, partnere i djecu osobe ili provjerava koji rodoslovci imaju istu osobu — posao koji bi ručno zahtijevao desetke pretraživanja.</li>
+        <li><strong>Pregledi:</strong> koji izvori imaju najviše zapisa s nekim prezimenom, s kojim se stablima podudara vaše i koliko je podudaranja.</li>
+        <li><strong>Pomoć u istraživanju:</strong> sažetak obitelji kroz više naraštaja, razlike između zapisa različitih rodoslovaca o istoj osobi ili popis otvorenih pitanja koja treba provjeriti u matičnim knjigama.</li>
+      </ul>
+      <p>Pomoćnik vidi iste podatke kao i svaki posjetitelj ove stranice i može ih samo čitati, a ne mijenjati.{auth_mcp} Vaša pitanja i pronađene zapise obrađuje pružatelj pomoćnika prema svojim uvjetima.</p>
+      <h4>Kako ga povezati</h4>
+      <p>Svi pomoćnici trebaju istu adresu veze:</p>
+      <p><code>{mcp_url}</code></p>
+      <ul>
+        <li><strong>Claude</strong> (claude.ai ili aplikacija Claude): u <em>postavkama</em> (Settings) otvorite <em>Connectors</em> i odaberite <em>Add custom connector</em>. Upišite naziv, npr. <em>Rodoslovni indeks</em>, i gornju adresu, a postavke autentifikacije ostavite praznima. Besplatni paket dopušta jedan vlastiti konektor. U razgovoru provjerite je li konektor uključen u izborniku alata.</li>
+        <li><strong>Gemini</strong> (gemini.google.com): u <em>postavkama</em> otvorite <em>Povezane aplikacije</em> (Connected apps) i dodajte vlastitu aplikaciju s gornjom adresom. Treba je dodati u web-verziji, a zatim radi i u aplikaciji na mobitelu.</li>
+        <li><strong>ChatGPT</strong> (chatgpt.com): vlastite veze trenutno su dostupne samo u plaćenim paketima. U <em>postavkama</em> (Settings) → <em>Apps</em> (ili <em>Connectors</em>) → <em>Advanced settings</em> uključite <em>Developer mode</em>, zatim izradite novu aplikaciju s gornjom adresom i bez autentifikacije. U razgovoru je odaberite pod gumbom <strong>+</strong>.</li>
+      </ul>
+      <p>Izbornici ovih aplikacija često se mijenjaju. Ako ne pronađete opciju, u postavkama ili pomoći pomoćnika potražite <em>connectors</em>, <em>apps</em> ili <em>MCP</em>. I pomoćnik može pogriješiti, stoga prije nego što išta dodate u svoje stablo, provjerite njegove navode u zapisima na ovoj stranici.</p>
       {auth_section}
     `,
 };

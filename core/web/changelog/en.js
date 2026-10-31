@@ -28,6 +28,10 @@ export default [
         title: "Tap the small icons on phones",
         text: "The small marks next to a surname, birth date or place (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) can now be tapped on a touch screen to show their details. The baptism mark is now boxed, so it no longer looks like part of the date.",
       },
+      {
+        title: "Ask an AI assistant to search the index",
+        text: "The index can now be connected to Claude, Gemini or ChatGPT. Ask in your own words — <em>\"who has Novaks born in Ribnica before 1850?\"</em> — and the assistant runs the searches, follows families from record to record and sums up what it found. The <a href=\"/guide#ai-assistant\">user guide</a> explains how to connect it.",
+      },
     ],
   },
   {

@@ -304,8 +304,9 @@ export default {
     help_auth_tree: ' Ez a funkció csak bejelentkezett tagok számára érhető el.',
     help_auth_match: ' (ez a funkció csak bejelentkezett tagok számára érhető el)',
     help_auth_section: `
-      <h3>5. Bejelentkezés</h3>
+      <h3>6. Bejelentkezés</h3>
       <p>A családfákhoz és egyezésekhez való teljes hozzáféréshez be kell jelentkeznie. Nyissa meg a bejelentkezési ablakot a jobb felső sarokban található felhasználó ikonra (<strong>{USER_ICON}</strong>) kattintva. Adja meg azt a felhasználónevet és jelszót, amelyet a társaság fő portáljának eléréséhez használ.</p>`,
+    help_auth_mcp: ' A családfák, a fák összehasonlítása és az egyezések részletei, amelyekhez ezen az oldalon bejelentkezés kell, az asszisztens számára nem érhetők el.',
     help_source_marks: `<p>A <em>Forrás</em> oszlopban a név utáni jel mutatja, milyen típusú forrásból származik a rekord — ugyanazok a típusok, amelyekre a keresés is korlátozható:</p>`,
     help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula index</em>: a Matricula Online beszkennelt anyakönyveiből indexelt rekordok</li>`,
     help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet temetők</em>: sírkövekről rögzített rekordok</li>`,
@@ -418,6 +419,25 @@ export default {
         <li><strong>Egyezések exportálása:</strong> Az egyes szakaszok címe melletti <strong>CSV</strong> gombra kattintva exportálhatja a megjelenített egyező rekordokat. Az exportot felhasználhatja saját családfája kiegészítéséhez, például egy olyan eszközzel, mint a <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Fák összehasonlítása:</strong> egy egyező személynél a <strong>🌳 Összehasonlítás</strong> gomb megnyitja mindkét forrás családfájának egymás melletti nézetét. Minden személy színkóddal jelölt — <em>egyezés</em>, <em>kisebb eltérés</em>, <em>fő eltérés</em> (eltér a keresztnév, a vezetéknév vagy a születési dátum) vagy csak az <em>egyik</em> fában szerepel —, és egy személyre kattintva mezőnkénti összehasonlítás jelenik meg, beleértve a forráshivatkozásokat is. Az összehasonlítás ugyanazokat a rajzformákat, irányokat és generációs korlátot kínálja, mint a családfa oldal; a színes jelmagyarázatból bármely személyre ugorhat, az eredményt pedig letöltheti <strong>CSV</strong> táblázatként, <strong>SVG</strong> képként vagy <strong>GEDCOM</strong> fájlként a két családfakutató bármelyike számára.</li>
       </ul>
+      <h3 id="ai-assistant">5. Az index használata MI-asszisztenssel</h3>
+      <p>Az index összekapcsolható egy MI-asszisztenssel, például a <strong>Claude</strong>, a <strong>Gemini</strong> vagy a <strong>ChatGPT</strong> szolgáltatással. Ezután saját szavaival kérdezhet, az asszisztens pedig maga keres az indexben, összesíti a találatokat, és összefoglalja, mit talált. A kapcsolat a nyílt <em>MCP</em> szabványt (Model Context Protocol) használja.</p>
+      <p>Miben segít:</p>
+      <ul>
+        <li><strong>Kérdések hétköznapi nyelven:</strong> például <em>„Keresd meg az összes Novak vezetéknevű személyt, aki 1820 és 1850 között Ribnicán született, és mondd meg, melyik genealógusnál szerepelnek.”</em> Az asszisztens kitölti Ön helyett a keresőmezőket.</li>
+        <li><strong>Sok keresés egyszerre:</strong> kipróbálja egy név több írásmódját, egymás után megkeresi egy személy szüleit, házastársait és gyermekeit, vagy ellenőrzi, mely genealógusoknál szerepel ugyanaz a személy — kézzel ez több tucat keresést igényelne.</li>
+        <li><strong>Áttekintések:</strong> mely források tartalmazzák a legtöbb rekordot egy vezetéknévvel, mely családfákkal egyezik az Öné, és hány egyezés van.</li>
+        <li><strong>Segítség a kutatásban:</strong> egy család összefoglalása több nemzedéken át, különböző genealógusok ugyanarról a személyről szóló rekordjainak eltérései, vagy a plébániai anyakönyvekben ellenőrizendő nyitott kérdések listája.</li>
+      </ul>
+      <p>Az asszisztens ugyanazokat az adatokat látja, mint az oldal bármely látogatója, és csak olvasni tudja őket, módosítani nem.{auth_mcp} Kérdéseit és a talált rekordokat az asszisztens szolgáltatója a saját feltételei szerint dolgozza fel.</p>
+      <h4>A csatlakoztatás módja</h4>
+      <p>Minden asszisztensnek ugyanarra a kapcsolódási címre van szüksége:</p>
+      <p><code>{mcp_url}</code></p>
+      <ul>
+        <li><strong>Claude</strong> (claude.ai vagy a Claude alkalmazás): a <em>Beállítások</em> (Settings) között nyissa meg a <em>Connectors</em> részt, és válassza az <em>Add custom connector</em> lehetőséget. Adjon meg egy nevet, pl. <em>Genealógiai index</em>, és a fenti címet; a hitelesítési beállításokat hagyja üresen. Az ingyenes csomag egy saját összekötőt enged. A beszélgetésben ellenőrizze, hogy az összekötő be van-e kapcsolva az eszközök menüjében.</li>
+        <li><strong>Gemini</strong> (gemini.google.com): a <em>Beállítások</em> között nyissa meg a <em>Csatlakoztatott alkalmazások</em> részt, és adjon hozzá egy saját alkalmazást a fenti címmel. A webes változatban kell hozzáadni, utána a telefonos alkalmazásban is működik.</li>
+        <li><strong>ChatGPT</strong> (chatgpt.com): saját kapcsolatok jelenleg csak a fizetős csomagokban érhetők el. A <em>Beállítások</em> → <em>Alkalmazások</em> (vagy <em>Összekötők</em>) → <em>Speciális beállítások</em> alatt kapcsolja be a <em>Fejlesztői módot</em>, majd hozzon létre egy új alkalmazást a fenti címmel, hitelesítés nélkül. A beszélgetésben a <strong>+</strong> gomb alatt választhatja ki.</li>
+      </ul>
+      <p>Ezeknek az alkalmazásoknak a menüi gyakran változnak. Ha nem találja a lehetőséget, keressen rá a <em>connectors</em>, <em>apps</em> vagy <em>MCP</em> szavakra az asszisztens beállításaiban vagy súgójában. Az asszisztens is tévedhet, ezért mielőtt bármit felvenne a saját családfájába, ellenőrizze állításait az oldal rekordjaiban.</p>
       {auth_section}
     `,
 };

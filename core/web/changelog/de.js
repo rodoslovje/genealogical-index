@@ -15,6 +15,10 @@ export default [
         title: "Kleine Symbole antippen",
         text: "Die kleinen Zeichen neben Nachname, Geburtsdatum oder -ort (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) zeigen ihre Details jetzt auch beim Antippen auf einem Touchscreen. Das Taufzeichen ist jetzt umrahmt und sieht nicht mehr wie ein Teil des Datums aus.",
       },
+      {
+        title: "Den Index von einem KI-Assistenten durchsuchen lassen",
+        text: "Der Index lässt sich jetzt mit Claude, Gemini oder ChatGPT verbinden. Fragen Sie in eigenen Worten — <em>„wer hat Novaks, die vor 1850 in Ribnica geboren wurden?“</em> — und der Assistent führt die Suchen aus, folgt Familien von Eintrag zu Eintrag und fasst zusammen, was er gefunden hat. Wie man ihn verbindet, erklärt das <a href=\"/guide#ai-assistant\">Benutzerhandbuch</a>.",
+      },
     ],
   },
   {

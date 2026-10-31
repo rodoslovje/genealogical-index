@@ -304,8 +304,9 @@ export default {
     help_auth_tree: ' This feature is only available to logged-in members.',
     help_auth_match: ' (this feature is only available to logged-in members)',
     help_auth_section: `
-      <h3>5. System Login</h3>
+      <h3>6. System Login</h3>
       <p>To get full access to trees and matches, you need to log in. Open the login window by clicking the user icon (<strong>{USER_ICON}</strong>) in the top right corner. Enter the username and password you use to access the society's main portal.</p>`,
+    help_auth_mcp: ' Family trees, tree comparisons and match details, which need a login on this site, are not available to the assistant.',
     help_source_marks: `<p>In the <em>Source</em> column, a mark after the name shows which kind of source the record comes from — the same kinds the search engine can be restricted to:</p>`,
     help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula Index</em>: entries indexed from the scanned parish registers on Matricula Online</li>`,
     help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet Cemeteries</em>: records read from gravestones</li>`,
@@ -418,6 +419,25 @@ export default {
         <li><strong>Exporting matches:</strong> Clicking the <strong>CSV</strong> button next to each section's title exports the displayed matching records. The export can be used to complete your own tree, for example with a tool such as <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Tree comparison:</strong> for a matching person, the <strong>🌳 Compare</strong> button opens a side-by-side view of both sources' family trees. Every person is colour-coded — <em>match</em>, <em>minor difference</em>, <em>key difference</em> (name, surname or birth date differs), or present in <em>only one</em> of the trees — and clicking a person reveals a field-by-field comparison, including source links. The comparison offers the same drawings, directions and generation limit as the tree page; you can jump to any person from the coloured legend, and download the result as a <strong>CSV</strong> table, an <strong>SVG</strong> image, or a <strong>GEDCOM</strong> file for either of the two genealogists.</li>
       </ul>
+      <h3 id="ai-assistant">5. Using the Index with an AI Assistant</h3>
+      <p>The index can be connected to an AI assistant such as <strong>Claude</strong>, <strong>Gemini</strong> or <strong>ChatGPT</strong>. You then ask questions in your own words, and the assistant searches the index itself, combines the results and sums up what it found. The connection uses the open <em>MCP</em> standard (Model Context Protocol).</p>
+      <p>What it helps with:</p>
+      <ul>
+        <li><strong>Questions in plain language:</strong> for example <em>"Find everyone with the surname Novak born in Ribnica between 1820 and 1850, and tell me which genealogists have them."</em> The assistant fills in the search fields for you.</li>
+        <li><strong>Many searches at once:</strong> it can try several spellings of a name, look up a person's parents, partners and children one after another, or check which genealogists have the same person — work that would take dozens of searches by hand.</li>
+        <li><strong>Overviews:</strong> which sources hold the most records of a surname, which genealogists' trees match yours, and how many matches there are.</li>
+        <li><strong>Help with research:</strong> a summary of a family over several generations, the differences between genealogists' records of the same person, or a list of open questions to check in the parish registers.</li>
+      </ul>
+      <p>The assistant sees the same data as any visitor of this site, and can only read it, not change it.{auth_mcp} Your questions and the records found are processed by the assistant's provider under its own terms.</p>
+      <h4>How to connect</h4>
+      <p>All assistants need the same connection address:</p>
+      <p><code>{mcp_url}</code></p>
+      <ul>
+        <li><strong>Claude</strong> (claude.ai or the Claude app): in <em>Settings</em> open <em>Connectors</em> and choose <em>Add custom connector</em>. Enter a name, e.g. <em>Genealogical Index</em>, and the address above, and leave the authentication settings empty. The free plan allows one custom connector. In a conversation, make sure the connector is switched on in the tools menu.</li>
+        <li><strong>Gemini</strong> (gemini.google.com): in <em>Settings</em> open <em>Connected apps</em> and add a custom app with the address above. It has to be added in the web version, but then also works in the phone app.</li>
+        <li><strong>ChatGPT</strong> (chatgpt.com): custom connections are currently available only on paid plans. In <em>Settings</em> → <em>Apps</em> (or <em>Connectors</em>) → <em>Advanced settings</em>, turn on <em>Developer mode</em>, then create a new app with the address above and no authentication. In a conversation, select it under the <strong>+</strong> button.</li>
+      </ul>
+      <p>The menus of these apps change often. If you can't find the option, look for <em>connectors</em>, <em>apps</em> or <em>MCP</em> in the assistant's settings or help pages. An assistant can also make mistakes, so check what it reports against the records on this site before adding anything to your own tree.</p>
       {auth_section}
     `,
 };

@@ -15,6 +15,10 @@ export default [
         title: "Petites icônes à toucher",
         text: "Les petites marques à côté du nom, de la date ou du lieu de naissance (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) affichent désormais leurs détails d'un simple toucher sur un écran tactile. La marque du baptême est maintenant encadrée et ne se confond plus avec la date.",
       },
+      {
+        title: "Faites chercher l'index par un assistant IA",
+        text: "L'index peut désormais être relié à Claude, Gemini ou ChatGPT. Posez votre question avec vos mots — <em>« qui a des Novak nés à Ribnica avant 1850 ? »</em> — et l'assistant lance les recherches, suit les familles d'un enregistrement à l'autre et résume ce qu'il a trouvé. Le <a href=\"/guide#ai-assistant\">guide d'utilisation</a> explique comment le connecter.",
+      },
     ],
   },
   {

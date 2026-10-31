@@ -304,8 +304,9 @@ export default {
     help_auth_tree: " Questa funzione è disponibile solo per i membri che hanno effettuato l'accesso.",
     help_auth_match: " (questa funzione è disponibile solo per i membri che hanno effettuato l'accesso)",
     help_auth_section: `
-      <h3>5. Accesso al sistema</h3>
+      <h3>6. Accesso al sistema</h3>
       <p>Per avere pieno accesso agli alberi e alle corrispondenze, è necessario effettuare l'accesso. Apri la finestra di accesso cliccando sull'icona dell'utente (<strong>{USER_ICON}</strong>) nell'angolo in alto a destra. Inserisci il nome utente e la password che utilizzi per accedere al portale principale della società.</p>`,
+    help_auth_mcp: " Gli alberi genealogici, i confronti tra alberi e i dettagli delle corrispondenze, che su questo sito richiedono l'accesso, non sono disponibili per l'assistente.",
     help_source_marks: `<p>Nella colonna <em>Fonte</em>, un segno dopo il nome indica da quale tipo di fonte proviene il record — gli stessi tipi a cui si può limitare la ricerca:</p>`,
     help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Indice Matricula</em>: record indicizzati dai registri parrocchiali digitalizzati su Matricula Online</li>`,
     help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Cimiteri Geneanet</em>: record rilevati dalle lapidi</li>`,
@@ -418,6 +419,25 @@ export default {
         <li><strong>Esportare le corrispondenze:</strong> Cliccando sul pulsante <strong>CSV</strong> accanto al titolo di ciascuna sezione si esportano i record corrispondenti visualizzati. L'esportazione può essere usata per completare il proprio albero, ad esempio con uno strumento come <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Confronto degli alberi:</strong> per una persona corrispondente, il pulsante <strong>🌳 Confronta</strong> apre una vista affiancata degli alberi genealogici di entrambe le fonti. Ogni persona è contrassegnata da un colore — <em>corrispondenza</em>, <em>differenza minore</em>, <em>differenza chiave</em> (differiscono nome, cognome o data di nascita) o presente in <em>uno solo</em> degli alberi —, e cliccando su una persona si apre un confronto campo per campo, compresi i collegamenti alle fonti. Il confronto offre gli stessi disegni, le stesse direzioni e lo stesso limite di generazioni della pagina dell'albero; dalla legenda colorata si salta a qualsiasi persona e il risultato si scarica come tabella <strong>CSV</strong>, immagine <strong>SVG</strong> o file <strong>GEDCOM</strong> per uno dei due genealogisti.</li>
       </ul>
+      <h3 id="ai-assistant">5. Usare l'indice con un assistente IA</h3>
+      <p>L'indice può essere collegato a un assistente IA come <strong>Claude</strong>, <strong>Gemini</strong> o <strong>ChatGPT</strong>. Potete poi fare domande con parole vostre: l'assistente cerca da solo nell'indice, combina i risultati e riassume ciò che ha trovato. Il collegamento usa lo standard aperto <em>MCP</em> (Model Context Protocol).</p>
+      <p>In cosa aiuta:</p>
+      <ul>
+        <li><strong>Domande in linguaggio comune:</strong> per esempio <em>“Trova tutti con il cognome Novak nati a Ribnica tra il 1820 e il 1850 e dimmi quali genealogisti li hanno.”</em> L'assistente compila i campi di ricerca al posto vostro.</li>
+        <li><strong>Molte ricerche in una volta:</strong> prova diverse grafie di un nome, cerca uno dopo l'altro i genitori, i partner e i figli di una persona o verifica quali genealogisti hanno la stessa persona — un lavoro che a mano richiederebbe decine di ricerche.</li>
+        <li><strong>Panoramiche:</strong> quali fonti hanno più record di un cognome, con quali alberi corrisponde il vostro e quante sono le corrispondenze.</li>
+        <li><strong>Aiuto nella ricerca:</strong> un riassunto di una famiglia su più generazioni, le differenze tra i record di diversi genealogisti sulla stessa persona o un elenco di domande aperte da verificare nei registri parrocchiali.</li>
+      </ul>
+      <p>L'assistente vede gli stessi dati di qualsiasi visitatore di questo sito e può solo leggerli, non modificarli.{auth_mcp} Le vostre domande e i record trovati sono elaborati dal fornitore dell'assistente secondo le sue condizioni.</p>
+      <h4>Come collegarlo</h4>
+      <p>Tutti gli assistenti richiedono lo stesso indirizzo di collegamento:</p>
+      <p><code>{mcp_url}</code></p>
+      <ul>
+        <li><strong>Claude</strong> (claude.ai o l'app Claude): nelle <em>Impostazioni</em> aprite <em>Connettori</em> e scegliete <em>Aggiungi connettore personalizzato</em>. Inserite un nome, ad es. <em>Indice genealogico</em>, e l'indirizzo qui sopra, lasciando vuote le impostazioni di autenticazione. Il piano gratuito consente un connettore personalizzato. Nella conversazione, verificate che il connettore sia attivo nel menu degli strumenti.</li>
+        <li><strong>Gemini</strong> (gemini.google.com): nelle <em>Impostazioni</em> aprite <em>App collegate</em> e aggiungete un'app personalizzata con l'indirizzo qui sopra. Va aggiunta nella versione web, ma poi funziona anche nell'app per telefono.</li>
+        <li><strong>ChatGPT</strong> (chatgpt.com): i collegamenti personalizzati sono attualmente disponibili solo nei piani a pagamento. In <em>Impostazioni</em> → <em>App</em> (o <em>Connettori</em>) → <em>Impostazioni avanzate</em> attivate la <em>Modalità sviluppatore</em>, poi create una nuova app con l'indirizzo qui sopra e senza autenticazione. Nella conversazione, selezionatela con il pulsante <strong>+</strong>.</li>
+      </ul>
+      <p>I menu di queste app cambiano spesso. Se non trovate l'opzione, cercate <em>connettori</em>, <em>app</em> o <em>MCP</em> nelle impostazioni o nella guida dell'assistente. Anche un assistente può sbagliare: verificate ciò che riporta con i record di questo sito prima di aggiungere qualcosa al vostro albero.</p>
       {auth_section}
     `,
 };

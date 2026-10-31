@@ -15,6 +15,10 @@ export default [
         title: "Male ikone reagiraju na dodir",
         text: "Male oznake uz prezime, datum ili mjesto rođenja (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) sada na zaslonu osjetljivom na dodir prikazuju pojedinosti kad ih dodirnete. Oznaka krštenja sada je uokvirena, pa više ne izgleda kao dio datuma.",
       },
+      {
+        title: "Pretraživanje indeksa s AI pomoćnikom",
+        text: "Indeks sada možete povezati s Claudeom, Geminijem ili ChatGPT-om. Pitajte svojim riječima — <em>„tko ima Novake rođene u Ravnoj Gori prije 1850.?“</em> — a pomoćnik sam obavlja pretraživanja, prati obitelji od zapisa do zapisa i sažima što je pronašao. Kako ga povezati, objašnjavaju <a href=\"/guide#ai-assistant\">upute za korištenje</a>.",
+      },
     ],
   },
   {

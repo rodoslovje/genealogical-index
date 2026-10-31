@@ -304,8 +304,9 @@ export default {
     help_auth_tree: ' Cette fonctionnalité est réservée aux membres connectés.',
     help_auth_match: ' (cette fonctionnalité est réservée aux membres connectés)',
     help_auth_section: `
-      <h3>5. Connexion au système</h3>
+      <h3>6. Connexion au système</h3>
       <p>Pour accéder pleinement aux arbres et aux correspondances, vous devez vous connecter. Ouvrez la fenêtre de connexion en cliquant sur l'icône utilisateur (<strong>{USER_ICON}</strong>) dans le coin supérieur droit. Saisissez le nom d'utilisateur et le mot de passe que vous utilisez pour accéder au portail principal de la société.</p>`,
+    help_auth_mcp: " Les arbres généalogiques, les comparaisons d'arbres et le détail des correspondances, qui demandent une connexion sur ce site, ne sont pas accessibles à l'assistant.",
     help_source_marks: `<p>Dans la colonne <em>Source</em>, une marque après le nom indique de quel type de source provient l'enregistrement — les mêmes types auxquels la recherche peut être restreinte :</p>`,
     help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Index Matricula</em> : enregistrements indexés à partir des registres paroissiaux numérisés sur Matricula Online</li>`,
     help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Cimetières Geneanet</em> : enregistrements relevés sur les pierres tombales</li>`,
@@ -418,6 +419,25 @@ export default {
         <li><strong>Export des correspondances :</strong> Un clic sur le bouton <strong>CSV</strong> à côté du titre de chaque section exporte les enregistrements correspondants affichés. L'export peut servir à compléter votre propre arbre, par exemple avec un outil tel que <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Comparaison des arbres :</strong> pour une personne correspondante, le bouton <strong>🌳 Comparer</strong> ouvre une vue côte à côte des arbres généalogiques des deux sources. Chaque personne reçoit un code couleur — <em>correspondance</em>, <em>différence mineure</em>, <em>différence majeure</em> (le prénom, le nom ou la date de naissance diffère) ou présente dans <em>un seul</em> des arbres — et un clic sur une personne révèle une comparaison champ par champ, y compris les liens vers les sources. La comparaison offre les mêmes dessins, les mêmes directions et la même limite de générations que la page de l'arbre ; la légende colorée permet d'accéder à n'importe quelle personne et le résultat se télécharge sous forme de tableau <strong>CSV</strong>, d'image <strong>SVG</strong> ou de fichier <strong>GEDCOM</strong> pour l'un ou l'autre des deux généalogistes.</li>
       </ul>
+      <h3 id="ai-assistant">5. Utiliser l'index avec un assistant IA</h3>
+      <p>L'index peut être relié à un assistant IA comme <strong>Claude</strong>, <strong>Gemini</strong> ou <strong>ChatGPT</strong>. Vous posez alors vos questions avec vos propres mots, et l'assistant cherche lui-même dans l'index, rassemble les résultats et résume ce qu'il a trouvé. La connexion utilise le standard ouvert <em>MCP</em> (Model Context Protocol).</p>
+      <p>Ce qu'il permet :</p>
+      <ul>
+        <li><strong>Des questions en langage courant :</strong> par exemple <em>« Trouve toutes les personnes nommées Novak nées à Ribnica entre 1820 et 1850, et dis-moi quels généalogistes les ont. »</em> L'assistant remplit les champs de recherche à votre place.</li>
+        <li><strong>De nombreuses recherches à la fois :</strong> il essaie plusieurs graphies d'un nom, recherche l'un après l'autre les parents, les conjoints et les enfants d'une personne, ou vérifie quels généalogistes ont la même personne — un travail qui demanderait des dizaines de recherches à la main.</li>
+        <li><strong>Des vues d'ensemble :</strong> quelles sources ont le plus d'enregistrements d'un nom, avec quels arbres le vôtre correspond et combien de correspondances il y a.</li>
+        <li><strong>Une aide à la recherche :</strong> le résumé d'une famille sur plusieurs générations, les différences entre les enregistrements de plusieurs généalogistes sur la même personne, ou une liste de questions ouvertes à vérifier dans les registres paroissiaux.</li>
+      </ul>
+      <p>L'assistant voit les mêmes données que tout visiteur de ce site et peut seulement les lire, pas les modifier.{auth_mcp} Vos questions et les enregistrements trouvés sont traités par le fournisseur de l'assistant selon ses propres conditions.</p>
+      <h4>Comment le connecter</h4>
+      <p>Tous les assistants ont besoin de la même adresse de connexion :</p>
+      <p><code>{mcp_url}</code></p>
+      <ul>
+        <li><strong>Claude</strong> (claude.ai ou l'application Claude) : dans les <em>Paramètres</em>, ouvrez <em>Connecteurs</em> et choisissez <em>Ajouter un connecteur personnalisé</em>. Saisissez un nom, par ex. <em>Index généalogique</em>, et l'adresse ci-dessus, en laissant vides les paramètres d'authentification. L'offre gratuite permet un connecteur personnalisé. Dans une conversation, vérifiez que le connecteur est activé dans le menu des outils.</li>
+        <li><strong>Gemini</strong> (gemini.google.com) : dans les <em>Paramètres</em>, ouvrez <em>Applications connectées</em> et ajoutez une application personnalisée avec l'adresse ci-dessus. Elle doit être ajoutée dans la version web, mais fonctionne ensuite aussi dans l'application mobile.</li>
+        <li><strong>ChatGPT</strong> (chatgpt.com) : les connexions personnalisées ne sont actuellement disponibles que dans les offres payantes. Dans <em>Paramètres</em> → <em>Applications</em> (ou <em>Connecteurs</em>) → <em>Paramètres avancés</em>, activez le <em>Mode développeur</em>, puis créez une nouvelle application avec l'adresse ci-dessus et sans authentification. Dans une conversation, sélectionnez-la avec le bouton <strong>+</strong>.</li>
+      </ul>
+      <p>Les menus de ces applications changent souvent. Si vous ne trouvez pas l'option, cherchez <em>connecteurs</em>, <em>applications</em> ou <em>MCP</em> dans les paramètres ou l'aide de l'assistant. Un assistant peut aussi se tromper : vérifiez ce qu'il rapporte dans les enregistrements de ce site avant d'ajouter quoi que ce soit à votre propre arbre.</p>
       {auth_section}
     `,
 };

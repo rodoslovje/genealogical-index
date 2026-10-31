@@ -708,7 +708,7 @@ except jwt.PyJWTError as e:
 
 ## 8. MCP Server (AI assistants)
 
-The API also serves a [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp` on the API host (e.g. `https://indeks-api.rodoslovlje.si/mcp`), so an AI assistant such as Claude can search the index and see who matches whom on a user's behalf. It lives in `core/backend/src/mcp_server.py` and is served by the same container as the REST API — no extra service, and no Caddy change: the existing `reverse_proxy` already forwards `/mcp`.
+The API also serves a [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp` on the API host (e.g. `https://indeks-api.rodoslovje.si/mcp`), so an AI assistant such as Claude can search the index and see who matches whom on a user's behalf. It lives in `core/backend/src/mcp_server.py` and is served by the same container as the REST API — no extra service, and no Caddy change: the existing `reverse_proxy` already forwards `/mcp`.
 
 The tools are read-only and call `crud.py` directly, so they return what the website does:
 
@@ -725,13 +725,13 @@ To connect:
 
 ```bash
 # Claude Code
-claude mcp add --transport http genealogical-index https://indeks-api.rodoslovlje.si/mcp
+claude mcp add --transport http genealogical-index https://indeks-api.rodoslovje.si/mcp
 ```
 
 In claude.ai or Claude Desktop, add it under Settings → Connectors → Add custom connector with the same URL. To check it by hand:
 
 ```bash
-curl -s https://indeks-api.rodoslovlje.si/mcp \
+curl -s https://indeks-api.rodoslovje.si/mcp \
   -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```

@@ -304,8 +304,9 @@ export default {
     help_auth_tree: ' Diese Funktion steht nur angemeldeten Mitgliedern zur Verfügung.',
     help_auth_match: ' (diese Funktion steht nur angemeldeten Mitgliedern zur Verfügung)',
     help_auth_section: `
-      <h3>5. Systemanmeldung</h3>
+      <h3>6. Systemanmeldung</h3>
       <p>Um vollen Zugriff auf Stammbäume und Übereinstimmungen zu erhalten, müssen Sie sich anmelden. Öffnen Sie das Anmeldefenster, indem Sie auf das Benutzersymbol (<strong>{USER_ICON}</strong>) in der oberen rechten Ecke klicken. Geben Sie den Benutzernamen und das Passwort ein, die Sie für den Zugriff auf das Hauptportal der Gesellschaft verwenden.</p>`,
+    help_auth_mcp: ' Stammbäume, Stammbaum-Vergleiche und Einzelheiten der Übereinstimmungen, für die auf dieser Seite eine Anmeldung nötig ist, stehen dem Assistenten nicht zur Verfügung.',
     help_source_marks: `<p>In der Spalte <em>Quelle</em> zeigt ein Zeichen hinter dem Namen, aus welcher Art von Quelle der Eintrag stammt — dieselben Arten, auf die sich die Suche einschränken lässt:</p>`,
     help_source_mark_matricula: `<li><strong>⛪</strong> – <em>Matricula-Index</em>: Einträge, die aus den gescannten Matrikelbüchern auf Matricula Online indexiert wurden</li>`,
     help_source_mark_geneanet: `<li><strong>🪦</strong> – <em>Geneanet Friedhöfe</em>: von Grabsteinen erfasste Einträge</li>`,
@@ -418,6 +419,25 @@ export default {
         <li><strong>Übereinstimmungen exportieren:</strong> Mit Klick auf die Schaltfläche <strong>CSV</strong> neben dem Titel eines Abschnitts exportieren Sie die angezeigten übereinstimmenden Datensätze. Den Export können Sie zur Ergänzung Ihres eigenen Stammbaums nutzen, zum Beispiel mit einem Werkzeug wie <a href="https://gedmerge.com" target="_blank" rel="noopener">GED Merge</a>.</li>
         <li><strong>Stammbaum-Vergleich:</strong> Für eine übereinstimmende Person öffnet die Schaltfläche <strong>🌳 Vergleichen</strong> eine Gegenüberstellung der Stammbäume beider Quellen. Jede Person ist farblich gekennzeichnet — <em>Übereinstimmung</em>, <em>geringe Abweichung</em>, <em>wesentliche Abweichung</em> (Vorname, Nachname oder Geburtsdatum weichen ab) oder nur in <em>einem</em> der Bäume vorhanden —, und ein Klick auf eine Person zeigt einen feldweisen Vergleich einschließlich der Quellenlinks. Der Vergleich bietet dieselben Zeichnungen, Richtungen und Generationengrenzen wie die Stammbaum-Seite; über die farbige Legende springen Sie zu jeder Person und laden das Ergebnis als <strong>CSV</strong>-Tabelle, <strong>SVG</strong>-Bild oder <strong>GEDCOM</strong>-Datei für einen der beiden Genealogen herunter.</li>
       </ul>
+      <h3 id="ai-assistant">5. Den Index mit einem KI-Assistenten nutzen</h3>
+      <p>Der Index lässt sich mit einem KI-Assistenten wie <strong>Claude</strong>, <strong>Gemini</strong> oder <strong>ChatGPT</strong> verbinden. Sie stellen dann Fragen in eigenen Worten, und der Assistent durchsucht den Index selbst, führt die Ergebnisse zusammen und fasst zusammen, was er gefunden hat. Die Verbindung nutzt den offenen Standard <em>MCP</em> (Model Context Protocol).</p>
+      <p>Wobei er hilft:</p>
+      <ul>
+        <li><strong>Fragen in Alltagssprache:</strong> zum Beispiel <em>„Finde alle mit dem Nachnamen Novak, die zwischen 1820 und 1850 in Ribnica geboren wurden, und sag mir, welche Genealogen sie haben.“</em> Der Assistent füllt die Suchfelder für Sie aus.</li>
+        <li><strong>Viele Suchen auf einmal:</strong> Er probiert mehrere Schreibweisen eines Namens aus, sucht nacheinander Eltern, Partner und Kinder einer Person oder prüft, welche Genealogen dieselbe Person haben — Arbeit, die von Hand Dutzende Suchen erfordern würde.</li>
+        <li><strong>Übersichten:</strong> welche Quellen die meisten Einträge zu einem Nachnamen haben, mit welchen Stammbäumen Ihrer übereinstimmt und wie viele Übereinstimmungen es gibt.</li>
+        <li><strong>Hilfe bei der Forschung:</strong> eine Zusammenfassung einer Familie über mehrere Generationen, die Unterschiede zwischen den Einträgen verschiedener Genealogen zur selben Person oder eine Liste offener Fragen, die in den Kirchenbüchern zu prüfen sind.</li>
+      </ul>
+      <p>Der Assistent sieht dieselben Daten wie jeder Besucher dieser Seite und kann sie nur lesen, nicht ändern.{auth_mcp} Ihre Fragen und die gefundenen Einträge werden vom Anbieter des Assistenten nach dessen eigenen Bedingungen verarbeitet.</p>
+      <h4>So verbinden Sie ihn</h4>
+      <p>Alle Assistenten brauchen dieselbe Verbindungsadresse:</p>
+      <p><code>{mcp_url}</code></p>
+      <ul>
+        <li><strong>Claude</strong> (claude.ai oder die Claude-App): Öffnen Sie in den <em>Einstellungen</em> <em>Konnektoren</em> und wählen Sie <em>Benutzerdefinierten Konnektor hinzufügen</em>. Geben Sie einen Namen ein, z. B. <em>Genealogischer Index</em>, und die Adresse oben; die Authentifizierungseinstellungen bleiben leer. Der kostenlose Tarif erlaubt einen eigenen Konnektor. Achten Sie im Gespräch darauf, dass der Konnektor im Werkzeugmenü eingeschaltet ist.</li>
+        <li><strong>Gemini</strong> (gemini.google.com): Öffnen Sie in den <em>Einstellungen</em> <em>Verbundene Apps</em> und fügen Sie eine eigene App mit der Adresse oben hinzu. Sie muss in der Webversion hinzugefügt werden, funktioniert danach aber auch in der Handy-App.</li>
+        <li><strong>ChatGPT</strong> (chatgpt.com): Eigene Verbindungen gibt es derzeit nur in kostenpflichtigen Tarifen. Schalten Sie unter <em>Einstellungen</em> → <em>Apps</em> (oder <em>Konnektoren</em>) → <em>Erweiterte Einstellungen</em> den <em>Entwicklermodus</em> ein und legen Sie dann eine neue App mit der Adresse oben und ohne Authentifizierung an. Im Gespräch wählen Sie sie unter der Schaltfläche <strong>+</strong>.</li>
+      </ul>
+      <p>Die Menüs dieser Apps ändern sich oft. Wenn Sie die Option nicht finden, suchen Sie in den Einstellungen oder der Hilfe des Assistenten nach <em>Konnektoren</em>, <em>Apps</em> oder <em>MCP</em>. Auch ein Assistent kann sich irren: Prüfen Sie seine Angaben anhand der Einträge auf dieser Seite, bevor Sie etwas in Ihren eigenen Stammbaum übernehmen.</p>
       {auth_section}
     `,
 };

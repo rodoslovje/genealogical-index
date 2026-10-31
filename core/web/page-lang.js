@@ -99,6 +99,9 @@ async function main() {
     refooter(strings, lang);
     document.documentElement.lang = lang;
     guideEl.innerHTML = renderGuideManual(strings, !!siteConfig.authUrl, siteConfig);
+    // Replacing the content drops the browser's jump to #section (e.g. the
+    // changelog's link to the AI assistant section), so redo it.
+    if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
     return;
   }
 
@@ -108,6 +111,13 @@ async function main() {
   refooter(strings, lang);
   document.documentElement.lang = lang;
   changelogEl.innerHTML = renderChangelog(mergeChangelog(enEntries, translated), strings);
+  // Links from an entry into the guide open it in the language being read, as
+  // the footer link does.
+  changelogEl.querySelectorAll('a[href^="/guide"]').forEach(a => {
+    const url = new URL(a.getAttribute('href'), location.origin);
+    url.searchParams.set('lang', lang);
+    a.setAttribute('href', url.pathname + url.search + url.hash);
+  });
 }
 
 main().catch(err => console.warn('Could not switch page language.', err));

@@ -15,6 +15,10 @@ export default [
         title: "Icone piccole toccabili",
         text: "I piccoli segni accanto a cognome, data o luogo di nascita (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) ora mostrano i dettagli anche toccandoli su uno schermo touch. Il segno del battesimo è ora incorniciato, così non sembra più parte della data.",
       },
+      {
+        title: "Chiedete a un assistente IA di cercare nell'indice",
+        text: "L'indice può ora essere collegato a Claude, Gemini o ChatGPT. Chiedete con parole vostre — <em>“chi ha dei Novak nati a Ribnica prima del 1850?”</em> — e l'assistente esegue le ricerche, segue le famiglie da un record all'altro e riassume ciò che ha trovato. La <a href=\"/guide#ai-assistant\">guida utente</a> spiega come collegarlo.",
+      },
     ],
   },
   {

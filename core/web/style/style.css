@@ -1800,6 +1800,8 @@ a.deceased-indicator:hover {
 .help-content h2 { margin-top: 0; margin-bottom: 1.2rem; font-size: 1.6rem; font-family: var(--srd-font-serif); font-weight: 500; color: var(--srd-brand); }
 .help-content h3 { margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 6px; font-size: 1.3rem; font-family: var(--srd-font-serif); font-weight: 500; color: var(--srd-ink); border-bottom: 1px solid var(--srd-line); }
 .help-content h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.05rem; font-weight: 600; color: var(--srd-ink); }
+/* A link to a #section of the guide lands below the fixed navbar, not under it. */
+.help-content [id] { scroll-margin-top: calc(var(--nav-height) + 1rem); }
 .help-content strong { color: var(--srd-ink); font-weight: 600; }
 @media (max-width: 768px) {
   #help-modal .srd-modal {

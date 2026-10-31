@@ -15,6 +15,10 @@ export default [
         title: "Érintésre nyíló kis ikonok",
         text: "A vezetéknév, a születési dátum vagy hely melletti kis jelek (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) mostantól érintőképernyőn megérintve is megmutatják a részleteket. A keresztelés jele most keretben jelenik meg, így nem tűnik a dátum részének.",
       },
+      {
+        title: "Kérje meg egy MI-asszisztenst, hogy keressen az indexben",
+        text: "Az index mostantól összekapcsolható a Claude, a Gemini vagy a ChatGPT szolgáltatással. Kérdezzen saját szavaival — <em>„kinél vannak 1850 előtt Ribnicán született Novakok?”</em> —, az asszisztens pedig elvégzi a kereséseket, rekordról rekordra követi a családokat, és összefoglalja, mit talált. A csatlakoztatás módját a <a href=\"/guide#ai-assistant\">felhasználói kézikönyv</a> ismerteti.",
+      },
     ],
   },
   {
