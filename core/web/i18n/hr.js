@@ -380,7 +380,7 @@ export default {
         <li><strong>1850–1855</strong> – negdje između dvaju datuma ili razdoblje od jednog do drugog (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
         <li><strong>1850–</strong> i <strong>–1850</strong> – od tog datuma ili do njega (<em>FROM</em>, <em>TO</em>)</li>
       </ul>
-      <p>Takvi su datumi podcrtani točkicama. Prelaskom mišem preko datuma ili dodirom na zaslonu osjetljivom na dodir prikazuje se datum točno onako kako je zabilježen i njegovo značenje. Izvozi (CSV, GEDCOM) zadržavaju izvorni oblik, a pretraživanje po datumu ili godini pronalazi i te datume.</p>
+      <p>Prelaskom mišem preko datuma ili dodirom na zaslonu osjetljivom na dodir prikazuje se datum točno onako kako je zabilježen i njegovo značenje. Izvozi (CSV, GEDCOM) zadržavaju izvorni oblik, a pretraživanje po datumu ili godini pronalazi i te datume.</p>
       <h4>Stranica s rodoslovnim stablom</h4>
       <p>Stranica sa stablom prikazuje grafičko, interaktivno rodoslovno stablo odabrane osobe. Dostupne su sljedeće mogućnosti:</p>
       <ul>

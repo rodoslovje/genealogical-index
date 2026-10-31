@@ -9,7 +9,7 @@ export default [
     items: [
       {
         title: "Dates incertaines plus lisibles",
-        text: "Les dates incertaines sont désormais affichées sous une forme abrégée : <strong>~1850</strong> pour environ, <strong>&lt;1850</strong> et <strong>&gt;1850</strong> pour avant et après, <strong>1850–1855</strong> pour un intervalle. Survolez une date soulignée en pointillé, ou touchez-la, pour la voir telle que le généalogiste l'a enregistrée et ce qu'elle signifie.",
+        text: "Les dates incertaines sont désormais affichées sous une forme abrégée : <strong>~1850</strong> pour environ, <strong>&lt;1850</strong> et <strong>&gt;1850</strong> pour avant et après, <strong>1850–1855</strong> pour un intervalle. Survolez une telle date, ou touchez-la, pour la voir telle que le généalogiste l'a enregistrée et ce qu'elle signifie.",
       },
       {
         title: "Petites icônes à toucher",

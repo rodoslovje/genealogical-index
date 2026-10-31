@@ -22,7 +22,7 @@ export default [
     items: [
       {
         title: "Easier-to-read uncertain dates",
-        text: "Uncertain dates are now shown in a short form: <strong>~1850</strong> for about, <strong>&lt;1850</strong> and <strong>&gt;1850</strong> for before and after, <strong>1850–1855</strong> for a range. Hover over a dotted date, or tap it, to see it exactly as the genealogist recorded it and what it means.",
+        text: "Uncertain dates are now shown in a short form: <strong>~1850</strong> for about, <strong>&lt;1850</strong> and <strong>&gt;1850</strong> for before and after, <strong>1850–1855</strong> for a range. Hover over such a date, or tap it, to see it exactly as the genealogist recorded it and what it means.",
       },
       {
         title: "Tap the small icons on phones",

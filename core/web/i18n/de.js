@@ -380,7 +380,7 @@ export default {
         <li><strong>1850–1855</strong> – irgendwann zwischen den beiden Daten oder ein Zeitraum vom einen bis zum anderen (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
         <li><strong>1850–</strong> und <strong>–1850</strong> – ab bzw. bis zu diesem Datum (<em>FROM</em>, <em>TO</em>)</li>
       </ul>
-      <p>Solche Daten sind gepunktet unterstrichen. Fahren Sie mit der Maus darüber oder tippen Sie auf einem Touchscreen darauf, um das Datum genau so, wie es erfasst wurde, und seine Bedeutung zu sehen. Exporte (CSV, GEDCOM) behalten die ursprüngliche Form, und die Suche nach einem Datum oder Jahr findet auch diese Daten.</p>
+      <p>Fahren Sie mit der Maus über ein solches Datum oder tippen Sie auf einem Touchscreen darauf, um das Datum genau so, wie es erfasst wurde, und seine Bedeutung zu sehen. Exporte (CSV, GEDCOM) behalten die ursprüngliche Form, und die Suche nach einem Datum oder Jahr findet auch diese Daten.</p>
       <h4>Die Stammbaum-Seite</h4>
       <p>Die Stammbaum-Seite zeigt einen grafischen, interaktiven Stammbaum der ausgewählten Person an. Folgende Funktionen stehen zur Verfügung:</p>
       <ul>

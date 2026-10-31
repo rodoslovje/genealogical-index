@@ -1660,14 +1660,9 @@ a.deceased-indicator:hover {
   vertical-align: 0.1em;
 }
 
-/* A qualified GEDCOM date (~1850, <1850, 1850–1855): dotted underline says
-   "tap or hover for the recorded value". */
-.gdate {
-  text-decoration: underline dotted;
-  text-decoration-color: color-mix(in srgb, currentColor 50%, transparent);
-  text-underline-offset: 3px;
-  cursor: help;
-}
+/* A qualified GEDCOM date (~1850, <1850, 1850–1855); hover or tap shows the
+   recorded value. */
+.gdate { cursor: help; }
 /* Tap popover for .gdate and .row-icon (lib/tap-tip.js). */
 .tap-tip {
   position: absolute;

@@ -380,7 +380,7 @@ export default {
         <li><strong>1850–1855</strong> – in un momento tra le due date, oppure un periodo dall'una all'altra (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
         <li><strong>1850–</strong> e <strong>–1850</strong> – da quella data o fino a quella data (<em>FROM</em>, <em>TO</em>)</li>
       </ul>
-      <p>Queste date sono sottolineate con puntini. Passandoci sopra con il mouse, o toccandole su uno schermo touch, si vede la data esattamente come è stata registrata e il suo significato. Le esportazioni (CSV, GEDCOM) mantengono la forma originale e la ricerca per data o anno trova anche queste date.</p>
+      <p>Passando con il mouse su una di queste date, o toccandola su uno schermo touch, si vede la data esattamente come è stata registrata e il suo significato. Le esportazioni (CSV, GEDCOM) mantengono la forma originale e la ricerca per data o anno trova anche queste date.</p>
       <h4>La pagina dell'albero genealogico</h4>
       <p>La pagina dell'albero visualizza un albero genealogico grafico e interattivo della persona selezionata. Sono disponibili le seguenti funzioni:</p>
       <ul>

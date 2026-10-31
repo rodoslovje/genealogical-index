@@ -380,7 +380,7 @@ export default {
         <li><strong>1850–1855</strong> – valamikor a két dátum között, vagy az egyiktől a másikig tartó időszak (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
         <li><strong>1850–</strong> és <strong>–1850</strong> – attól a dátumtól kezdve, illetve addig (<em>FROM</em>, <em>TO</em>)</li>
       </ul>
-      <p>Az ilyen dátumok pontozottan alá vannak húzva. Vigye föléjük az egeret, vagy érintse meg őket érintőképernyőn, és megjelenik a dátum pontosan úgy, ahogy rögzítették, valamint a jelentése. Az exportok (CSV, GEDCOM) megőrzik az eredeti formát, és a dátumra vagy évre keresés ezeket a dátumokat is megtalálja.</p>
+      <p>Vigye az egeret egy ilyen dátum fölé, vagy érintse meg érintőképernyőn, és megjelenik a dátum pontosan úgy, ahogy rögzítették, valamint a jelentése. Az exportok (CSV, GEDCOM) megőrzik az eredeti formát, és a dátumra vagy évre keresés ezeket a dátumokat is megtalálja.</p>
       <h4>A családfa oldal</h4>
       <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
       <ul>

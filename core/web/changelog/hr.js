@@ -9,7 +9,7 @@ export default [
     items: [
       {
         title: "Pregledniji nesigurni datumi",
-        text: "Nesigurni datumi sada su prikazani u kratkom obliku: <strong>~1850</strong> za približno, <strong>&lt;1850</strong> i <strong>&gt;1850</strong> za prije i nakon, <strong>1850–1855</strong> za raspon. Prelaskom mišem preko datuma s točkastom crtom ili dodirom vidite kako ga je rodoslovac zabilježio i što znači.",
+        text: "Nesigurni datumi sada su prikazani u kratkom obliku: <strong>~1850</strong> za približno, <strong>&lt;1850</strong> i <strong>&gt;1850</strong> za prije i nakon, <strong>1850–1855</strong> za raspon. Prelaskom mišem preko takvog datuma ili dodirom vidite kako ga je rodoslovac zabilježio i što znači.",
       },
       {
         title: "Male ikone reagiraju na dodir",

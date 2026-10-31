@@ -9,7 +9,7 @@ export default [
     items: [
       {
         title: "Date incerte più leggibili",
-        text: "Le date incerte sono ora mostrate in forma breve: <strong>~1850</strong> per circa, <strong>&lt;1850</strong> e <strong>&gt;1850</strong> per prima e dopo, <strong>1850–1855</strong> per un intervallo. Passando con il mouse su una data sottolineata a puntini, o toccandola, la si vede come l'ha registrata il genealogista, con il suo significato.",
+        text: "Le date incerte sono ora mostrate in forma breve: <strong>~1850</strong> per circa, <strong>&lt;1850</strong> e <strong>&gt;1850</strong> per prima e dopo, <strong>1850–1855</strong> per un intervallo. Passando con il mouse su una di queste date, o toccandola, la si vede come l'ha registrata il genealogista, con il suo significato.",
       },
       {
         title: "Icone piccole toccabili",

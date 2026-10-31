@@ -9,7 +9,7 @@ export default [
     items: [
       {
         title: "Könnyebben olvasható bizonytalan dátumok",
-        text: "A bizonytalan dátumok mostantól rövid formában jelennek meg: <strong>~1850</strong> a körülbelülire, <strong>&lt;1850</strong> és <strong>&gt;1850</strong> az előtte és utána értékre, <strong>1850–1855</strong> az időszakra. Vigye az egeret egy pontozottan aláhúzott dátum fölé, vagy érintse meg, és láthatja, hogyan rögzítette a családfakutató, és mit jelent.",
+        text: "A bizonytalan dátumok mostantól rövid formában jelennek meg: <strong>~1850</strong> a körülbelülire, <strong>&lt;1850</strong> és <strong>&gt;1850</strong> az előtte és utána értékre, <strong>1850–1855</strong> az időszakra. Vigye az egeret egy ilyen dátum fölé, vagy érintse meg, és láthatja, hogyan rögzítette a családfakutató, és mit jelent.",
       },
       {
         title: "Érintésre nyíló kis ikonok",

@@ -380,7 +380,7 @@ export default {
         <li><strong>1850–1855</strong> – sometime between the two dates, or a period from one to the other (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
         <li><strong>1850–</strong> and <strong>–1850</strong> – from or until that date (<em>FROM</em>, <em>TO</em>)</li>
       </ul>
-      <p>Such dates are underlined with dots. Hover over one, or tap it on a touch screen, to see the date exactly as recorded and what it means. Exports (CSV, GEDCOM) keep the original form, and searching by a date or year finds these dates too.</p>
+      <p>Hover over such a date, or tap it on a touch screen, to see the date exactly as recorded and what it means. Exports (CSV, GEDCOM) keep the original form, and searching by a date or year finds these dates too.</p>
       <h4>The Family Tree Page</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>

@@ -379,7 +379,7 @@ export default {
         <li><strong>1850–1855</strong> – nekje med datumoma ali obdobje od enega do drugega (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
         <li><strong>1850–</strong> in <strong>–1850</strong> – od tega datuma ali do njega (<em>FROM</em>, <em>TO</em>)</li>
       </ul>
-      <p>Takšni datumi so podčrtani s pikicami. Z miško nad datumom ali z dotikom nanj na zaslonu na dotik prikažete datum točno tako, kot je zapisan, in njegov pomen. Izvozi (CSV, GEDCOM) ohranijo izvirno obliko, iskanje po datumu ali letnici pa najde tudi te datume.</p>
+      <p>Z miško nad datumom ali z dotikom nanj na zaslonu na dotik prikažete datum točno tako, kot je zapisan, in njegov pomen. Izvozi (CSV, GEDCOM) ohranijo izvirno obliko, iskanje po datumu ali letnici pa najde tudi te datume.</p>
       <h4>Stran z rodovniškim drevesom</h4>
       <p>Stran z drevesom prikazuje grafično, interaktivno rodovniško drevo izbrane osebe. Na voljo so:</p>
       <ul>

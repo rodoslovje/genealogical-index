@@ -9,7 +9,7 @@ export default [
     items: [
       {
         title: "Unsichere Daten leichter lesbar",
-        text: "Unsichere Daten werden jetzt in Kurzform angezeigt: <strong>~1850</strong> für ungefähr, <strong>&lt;1850</strong> und <strong>&gt;1850</strong> für vor und nach, <strong>1850–1855</strong> für einen Zeitraum. Fahren Sie mit der Maus über ein gepunktet unterstrichenes Datum oder tippen Sie darauf, um es so zu sehen, wie der Genealoge es erfasst hat, und was es bedeutet.",
+        text: "Unsichere Daten werden jetzt in Kurzform angezeigt: <strong>~1850</strong> für ungefähr, <strong>&lt;1850</strong> und <strong>&gt;1850</strong> für vor und nach, <strong>1850–1855</strong> für einen Zeitraum. Fahren Sie mit der Maus über ein solches Datum oder tippen Sie darauf, um es so zu sehen, wie der Genealoge es erfasst hat, und was es bedeutet.",
       },
       {
         title: "Kleine Symbole antippen",

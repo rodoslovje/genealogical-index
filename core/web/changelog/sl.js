@@ -9,7 +9,7 @@ export default [
     items: [
       {
         title: "Preglednejši negotovi datumi",
-        text: "Negotovi datumi so zdaj prikazani v kratki obliki: <strong>~1850</strong> za približno, <strong>&lt;1850</strong> in <strong>&gt;1850</strong> za pred in po, <strong>1850–1855</strong> za razpon. Z miško nad datumom s pikčasto črto ali z dotikom nanj vidite, kako ga je zapisal rodoslovec, in kaj pomeni.",
+        text: "Negotovi datumi so zdaj prikazani v kratki obliki: <strong>~1850</strong> za približno, <strong>&lt;1850</strong> in <strong>&gt;1850</strong> za pred in po, <strong>1850–1855</strong> za razpon. Z miško nad takim datumom ali z dotikom nanj vidite, kako ga je zapisal rodoslovec, in kaj pomeni.",
       },
       {
         title: "Male ikone se odzovejo na dotik",
