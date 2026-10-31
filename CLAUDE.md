@@ -107,6 +107,8 @@ Each site's `vite.config.js` calls `createSiteConfig()` from `core/vite.config.s
 - `crud.py` — All DB query logic; in-memory caches with TTL for expensive queries (contributor lists, match counts, timelines)
 - `schemas.py` — Pydantic response models
 
+The DB driver is psycopg 3 (`postgresql+psycopg://`) with `ClientCursor`, i.e. client-side parameter binding as psycopg2 had — server-side binding rejects the parameterised multi-statement `text()` SQL in the tools. Every engine (API and each tool) sets it.
+
 The Docker volume mounts `core/backend/src` directly into the container, so backend code changes take effect without rebuilding the image.
 
 ### Contributor Naming Conventions

@@ -4,6 +4,7 @@ import json
 import re
 import time
 import unicodedata
+from psycopg import ClientCursor
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
@@ -22,14 +23,15 @@ if os.getenv("POSTGRES_USER") and os.getenv("POSTGRES_DB"):
     _db_host = os.getenv(
         "POSTGRES_HOST", "db" if os.path.exists("/.dockerenv") else "localhost"
     )
-    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
+    DATABASE_URL = f"postgresql+psycopg://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
 else:
     DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
     os.environ["DATABASE_URL"] = DATABASE_URL
 
-engine = create_engine(DATABASE_URL)
+# ClientCursor: see core/backend/src/database.py.
+engine = create_engine(DATABASE_URL, connect_args={"cursor_factory": ClientCursor})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Helper functions used by generated fold columns (matching) and by

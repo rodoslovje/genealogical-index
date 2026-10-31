@@ -1,5 +1,6 @@
 import os
 import urllib.parse
+from psycopg import ClientCursor
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -19,7 +20,7 @@ def _build_database_url() -> str:
         password = urllib.parse.quote(os.getenv("POSTGRES_PASSWORD", ""), safe="")
         host = os.getenv("POSTGRES_HOST", "db" if os.path.exists("/.dockerenv") else "localhost")
         port = os.getenv("POSTGRES_PORT", "5432")
-        return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+        return f"postgresql+psycopg://{user}:{password}@{host}:{port}/{db}"
     return os.getenv("DATABASE_URL")
 
 
@@ -55,6 +56,11 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_recycle=300,
     connect_args={
+        # Bind parameters client side, as psycopg2 did. psycopg 3 binds them
+        # server side by default, which rejects a parameterised text() holding
+        # several statements (import_to_db.py has those) and can't always
+        # infer the type of a bare parameter.
+        "cursor_factory": ClientCursor,
         "connect_timeout": 10,
         "options": (
             f"-c statement_timeout={STATEMENT_TIMEOUT_MS}"

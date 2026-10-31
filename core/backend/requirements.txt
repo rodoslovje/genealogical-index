@@ -1,8 +1,8 @@
 fastapi
 uvicorn[standard]
-# 2.1 makes postgresql:// mean psycopg 3; we ship psycopg2.
-sqlalchemy>=2.0,<2.1
-psycopg2-binary
+# The DB URLs name the driver (postgresql+psycopg://), which needs psycopg 3.
+sqlalchemy>=2.1,<2.2
+psycopg[binary]>=3.2
 python-dotenv
 PyJWT
 orjson

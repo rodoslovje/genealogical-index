@@ -17,6 +17,6 @@
     "preview:test": "npm run preview --workspace=sites/test"
   },
   "devDependencies": {
-    "vite": "^8.0.9"
+    "vite": "^8.3.5"
   }
 }

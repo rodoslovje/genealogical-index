@@ -70,6 +70,7 @@ import os
 import sys
 import time
 
+from psycopg import ClientCursor
 from sqlalchemy import create_engine, text
 
 try:
@@ -88,7 +89,7 @@ if os.getenv("POSTGRES_USER") and os.getenv("POSTGRES_DB"):
     _db_host = os.getenv(
         "POSTGRES_HOST", "db" if os.path.exists("/.dockerenv") else "localhost"
     )
-    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
+    DATABASE_URL = f"postgresql+psycopg://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
 else:
     DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -663,7 +664,8 @@ def main():
 
     if not DATABASE_URL:
         sys.exit("No database configured (set DATABASE_URL or POSTGRES_* env vars).")
-    engine = create_engine(DATABASE_URL)
+    # ClientCursor: see core/backend/src/database.py.
+    engine = create_engine(DATABASE_URL, connect_args={"cursor_factory": ClientCursor})
     t0 = time.monotonic()
     with engine.connect() as conn:
         conn.execute(text(f"SET work_mem = '{WORK_MEM}'"))

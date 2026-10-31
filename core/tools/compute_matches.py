@@ -22,6 +22,7 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from psycopg import ClientCursor
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
@@ -138,12 +139,16 @@ if not DATABASE_URL:
     _db_host = os.getenv(
         "POSTGRES_HOST", "db" if os.path.exists("/.dockerenv") else "localhost"
     )
-    DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
+    DATABASE_URL = f"postgresql+psycopg://{os.getenv('POSTGRES_USER')}:{urllib.parse.quote(os.getenv('POSTGRES_PASSWORD', ''))}@{_db_host}:5432/{os.getenv('POSTGRES_DB')}"
 
 os.environ["DATABASE_URL"] = DATABASE_URL
 
 # pool_size matches typical --workers usage; overflow handles bursts
-engine = create_engine(DATABASE_URL, pool_size=8, max_overflow=4)
+# ClientCursor: see core/backend/src/database.py.
+engine = create_engine(
+    DATABASE_URL, pool_size=8, max_overflow=4,
+    connect_args={"cursor_factory": ClientCursor},
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

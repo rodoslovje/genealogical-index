@@ -2977,7 +2977,7 @@ def compare_trees(
     a_id, b_id = person_a.id, person_b.id
 
     # The two trees are independent, I/O-bound builds — run them concurrently on
-    # their own sessions (psycopg2 releases the GIL during DB round-trips, so
+    # their own sessions (psycopg releases the GIL during DB round-trips, so
     # this genuinely overlaps the work).
     tree_a, tree_b = _build_trees_parallel(a_id, b_id, max_generations, direction)
     if not tree_a or not tree_b:
