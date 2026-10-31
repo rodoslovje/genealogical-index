@@ -2,6 +2,7 @@ import { t } from './i18n.js';
 import { formatLinks } from './lib/links.js';
 import { isPrivate, cmp, getExpandCollapseIcon, baseContributorName, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, altSurnameIconHtml, baptismIconHtml, notesIconHtml, isSpecialContributor, escapeHtml, highlightDifferences, formatExportFilename, parseList, pairRelatives } from './lib/utils.js';
 import { childYearOf, parseDateForSort } from './lib/dates.js';
+import { dateHtml } from './lib/date-display.js';
 import { toUnicodeHref } from './lib/url.js';
 import { createExportButton } from './lib/icons.js';
 import { exportToCSV } from './table-csv.js';
@@ -604,11 +605,10 @@ function renderCellHtml(col, row) {
     return `<td class="col-center">${val}</td>`;
   }
   if (RIGHT_COLUMNS.has(col)) {
-    const raw = escapeHtml(row[col]);
     const extra = col === 'date_of_birth'
       ? baptismIconHtml(row.date_of_baptism, row.place_of_baptism, t('icon_baptism'))
       : '';
-    return `<td class="col-right">${raw}${extra}</td>`;
+    return `<td class="col-right">${dateHtml(row[col])}${extra}</td>`;
   }
   if (col === 'husband_name' || col === 'husband_surname') return renderPersonNameCell(col, row, 'husband', 'husband_alt_surname');
   if (col === 'wife_name'    || col === 'wife_surname')    return renderPersonNameCell(col, row, 'wife',    'wife_alt_surname');

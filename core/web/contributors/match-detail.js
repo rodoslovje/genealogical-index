@@ -3,6 +3,7 @@ import { formatSpecialCell, exportToCSV, runWithBusy, remeasureVirtualColumns, s
 import { formatLinks } from '../lib/links.js';
 import { csvRow } from '../lib/csv.js';
 import { parseDateForSort } from '../lib/dates.js';
+import { dateHtml, dateDiffHtml } from '../lib/date-display.js';
 import {
   isPrivate, getExpandCollapseIcon, shortenUrlLabel, baseContributorName,
   isMatriculaContributor, matriculaIndicatorHtml, geneanetIndicatorHtml, militaryIndicatorHtml, deceasedIndicatorHtml, deceasedTitleAttr, isSpecialContributor, altSurnameIconHtml, baptismIconHtml, notesIconHtml,
@@ -20,7 +21,7 @@ import { NO_UNIT_PARAM } from './matches-summary.js';
 
 // --- Match detail (per-record pair view) ------------------------------------
 
-const DATE_FIELDS_SET = new Set(['date_of_birth', 'date_of_death', 'date_of_marriage', 'husband_birth', 'wife_birth']);
+const DATE_FIELDS_SET = new Set(['date_of_birth', 'date_of_death', 'date_of_burial', 'date_of_marriage', 'husband_birth', 'wife_birth']);
 const isDateField = (f) => DATE_FIELDS_SET.has(f);
 
 // Above this match count, a sort/filter re-render blocks long enough to warrant
@@ -522,9 +523,9 @@ export async function renderMatchDetail(contributor, partner, contribData, conta
               const altF = f === 'surname' ? 'alt_surname' : f.replace('surname', 'alt_surname');
               otherText = otherRec[altF] || '';
             }
-            safeVal = highlightDifferences(val, otherText, isB);
+            safeVal = isDateField(f) ? dateDiffHtml(val, otherText, isB) : highlightDifferences(val, otherText, isB);
           } else {
-            safeVal = escapeHtml(val);
+            safeVal = isDateField(f) ? dateHtml(val) : escapeHtml(val);
           }
 
           const cls = isDateField(f) ? ' class="col-right"' : '';

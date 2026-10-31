@@ -4,6 +4,7 @@ import {
 import { descendantFamilyHref, partnerLabel, isPartnerUnknown } from './descendants.js';
 import { ancestorMarriageHref } from './ancestors.js';
 import { isPrivate } from '../lib/utils.js';
+import { formatGedcomDate } from '../lib/dates.js';
 
 // "Fan" chart (and "Circle" = fan with a full 360° arc): generations as
 // concentric rings, people as wedges.
@@ -175,14 +176,14 @@ function wedgeLines(d) {
   if (d.data.is_marriage) {
     const m = d.data.marriage;
     const place = m.place ? m.place.split(',')[0].trim() : '';
-    return [`⚭ ${m.date || ''}`.trim(), place].filter(Boolean);
+    return [`⚭ ${formatGedcomDate(m.date)}`.trim(), place].filter(Boolean);
   }
   if (d.data.is_family) {
     const p = d.data.partner;
     const m = d.data.marriage || {};
-    return [`⚭ ${partnerLabel(p)}`, m.date || ''].filter(Boolean);
+    return [`⚭ ${partnerLabel(p)}`, formatGedcomDate(m.date)].filter(Boolean);
   }
-  return [personLabel(d) || '?', d.data.date_of_birth || '', birthPlaceShort(d)].filter(Boolean);
+  return [personLabel(d) || '?', formatGedcomDate(d.data.date_of_birth), birthPlaceShort(d)].filter(Boolean);
 }
 
 const yearOf = date => ((date || '').match(/\d{4}/g) || []).pop() || '';
@@ -195,18 +196,18 @@ const yearOf = date => ((date || '').match(/\d{4}/g) || []).pop() || '';
 function wedgeVariants(d) {
   if (d.data.is_marriage) {
     const m = d.data.marriage;
-    const date = (m.date || '').trim();
+    const date = formatGedcomDate(m.date);
     const place = m.place ? m.place.split(',')[0].trim() : '';
     return dropRepeats([
       [`⚭ ${date}`.trim(), place],
       [`⚭ ${date}`.trim()],
-      [`⚭ ${yearOf(date)}`.trim()],
+      [`⚭ ${yearOf(m.date)}`.trim()],
       ['⚭'],
     ]);
   }
   if (d.data.is_family) {
     const p = d.data.partner;
-    const date = ((d.data.marriage || {}).date || '').trim();
+    const date = formatGedcomDate((d.data.marriage || {}).date);
     const full = partnerLabel(p);
     const short = isPartnerUnknown(p) ? '' : (p.surname || p.name || '');
     return dropRepeats([
@@ -228,8 +229,9 @@ function dropRepeats(variants) {
   return out;
 }
 
-// Everything the wedge knows, for the hover tooltip — full places and the
-// details the wedge itself had no room for.
+// Everything the wedge knows, for the hover tooltip — full places, the
+// details the wedge itself had no room for, and dates as recorded (ABT 1850
+// where the wedge says ~1850).
 function wedgeTitle(d) {
   if (d.data.is_marriage) {
     const m = d.data.marriage;

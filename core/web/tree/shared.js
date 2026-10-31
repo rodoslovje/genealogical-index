@@ -1,5 +1,6 @@
 import { toUnicodeSearch } from '../lib/url.js';
 import { isPrivate } from '../lib/utils.js';
+import { formatGedcomDate } from '../lib/dates.js';
 
 // Person-node rendering helpers shared by every tree layout, plus a barrel
 // that re-exports the layout/SVG, CSV, and GEDCOM modules so callers can keep
@@ -101,7 +102,7 @@ export function decoratePersonNodes(selection, contributorName) {
 
   infoText.each(function(d) {
     const el = d3.select(this);
-    const b = d.data.date_of_birth || '';
+    const b = formatGedcomDate(d.data.date_of_birth);
     const p = birthPlaceShort(d);
     if (b) el.append('tspan').attr('x', 0).text(b);
     if (p) el.append('tspan').attr('x', 0).attr('dy', b ? '1.2em' : '0').text(p);

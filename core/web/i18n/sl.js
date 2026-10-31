@@ -159,6 +159,16 @@ export default {
     icon_alt_surname: 'Drugi priimki',
     icon_baptism: 'Krst',
     icon_notes: 'Opombe',
+    date_kind_abt: "približno",
+    date_kind_est: "ocenjeno",
+    date_kind_cal: "izračunano iz drugih podatkov",
+    date_kind_bef: "pred tem datumom",
+    date_kind_aft: "po tem datumu",
+    date_kind_bet: "nekje med tema datumoma",
+    date_kind_from: "od tega datuma naprej",
+    date_kind_to: "do tega datuma",
+    date_kind_fromto: "obdobje od prvega do drugega datuma",
+    date_kind_int: "razbrano iz izvirnega zapisa",
 
     // Matches
     col_matches: 'Ujemanja',
@@ -359,7 +369,17 @@ export default {
         <li><strong>📄</strong> – drugi zgodovinski viri (arhivi, župnijske in društvene spletne strani)</li>
       </ul>
       {source_marks}
-      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <strong>~</strong> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi prikažete podrobnosti.</p>
+      <p>Ob nekaterih drugih podatkih se pojavijo še manjše obrobne ikone z dodatnimi informacijami: oznaka <strong>🏷</strong> ob priimku prikaže druge oblike priimka (na primer priimek po poroki), oznaka <span class="row-icon-badge">~</span> ob datumu rojstva pomeni, da je znan tudi datum krsta, oznaka <strong>🗒</strong> ob kraju rojstva ali poroke pa opozarja na zabeležene opombe. Z miško nad njimi ali z dotikom nanje na zaslonu na dotik prikažete podrobnosti.</p>
+      <h4>Datumi</h4>
+      <p>Datumi, ki jih je rodoslovec zapisal kot negotove, so prikazani v kratki obliki:</p>
+      <ul>
+        <li><strong>~1850</strong> – približno, ocenjeno ali izračunano (v GEDCOM <em>ABT</em>, <em>EST</em>, <em>CAL</em>)</li>
+        <li><strong>&lt;1850</strong> – pred letom 1850 (<em>BEF</em>)</li>
+        <li><strong>&gt;1850</strong> – po letu 1850 (<em>AFT</em>)</li>
+        <li><strong>1850–1855</strong> – nekje med datumoma ali obdobje od enega do drugega (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
+        <li><strong>1850–</strong> in <strong>–1850</strong> – od tega datuma ali do njega (<em>FROM</em>, <em>TO</em>)</li>
+      </ul>
+      <p>Takšni datumi so podčrtani s pikicami. Z miško nad datumom ali z dotikom nanj na zaslonu na dotik prikažete datum točno tako, kot je zapisan, in njegov pomen. Izvozi (CSV, GEDCOM) ohranijo izvirno obliko, iskanje po datumu ali letnici pa najde tudi te datume.</p>
       <h4>Stran z rodovniškim drevesom</h4>
       <p>Stran z drevesom prikazuje grafično, interaktivno rodovniško drevo izbrane osebe. Na voljo so:</p>
       <ul>

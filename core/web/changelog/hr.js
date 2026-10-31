@@ -5,6 +5,19 @@
 
 export default [
   {
+    date: '2026-10-31',
+    items: [
+      {
+        title: "Pregledniji nesigurni datumi",
+        text: "Nesigurni datumi sada su prikazani u kratkom obliku: <strong>~1850</strong> za približno, <strong>&lt;1850</strong> i <strong>&gt;1850</strong> za prije i nakon, <strong>1850–1855</strong> za raspon. Prelaskom mišem preko datuma s točkastom crtom ili dodirom vidite kako ga je rodoslovac zabilježio i što znači.",
+      },
+      {
+        title: "Male ikone reagiraju na dodir",
+        text: "Male oznake uz prezime, datum ili mjesto rođenja (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) sada na zaslonu osjetljivom na dodir prikazuju pojedinosti kad ih dodirnete. Oznaka krštenja sada je uokvirena, pa više ne izgleda kao dio datuma.",
+      },
+    ],
+  },
+  {
     date: '2026-10-15',
     items: [
       {

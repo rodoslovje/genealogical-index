@@ -11,6 +11,7 @@ import { initNavbar, checkNavOverflow } from './navbar.js';
 import { initRouter, activateTab, normalizeLegacyURL, maybeRouteMatricula, maybeRouteGeneanet, maybeRouteCompare, tabIdFromParams } from './router.js';
 import { relocalizeCompare } from './tree/compare.js';
 import { clearViewCache } from './lib/view-cache.js';
+import { initTapTips } from './lib/tap-tip.js';
 
 // --- Global styles injected from JS ---
 // (Anchor color/underline is handled per-area in style.css — `.intro-text a`,
@@ -41,6 +42,7 @@ const sidebar = document.getElementById('sidebar');
 // Navbar + routing event wiring (does not depend on i18n being ready).
 initNavbar();
 initRouter();
+initTapTips();
 
 // --- Init ---
 

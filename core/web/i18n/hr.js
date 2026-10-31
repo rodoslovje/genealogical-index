@@ -159,6 +159,16 @@ export default {
     icon_alt_surname: 'Druga prezimena',
     icon_baptism: 'Krštenje',
     icon_notes: 'Napomene',
+    date_kind_abt: "približno",
+    date_kind_est: "procijenjeno",
+    date_kind_cal: "izračunato iz drugih podataka",
+    date_kind_bef: "prije tog datuma",
+    date_kind_aft: "nakon tog datuma",
+    date_kind_bet: "negdje između tih datuma",
+    date_kind_from: "od tog datuma nadalje",
+    date_kind_to: "do tog datuma",
+    date_kind_fromto: "razdoblje od prvog do drugog datuma",
+    date_kind_int: "protumačeno iz izvornog zapisa",
 
     // Matches
     col_matches: 'Podudaranja',
@@ -360,7 +370,17 @@ export default {
         <li><strong>📄</strong> – ostali povijesni izvori (arhivi, župne i društvene mrežne stranice)</li>
       </ul>
       {source_marks}
-      <p>Uz neke druge podatke pojavljuju se i manje rubne ikone s dodatnim informacijama: oznaka <strong>🏷</strong> uz prezime prikazuje druge oblike prezimena (na primjer prezime nakon vjenčanja), oznaka <strong>~</strong> uz datum rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> uz mjesto rođenja ili vjenčanja upozorava na zabilježene napomene. Prelaskom mišem preko njih prikazuju se pojedinosti.</p>
+      <p>Uz neke druge podatke pojavljuju se i manje rubne ikone s dodatnim informacijama: oznaka <strong>🏷</strong> uz prezime prikazuje druge oblike prezimena (na primjer prezime nakon vjenčanja), oznaka <span class="row-icon-badge">~</span> uz datum rođenja znači da je poznat i datum krštenja, a oznaka <strong>🗒</strong> uz mjesto rođenja ili vjenčanja upozorava na zabilježene napomene. Prelaskom mišem preko njih ili dodirom na zaslonu osjetljivom na dodir prikazuju se pojedinosti.</p>
+      <h4>Datumi</h4>
+      <p>Datumi koje je rodoslovac zabilježio kao nesigurne prikazani su u kratkom obliku:</p>
+      <ul>
+        <li><strong>~1850</strong> – približno, procijenjeno ili izračunato (u GEDCOM-u <em>ABT</em>, <em>EST</em>, <em>CAL</em>)</li>
+        <li><strong>&lt;1850</strong> – prije 1850. (<em>BEF</em>)</li>
+        <li><strong>&gt;1850</strong> – nakon 1850. (<em>AFT</em>)</li>
+        <li><strong>1850–1855</strong> – negdje između dvaju datuma ili razdoblje od jednog do drugog (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
+        <li><strong>1850–</strong> i <strong>–1850</strong> – od tog datuma ili do njega (<em>FROM</em>, <em>TO</em>)</li>
+      </ul>
+      <p>Takvi su datumi podcrtani točkicama. Prelaskom mišem preko datuma ili dodirom na zaslonu osjetljivom na dodir prikazuje se datum točno onako kako je zabilježen i njegovo značenje. Izvozi (CSV, GEDCOM) zadržavaju izvorni oblik, a pretraživanje po datumu ili godini pronalazi i te datume.</p>
       <h4>Stranica s rodoslovnim stablom</h4>
       <p>Stranica sa stablom prikazuje grafičko, interaktivno rodoslovno stablo odabrane osobe. Dostupne su sljedeće mogućnosti:</p>
       <ul>

@@ -1646,7 +1646,42 @@ a.deceased-indicator:hover {
   user-select: none;
   white-space: nowrap;
 }
-.row-icon:hover { opacity: 1; }
+.row-icon:hover,
+.row-icon:focus-visible { opacity: 1; }
+/* A text glyph (the baptism ~) boxed so it reads as an icon rather than as
+   part of the date beside it. */
+.row-icon-badge {
+  display: inline-block;
+  padding: 0 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 0.35em;
+  font-size: 0.75em;
+  line-height: 1.25;
+  vertical-align: 0.1em;
+}
+
+/* A qualified GEDCOM date (~1850, <1850, 1850–1855): dotted underline says
+   "tap or hover for the recorded value". */
+.gdate {
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 50%, transparent);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+/* Tap popover for .gdate and .row-icon (lib/tap-tip.js). */
+.tap-tip {
+  position: absolute;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px 10px;
+  background: var(--srd-surface);
+  color: var(--srd-ink);
+  border: 1px solid var(--srd-line-strong);
+  border-radius: var(--srd-radius);
+  box-shadow: var(--srd-shadow-2);
+  font-size: 13px;
+  line-height: 1.4;
+  z-index: 3000;
+}
 
 /* =============================================================
  * Authentication / Modals

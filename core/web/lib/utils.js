@@ -581,10 +581,13 @@ const ALT_SURNAME_ICON = '🏷';
 const BAPTISM_ICON     = '~';
 const NOTES_ICON       = '🗒';
 
-function _inlineIcon(glyph, label, value) {
+// Focusable with role=button so a tap or Enter opens the title in the
+// lib/tap-tip.js popover. `badge` boxes a text glyph so it reads as an icon.
+function _inlineIcon(glyph, label, value, badge = false) {
   const tooltip = label ? `${label}: ${value}` : String(value);
   const safe = escapeHtml(tooltip);
-  return ` <span class="row-icon" title="${safe}" aria-label="${safe}">${glyph}</span>`;
+  const cls = badge ? 'row-icon row-icon-badge' : 'row-icon';
+  return ` <span class="${cls}" tabindex="0" role="button" title="${safe}" aria-label="${safe}">${glyph}</span>`;
 }
 
 export function altSurnameIconHtml(altSurname, label) {
@@ -596,7 +599,7 @@ export function baptismIconHtml(date, place, label) {
   const d = String(date || '').trim();
   const p = String(place || '').trim();
   if (!d && !p) return '';
-  return _inlineIcon(BAPTISM_ICON, label, [d, p].filter(Boolean).join(', '));
+  return _inlineIcon(BAPTISM_ICON, label, [d, p].filter(Boolean).join(', '), true);
 }
 
 export function notesIconHtml(notes, label) {

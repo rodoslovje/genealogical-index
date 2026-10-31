@@ -159,6 +159,16 @@ export default {
     icon_alt_surname: 'Alternatív vezetéknevek',
     icon_baptism: 'Keresztség',
     icon_notes: 'Megjegyzések',
+    date_kind_abt: "körülbelül",
+    date_kind_est: "becsült",
+    date_kind_cal: "más adatokból számított",
+    date_kind_bef: "e dátum előtt",
+    date_kind_aft: "e dátum után",
+    date_kind_bet: "valamikor e dátumok között",
+    date_kind_from: "e dátumtól kezdve",
+    date_kind_to: "e dátumig",
+    date_kind_fromto: "időszak az első dátumtól a másodikig",
+    date_kind_int: "az eredeti szövegből értelmezve",
 
     // Matches
     col_matches: 'Egyezések',
@@ -360,7 +370,17 @@ export default {
         <li><strong>📄</strong> – egyéb történelmi források (levéltárak, plébániai és egyesületi weboldalak)</li>
       </ul>
       {source_marks}
-      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <strong>~</strong> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, megjelennek a részletek.</p>
+      <p>Bizonyos egyéb adatok mellett további információkat tartalmazó kisebb marginális ikonok jelennek meg: a vezetéknév melletti <strong>🏷</strong> jel a vezetéknév alternatív formáit mutatja (például a házasság után felvett nevet), a születési dátum melletti <span class="row-icon-badge">~</span> jel azt jelenti, hogy a keresztelés dátuma is ismert, a születés vagy a házasságkötés helye melletti <strong>🗒</strong> jel pedig a rögzített megjegyzésekre hívja fel a figyelmet. Ha az egeret föléjük viszi, vagy érintőképernyőn megérinti őket, megjelennek a részletek.</p>
+      <h4>Dátumok</h4>
+      <p>A családfakutató által bizonytalanként rögzített dátumok rövid formában jelennek meg:</p>
+      <ul>
+        <li><strong>~1850</strong> – körülbelül, becsült vagy számított (GEDCOM-ban <em>ABT</em>, <em>EST</em>, <em>CAL</em>)</li>
+        <li><strong>&lt;1850</strong> – 1850 előtt (<em>BEF</em>)</li>
+        <li><strong>&gt;1850</strong> – 1850 után (<em>AFT</em>)</li>
+        <li><strong>1850–1855</strong> – valamikor a két dátum között, vagy az egyiktől a másikig tartó időszak (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
+        <li><strong>1850–</strong> és <strong>–1850</strong> – attól a dátumtól kezdve, illetve addig (<em>FROM</em>, <em>TO</em>)</li>
+      </ul>
+      <p>Az ilyen dátumok pontozottan alá vannak húzva. Vigye föléjük az egeret, vagy érintse meg őket érintőképernyőn, és megjelenik a dátum pontosan úgy, ahogy rögzítették, valamint a jelentése. Az exportok (CSV, GEDCOM) megőrzik az eredeti formát, és a dátumra vagy évre keresés ezeket a dátumokat is megtalálja.</p>
       <h4>A családfa oldal</h4>
       <p>A családfa oldal a kiválasztott személy grafikus, interaktív családfáját mutatja be. Elérhető funkciók:</p>
       <ul>

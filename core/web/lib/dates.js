@@ -23,9 +23,46 @@ const MONTH_MAP = {
 
 const MON_RE = '[A-Za-zčšžČŠŽäöüÄÖÜáéíóőúűÁÉÍÓŐÚŰ]+';
 
+// Display form of GEDCOM date qualifiers. The approximate mark leads the date
+// ("~1850"); the baptism marker that shares the glyph trails a birth date as a
+// separate row icon, so the two don't collide.
+export const APPROX_MARK = '~';
+const RANGE_DASH = '–';
+
+// Spaced en dash between full dates ("3 MAR 1850 – 1 MAY 1851"), tight between
+// bare years ("1850–1855").
+const joinRange = (a, b) => (/\s/.test(a + b) ? `${a} ${RANGE_DASH} ${b}` : `${a}${RANGE_DASH}${b}`);
+
+/** Splits a GEDCOM date into the parts it is displayed as: `pre` / `post`
+ *  marks around the `core` date text, plus the qualifier `kind` (abt, est,
+ *  cal, bef, aft, bet, from, to, fromto, int, or exact when there is none).
+ *  Shown as ~x for ABT/EST/CAL, <x / >x for BEF / AFT, x–y for BET…AND and
+ *  FROM…TO, x– / –x for an open FROM / TO, and INT drops its phrase. Anything
+ *  else (date phrases, calendar escapes) is passed through as exact. */
+export function splitGedcomDate(raw) {
+  const s = String(raw || '').trim();
+  let m;
+  if ((m = s.match(/^(ABT|EST|CAL)\s+(.+)$/i))) return { kind: m[1].toLowerCase(), pre: APPROX_MARK, core: m[2], post: '' };
+  if ((m = s.match(/^BEF\s+(.+)$/i)))           return { kind: 'bef', pre: '<', core: m[1], post: '' };
+  if ((m = s.match(/^AFT\s+(.+)$/i)))           return { kind: 'aft', pre: '>', core: m[1], post: '' };
+  if ((m = s.match(/^BET\s+(.+?)\s+AND\s+(.+)$/i))) return { kind: 'bet', pre: '', core: joinRange(m[1], m[2]), post: '' };
+  if ((m = s.match(/^FROM\s+(.+?)\s+TO\s+(.+)$/i))) return { kind: 'fromto', pre: '', core: joinRange(m[1], m[2]), post: '' };
+  if ((m = s.match(/^FROM\s+(.+)$/i)))          return { kind: 'from', pre: '', core: m[1], post: RANGE_DASH };
+  if ((m = s.match(/^TO\s+(.+)$/i)))            return { kind: 'to', pre: RANGE_DASH, core: m[1], post: '' };
+  if ((m = s.match(/^INT\s+(.+?)\s*(?:\(.*\))?$/i))) return { kind: 'int', pre: '', core: m[1], post: '' };
+  return { kind: 'exact', pre: '', core: s, post: '' };
+}
+
+/** Plain-text display form of a GEDCOM date (for SVG labels and the like). */
+export function formatGedcomDate(raw) {
+  const d = splitGedcomDate(raw);
+  return d.pre + d.core + d.post;
+}
+
 export function normalizeSearchDate(val) {
   if (!val) return val;
-  const str = val.trim();
+  // A date copied from the results may carry its display mark (~ < >).
+  const str = val.trim().replace(/^[~<>]\s*/, '');
 
   const dotMatch = str.match(/^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})$/);
   if (dotMatch) {

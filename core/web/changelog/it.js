@@ -5,6 +5,19 @@
 
 export default [
   {
+    date: '2026-10-31',
+    items: [
+      {
+        title: "Date incerte più leggibili",
+        text: "Le date incerte sono ora mostrate in forma breve: <strong>~1850</strong> per circa, <strong>&lt;1850</strong> e <strong>&gt;1850</strong> per prima e dopo, <strong>1850–1855</strong> per un intervallo. Passando con il mouse su una data sottolineata a puntini, o toccandola, la si vede come l'ha registrata il genealogista, con il suo significato.",
+      },
+      {
+        title: "Icone piccole toccabili",
+        text: "I piccoli segni accanto a cognome, data o luogo di nascita (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) ora mostrano i dettagli anche toccandoli su uno schermo touch. Il segno del battesimo è ora incorniciato, così non sembra più parte della data.",
+      },
+    ],
+  },
+  {
     date: '2026-10-15',
     items: [
       {

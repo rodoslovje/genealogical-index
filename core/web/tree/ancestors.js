@@ -1,4 +1,5 @@
 import { isPrivate } from '../lib/utils.js';
+import { formatGedcomDate } from '../lib/dates.js';
 import { toUnicodeSearch } from '../lib/url.js';
 import { orderSpouses, personRow } from './shared.js';
 
@@ -111,7 +112,7 @@ export function appendAncestorMarriageNodes(g, root, contributorName) {
   marriageText.each(function(d) {
     const el = d3.select(this);
     const m = d.data.parents_marriage;
-    const date = m.date || '';
+    const date = formatGedcomDate(m.date);
     const place = m.place ? m.place.split(',')[0].trim() : '';
     if (date && place) {
       el.append('tspan').attr('x', 0).attr('dy', '-0.2em').text(`⚭ ${date}`);

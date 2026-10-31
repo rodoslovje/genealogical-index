@@ -5,6 +5,19 @@
 
 export default [
   {
+    date: '2026-10-31',
+    items: [
+      {
+        title: "Preglednejši negotovi datumi",
+        text: "Negotovi datumi so zdaj prikazani v kratki obliki: <strong>~1850</strong> za približno, <strong>&lt;1850</strong> in <strong>&gt;1850</strong> za pred in po, <strong>1850–1855</strong> za razpon. Z miško nad datumom s pikčasto črto ali z dotikom nanj vidite, kako ga je zapisal rodoslovec, in kaj pomeni.",
+      },
+      {
+        title: "Male ikone se odzovejo na dotik",
+        text: "Male oznake ob priimku, datumu ali kraju rojstva (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) zdaj na zaslonu na dotik pokažejo podrobnosti, ko se jih dotaknete. Oznaka krsta je zdaj v okvirčku, da je ni več mogoče zamenjati z delom datuma.",
+      },
+    ],
+  },
+  {
     date: '2026-10-15',
     items: [
       {

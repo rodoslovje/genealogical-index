@@ -5,6 +5,19 @@
 
 export default [
   {
+    date: '2026-10-31',
+    items: [
+      {
+        title: "Dates incertaines plus lisibles",
+        text: "Les dates incertaines sont désormais affichées sous une forme abrégée : <strong>~1850</strong> pour environ, <strong>&lt;1850</strong> et <strong>&gt;1850</strong> pour avant et après, <strong>1850–1855</strong> pour un intervalle. Survolez une date soulignée en pointillé, ou touchez-la, pour la voir telle que le généalogiste l'a enregistrée et ce qu'elle signifie.",
+      },
+      {
+        title: "Petites icônes à toucher",
+        text: "Les petites marques à côté du nom, de la date ou du lieu de naissance (🏷, <span class=\"row-icon-badge\">~</span>, 🗒) affichent désormais leurs détails d'un simple toucher sur un écran tactile. La marque du baptême est maintenant encadrée et ne se confond plus avec la date.",
+      },
+    ],
+  },
+  {
     date: '2026-10-15',
     items: [
       {

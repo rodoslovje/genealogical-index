@@ -159,6 +159,16 @@ export default {
     icon_alt_surname: 'Alternative Nachnamen',
     icon_baptism: 'Taufe',
     icon_notes: 'Notizen',
+    date_kind_abt: "ungefähr",
+    date_kind_est: "geschätzt",
+    date_kind_cal: "aus anderen Angaben errechnet",
+    date_kind_bef: "vor diesem Datum",
+    date_kind_aft: "nach diesem Datum",
+    date_kind_bet: "irgendwann zwischen diesen Daten",
+    date_kind_from: "ab diesem Datum",
+    date_kind_to: "bis zu diesem Datum",
+    date_kind_fromto: "Zeitraum vom ersten bis zum zweiten Datum",
+    date_kind_int: "aus dem Originalwortlaut gedeutet",
 
     // Matches
     col_matches: 'Übereinstimmungen',
@@ -360,7 +370,17 @@ export default {
         <li><strong>📄</strong> – andere historische Quellen (Archive, Pfarr- und Vereinswebseiten)</li>
       </ul>
       {source_marks}
-      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <strong>~</strong>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber, um Details anzuzeigen.</p>
+      <p>Neben einigen anderen Daten erscheinen kleinere Randsymbole mit Zusatzinformationen: das <strong>🏷</strong>-Zeichen neben einem Nachnamen zeigt alternative Nachnamenformen an (zum Beispiel den Namen nach der Heirat), das <span class="row-icon-badge">~</span>-Zeichen neben dem Geburtsdatum bedeutet, dass auch das Taufdatum bekannt ist, und das <strong>🗒</strong>-Zeichen neben dem Geburts- oder Heiratsort weist auf aufgezeichnete Notizen hin. Fahren Sie mit der Maus darüber oder tippen Sie auf einem Touchscreen darauf, um Details anzuzeigen.</p>
+      <h4>Daten</h4>
+      <p>Daten, die der Genealoge als unsicher erfasst hat, werden in Kurzform angezeigt:</p>
+      <ul>
+        <li><strong>~1850</strong> – ungefähr, geschätzt oder errechnet (in GEDCOM <em>ABT</em>, <em>EST</em>, <em>CAL</em>)</li>
+        <li><strong>&lt;1850</strong> – vor 1850 (<em>BEF</em>)</li>
+        <li><strong>&gt;1850</strong> – nach 1850 (<em>AFT</em>)</li>
+        <li><strong>1850–1855</strong> – irgendwann zwischen den beiden Daten oder ein Zeitraum vom einen bis zum anderen (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
+        <li><strong>1850–</strong> und <strong>–1850</strong> – ab bzw. bis zu diesem Datum (<em>FROM</em>, <em>TO</em>)</li>
+      </ul>
+      <p>Solche Daten sind gepunktet unterstrichen. Fahren Sie mit der Maus darüber oder tippen Sie auf einem Touchscreen darauf, um das Datum genau so, wie es erfasst wurde, und seine Bedeutung zu sehen. Exporte (CSV, GEDCOM) behalten die ursprüngliche Form, und die Suche nach einem Datum oder Jahr findet auch diese Daten.</p>
       <h4>Die Stammbaum-Seite</h4>
       <p>Die Stammbaum-Seite zeigt einen grafischen, interaktiven Stammbaum der ausgewählten Person an. Folgende Funktionen stehen zur Verfügung:</p>
       <ul>

@@ -1,4 +1,5 @@
 import { isPrivate } from '../lib/utils.js';
+import { formatGedcomDate } from '../lib/dates.js';
 import { toUnicodeSearch } from '../lib/url.js';
 import { orderSpouses, personRow, sexColor } from './shared.js';
 
@@ -136,7 +137,7 @@ export function decorateDescendantFamilies(node, contributorName) {
     const m = d.data.marriage || {};
     const partUnknown = isPartnerUnknown(p);
     const partnerName = partnerLabel(p);
-    const date = m.date || '';
+    const date = formatGedcomDate(m.date);
     const place = m.place ? m.place.split(',')[0].trim() : '';
 
     let firstLine = true;

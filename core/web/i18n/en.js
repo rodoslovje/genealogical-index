@@ -159,6 +159,16 @@ export default {
     icon_alt_surname: 'Alternate surnames',
     icon_baptism: 'Baptism',
     icon_notes: 'Notes',
+    date_kind_abt: "approximate",
+    date_kind_est: "estimated",
+    date_kind_cal: "calculated from other data",
+    date_kind_bef: "before this date",
+    date_kind_aft: "after this date",
+    date_kind_bet: "sometime between these dates",
+    date_kind_from: "from this date on",
+    date_kind_to: "until this date",
+    date_kind_fromto: "a period from the first date to the second",
+    date_kind_int: "interpreted from the original wording",
 
     // Matches
     col_matches: 'Matches',
@@ -360,7 +370,17 @@ export default {
         <li><strong>📄</strong> – other historical sources (archives, parish and society websites)</li>
       </ul>
       {source_marks}
-      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <strong>~</strong> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse to display details.</p>
+      <p>Next to some other data, smaller marginal icons appear with additional information: the <strong>🏷</strong> mark next to a surname shows alternate surname forms (for example a married surname), the <span class="row-icon-badge">~</span> mark next to the date of birth means the baptism date is also known, and the <strong>🗒</strong> mark next to the place of birth or marriage alerts to recorded notes. Hover over them with the mouse, or tap them on a touch screen, to display details.</p>
+      <h4>Dates</h4>
+      <p>Dates the genealogist recorded as uncertain are shown in a short form:</p>
+      <ul>
+        <li><strong>~1850</strong> – about, estimated or calculated (in GEDCOM <em>ABT</em>, <em>EST</em>, <em>CAL</em>)</li>
+        <li><strong>&lt;1850</strong> – before 1850 (<em>BEF</em>)</li>
+        <li><strong>&gt;1850</strong> – after 1850 (<em>AFT</em>)</li>
+        <li><strong>1850–1855</strong> – sometime between the two dates, or a period from one to the other (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
+        <li><strong>1850–</strong> and <strong>–1850</strong> – from or until that date (<em>FROM</em>, <em>TO</em>)</li>
+      </ul>
+      <p>Such dates are underlined with dots. Hover over one, or tap it on a touch screen, to see the date exactly as recorded and what it means. Exports (CSV, GEDCOM) keep the original form, and searching by a date or year finds these dates too.</p>
       <h4>The Family Tree Page</h4>
       <p>The tree page displays a graphical, interactive family tree of the selected person. Available features are:</p>
       <ul>

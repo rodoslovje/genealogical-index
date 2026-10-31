@@ -159,6 +159,16 @@ export default {
     icon_alt_surname: 'Noms alternatifs',
     icon_baptism: 'Baptême',
     icon_notes: 'Notes',
+    date_kind_abt: "environ",
+    date_kind_est: "estimée",
+    date_kind_cal: "calculée à partir d'autres données",
+    date_kind_bef: "avant cette date",
+    date_kind_aft: "après cette date",
+    date_kind_bet: "à un moment entre ces dates",
+    date_kind_from: "à partir de cette date",
+    date_kind_to: "jusqu'à cette date",
+    date_kind_fromto: "période de la première à la seconde date",
+    date_kind_int: "interprétée d'après le libellé original",
 
     // Matches
     col_matches: 'Correspondances',
@@ -360,7 +370,17 @@ export default {
         <li><strong>📄</strong> – autres sources historiques (archives, sites de paroisses et de sociétés)</li>
       </ul>
       {source_marks}
-      <p>À côté de certaines autres données apparaissent de petites icônes marginales apportant des informations complémentaires : la marque <strong>🏷</strong> à côté d'un nom indique des formes alternatives du nom (par exemple un nom d'épouse), la marque <strong>~</strong> à côté de la date de naissance signifie que la date de baptême est également connue, et la marque <strong>🗒</strong> à côté du lieu de naissance ou de mariage signale des notes enregistrées. Survolez-les avec la souris pour afficher les détails.</p>
+      <p>À côté de certaines autres données apparaissent de petites icônes marginales apportant des informations complémentaires : la marque <strong>🏷</strong> à côté d'un nom indique des formes alternatives du nom (par exemple un nom d'épouse), la marque <span class="row-icon-badge">~</span> à côté de la date de naissance signifie que la date de baptême est également connue, et la marque <strong>🗒</strong> à côté du lieu de naissance ou de mariage signale des notes enregistrées. Survolez-les avec la souris, ou touchez-les sur un écran tactile, pour afficher les détails.</p>
+      <h4>Dates</h4>
+      <p>Les dates que le généalogiste a enregistrées comme incertaines sont affichées sous une forme abrégée :</p>
+      <ul>
+        <li><strong>~1850</strong> – environ, estimée ou calculée (en GEDCOM <em>ABT</em>, <em>EST</em>, <em>CAL</em>)</li>
+        <li><strong>&lt;1850</strong> – avant 1850 (<em>BEF</em>)</li>
+        <li><strong>&gt;1850</strong> – après 1850 (<em>AFT</em>)</li>
+        <li><strong>1850–1855</strong> – à un moment entre les deux dates, ou une période de l'une à l'autre (<em>BET … AND</em>, <em>FROM … TO</em>)</li>
+        <li><strong>1850–</strong> et <strong>–1850</strong> – à partir de cette date ou jusqu'à elle (<em>FROM</em>, <em>TO</em>)</li>
+      </ul>
+      <p>Ces dates sont soulignées en pointillé. Survolez-en une avec la souris, ou touchez-la sur un écran tactile, pour voir la date telle qu'elle a été enregistrée et sa signification. Les exports (CSV, GEDCOM) conservent la forme d'origine, et une recherche par date ou par année trouve aussi ces dates.</p>
       <h4>La page de l'arbre généalogique</h4>
       <p>La page de l'arbre affiche un arbre généalogique graphique et interactif de la personne sélectionnée. Les fonctions disponibles sont :</p>
       <ul>

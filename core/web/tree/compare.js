@@ -7,6 +7,8 @@ import {
 } from '../lib/utils.js';
 import { csvCell, csvRow, csvFooter, downloadCsv } from '../lib/csv.js';
 import { formatLinks } from '../lib/links.js';
+import { formatGedcomDate } from '../lib/dates.js';
+import { dateHtml, dateDiffHtml } from '../lib/date-display.js';
 import { authFetch } from '../auth.js';
 import {
   createSvgWithZoom, appendLinks, attachSvgExport,
@@ -470,7 +472,7 @@ function wireLegendList(legend, view, detail, cmp) {
       dropdown.innerHTML = nodes.map((d, i) => {
         const label = [d.data.name, d.data.surname].filter(Boolean).join(' ') || '?';
         const dob = d.data.date_of_birth
-          ? `<span class="compare-list-dob">${escapeHtml(d.data.date_of_birth)}</span>` : '';
+          ? `<span class="compare-list-dob">${escapeHtml(formatGedcomDate(d.data.date_of_birth))}</span>` : '';
         return `<button type="button" class="compare-list-item" data-idx="${i}"><span class="compare-list-name">${escapeHtml(label)}</span>${dob}</button>`;
       }).join('');
       dropdown.dataset.status = status;
@@ -601,7 +603,7 @@ function decoratePersons(selection) {
       .attr('font-size', '12px');
   infoText.each(function (d) {
     const el = d3.select(this);
-    const b = d.data.date_of_birth || '';
+    const b = formatGedcomDate(d.data.date_of_birth);
     const p = d.data.place_of_birth ? d.data.place_of_birth.split(',')[0].trim() : '';
     if (b) el.append('tspan').attr('x', 0).text(b);
     if (p) el.append('tspan').attr('x', 0).attr('dy', b ? '1.2em' : '0').text(p);
@@ -632,7 +634,7 @@ function decorateFamilies(selection) {
     const p = d.data.partner || {};
     const m = d.data.marriage || {};
     const name = [p.name, p.surname].filter(Boolean).join(' ');
-    const date = m.date || '';
+    const date = formatGedcomDate(m.date);
     let first = true;
     if (name) { el.append('tspan').attr('x', 14).attr('font-weight', 'bold').text(name); first = false; }
     if (date) { el.append('tspan').attr('x', 14).attr('dy', first ? '0' : '1.2em').text(date); }
@@ -661,8 +663,11 @@ function showDetail(detail, node, cmp) {
     const va = a ? (a[f] || '') : '';
     const vb = b ? (b[f] || '') : '';
     if (!va && !vb) return '';
-    const aCell = (a && b && diffs.has(f)) ? highlightDifferences(va, vb) : escapeHtml(va);
-    const bCell = (a && b && diffs.has(f)) ? highlightDifferences(vb, va) : escapeHtml(vb);
+    const isDate = f.startsWith('date_of_');
+    const diffCell = isDate ? dateDiffHtml : highlightDifferences;
+    const plainCell = isDate ? dateHtml : escapeHtml;
+    const aCell = (a && b && diffs.has(f)) ? diffCell(va, vb) : plainCell(va);
+    const bCell = (a && b && diffs.has(f)) ? diffCell(vb, va) : plainCell(vb);
     return `<tr><th>${t(labelKey)}</th><td>${aCell}</td><td>${bCell}</td></tr>`;
   }).join('');
 
