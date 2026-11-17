@@ -32,6 +32,7 @@ services:
       - VIRTUAL_PORT=8000
       - LETSENCRYPT_HOST=${API_HOST}
       - SITE_URL=${SITE_URL:-https://indeks.rodoslovje.si}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://indeks.rodoslovje.si,https://gedmerge.com,https://test.gedmerge.com}
     depends_on:
       - db
 

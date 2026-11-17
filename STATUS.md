@@ -17,7 +17,7 @@ index hints (17. 11.).
       fuzzy) with EXPLAIN ANALYZE: ORDER BY + the count now read every hit
       instead of stopping at `limit`
 - [ ] Migration 017 (index for `same_as`) on each site, then `docker compose up -d
-      api` (new env `SITE_URL`) and rebuild the web (guide + changelog 17. 11.)
+      api` (new env `SITE_URL`, `CORS_ORIGINS`) and rebuild the web (guide + changelog 17. 11.)
 - [ ] Deploy MCP + driver upgrade: `docker compose up -d --build api` on each
       site (requirements changed). Then decide whether it gets a guide /
       changelog entry and an announcement
@@ -43,4 +43,6 @@ index hints (17. 11.).
   + ext_id) publicly; confidence and field detail stay behind the login
 - Search results are ordered by relevance (exact field, trigram similarity,
   year distance, id), not left to the planner
+- CORS: per-site allow-list (site + gedmerge.com) plus dev origins
+  (localhost / LAN / Tailscale); unset = any origin
 - Per-site config under `sites/<slo|cro|test>/`

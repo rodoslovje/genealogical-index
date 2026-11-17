@@ -32,6 +32,7 @@ services:
       - VIRTUAL_PORT=8000
       - LETSENCRYPT_HOST=${API_HOST}
       - SITE_URL=${SITE_URL:-https://indeks.rodoslovlje.hr}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://indeks.rodoslovlje.hr,https://gedmerge.com,https://test.gedmerge.com}
     depends_on:
       - db
 

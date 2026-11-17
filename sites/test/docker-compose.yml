@@ -32,6 +32,7 @@ services:
       - VIRTUAL_PORT=8000
       - LETSENCRYPT_HOST=${API_HOST}
       - SITE_URL=${SITE_URL:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
     depends_on:
       - db
 

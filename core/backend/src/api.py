@@ -53,12 +53,28 @@ async def lifespan(_app):
 app = FastAPI(lifespan=lifespan)
 
 # Configure CORS so the frontend can make requests to this API
+# CORS_ORIGINS (comma-separated) names the web pages whose JS may call the
+# API: the site itself and apps built on it such as GED Merge. Unset means any
+# origin (test / local runs). When set, development origins are allowed too —
+# localhost, private-network and Tailscale addresses over http(s) — because the
+# Vite dev servers of this site and of GED Merge call the production API from
+# there; CORS_ORIGIN_REGEX replaces that pattern, and an empty value turns it
+# off. CORS only keeps other websites' scripts out: the data stays public to
+# curl and server-side clients (MCP connectors), and logins travel in the
+# Authorization header, not cookies, hence no allow_credentials.
+_DEV_ORIGINS = (
+    r"https?://(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+"
+    r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|100\.\d+\.\d+\.\d+"
+    r"|[a-z0-9-]+\.[a-z0-9-]+\.ts\.net)(:\d+)?"
+)
+_cors_origins = [o.strip().rstrip("/") for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+_cors_regex = os.getenv("CORS_ORIGIN_REGEX", _DEV_ORIGINS) if _cors_origins else None
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*"
-    ],  # In production, replace "*" with your frontend domain e.g., ["https://sgi.renko.fyi"]
-    allow_credentials=True,
+    allow_origins=_cors_origins or ["*"],
+    allow_origin_regex=_cors_regex or None,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     # Total hit count of the advanced searches (a page is capped by `limit`).

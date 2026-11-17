@@ -722,6 +722,8 @@ The tools are read-only and call `crud.py` directly, so they return what the web
 
 Every person carries `url`, its page on the website, built from `SITE_URL` (set per site in `docker-compose.yml`; unset means no urls); persons from `search` and `get_person` also carry `same_as`.
 
+Browser access to the API is limited by `CORS_ORIGINS` (comma-separated; per-site defaults in `docker-compose.yml`: the site itself, `gedmerge.com` and `test.gedmerge.com`; unset allows any origin). With it set, development origins — localhost, private-network and Tailscale addresses — stay allowed, since the dev servers of this site and of GED Merge call the production API; `CORS_ORIGIN_REGEX` replaces that pattern. A new web app that calls the API from the browser needs its origin added. CORS does not affect MCP connectors or other server-side clients.
+
 **The endpoint is public and does not check `JWT_SECRET`, so it offers only what a logged-out visitor sees.** The premium endpoints — ancestor / descendant trees, tree comparison and pair-by-pair match detail — have no tool; add one only together with the same JWT check. Results are capped at 200 rows per call, and at most `MCP_MAX_CONCURRENT` (default 4) tool calls run at once, the rest queuing without holding a worker thread (see the pool-exhaustion note in `database.py`).
 
 To connect:
