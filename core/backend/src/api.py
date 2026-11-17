@@ -2,7 +2,7 @@ import os
 import threading
 from contextlib import asynccontextmanager
 from typing import List, Optional
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 from sqlalchemy.orm import Session
@@ -61,6 +61,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Total hit count of the advanced searches (a page is capped by `limit`).
+    expose_headers=["X-Total-Count"],
 )
 
 # Build the contributors-page caches before anyone asks for them. In a daemon
@@ -290,10 +292,18 @@ def search_advanced_persons(
     has_link: bool = False,
     id: Optional[str] = None,
     limit: int = 999,
+    skip: int = 0,
     exact: bool = False,
+    exclude_contributor: Optional[str] = None,
+    same_as: bool = False,
+    response: Response = None,
     db: Session = Depends(get_db),
 ):
-    return crud.search_advanced_persons(
+    """Best hit first; the number of all hits is in `X-Total-Count`.
+    `exclude_contributor` (comma-separated exact names) drops those
+    contributors' records, e.g. a client's own tree. `same_as=true` adds to
+    each hit the (contributor, ext_id) of the records matched to it."""
+    rows, total = crud.search_advanced_persons(
         db,
         name=name,
         surname=surname,
@@ -311,8 +321,15 @@ def search_advanced_persons(
         has_link=has_link,
         ext_id=id,
         limit=limit,
+        skip=skip,
         exact=exact,
+        exclude_contributor=exclude_contributor,
+        with_total=True,
     )
+    response.headers["X-Total-Count"] = str(total)
+    if same_as:
+        crud.attach_same_as(db, rows)
+    return rows
 
 
 @app.get("/api/persons/{person_id}/ancestors")
@@ -419,10 +436,16 @@ def search_advanced_families(
     source: str = "all",
     has_link: bool = False,
     limit: int = 999,
+    skip: int = 0,
     exact: bool = False,
+    exclude_contributor: Optional[str] = None,
+    response: Response = None,
     db: Session = Depends(get_db),
 ):
-    return crud.search_advanced_families(
+    """Best hit first; the number of all hits is in `X-Total-Count`.
+    `exclude_contributor` (comma-separated exact names) drops those
+    contributors' records, e.g. a client's own tree."""
+    rows, total = crud.search_advanced_families(
         db,
         husband_name=husband_name,
         husband_surname=husband_surname,
@@ -440,8 +463,13 @@ def search_advanced_families(
         source=source,
         has_link=has_link,
         limit=limit,
+        skip=skip,
         exact=exact,
+        exclude_contributor=exclude_contributor,
+        with_total=True,
     )
+    response.headers["X-Total-Count"] = str(total)
+    return rows
 
 
 @app.get("/api/ancestors")

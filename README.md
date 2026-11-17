@@ -715,9 +715,12 @@ The tools are read-only and call `crud.py` directly, so they return what the web
 | Tool                                 | What it returns                                                                  |
 | ------------------------------------ | -------------------------------------------------------------------------------- |
 | `search`                             | Quick search over persons and families (name, surname, years, place, source, id) |
-| `search_persons` / `search_families` | Field-by-field search, like the Person / Family tabs                             |
+| `search_persons` / `search_families` | Field-by-field search, like the Person / Family tabs; best hit first, with `total`, `skip`, `exclude_contributor`; persons carry `same_as` (matched records' contributor + ext_id) |
+| `get_person`                         | One person with parents, partners, marriages and children as full records, plus `same_as` |
 | `list_contributors` / `top_surnames` | Genealogists with record counts; most frequent surnames                          |
 | `get_contributor_matches`            | A tree's match partners and counts (per tree / parish / cemetery place)          |
+
+Every person carries `url`, its page on the website, built from `SITE_URL` (set per site in `docker-compose.yml`; unset means no urls); persons from `search` and `get_person` also carry `same_as`.
 
 **The endpoint is public and does not check `JWT_SECRET`, so it offers only what a logged-out visitor sees.** The premium endpoints — ancestor / descendant trees, tree comparison and pair-by-pair match detail — have no tool; add one only together with the same JWT check. Results are capped at 200 rows per call, and at most `MCP_MAX_CONCURRENT` (default 4) tool calls run at once, the rest queuing without holding a worker thread (see the pool-exhaustion note in `database.py`).
 

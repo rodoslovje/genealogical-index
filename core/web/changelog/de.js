@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-17',
+    items: [
+      {
+        title: "Der KI-Assistent verlinkt die gefundenen Einträge",
+        text: "Wenn Sie den Index über einen KI-Assistenten nutzen, kann er Ihnen jetzt zu jedem erwähnten Eintrag einen Link geben, damit Sie ihn hier öffnen und prüfen können. Er sieht außerdem sofort, welche anderen Genealogen dieselbe Person haben, und holt Eltern, Partner und Kinder einer Person in einem Schritt.",
+      },
+    ],
+  },
+  {
     date: '2026-10-31',
     items: [
       {

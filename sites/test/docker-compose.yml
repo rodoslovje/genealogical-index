@@ -31,6 +31,7 @@ services:
       - VIRTUAL_HOST=${API_HOST}
       - VIRTUAL_PORT=8000
       - LETSENCRYPT_HOST=${API_HOST}
+      - SITE_URL=${SITE_URL:-}
     depends_on:
       - db
 

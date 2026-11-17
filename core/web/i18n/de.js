@@ -437,7 +437,7 @@ export default {
         <li><strong>Gemini</strong> (gemini.google.com): Öffnen Sie in den <em>Einstellungen</em> <em>Verbundene Apps</em> und fügen Sie eine eigene App mit der Adresse oben hinzu. Sie muss in der Webversion hinzugefügt werden, funktioniert danach aber auch in der Handy-App.</li>
         <li><strong>ChatGPT</strong> (chatgpt.com): Eigene Verbindungen gibt es derzeit nur in kostenpflichtigen Tarifen. Schalten Sie unter <em>Einstellungen</em> → <em>Apps</em> (oder <em>Konnektoren</em>) → <em>Erweiterte Einstellungen</em> den <em>Entwicklermodus</em> ein und legen Sie dann eine neue App mit der Adresse oben und ohne Authentifizierung an. Im Gespräch wählen Sie sie unter der Schaltfläche <strong>+</strong>.</li>
       </ul>
-      <p>Die Menüs dieser Apps ändern sich oft. Wenn Sie die Option nicht finden, suchen Sie in den Einstellungen oder der Hilfe des Assistenten nach <em>Konnektoren</em>, <em>Apps</em> oder <em>MCP</em>. Auch ein Assistent kann sich irren: Prüfen Sie seine Angaben anhand der Einträge auf dieser Seite, bevor Sie etwas in Ihren eigenen Stammbaum übernehmen.</p>
+      <p>Die Menüs dieser Apps ändern sich oft. Wenn Sie die Option nicht finden, suchen Sie in den Einstellungen oder der Hilfe des Assistenten nach <em>Konnektoren</em>, <em>Apps</em> oder <em>MCP</em>. Auch ein Assistent kann sich irren: Prüfen Sie seine Angaben anhand der Einträge auf dieser Seite, bevor Sie etwas in Ihren eigenen Stammbaum übernehmen. Zu jedem gefundenen Eintrag erhält der Assistent auch einen Link auf diese Seite. Bitten Sie ihn also um die Links und öffnen Sie die Einträge selbst.</p>
       {auth_section}
     `,
 };

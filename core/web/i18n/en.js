@@ -437,7 +437,7 @@ export default {
         <li><strong>Gemini</strong> (gemini.google.com): in <em>Settings</em> open <em>Connected apps</em> and add a custom app with the address above. It has to be added in the web version, but then also works in the phone app.</li>
         <li><strong>ChatGPT</strong> (chatgpt.com): custom connections are currently available only on paid plans. In <em>Settings</em> → <em>Apps</em> (or <em>Connectors</em>) → <em>Advanced settings</em>, turn on <em>Developer mode</em>, then create a new app with the address above and no authentication. In a conversation, select it under the <strong>+</strong> button.</li>
       </ul>
-      <p>The menus of these apps change often. If you can't find the option, look for <em>connectors</em>, <em>apps</em> or <em>MCP</em> in the assistant's settings or help pages. An assistant can also make mistakes, so check what it reports against the records on this site before adding anything to your own tree.</p>
+      <p>The menus of these apps change often. If you can't find the option, look for <em>connectors</em>, <em>apps</em> or <em>MCP</em> in the assistant's settings or help pages. An assistant can also make mistakes, so check what it reports against the records on this site before adding anything to your own tree. With each record it finds, the assistant gets a link to it on this site, so you can ask it for the links and open the records yourself.</p>
       {auth_section}
     `,
 };

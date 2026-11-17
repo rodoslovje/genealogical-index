@@ -436,7 +436,7 @@ export default {
         <li><strong>Gemini</strong> (gemini.google.com): v <em>nastavitvah</em> odprite <em>Povezane aplikacije</em> (Connected apps) in dodajte lastno aplikacijo z zgornjim naslovom. Dodati jo morate v spletni različici, nato pa deluje tudi v aplikaciji na telefonu.</li>
         <li><strong>ChatGPT</strong> (chatgpt.com): lastne povezave so trenutno na voljo le v plačljivih paketih. V <em>nastavitvah</em> (Settings) → <em>Apps</em> (ali <em>Connectors</em>) → <em>Advanced settings</em> vklopite <em>Developer mode</em>, nato ustvarite novo aplikacijo z zgornjim naslovom in brez preverjanja pristnosti. V pogovoru jo izberete pod gumbom <strong>+</strong>.</li>
       </ul>
-      <p>Meniji teh aplikacij se pogosto spreminjajo. Če možnosti ne najdete, v nastavitvah ali pomoči pomočnika poiščite <em>connectors</em>, <em>apps</em> ali <em>MCP</em>. Tudi pomočnik se lahko zmoti, zato preden kar koli dodate v svoj rodovnik, njegove navedbe preverite v zapisih na tej strani.</p>
+      <p>Meniji teh aplikacij se pogosto spreminjajo. Če možnosti ne najdete, v nastavitvah ali pomoči pomočnika poiščite <em>connectors</em>, <em>apps</em> ali <em>MCP</em>. Tudi pomočnik se lahko zmoti, zato preden kar koli dodate v svoj rodovnik, njegove navedbe preverite v zapisih na tej strani. Pri vsakem najdenem zapisu pomočnik dobi tudi povezavo nanj na tej strani, zato ga lahko prosite za povezave in zapise odprete sami.</p>
       {auth_section}
     `,
 };

@@ -377,6 +377,23 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < core/backend/migrations/016_source_unit.sql
 ```
 
+### 017 — `matches_by_person`
+
+Partial btree `matches(record_a_id) WHERE record_type = 'person'`, for the
+`same_as` lookup on person search (which other contributors' records are
+matched to each hit on a page).
+
+- `CREATE INDEX CONCURRENTLY` — no lock, safe online; pipe through psql
+  (no transaction).
+- Run before (or right after) deploying the API code. Without it `same_as`
+  still works, just slowly.
+- New installs get it from `import_to_db.py`. Re-runnable.
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < core/backend/migrations/017_matches_by_person.sql
+```
+
 ### Rollback
 
 If the migration fails partway, the `BEGIN/COMMIT` block aborts the

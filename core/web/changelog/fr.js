@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-17',
+    items: [
+      {
+        title: "L'assistant IA donne le lien des enregistrements trouvés",
+        text: "Lorsque vous utilisez l'index via un assistant IA, il peut désormais vous donner un lien vers chaque enregistrement qu'il cite, pour l'ouvrir ici et le vérifier. Il voit aussi d'emblée quels autres généalogistes ont la même personne, et récupère les parents, conjoints et enfants d'une personne en une seule étape.",
+      },
+    ],
+  },
+  {
     date: '2026-10-31',
     items: [
       {

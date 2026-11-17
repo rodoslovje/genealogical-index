@@ -18,6 +18,15 @@
 
 export default [
   {
+    date: '2026-11-17',
+    items: [
+      {
+        title: "The AI assistant links to the records it finds",
+        text: "When you use the index through an AI assistant, it can now give you a link to every record it mentions, so you can open it here and check it. It also sees at once which other genealogists have the same person, and fetches a person's parents, partners and children in a single step.",
+      },
+    ],
+  },
+  {
     date: '2026-10-31',
     items: [
       {

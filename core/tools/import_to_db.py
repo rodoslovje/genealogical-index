@@ -224,6 +224,7 @@ def setup_full(db):
         CREATE INDEX idx_matches_b  ON matches(contributor_b);
         CREATE INDEX idx_matches_ab ON matches(contributor_a, contributor_b);
         CREATE INDEX idx_matches_surnames ON matches USING gin (surnames);
+        CREATE INDEX idx_matches_person_a ON matches(record_a_id) WHERE record_type = 'person';
 
         -- Per-contributor set of distinct folded surnames (own + alt, from
         -- both persons and families), refreshed on import. compute_matches
@@ -551,6 +552,7 @@ def setup_update(db):
         CREATE INDEX IF NOT EXISTS idx_matches_b  ON matches(contributor_b);
         CREATE INDEX IF NOT EXISTS idx_matches_ab ON matches(contributor_a, contributor_b);
         CREATE INDEX IF NOT EXISTS idx_matches_surnames ON matches USING gin (surnames);
+        CREATE INDEX IF NOT EXISTS idx_matches_person_a ON matches(record_a_id) WHERE record_type = 'person';
         CREATE INDEX IF NOT EXISTS idx_match_jobs_status ON match_jobs(status, queued_at);
         CREATE INDEX IF NOT EXISTS idx_contributor_surnames_trgm ON contributor_surnames USING gin (sur gin_trgm_ops);
 

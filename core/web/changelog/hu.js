@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-17',
+    items: [
+      {
+        title: "Az MI-asszisztens hivatkozást ad a talált rekordokhoz",
+        text: "Ha MI-asszisztensen keresztül használja az indexet, az mostantól minden általa említett rekordhoz hivatkozást adhat, így itt megnyithatja és ellenőrizheti. Azt is azonnal látja, mely más genealógusoknál szerepel ugyanaz a személy, és egy lépésben lekéri egy személy szüleit, házastársait és gyermekeit.",
+      },
+    ],
+  },
+  {
     date: '2026-10-31',
     items: [
       {

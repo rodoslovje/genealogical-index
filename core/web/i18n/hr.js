@@ -437,7 +437,7 @@ export default {
         <li><strong>Gemini</strong> (gemini.google.com): u <em>postavkama</em> otvorite <em>Povezane aplikacije</em> (Connected apps) i dodajte vlastitu aplikaciju s gornjom adresom. Treba je dodati u web-verziji, a zatim radi i u aplikaciji na mobitelu.</li>
         <li><strong>ChatGPT</strong> (chatgpt.com): vlastite veze trenutno su dostupne samo u plaćenim paketima. U <em>postavkama</em> (Settings) → <em>Apps</em> (ili <em>Connectors</em>) → <em>Advanced settings</em> uključite <em>Developer mode</em>, zatim izradite novu aplikaciju s gornjom adresom i bez autentifikacije. U razgovoru je odaberite pod gumbom <strong>+</strong>.</li>
       </ul>
-      <p>Izbornici ovih aplikacija često se mijenjaju. Ako ne pronađete opciju, u postavkama ili pomoći pomoćnika potražite <em>connectors</em>, <em>apps</em> ili <em>MCP</em>. I pomoćnik može pogriješiti, stoga prije nego što išta dodate u svoje stablo, provjerite njegove navode u zapisima na ovoj stranici.</p>
+      <p>Izbornici ovih aplikacija često se mijenjaju. Ako ne pronađete opciju, u postavkama ili pomoći pomoćnika potražite <em>connectors</em>, <em>apps</em> ili <em>MCP</em>. I pomoćnik može pogriješiti, stoga prije nego što išta dodate u svoje stablo, provjerite njegove navode u zapisima na ovoj stranici. Uz svaki pronađeni zapis pomoćnik dobiva i poveznicu na njega na ovoj stranici, pa ga možete zamoliti za poveznice i sami otvoriti zapise.</p>
       {auth_section}
     `,
 };

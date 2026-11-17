@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-17',
+    items: [
+      {
+        title: "AI pomoćnik daje poveznice na pronađene zapise",
+        text: "Kad indeks koristite putem AI pomoćnika, on vam sada može dati poveznicu na svaki zapis koji spomene, da ga otvorite ovdje i provjerite. Odmah vidi i koji drugi rodoslovci imaju istu osobu, a roditelje, partnere i djecu osobe dohvaća u jednom koraku.",
+      },
+    ],
+  },
+  {
     date: '2026-10-31',
     items: [
       {

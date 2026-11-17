@@ -19,6 +19,7 @@ loop, so queued calls hold no thread.
 import os
 from contextlib import contextmanager
 from typing import Literal, Optional
+from urllib.parse import urlencode
 
 import anyio
 from mcp.server.mcpserver import MCPServer
@@ -30,6 +31,9 @@ from .database import SessionLocal
 
 MAX_CONCURRENT = int(os.getenv("MCP_MAX_CONCURRENT", "4"))
 MAX_RESULTS = 200
+# The website this API serves (e.g. https://indeks.rodoslovje.si), for the
+# `url` on each person. Unset: no urls.
+SITE_URL = os.getenv("SITE_URL", "").rstrip("/")
 
 _limiter = anyio.Semaphore(MAX_CONCURRENT)
 
@@ -54,6 +58,15 @@ fuzzy (trigram + substring) unless exact=true; "^Novak" anchors the start,
 
 Matches are precomputed pairs of records in different contributors' data that
 likely describe the same person or family, with a confidence of 0.80-1.0.
+search_persons lists each hit's matched records in `same_as`, so one person
+found in several trees can be read as one person with several sources.
+
+get_person returns one person with parents, partners, marriages and
+children as full records, in one call. Each person has a `url` to its page on
+the website — give it to the user so they can check the record themselves.
+
+Results come best match first; `total` says how many there are in all, and
+`skip` pages through them.
 """
 
 mcp = MCPServer(
@@ -106,8 +119,37 @@ def _cap(limit: int) -> int:
     return max(1, min(limit, MAX_RESULTS))
 
 
+_PRIVATE = {"private", "<private>", "unknown"}
+
+
+def _person_url(rec: dict):
+    """The record's page on the website, built like the site's own name
+    links (table.js): the Person tab searched by ext_id and contributor.
+    None for a private / unknown name, which the site doesn't link either."""
+    if not SITE_URL or not rec.get("ext_id") or not rec.get("contributor"):
+        return None
+    name, surname = rec.get("name") or "", rec.get("surname") or ""
+    if name.lower() in _PRIVATE or surname.lower() in _PRIVATE:
+        return None
+    q = {"t": "person"}
+    if name:
+        q["n"] = name
+    if surname:
+        q["sn"] = surname
+    q.update({"id": rec["ext_id"], "c": rec["contributor"], "ex": "1"})
+    return f"{SITE_URL}/?{urlencode(q, safe='@')}"
+
+
+def _person(p):
+    rec = schemas.Person.model_validate(p).model_dump()
+    rec["url"] = _person_url(rec)
+    for other in rec.get("same_as") or []:
+        other["url"] = _person_url(other)
+    return _clean(rec)
+
+
 def _persons(rows):
-    return [_clean(schemas.Person.model_validate(p).model_dump()) for p in rows]
+    return [_person(p) for p in rows]
 
 
 def _families(rows):
@@ -136,7 +178,8 @@ async def search(
     applied to births, deaths and marriages. contributor narrows to one
     genealogist (including their -matricula / -geneanet sources); source to
     one kind of data. ext_id (with contributor) selects one person by GEDCOM
-    id. At least one filter is required.
+    id. At least one filter is required. Persons carry `same_as`: the
+    matched records in other contributors' data.
     """
     if not any([name, surname, date_from, date_to, place, contributor, ext_id]):
         return {"error": "Give at least one search filter."}
@@ -149,6 +192,7 @@ async def search(
                 ext_id=ext_id, source=source, limit=_cap(limit), exact=exact,
                 record_type=record_type,
             )
+            crud.attach_same_as(db, res["persons"])
             return {
                 "persons": _persons(res["persons"]),
                 "families": _families(res["families"]),
@@ -171,18 +215,24 @@ async def search_persons(
     burial_to: Optional[str] = None,
     place_of_burial: Optional[str] = None,
     contributor: Optional[str] = None,
+    exclude_contributor: Optional[str] = None,
     source: Source = "all",
     exact: bool = False,
+    same_as: bool = True,
     limit: int = 50,
+    skip: int = 0,
 ) -> dict:
     """Search persons field by field (birth, death and burial each separately).
 
     A *_from date alone is a fuzzy date match; with the matching *_to it is a
-    year range. Baptism counts as birth.
+    year range. Baptism counts as birth. exclude_contributor (comma-separated)
+    leaves out those genealogists' records. With same_as, each hit lists the
+    (contributor, ext_id) of the records in other contributors' data matched
+    to it.
     """
     def go():
         with _session() as db:
-            return {"persons": _persons(crud.search_advanced_persons(
+            rows, total = crud.search_advanced_persons(
                 db, name=name, surname=surname,
                 date_of_birth=birth_from, date_of_birth_to=birth_to,
                 place_of_birth=place_of_birth,
@@ -191,8 +241,12 @@ async def search_persons(
                 date_of_burial=burial_from, date_of_burial_to=burial_to,
                 place_of_burial=place_of_burial,
                 contributor=contributor, source=source,
-                limit=_cap(limit), exact=exact,
-            ))}
+                limit=_cap(limit), skip=max(0, skip), exact=exact,
+                exclude_contributor=exclude_contributor, with_total=True,
+            )
+            if same_as:
+                crud.attach_same_as(db, rows)
+            return {"total": total, "persons": _persons(rows)}
 
     return await _run(go)
 
@@ -212,18 +266,21 @@ async def search_families(
     marriage_to: Optional[str] = None,
     place_of_marriage: Optional[str] = None,
     contributor: Optional[str] = None,
+    exclude_contributor: Optional[str] = None,
     source: Source = "all",
     exact: bool = False,
     limit: int = 50,
+    skip: int = 0,
 ) -> dict:
     """Search families (couples) by either spouse, children's names or the marriage.
 
     children matches any child's name. A *_from date alone is a fuzzy match;
-    with the matching *_to it is a year range.
+    with the matching *_to it is a year range. exclude_contributor
+    (comma-separated) leaves out those genealogists' records.
     """
     def go():
         with _session() as db:
-            return {"families": _families(crud.search_advanced_families(
+            rows, total = crud.search_advanced_families(
                 db, husband_name=husband_name, husband_surname=husband_surname,
                 husband_birth=husband_birth_from,
                 husband_birth_to=husband_birth_to,
@@ -233,8 +290,48 @@ async def search_families(
                 date_of_marriage=marriage_from, date_of_marriage_to=marriage_to,
                 place_of_marriage=place_of_marriage,
                 contributor=contributor, source=source,
-                limit=_cap(limit), exact=exact,
-            ))}
+                limit=_cap(limit), skip=max(0, skip), exact=exact,
+                exclude_contributor=exclude_contributor, with_total=True,
+            )
+            return {"total": total, "families": _families(rows)}
+
+    return await _run(go)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+async def get_person(contributor: str, ext_id: str) -> dict:
+    """One person with their family, all as full records, in one call.
+
+    Returns the person (with `same_as`), their parents, and one entry per
+    family: the partner, the marriage date and place, and the children. Every
+    relative carries its own ext_id, so get_person on it walks one step
+    further. Relatives are those in the same contributor's data.
+    """
+    def go():
+        with _session() as db:
+            res = crud.get_person_with_relatives(db, contributor, ext_id)
+            if res is None:
+                return {"error": f"No person {ext_id} in {contributor}'s data."}
+            everyone = [res["person"], *res["parents"]]
+            for fam in res["families"]:
+                if fam["partner"] is not None:
+                    everyone.append(fam["partner"])
+                everyone.extend(fam["children"])
+            crud.attach_same_as(db, everyone)
+            families = []
+            for fam in res["families"]:
+                f = fam["family"]
+                families.append(_clean({
+                    "partner": _person(fam["partner"]) if fam["partner"] is not None else None,
+                    "date_of_marriage": f.date_of_marriage if f is not None else None,
+                    "place_of_marriage": f.place_of_marriage if f is not None else None,
+                    "children": _persons(fam["children"]),
+                }))
+            return {
+                "person": _person(res["person"]),
+                "parents": _persons(res["parents"]),
+                "families": families,
+            }
 
     return await _run(go)
 

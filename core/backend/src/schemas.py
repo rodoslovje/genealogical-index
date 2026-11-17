@@ -23,8 +23,18 @@ class PersonBase(BaseModel):
     links: Optional[Any] = None
 
 
+class SameAs(BaseModel):
+    contributor: str
+    ext_id: Optional[str] = None
+    name: Optional[str] = None
+    surname: Optional[str] = None
+
+
 class Person(PersonBase):
     id: int
+    # Matched records in other contributors' data; only with `same_as=true`
+    # on person search, else None.
+    same_as: Optional[List[SameAs]] = None
 
     class Config:
         from_attributes = True

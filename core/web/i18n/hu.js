@@ -437,7 +437,7 @@ export default {
         <li><strong>Gemini</strong> (gemini.google.com): a <em>Beállítások</em> között nyissa meg a <em>Csatlakoztatott alkalmazások</em> részt, és adjon hozzá egy saját alkalmazást a fenti címmel. A webes változatban kell hozzáadni, utána a telefonos alkalmazásban is működik.</li>
         <li><strong>ChatGPT</strong> (chatgpt.com): saját kapcsolatok jelenleg csak a fizetős csomagokban érhetők el. A <em>Beállítások</em> → <em>Alkalmazások</em> (vagy <em>Összekötők</em>) → <em>Speciális beállítások</em> alatt kapcsolja be a <em>Fejlesztői módot</em>, majd hozzon létre egy új alkalmazást a fenti címmel, hitelesítés nélkül. A beszélgetésben a <strong>+</strong> gomb alatt választhatja ki.</li>
       </ul>
-      <p>Ezeknek az alkalmazásoknak a menüi gyakran változnak. Ha nem találja a lehetőséget, keressen rá a <em>connectors</em>, <em>apps</em> vagy <em>MCP</em> szavakra az asszisztens beállításaiban vagy súgójában. Az asszisztens is tévedhet, ezért mielőtt bármit felvenne a saját családfájába, ellenőrizze állításait az oldal rekordjaiban.</p>
+      <p>Ezeknek az alkalmazásoknak a menüi gyakran változnak. Ha nem találja a lehetőséget, keressen rá a <em>connectors</em>, <em>apps</em> vagy <em>MCP</em> szavakra az asszisztens beállításaiban vagy súgójában. Az asszisztens is tévedhet, ezért mielőtt bármit felvenne a saját családfájába, ellenőrizze állításait az oldal rekordjaiban. Minden megtalált rekordhoz az asszisztens egy erre az oldalra mutató hivatkozást is kap, így elkérheti tőle a hivatkozásokat, és maga nyithatja meg a rekordokat.</p>
       {auth_section}
     `,
 };

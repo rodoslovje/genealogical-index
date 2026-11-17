@@ -437,7 +437,7 @@ export default {
         <li><strong>Gemini</strong> (gemini.google.com): nelle <em>Impostazioni</em> aprite <em>App collegate</em> e aggiungete un'app personalizzata con l'indirizzo qui sopra. Va aggiunta nella versione web, ma poi funziona anche nell'app per telefono.</li>
         <li><strong>ChatGPT</strong> (chatgpt.com): i collegamenti personalizzati sono attualmente disponibili solo nei piani a pagamento. In <em>Impostazioni</em> → <em>App</em> (o <em>Connettori</em>) → <em>Impostazioni avanzate</em> attivate la <em>Modalità sviluppatore</em>, poi create una nuova app con l'indirizzo qui sopra e senza autenticazione. Nella conversazione, selezionatela con il pulsante <strong>+</strong>.</li>
       </ul>
-      <p>I menu di queste app cambiano spesso. Se non trovate l'opzione, cercate <em>connettori</em>, <em>app</em> o <em>MCP</em> nelle impostazioni o nella guida dell'assistente. Anche un assistente può sbagliare: verificate ciò che riporta con i record di questo sito prima di aggiungere qualcosa al vostro albero.</p>
+      <p>I menu di queste app cambiano spesso. Se non trovate l'opzione, cercate <em>connettori</em>, <em>app</em> o <em>MCP</em> nelle impostazioni o nella guida dell'assistente. Anche un assistente può sbagliare: verificate ciò che riporta con i record di questo sito prima di aggiungere qualcosa al vostro albero. Per ogni record trovato l'assistente riceve anche un link alla sua pagina su questo sito: chiedetegli i link e aprite i record di persona.</p>
       {auth_section}
     `,
 };

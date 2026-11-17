@@ -9,7 +9,7 @@ import time
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_, text, cast, Text, Integer
+from sqlalchemy import func, or_, and_, case, text, cast, Text, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from . import models
 from .database import SessionLocal
@@ -1288,6 +1288,226 @@ def _apply_source_and_contributor(
     return query
 
 
+def _query_parts(value):
+    """The comma-separated alternatives of a text filter, with the ^ / $
+    anchors stripped — the bare strings to rank a hit against."""
+    if not value:
+        return []
+    value = unicodedata.normalize("NFC", value)
+    parts = [p.strip() for p in value.split(",")] if "," in value else [value]
+    out = []
+    for p in parts:
+        p = p.removeprefix("^").removesuffix("$").strip()
+        if p:
+            out.append(p)
+    return out
+
+
+def _text_rank(columns, value):
+    """(exact, similarity) rank terms of one text filter: `exact` is 1 when any
+    column equals any alternative case-insensitively, `similarity` the best
+    trigram similarity of any column to any alternative (0 for NULL)."""
+    parts = _query_parts(value)
+    if not parts:
+        return None, None
+    # lower() on both sides: under a C-locale database Postgres leaves
+    # non-ASCII letters (Š, Č, Ž) as they are, Python would not.
+    exact = or_(*[func.lower(c) == func.lower(cast(p, Text)) for c in columns for p in parts])
+    sims = [
+        func.coalesce(func.similarity(c, cast(p, Text)), 0.0)
+        for c in columns
+        for p in parts
+    ]
+    sim = sims[0] if len(sims) == 1 else func.greatest(*sims)
+    return case((exact, 1), else_=0), sim
+
+
+def _year_target(from_val, to_val):
+    """The year a hit's date should be closest to: the middle of a year range,
+    or the year in a single date. None when the filter carries no year."""
+    from_year = _extract_year(from_val) if from_val else None
+    to_year = _extract_year(to_val) if to_val else None
+    if from_year and to_year:
+        return (from_year + to_year) / 2
+    return from_year or to_year
+
+
+def _relevance_order(text_terms, year_terms, id_column):
+    """ORDER BY for a search, best hit first, so the limit cuts off the least
+    likely records instead of an arbitrary set:
+
+    1. how many text filters match a field exactly (case-insensitive);
+    2. summed trigram similarity of those fields to the query;
+    3. distance of the nearest searched date's year to the target year
+       (middle of the range), undated records last;
+    4. id, so paging with skip is stable.
+
+    `text_terms` is a list of (columns, value); `year_terms` a list of
+    (year_columns, from_val, to_val).
+    """
+    exacts, sims, dists = [], [], []
+    for columns, value in text_terms:
+        e, s = _text_rank(columns, value)
+        if e is not None:
+            exacts.append(e)
+            sims.append(s)
+    for year_columns, from_val, to_val in year_terms:
+        target = _year_target(from_val, to_val)
+        if target is None:
+            continue
+        ds = [func.abs(c - target) for c in year_columns]
+        # LEAST ignores NULLs, so a record is ranked by whichever of its
+        # searched dates is nearest.
+        dists.append(ds[0] if len(ds) == 1 else func.least(*ds))
+
+    order = []
+    if exacts:
+        order.append(sum(exacts[1:], exacts[0]).desc())
+        order.append(sum(sims[1:], sims[0]).desc())
+    if dists:
+        d = dists[0] if len(dists) == 1 else sum(dists[1:], dists[0])
+        order.append(d.asc().nulls_last())
+    order.append(id_column)
+    return order
+
+
+def _exclude_contributors(query, column, exclude: str):
+    """Drop the records of the named contributors (comma-separated, exact
+    names) — e.g. a client's own tree, which would otherwise find itself.
+    A tree's -matricula / -geneanet / -military sources are separate
+    contributors and stay unless named too."""
+    if not exclude:
+        return query
+    names = [
+        unicodedata.normalize("NFC", n.strip())
+        for n in exclude.split(",")
+        if n.strip()
+    ]
+    if names:
+        query = query.filter(column.notin_(names))
+    return query
+
+
+def _page(query, skip: int, limit: int, with_total: bool):
+    """Run a search query for one page. With `with_total`, also return the
+    number of all hits — counted only when the page is full, since a short
+    page already says how many there are."""
+    rows = query.offset(skip).limit(limit).all()
+    if not with_total:
+        return rows
+    if len(rows) < limit:
+        total = skip + len(rows) if rows or skip == 0 else query.order_by(None).count()
+    else:
+        total = query.order_by(None).count()
+    return rows, total
+
+
+def attach_same_as(db: Session, persons):
+    """Set `same_as` on each person: the records in other contributors' data
+    that the precomputed matches pair with it, best confidence first, as
+    {contributor, ext_id}. Lets a client show one person found in several
+    trees as one hit with several sources. Only the identities — confidence
+    and the field-by-field detail stay behind the login like the match pages.
+    One query per page, via idx_matches_person_a (migration 017)."""
+    ids = [p.id for p in persons]
+    by_id = {pid: [] for pid in ids}
+    if ids:
+        M, P = models.Match, models.Person
+        rows = (
+            db.query(M.record_a_id, P.contributor, P.ext_id, P.name, P.surname)
+            .join(P, P.id == M.record_b_id)
+            .filter(M.record_type == "person", M.record_a_id.in_(ids))
+            .order_by(M.record_a_id, M.confidence.desc(), P.id)
+            .all()
+        )
+        for a_id, contributor, ext_id, name, surname in rows:
+            by_id[a_id].append({
+                "contributor": contributor, "ext_id": ext_id,
+                "name": name, "surname": surname,
+            })
+    for p in persons:
+        p.same_as = by_id[p.id]
+    return persons
+
+
+def _list_ids(value):
+    """ext_ids of a parents_list / partners_list / children_list (JSONB)."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return []
+    if not isinstance(value, list):
+        return []
+    return [e["id"] for e in value if isinstance(e, dict) and e.get("id")]
+
+
+def get_person_with_relatives(db: Session, contributor: str, ext_id: str):
+    """One person by (contributor, ext_id) with their relatives' own records:
+    parents, and per family (as husband or wife) the partner, the marriage and
+    the children; partners with no family record come as families without a
+    marriage. Relatives are looked up in the same contributor's data, in one
+    query, by the ext_ids the lists carry. None if there is no such person.
+    The data is the same a visitor reaches by following the links one by one."""
+    contributor = unicodedata.normalize("NFC", contributor)
+    ext_id = unicodedata.normalize("NFC", ext_id)
+    P, F = models.Person, models.Family
+    person = (
+        db.query(P)
+        .filter(P.contributor == contributor, P.ext_id == ext_id)
+        .order_by(P.id)
+        .first()
+    )
+    if person is None:
+        return None
+    families = (
+        db.query(F)
+        .filter(
+            F.contributor == contributor,
+            or_(F.husband_ext_id == ext_id, F.wife_ext_id == ext_id),
+        )
+        .order_by(F.marriage_year.asc().nulls_last(), F.id)
+        .all()
+    )
+    parent_ids = _list_ids(person.parents_list)
+    partner_ids = _list_ids(person.partners_list)
+    fam_partner = [
+        f.wife_ext_id if f.husband_ext_id == ext_id else f.husband_ext_id
+        for f in families
+    ]
+    fam_children = [_list_ids(f.children_list) for f in families]
+    wanted = set(parent_ids) | set(partner_ids) | {x for x in fam_partner if x}
+    for ids in fam_children:
+        wanted.update(ids)
+    wanted.discard(ext_id)
+    records = {}
+    if wanted:
+        for r in (
+            db.query(P)
+            .filter(P.contributor == contributor, P.ext_id.in_(wanted))
+            .order_by(P.id)
+            .all()
+        ):
+            records.setdefault(r.ext_id, r)
+
+    def pick(ids):
+        return [records[i] for i in ids if i in records]
+
+    out_families = []
+    for f, partner, children in zip(families, fam_partner, fam_children):
+        out_families.append({
+            "family": f,
+            "partner": records.get(partner) if partner else None,
+            "children": pick(children),
+        })
+    covered = {x for x in fam_partner if x}
+    for pid in partner_ids:
+        if pid not in covered and pid in records:
+            out_families.append({"family": None, "partner": records[pid], "children": []})
+            covered.add(pid)
+    return {"person": person, "parents": pick(parent_ids), "families": out_families}
+
+
 def search_all(
     db: Session,
     name: str = None,
@@ -1370,6 +1590,12 @@ def search_all(
         )
         if has_link:
             q = q.filter(_has_links_clause(models.Person.links))
+        P = models.Person
+        q = q.order_by(*_relevance_order(
+            [([P.name], name), ([P.surname, P.alt_surname], surname)],
+            [([P.birth_year, P.death_year, P.burial_year], date_from, date_to)],
+            P.id,
+        ))
         persons = q.offset(skip).limit(limit).all()
 
     families = []
@@ -1471,7 +1697,11 @@ def search_advanced_persons(
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
+    exclude_contributor: str = None,
+    with_total: bool = False,
 ):
+    """Persons matching every given filter, best hit first (see
+    `_relevance_order`). With `with_total`, returns (rows, total hits)."""
     _set_trgm(db, exact)
 
     query = db.query(models.Person)
@@ -1539,8 +1769,19 @@ def search_advanced_persons(
     )
     if has_link:
         query = query.filter(_has_links_clause(models.Person.links))
+    query = _exclude_contributors(query, models.Person.contributor, exclude_contributor)
 
-    return query.offset(skip).limit(limit).all()
+    P = models.Person
+    query = query.order_by(*_relevance_order(
+        [([P.name], name), ([P.surname, P.alt_surname], surname)],
+        [
+            ([P.birth_year], date_of_birth, date_of_birth_to),
+            ([P.death_year], date_of_death, date_of_death_to),
+            ([P.burial_year], date_of_burial, date_of_burial_to),
+        ],
+        P.id,
+    ))
+    return _page(query, skip, limit, with_total)
 
 
 def search_advanced_families(
@@ -1563,7 +1804,11 @@ def search_advanced_families(
     skip: int = 0,
     limit: int = 100,
     exact: bool = False,
+    exclude_contributor: str = None,
+    with_total: bool = False,
 ):
+    """Families matching every given filter, best hit first (see
+    `_relevance_order`). With `with_total`, returns (rows, total hits)."""
     _set_trgm(db, exact)
 
     query = db.query(models.Family)
@@ -1643,8 +1888,24 @@ def search_advanced_families(
     )
     if has_link:
         query = query.filter(_has_links_clause(models.Family.links))
+    query = _exclude_contributors(query, models.Family.contributor, exclude_contributor)
 
-    return query.offset(skip).limit(limit).all()
+    F = models.Family
+    query = query.order_by(*_relevance_order(
+        [
+            ([F.husband_name], husband_name),
+            ([F.husband_surname, F.husband_alt_surname], husband_surname),
+            ([F.wife_name], wife_name),
+            ([F.wife_surname, F.wife_alt_surname], wife_surname),
+        ],
+        [
+            ([F.marriage_year], date_of_marriage, date_of_marriage_to),
+            ([F.husband_birth_year], husband_birth, husband_birth_to),
+            ([F.wife_birth_year], wife_birth, wife_birth_to),
+        ],
+        F.id,
+    ))
+    return _page(query, skip, limit, with_total)
 
 
 def find_parent_record(db: Session, parent_info: dict, contributor: str):

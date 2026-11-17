@@ -437,7 +437,7 @@ export default {
         <li><strong>Gemini</strong> (gemini.google.com) : dans les <em>Paramètres</em>, ouvrez <em>Applications connectées</em> et ajoutez une application personnalisée avec l'adresse ci-dessus. Elle doit être ajoutée dans la version web, mais fonctionne ensuite aussi dans l'application mobile.</li>
         <li><strong>ChatGPT</strong> (chatgpt.com) : les connexions personnalisées ne sont actuellement disponibles que dans les offres payantes. Dans <em>Paramètres</em> → <em>Applications</em> (ou <em>Connecteurs</em>) → <em>Paramètres avancés</em>, activez le <em>Mode développeur</em>, puis créez une nouvelle application avec l'adresse ci-dessus et sans authentification. Dans une conversation, sélectionnez-la avec le bouton <strong>+</strong>.</li>
       </ul>
-      <p>Les menus de ces applications changent souvent. Si vous ne trouvez pas l'option, cherchez <em>connecteurs</em>, <em>applications</em> ou <em>MCP</em> dans les paramètres ou l'aide de l'assistant. Un assistant peut aussi se tromper : vérifiez ce qu'il rapporte dans les enregistrements de ce site avant d'ajouter quoi que ce soit à votre propre arbre.</p>
+      <p>Les menus de ces applications changent souvent. Si vous ne trouvez pas l'option, cherchez <em>connecteurs</em>, <em>applications</em> ou <em>MCP</em> dans les paramètres ou l'aide de l'assistant. Un assistant peut aussi se tromper : vérifiez ce qu'il rapporte dans les enregistrements de ce site avant d'ajouter quoi que ce soit à votre propre arbre. Pour chaque enregistrement trouvé, l'assistant reçoit aussi un lien vers sa page sur ce site : demandez-lui les liens et ouvrez vous-même les enregistrements.</p>
       {auth_section}
     `,
 };
