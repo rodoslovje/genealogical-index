@@ -1,5 +1,5 @@
 # STATUS — genealogical-index
-_Updated 2026-11-17_
+_Updated 2026-11-18_
 
 Monorepo for indeks.rodoslovje.si (SRD) and indeks.rodoslovlje.hr. Rules: `CLAUDE.md`.
 Last work: matches split into sections (trees / Matricula by parish / cemeteries
@@ -10,14 +10,13 @@ converters instead of an import-time SQL pass (24. 10.); public MCP server at
 shown short (~ < > x–y) with tap tooltips, row icons tappable (31. 10.);
 search ranked best hit first + `X-Total-Count`, `skip`, `exclude_contributor`
 on the advanced searches, `same_as=true` on person search (also MCP, with `total`, `url`, new `get_person`), for GED Merge's
-index hints (17. 11.).
+index hints (17. 11.); `include_undated` on the advanced searches (18. 11.).
 
 **Next**
-- [ ] Deploy the ranked search and time a common-name query (`surname=Novak`,
-      fuzzy) with EXPLAIN ANALYZE: ORDER BY + the count now read every hit
-      instead of stopping at `limit`
-- [ ] Migration 017 (index for `same_as`) on each site, then `docker compose up -d
-      api` (new env `SITE_URL`, `CORS_ORIGINS`) and rebuild the web (guide + changelog 17. 11.)
+- [ ] Watch ranked-search speed: fuzzy `surname=Novak` on slo 3.5 s cold,
+      0.5 s warm (17. 11.); EXPLAIN ANALYZE if it grows
+- [ ] cro: migration 017, `docker compose up -d api` (new env `SITE_URL`,
+      `CORS_ORIGINS`), rebuild + rsync the web. slo done 17. 11.
 - [ ] Deploy MCP + driver upgrade: `docker compose up -d --build api` on each
       site (requirements changed). Then decide whether it gets a guide /
       changelog entry and an announcement

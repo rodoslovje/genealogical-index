@@ -1159,6 +1159,22 @@ def _date_filter(
     return None
 
 
+def _with_undated(cond, column, year_column, include_undated: bool):
+    """With `include_undated`, widen a date filter to also keep records that
+    carry no year in that field at all: no 4-digit year and no decade /
+    century approximation ("193_", "19__"), which the filter itself judges.
+    For clients that rank hits by other evidence (death, place, parents) and
+    would otherwise never see a record only because its birth date is
+    missing. The relevance order puts these after the dated hits."""
+    if cond is None or not include_undated:
+        return cond
+    undated = and_(
+        year_column.is_(None),
+        or_(column.is_(None), ~column.op("~")(r"\d{3}_|\d{2}__")),
+    )
+    return or_(cond, undated)
+
+
 # Characters that delimit a "word" for exact (whole-word) matching. Exact
 # search must match a value as a standalone token, so "Visoko 1" matches both
 # "Visoko 1" and "Visoko 1, p. Šenčur" but not "Visoko 10". Postgres's \y /
@@ -1699,6 +1715,7 @@ def search_advanced_persons(
     exact: bool = False,
     exclude_contributor: str = None,
     with_total: bool = False,
+    include_undated: bool = False,
 ):
     """Persons matching every given filter, best hit first (see
     `_relevance_order`). With `with_total`, returns (rows, total hits)."""
@@ -1744,6 +1761,9 @@ def search_advanced_persons(
         exact,
         year_column=models.Person.birth_year,
     )
+    bcond = _with_undated(
+        bcond, models.Person.date_of_birth, models.Person.birth_year, include_undated
+    )
     if bcond is not None:
         query = query.filter(bcond)
     dcond = _date_filter(
@@ -1753,6 +1773,9 @@ def search_advanced_persons(
         exact,
         year_column=models.Person.death_year,
     )
+    dcond = _with_undated(
+        dcond, models.Person.date_of_death, models.Person.death_year, include_undated
+    )
     if dcond is not None:
         query = query.filter(dcond)
     ucond = _date_filter(
@@ -1761,6 +1784,9 @@ def search_advanced_persons(
         date_of_burial_to,
         exact,
         year_column=models.Person.burial_year,
+    )
+    ucond = _with_undated(
+        ucond, models.Person.date_of_burial, models.Person.burial_year, include_undated
     )
     if ucond is not None:
         query = query.filter(ucond)
@@ -1806,6 +1832,7 @@ def search_advanced_families(
     exact: bool = False,
     exclude_contributor: str = None,
     with_total: bool = False,
+    include_undated: bool = False,
 ):
     """Families matching every given filter, best hit first (see
     `_relevance_order`). With `with_total`, returns (rows, total hits)."""
@@ -1829,7 +1856,12 @@ def search_advanced_families(
             )
         )
     hb_cond = _date_filter(
-        models.Family.husband_birth, husband_birth, husband_birth_to, exact
+        models.Family.husband_birth, husband_birth, husband_birth_to, exact,
+        year_column=models.Family.husband_birth_year,
+    )
+    hb_cond = _with_undated(
+        hb_cond, models.Family.husband_birth, models.Family.husband_birth_year,
+        include_undated,
     )
     if hb_cond is not None:
         query = query.filter(hb_cond)
@@ -1846,7 +1878,14 @@ def search_advanced_families(
                 exact,
             )
         )
-    wb_cond = _date_filter(models.Family.wife_birth, wife_birth, wife_birth_to, exact)
+    wb_cond = _date_filter(
+        models.Family.wife_birth, wife_birth, wife_birth_to, exact,
+        year_column=models.Family.wife_birth_year,
+    )
+    wb_cond = _with_undated(
+        wb_cond, models.Family.wife_birth, models.Family.wife_birth_year,
+        include_undated,
+    )
     if wb_cond is not None:
         query = query.filter(wb_cond)
     if children:
@@ -1880,6 +1919,10 @@ def search_advanced_families(
         date_of_marriage_to,
         exact,
         year_column=models.Family.marriage_year,
+    )
+    date_cond = _with_undated(
+        date_cond, models.Family.date_of_marriage, models.Family.marriage_year,
+        include_undated,
     )
     if date_cond is not None:
         query = query.filter(date_cond)

@@ -216,6 +216,7 @@ async def search_persons(
     place_of_burial: Optional[str] = None,
     contributor: Optional[str] = None,
     exclude_contributor: Optional[str] = None,
+    include_undated: bool = False,
     source: Source = "all",
     exact: bool = False,
     same_as: bool = True,
@@ -226,7 +227,8 @@ async def search_persons(
 
     A *_from date alone is a fuzzy date match; with the matching *_to it is a
     year range. Baptism counts as birth. exclude_contributor (comma-separated)
-    leaves out those genealogists' records. With same_as, each hit lists the
+    leaves out those genealogists' records. include_undated also keeps
+    records with no year in a filtered date field, after the dated ones. With same_as, each hit lists the
     (contributor, ext_id) of the records in other contributors' data matched
     to it.
     """
@@ -243,6 +245,7 @@ async def search_persons(
                 contributor=contributor, source=source,
                 limit=_cap(limit), skip=max(0, skip), exact=exact,
                 exclude_contributor=exclude_contributor, with_total=True,
+                include_undated=include_undated,
             )
             if same_as:
                 crud.attach_same_as(db, rows)
@@ -267,6 +270,7 @@ async def search_families(
     place_of_marriage: Optional[str] = None,
     contributor: Optional[str] = None,
     exclude_contributor: Optional[str] = None,
+    include_undated: bool = False,
     source: Source = "all",
     exact: bool = False,
     limit: int = 50,
@@ -276,7 +280,8 @@ async def search_families(
 
     children matches any child's name. A *_from date alone is a fuzzy match;
     with the matching *_to it is a year range. exclude_contributor
-    (comma-separated) leaves out those genealogists' records.
+    (comma-separated) leaves out those genealogists' records. include_undated also keeps
+    records with no year in a filtered date field, after the dated ones.
     """
     def go():
         with _session() as db:
@@ -292,6 +297,7 @@ async def search_families(
                 contributor=contributor, source=source,
                 limit=_cap(limit), skip=max(0, skip), exact=exact,
                 exclude_contributor=exclude_contributor, with_total=True,
+                include_undated=include_undated,
             )
             return {"total": total, "families": _families(rows)}
 

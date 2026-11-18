@@ -311,13 +311,16 @@ def search_advanced_persons(
     skip: int = 0,
     exact: bool = False,
     exclude_contributor: Optional[str] = None,
+    include_undated: bool = False,
     same_as: bool = False,
     response: Response = None,
     db: Session = Depends(get_db),
 ):
     """Best hit first; the number of all hits is in `X-Total-Count`.
     `exclude_contributor` (comma-separated exact names) drops those
-    contributors' records, e.g. a client's own tree. `same_as=true` adds to
+    contributors' records, e.g. a client's own tree. `include_undated=true`
+    keeps, for each date filter, records with no year in that field too
+    (ranked after the dated ones). `same_as=true` adds to
     each hit the (contributor, ext_id) of the records matched to it."""
     rows, total = crud.search_advanced_persons(
         db,
@@ -340,6 +343,7 @@ def search_advanced_persons(
         skip=skip,
         exact=exact,
         exclude_contributor=exclude_contributor,
+        include_undated=include_undated,
         with_total=True,
     )
     response.headers["X-Total-Count"] = str(total)
@@ -455,12 +459,15 @@ def search_advanced_families(
     skip: int = 0,
     exact: bool = False,
     exclude_contributor: Optional[str] = None,
+    include_undated: bool = False,
     response: Response = None,
     db: Session = Depends(get_db),
 ):
     """Best hit first; the number of all hits is in `X-Total-Count`.
     `exclude_contributor` (comma-separated exact names) drops those
-    contributors' records, e.g. a client's own tree."""
+    contributors' records, e.g. a client's own tree. `include_undated=true`
+    keeps, for each date filter, records with no year in that field too
+    (ranked after the dated ones)."""
     rows, total = crud.search_advanced_families(
         db,
         husband_name=husband_name,
@@ -482,6 +489,7 @@ def search_advanced_families(
         skip=skip,
         exact=exact,
         exclude_contributor=exclude_contributor,
+        include_undated=include_undated,
         with_total=True,
     )
     response.headers["X-Total-Count"] = str(total)
