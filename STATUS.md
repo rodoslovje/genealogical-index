@@ -1,5 +1,5 @@
 # STATUS — genealogical-index
-_Updated 2026-11-18_
+_Updated 2026-11-19_
 
 Monorepo for indeks.rodoslovje.si (SRD) and indeks.rodoslovlje.hr. Rules: `CLAUDE.md`.
 Last work: matches split into sections (trees / Matricula by parish / cemeteries
@@ -11,20 +11,17 @@ shown short (~ < > x–y) with tap tooltips, row icons tappable (31. 10.);
 search ranked best hit first + `X-Total-Count`, `skip`, `exclude_contributor`
 on the advanced searches, `same_as=true` on person search (also MCP, with `total`, `url`, new `get_person`), for GED Merge's
 index hints (17. 11.); `include_undated` on the advanced searches (18. 11.).
+cro upgraded to current main 19. 11. (migrations 002–008 + 015–017, API
+rebuild, web) — both sites now run the same code.
 
 **Next**
 - [ ] Watch ranked-search speed: fuzzy `surname=Novak` on slo 3.5 s cold,
       0.5 s warm (17. 11.); EXPLAIN ANALYZE if it grows
-- [ ] cro: migration 017, `docker compose up -d api` (new env `SITE_URL`,
-      `CORS_ORIGINS`), rebuild + rsync the web. slo done 17. 11.
-- [ ] Deploy MCP + driver upgrade: `docker compose up -d --build api` on each
-      site (requirements changed). Then decide whether it gets a guide /
-      changelog entry and an announcement
+- [ ] MCP is deployed on both sites: decide on an announcement
 - [ ] MCP tools for trees / compare / match detail, once they check the JWT
 - [ ] MCP ideas not done: Matricula / cemetery catalogue tool, batch search
-- [ ] Deploy: migration 016 on cro if not yet run; re-convert Matricula + Geneanet
-      with ged-tools `--mode full` so every JSON carries `source_unit` (no re-import
-      needed — labels already in the DB from the last SQL pass are identical)
+- [ ] Re-convert slo Matricula + Geneanet with ged-tools `--mode full` so every
+      JSON carries `source_unit` (no re-import needed; cro has no special sources)
 - [ ] Usability backlog from the 27. 9. review of the live site: `IDEAS.md`
       (first up: silent 999-row search cap, search panel closing after every search)
 
@@ -45,3 +42,6 @@ index hints (17. 11.); `include_undated` on the advanced searches (18. 11.).
 - CORS: per-site allow-list (site + gedmerge.com) plus dev origins
   (localhost / LAN / Tailscale); unset = any origin
 - Per-site config under `sites/<slo|cro|test>/`
+- cro server: `root@indeks.rodoslovlje.hr`, repo `/var/cgi/genealogical-index`,
+  web root `/var/caddy/sites/cgi/` (README's `/var/www/sites/cgi` is wrong for
+  it), DB backups in `/var/cgi/backups/`

@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import json
 import re
 import time
@@ -727,6 +728,51 @@ def _print_done(count, start):
 INSERT_CHUNK_SIZE = 20_000
 
 
+class JSONFileError(Exception):
+    """A data file that can't be parsed. The message names the file and the
+    position, so main() prints it instead of a bare traceback."""
+
+
+def _json_error(path, err, line=None, col=None):
+    """Build a JSONFileError for `err` (a json.JSONDecodeError) in `path`.
+    `line`/`col` override err's own when the document err saw is only part
+    of the file (the streaming reader). Shows the offending lines of err.doc
+    with a caret under the error."""
+    line = err.lineno if line is None else line
+    col = err.colno if col is None else col
+    doc, pos = err.doc, err.pos
+    start = doc.rfind("\n", 0, pos) + 1
+    end = doc.find("\n", pos)
+    end = len(doc) if end == -1 else end
+    context = ""
+    if start:
+        prev_start = doc.rfind("\n", 0, start - 1) + 1
+        context += f"  {line - 1:>6} | {doc[prev_start:start - 1][:120]}\n"
+    # Long (compact, single-line) records: show a window around the error.
+    lo = max(start, pos - 60)
+    hi = min(end, pos + 60)
+    prefix = "…" if lo > start else ""
+    suffix = "…" if hi < end else ""
+    context += f"  {line:>6} | {prefix}{doc[lo:hi]}{suffix}\n"
+    context += f"  {'':>6} | {' ' * (len(prefix) + pos - lo)}^\n"
+    hint = ""
+    if not doc[pos:].strip():
+        hint = "  (the file ends here: truncated or incompletely copied?)\n"
+    return JSONFileError(
+        f"Invalid JSON in {path}\n"
+        f"  line {line}, column {col}: {err.msg}\n{context}{hint}"
+    )
+
+
+def _load_json(path):
+    """json.load that names the file and shows the bad line on a parse error."""
+    with open(path, "r", encoding="utf-8") as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError as e:
+            raise _json_error(path, e) from None
+
+
 def _iter_json_array(path, read_size=1 << 20):
     """Incrementally yield the elements of a JSON file whose top level is an
     array, without materializing the whole document in memory. json.load of
@@ -734,6 +780,25 @@ def _iter_json_array(path, read_size=1 << 20):
     Docker container; this keeps only ~read_size of text buffered at a time.
     """
     decoder = json.JSONDecoder()
+    # Where `buf` starts in the file, so errors report file positions, not
+    # buffer ones: lines before it, and characters since the last newline.
+    base_line = 1
+    base_col = 0
+
+    def advance(consumed):
+        nonlocal base_line, base_col
+        newlines = consumed.count("\n")
+        if newlines:
+            base_line += newlines
+            base_col = len(consumed) - consumed.rfind("\n") - 1
+        else:
+            base_col += len(consumed)
+
+    def error(e):
+        line = base_line + e.lineno - 1
+        col = e.colno + (base_col if e.lineno == 1 else 0)
+        return _json_error(path, e, line, col)
+
     with open(path, "r", encoding="utf-8") as f:
         buf = ""
         pos = 0
@@ -742,16 +807,23 @@ def _iter_json_array(path, read_size=1 << 20):
             while pos < len(buf) and buf[pos] in " \t\r\n,":
                 pos += 1
             if pos >= len(buf):
+                advance(buf)
                 buf = f.read(read_size)
                 pos = 0
                 if not buf:
                     if started:
-                        raise ValueError(f"Unterminated JSON array in {path}")
+                        raise JSONFileError(
+                            f"Invalid JSON in {path}\n  unterminated array "
+                            f"(missing ']' at the end; file truncated?)"
+                        )
                     return
                 continue
             if not started:
                 if buf[pos] != "[":
-                    raise ValueError(f"Expected top-level JSON array in {path}")
+                    raise JSONFileError(
+                        f"Invalid JSON in {path}\n  expected a top-level array "
+                        f"('['), found {buf[pos]!r}"
+                    )
                 started = True
                 pos += 1
                 continue
@@ -761,10 +833,18 @@ def _iter_json_array(path, read_size=1 << 20):
                 # Elements are objects, so raw_decode only succeeds once the
                 # closing brace is in the buffer — safe across read boundaries.
                 obj, pos = decoder.raw_decode(buf, pos)
-            except json.JSONDecodeError:
-                more = f.read(read_size)
+            except json.JSONDecodeError as e:
+                # Input cut off by the buffer end fails at (or, inside a
+                # \uXXXX escape, a few characters before) the end, or as an
+                # unterminated string. Anything earlier is a real error: stop
+                # here instead of reading the rest of the file looking for it.
+                truncated = e.pos >= len(buf) - 6 or e.msg.startswith(
+                    "Unterminated string"
+                )
+                more = f.read(read_size) if truncated else ""
                 if not more:
-                    raise
+                    raise error(e) from None
+                advance(buf[:pos])
                 buf = buf[pos:] + more
                 pos = 0
                 continue
@@ -1028,8 +1108,7 @@ def import_matricula_index(db):
         print(f"\nSkipping matricula-index: '{path}' not found.")
         return
 
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = _load_json(path)
 
     rows = []
     for contributor, books in data.items():
@@ -1083,8 +1162,7 @@ def import_geneanet_index(db):
         print(f"\nSkipping geneanet-index: '{path}' not found.")
         return
 
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = _load_json(path)
 
     def _to_float(v):
         try:
@@ -1217,8 +1295,7 @@ def main():
         )
         return
 
-    with open(metadata_file, "r", encoding="utf-8") as f:
-        metadata = json.load(f)
+    metadata = _load_json(metadata_file)
 
     if not args.drop_tables:
         known = {m["contributor"] for m in metadata}
@@ -1456,4 +1533,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except JSONFileError as e:
+        # The open transaction is rolled back when the connection drops, so
+        # nothing from the contributor being imported is half-written.
+        print(f"\nERROR: {e}", file=sys.stderr)
+        sys.exit(1)
