@@ -838,10 +838,20 @@ _PERSON_INSERT = text(r"""
 """)
 
 
+# -military sources whose dates are recorded, not derived from an age. They
+# show as military sources, but for the gates they are a GEDCOM (recorded
+# dates, parents), so the plain-year rules stay on. Keep in sync with
+# audit_matches.DATED_MILITARY.
+DATED_MILITARY = ("SIstory-WW2-military",)
+
+
 def source_type(contributor):
     """Data-profile class of a contributor, from its name suffix (see
     crud.SPECIAL_SUFFIXES): 'cem' cemetery index, 'reg' parish-register
-    index, 'mil' military roll, 'ged' a GEDCOM family tree."""
+    index, 'mil' military roll, 'ged' a GEDCOM family tree (or a source
+    in DATED_MILITARY)."""
+    if contributor in DATED_MILITARY:
+        return "ged"
     for suffix, kind in (("-geneanet", "cem"), ("-matricula", "reg"), ("-military", "mil")):
         if contributor.endswith(suffix):
             return kind

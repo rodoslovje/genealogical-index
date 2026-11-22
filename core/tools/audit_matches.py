@@ -137,8 +137,14 @@ def _tol(q1, q2):
 #        full birth date, place, parents; no death, no spouse on persons;
 #        siblings with a reused name are separate records
 #   mil  -military: personnel rolls — name-centred, birth data thin
+#        (except DATED_MILITARY, whose dates are recorded: 'ged' here)
+DATED_MILITARY = ("SIstory-WW2-military",)  # must equal compute_matches.DATED_MILITARY
+
+
 def _SRC_TYPE(col):
-    return (f"CASE WHEN {col} LIKE '%-geneanet' THEN 'cem' "
+    dated = ", ".join(f"'{c}'" for c in DATED_MILITARY)
+    return (f"CASE WHEN {col} IN ({dated}) THEN 'ged' "
+            f"WHEN {col} LIKE '%-geneanet' THEN 'cem' "
             f"WHEN {col} LIKE '%-matricula' THEN 'reg' "
             f"WHEN {col} LIKE '%-military' THEN 'mil' ELSE 'ged' END")
 
