@@ -1,5 +1,5 @@
 # STATUS — genealogical-index
-_Updated 2026-11-22_
+_Updated 2026-11-23_
 
 Monorepo for indeks.rodoslovje.si (SRD) and indeks.rodoslovlje.hr. Rules: `CLAUDE.md`.
 Last work: matches split into sections (trees / Matricula by parish / cemeteries
@@ -15,9 +15,10 @@ cro upgraded to current main 19. 11. (migrations 002–008 + 015–017, API
 rebuild, web) — both sites now run the same code.
 
 **Next**
-- [ ] SIstory WW2 victims (`SIstory-WW2-military`, 101 611 persons, no
-      families) converted 22. 11.: sync + `import_to_db --mode update` on slo,
-      `trigger_matches`, then `audit_matches` (first source in `DATED_MILITARY`)
+- [ ] SIstory WW1 + WW2 victims (`SIstory-WW1-military` 33 501 persons,
+      `SIstory-WW2-military` 101 611, no families) converted 22.–23. 11.: sync +
+      `import_to_db --mode update` on slo, `trigger_matches`, then
+      `audit_matches` (first sources in `DATED_MILITARY`)
 - [ ] Watch ranked-search speed: fuzzy `surname=Novak` on slo 3.5 s cold,
       0.5 s warm (17. 11.); EXPLAIN ANALYZE if it grows
 - [ ] MCP is deployed on both sites: decide on an announcement
@@ -29,8 +30,8 @@ rebuild, web) — both sites now run the same code.
       (first up: silent 999-row search cap, search panel closing after every search)
 
 **Decided**
-- SIstory WW2 victims are a `-military` source for display, but gated as a
-  GEDCOM (`DATED_MILITARY`): its dates are recorded, not age-derived
+- SIstory WW1 / WW2 victims are `-military` sources for display, but gated as
+  a GEDCOM (`DATED_MILITARY`): their dates are recorded, not age-derived
 - MCP is public and exposes only what logged-out visitors see; no premium data
 - DB driver psycopg 3 with `ClientCursor` (client-side binding, as psycopg2)
 - Matches are for trees: only tree contributors get a Matches section, and it

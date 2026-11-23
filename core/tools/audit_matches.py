@@ -138,7 +138,7 @@ def _tol(q1, q2):
 #        siblings with a reused name are separate records
 #   mil  -military: personnel rolls — name-centred, birth data thin
 #        (except DATED_MILITARY, whose dates are recorded: 'ged' here)
-DATED_MILITARY = ("SIstory-WW2-military",)  # must equal compute_matches.DATED_MILITARY
+DATED_MILITARY = ("SIstory-WW1-military", "SIstory-WW2-military")  # must equal compute_matches.DATED_MILITARY
 
 
 def _SRC_TYPE(col):

@@ -842,7 +842,7 @@ _PERSON_INSERT = text(r"""
 # show as military sources, but for the gates they are a GEDCOM (recorded
 # dates, parents), so the plain-year rules stay on. Keep in sync with
 # audit_matches.DATED_MILITARY.
-DATED_MILITARY = ("SIstory-WW2-military",)
+DATED_MILITARY = ("SIstory-WW1-military", "SIstory-WW2-military")
 
 
 def source_type(contributor):
