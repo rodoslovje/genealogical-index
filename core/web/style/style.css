@@ -566,8 +566,13 @@ h2 {
    node with no element to hang flex/order rules on — so centering it the
    way `.matches-section-bar` does (flex-basis-0 zones) isn't available here.
    Take the filter out of flow instead and center it absolutely over the bar;
-   it never collides with the float layout since it isn't part of it. */
-h2.collapsible-header {
+   it never collides with the float layout since it isn't part of it.
+
+   Keyed on the filter itself, not on `.collapsible-header`: table.js adds that
+   class only once a table has rows, but mounts the filter either way — so a
+   table whose first result set was empty had an unpositioned heading and its
+   filter centered itself on the page instead. */
+h2:has(> .table-filter-wrapper) {
   position: relative;
 }
 h2 .table-filter-wrapper {
