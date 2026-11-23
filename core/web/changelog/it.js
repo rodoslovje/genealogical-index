@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-23',
+    items: [
+      {
+        title: "Le fonti militari mostrano in quali alberi compaiono",
+        text: "Una fonte militare autonoma, come l'elenco dei combattenti per il confine settentrionale o gli elenchi delle vittime di guerra, ha ora nella sua pagina la sezione <em>Possibili corrispondenze</em> con gli alberi genealogici in cui compaiono le sue persone. Apritene uno per vedere i record corrispondenti fianco a fianco.",
+      },
+    ],
+  },
+  {
     date: '2026-11-17',
     items: [
       {

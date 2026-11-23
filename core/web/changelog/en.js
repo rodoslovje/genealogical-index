@@ -18,6 +18,15 @@
 
 export default [
   {
+    date: '2026-11-23',
+    items: [
+      {
+        title: "Military sources show which family trees they appear in",
+        text: "A military source published on its own, such as the list of fighters for the northern border or the lists of war casualties, now has a <em>Possible matches</em> section on its page, listing the family trees its people appear in. Open one to see the matching records side by side.",
+      },
+    ],
+  },
+  {
     date: '2026-11-17',
     items: [
       {

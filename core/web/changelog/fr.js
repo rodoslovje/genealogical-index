@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-23',
+    items: [
+      {
+        title: "Les sources militaires montrent dans quels arbres elles figurent",
+        text: "Une source militaire publiée à part, comme la liste des combattants pour la frontière nord ou les listes de victimes de guerre, a désormais sur sa page une section <em>Correspondances possibles</em> avec les arbres généalogiques où figurent ses personnes. Ouvrez-en un pour voir les fiches correspondantes côte à côte.",
+      },
+    ],
+  },
+  {
     date: '2026-11-17',
     items: [
       {

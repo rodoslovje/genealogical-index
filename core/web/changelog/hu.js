@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-23',
+    items: [
+      {
+        title: "A katonai források megmutatják, mely családfákban szerepelnek",
+        text: "Egy önálló katonai forrás, például az északi határért harcolók listája vagy a háborús áldozatok listái, mostantól az oldalán <em>Lehetséges egyezések</em> szakaszt kap azokkal a családfákkal, amelyekben a személyei szerepelnek. Nyisson meg egyet, és egymás mellett láthatja az egyező rekordokat.",
+      },
+    ],
+  },
+  {
     date: '2026-11-17',
     items: [
       {

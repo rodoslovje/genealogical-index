@@ -41,9 +41,13 @@ export const NO_UNIT_PARAM = '-';
  *  `displayName`'s tree, with counts — into `sectionEl`, as one table per
  *  kind of source (see SECTIONS).
  *
- *  `primary` is the tree the matches are fetched for. `overlay` is the global
- *  spinner shown while a surname scope is re-fetched. */
-export async function renderMatchesSummary({ sectionEl, primary, displayName, overlay }) {
+ *  `primary` is the part the matches are fetched for: the tree, or a
+ *  stand-alone military source. `sources` limits the sections shown (a
+ *  military source lists only the trees). `overlay` is the global spinner
+ *  shown while a surname scope is re-fetched. */
+export async function renderMatchesSummary({ sectionEl, primary, displayName, overlay, sources = null }) {
+  const sections = sources ? SECTIONS.filter(s => sources.includes(s.source)) : SECTIONS;
+  const inSections = (p) => sections.some(s => s.source === (p.source || 'tree'));
   const plainHeading = `<h3 class="section-heading" style="margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 10px;">${t('col_matches')}</h3>`;
 
   let partners;
@@ -52,7 +56,7 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ov
     const res = await fetch(`${API_BASE_URL}/api/contributors/${encodeURIComponent(primary.contributor_ID)}/matches`);
     status = res.status;
     if (!res.ok) throw new Error('API failed');
-    partners = await res.json();
+    partners = (await res.json()).filter(inSections);
     setCurrentMatches(partners, displayName);
   } catch {
     sectionEl.innerHTML = plainHeading + `<p>${t(fetchErrorKey(status))}</p>`;
@@ -72,7 +76,7 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ov
       <p>${t('matches_found_intro')} <strong>${displayName}</strong>.<br>${t('matches_found_outro')}</p>
       <div id="matches-surname-scope"></div>
       <p id="matches-surname-error" class="match-surname-error" style="display: none;"></p>
-      ${SECTIONS.map(s => `<div class="matches-summary-group" data-source="${s.source}">
+      ${sections.map(s => `<div class="matches-summary-group" data-source="${s.source}">
         <h4 class="matches-summary-group-title collapsible-header">${t(s.titleKey)}</h4>
         <div class="matches-summary-group-body">
           <div id="matches-summary-${s.source}" class="table-responsive"></div>
@@ -150,7 +154,7 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ov
     // The column set changes with the scope, and renderTable keeps its sort
     // state on the container — drop it so the new column can be the default
     // sort instead of inheriting one keyed to the old columns.
-    for (const s of SECTIONS) {
+    for (const s of sections) {
       const el = document.getElementById(`matches-summary-${s.source}`);
       if (el) el._sortState = null;
     }
@@ -190,8 +194,10 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ov
       const row = {
         // The detail view takes one partner; for a parish / place row that
         // is any of its transcribers (it fixes the source type) plus `u`.
+        // `c` is the part's full name: the detail endpoint matches it as
+        // given, and for a military source that carries the suffix.
         _match_href: toUnicodeHref({
-          t: 'contributors', c: displayName, w: p.contributor || names[0],
+          t: 'contributors', c: primary.contributor_ID, w: p.contributor || names[0],
           ...(p.contributor ? {} : { u: p.unit ?? NO_UNIT_PARAM }),
           ...detailFilter,
         }),
@@ -216,7 +222,7 @@ export async function renderMatchesSummary({ sectionEl, primary, displayName, ov
 
     currentExportRows = [];
     let shown = 0;
-    for (const section of SECTIONS) {
+    for (const section of sections) {
       const groupEl = sectionEl.querySelector(`.matches-summary-group[data-source="${section.source}"]`);
       const rows = partners
         .filter(p => (p.source || 'tree') === section.source)

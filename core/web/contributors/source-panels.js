@@ -5,10 +5,12 @@
 // Matricula index transcriptions, Geneanet cemetery indexes, military
 // records — and each gets one panel: its own surname cloud plus whatever is
 // specific to that source (transcribed books, indexed cemeteries). The
-// Matches section rides along on the tree panel only: matches are for
-// comparing family trees, so a genealogist who contributed only Matricula,
-// cemetery or military indexes gets none. Those indexes still show up as
-// partners on the tree owners' pages.
+// Matches section rides along on the tree panel: matches are for comparing
+// family trees, so a genealogist's own Matricula, cemetery or military
+// indexes get none — they show up as partners on the tree owners' pages.
+// The one exception is a military source with no tree behind it (a roll or
+// a list of war casualties published as a collection of its own): its
+// military panel lists the family trees its people appear in.
 //
 // With one source there is no strip and the lone panel renders flat. With
 // several, only the active panel is built (lazily, on first activation) and
@@ -199,15 +201,17 @@ function mountBooksTable(panelEl, matriculaBooks, booksCols, displayName) {
  *  that can't be known without asking. */
 export async function buildSourcePanels({ contribData, displayName, overlay }) {
   const primary = contribData._tree;
-  const showMatches = !!primary && !siteConfig.gatedFeatures?.includes('matches');
+  const matchesGated = !!siteConfig.gatedFeatures?.includes('matches');
+  // A military source standing on its own (no tree) lists the trees its
+  // people appear in; see the header comment.
+  const militaryMatches = !primary && !!contribData._military && !matchesGated;
   const matriculaBooks = await fetchMatriculaBooks(displayName);
 
-  // The Matches section lands on the tree panel only.
-  const matchesHtml = showMatches ? '<div class="matches-summary-section"></div>' : '';
-  const mountMatches = async (panelEl) => {
+  const matchesHtml = '<div class="matches-summary-section"></div>';
+  const mountMatches = async (panelEl, part, sources) => {
     const sectionEl = panelEl.querySelector('.matches-summary-section');
     if (!sectionEl) return;
-    await renderMatchesSummary({ sectionEl, primary, displayName, overlay });
+    await renderMatchesSummary({ sectionEl, primary: part, displayName, overlay, sources });
   };
 
   const panels = [];
@@ -221,9 +225,9 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
         panelEl.innerHTML =
           cloudSectionHtml('contributor-tree-surname-cloud',
             `${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}`) +
-          matchesHtml;
+          (matchesGated ? '' : matchesHtml);
         loadSurnameCloud([part.contributor_ID], 'contributor-tree-surname-cloud');
-        await mountMatches(panelEl);
+        await mountMatches(panelEl, part);
       },
     });
   }
@@ -345,8 +349,10 @@ export async function buildSourcePanels({ contribData, displayName, overlay }) {
       async load(panelEl) {
         panelEl.innerHTML =
           cloudSectionHtml('contributor-military-surname-cloud',
-            `${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}`);
+            `${t('contributor_surnames_intro')} <strong>${displayName}</strong> ${t('contributor_surnames_outro')}`) +
+          (militaryMatches ? matchesHtml : '');
         loadSurnameCloud([part.contributor_ID], 'contributor-military-surname-cloud', { hideSectionIfEmpty: true });
+        if (militaryMatches) await mountMatches(panelEl, part, ['tree']);
       },
     });
   }

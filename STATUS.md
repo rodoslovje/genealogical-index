@@ -35,7 +35,8 @@ rebuild, web) — both sites now run the same code.
 - MCP is public and exposes only what logged-out visitors see; no premium data
 - DB driver psycopg 3 with `ClientCursor` (client-side binding, as psycopg2)
 - Matches are for trees: only tree contributors get a Matches section, and it
-  counts the tree's own matches only (not those of the genealogist's indexes)
+  counts the tree's own matches only (not those of the genealogist's indexes);
+  exception (23. 11.): a stand-alone military source lists its matching trees
 - Matricula / cemetery matches: one row per parish / place across all transcribers
 - Geneanet groups by cemetery *place* (postcode dropped), not cemetery
 - `source_unit` is set in the record JSON by ged-tools, never derived at import

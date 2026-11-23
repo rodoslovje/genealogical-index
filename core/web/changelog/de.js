@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-23',
+    items: [
+      {
+        title: "Militärquellen zeigen, in welchen Stammbäumen sie vorkommen",
+        text: "Eine eigenständige Militärquelle, etwa die Liste der Kämpfer für die Nordgrenze oder die Listen der Kriegsopfer, hat auf ihrer Seite jetzt einen Abschnitt <em>Mögliche Übereinstimmungen</em> mit den Stammbäumen, in denen ihre Personen vorkommen. Öffnen Sie einen, um die übereinstimmenden Einträge nebeneinander zu sehen.",
+      },
+    ],
+  },
+  {
     date: '2026-11-17',
     items: [
       {

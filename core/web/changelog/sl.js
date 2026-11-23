@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-23',
+    items: [
+      {
+        title: "Vojaški viri pokažejo, v katerih rodovnikih se pojavijo",
+        text: "Samostojen vojaški vir, na primer seznam borcev za severno mejo ali seznami žrtev vojn, ima zdaj na svoji strani razdelek <em>Možna ujemanja</em> z rodovniki, v katerih se pojavijo njegove osebe. Odprite enega, da ujemajoče se zapise vidite enega ob drugem.",
+      },
+    ],
+  },
+  {
     date: '2026-11-17',
     items: [
       {

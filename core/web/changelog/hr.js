@@ -5,6 +5,15 @@
 
 export default [
   {
+    date: '2026-11-23',
+    items: [
+      {
+        title: "Vojni izvori pokazuju u kojim se rodoslovnim stablima pojavljuju",
+        text: "Samostalan vojni izvor, na primjer popis boraca za sjevernu granicu ili popisi žrtava ratova, sada na svojoj stranici ima odjeljak <em>Moguća podudaranja</em> s rodoslovnim stablima u kojima se pojavljuju njegove osobe. Otvorite jedno da podudarne zapise vidite jedan uz drugi.",
+      },
+    ],
+  },
+  {
     date: '2026-11-17',
     items: [
       {
